@@ -85,3 +85,24 @@ clear
 clear
 11 22 >>THREE @FIVE 55 66 >>SEVEN @THREE 33 44 <<FIVE @SEVEN 77 88
 
+( if )
+clear
+100 100 == if >>TRUE >>FALSE @TRUE 1234 >>END @FALSE 5678 @END
+200 200 == if >>TRUE 8888 >>END @TRUE 5678 @END
+100 300 == if >>TRUE >>FALSE @TRUE 9999 >>END @FALSE 8765 @END
+300 200 == if >>TRUE 4321 >>END @TRUE 9999 @END
+
+( defining words )
+clear
+: aaa 111 222 333 444 ;
+: bbb 99 88 77 ;
+aaa
+bbb
+clear
+
+( show that forward references are fine )
+: ccc 11 ddd 88 ;
+: ddd 22 eee 77 ;
+: eee 33 fff 66 ;
+: fff 44 55 ;
+ccc

@@ -90,6 +90,7 @@ void Interpreter::do_jump(const string &jumpword) {
 }
 
 void Interpreter::run() {
+	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
 		const string &word = reader.nextWord();
 		if(word == "") {
@@ -115,6 +116,25 @@ void Interpreter::run() {
 			continue;
 		}
 
+		if(word == "if") {
+			// true jump is required
+			auto true_jump = reader.nextWord();
+			// false word is optional
+			string false_jump;
+			if(reader.peekWord().substr(0,2) == "<<" || reader.peekWord().substr(0,2) == ">>") {
+				false_jump = reader.nextWord();
+			}
+			bool cond = taggedToBool(pop());
+			// these don't run the jump, they just reposition the reader
+			if(cond) {
+				do_jump(true_jump);
+			}
+			else if(false_jump.size() > 0) {
+				do_jump(false_jump);
+			}
+			continue;
+		}
+
 		if(word.substr(0,2) == ">>" || word.substr(0,2) == "<<") {
 			do_jump(word);
 			continue;
@@ -136,7 +156,9 @@ void Interpreter::run() {
 			// tail call elimination -- if end of this wordlist OR next word is 'return', then
 			// i don't need to come back here, so pop my wordlist first to stop stack from growing
 			if(reader.peekWord() == "" || reader.peekWord() == "return") {
-				reader.popWords();
+				if(reader.hasPushedWords()) { // in case i'm at the toplevel
+					reader.popWords();
+				}
 			}
 			// execute word by pushing its wordlist and continuing
 			reader.pushWords(&userword->second);

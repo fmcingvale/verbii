@@ -1,6 +1,10 @@
 /*
 	Reader unittests
 
+	I do NOT want to have unittests for everything, since I think running code in
+	the interpreter is the best test. However, it's hard to test some low level details
+	of the Reader just with code, so I made an exception here.
+
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 #include "extern/doctest.h"
@@ -62,35 +66,52 @@ TEST_CASE("reader:forward-backward") {
 
 TEST_CASE("reader:push-pop") {
 	auto reader = Reader();
+	
+	CHECK(reader.hasPushedWords() == false);
 	reader.addText("  1-aaa  1-bbb 1-ccc  1-ddd  ");
+	CHECK(reader.hasPushedWords() == false);
 
 	CHECK(reader.nextWord() == "1-aaa");
+	CHECK(reader.peekWord() == "1-bbb");
 	CHECK(reader.nextWord() == "1-bbb");
 
 	Wordlist more{"2-aaa","2-bbb","2-ccc"};
+	CHECK(reader.hasPushedWords() == false);
 	reader.pushWords(&more);
+	CHECK(reader.hasPushedWords() == true);
 	
 	CHECK(reader.nextWord() == "2-aaa");
 	CHECK(reader.nextWord() == "2-bbb");
+	CHECK(reader.peekWord() == "2-ccc");
 	CHECK(reader.nextWord() == "2-ccc");
 	
 	Wordlist more2{"3-aaa","3-bbb","3-ccc"};
+	CHECK(reader.hasPushedWords() == true);
 	reader.pushWords(&more2);
+	CHECK(reader.hasPushedWords() == true);
 	
 	CHECK(reader.nextWord() == "3-aaa");
+	CHECK(reader.peekWord() == "3-bbb");
 	CHECK(reader.nextWord() == "3-bbb");
 	CHECK(reader.nextWord() == "3-ccc");
+	CHECK(reader.peekWord() == "");
 	CHECK(reader.nextWord() == "");
 	
 	CHECK(reader.prevWord() == "3-ccc");
+	CHECK(reader.hasPushedWords() == true);
 	reader.popWords();
+	CHECK(reader.hasPushedWords() == true);
 	
 	CHECK(reader.prevWord() == "2-ccc");
+	CHECK(reader.peekWord() == "2-ccc");
 	CHECK(reader.prevWord() == "2-bbb");
 	
+	CHECK(reader.hasPushedWords() == true);
 	reader.popWords();
-
+	CHECK(reader.hasPushedWords() == false);
+	
 	CHECK(reader.nextWord() == "1-ccc");
+	CHECK(reader.peekWord() == "1-ddd");
 	CHECK(reader.nextWord() == "1-ddd");
 }
 
