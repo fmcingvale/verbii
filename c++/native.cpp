@@ -1,10 +1,12 @@
-
 /*
 	Native - functions that have to be implemented in the native (host) language.
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
+
 #include "native.hpp"
+#include "tagging.hpp"
+#include "errors.hpp"
 #include <cmath>
 #include <string>
 #include <vector>
@@ -12,18 +14,18 @@
 #include <iostream>
 using namespace std;
 
-static void native_add(Interpreter *intr) {
-	intr->push(intr->pop()+intr->pop());
+static void builtin_add(Interpreter *intr) {
+	intr->push(intToTagged(taggedToInt(intr->pop())+taggedToInt(intr->pop())));
 }
 
-static void native_subtract(Interpreter *intr) {
-	int b = intr->pop();
-	int a = intr->pop();
-	intr->push(a-b);
+static void builtin_subtract(Interpreter *intr) {
+	int b = taggedToInt(intr->pop());
+	int a = taggedToInt(intr->pop());
+	intr->push(intToTagged(a-b));
 }
 
-static void native_multiply(Interpreter *intr) {
-	intr->push(intr->pop()*intr->pop());
+static void builtin_multiply(Interpreter *intr) {
+	intr->push(intToTagged(taggedToInt(intr->pop())*taggedToInt(intr->pop())));
 }
 
 /*
@@ -38,6 +40,9 @@ static void native_multiply(Interpreter *intr) {
 	consistent behavior regardless of signs
 */
 static int int_divmod(int a, int b, int *mod) {
+	if(b == 0) {
+		throw LangError("Divide by zero");
+	}
 	int quot = (int)floor(((double)(abs(a))) / ((double)(abs(b))));
 
 	bool samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
@@ -51,38 +56,37 @@ static int int_divmod(int a, int b, int *mod) {
 	}
 }
 
-static void native_divide(Interpreter *intr) {
-	int b = intr->pop();
-	int a = intr->pop();
+static void builtin_divide(Interpreter *intr) {
+	int b = taggedToInt(intr->pop());
+	int a = taggedToInt(intr->pop());
 	int mod;
-	intr->push(int_divmod(a,b,&mod));
+	intr->push(intToTagged(int_divmod(a,b,&mod)));
 }
 
-static void native_mod(Interpreter *intr) {
-	int b = intr->pop();
-	int a = intr->pop();
+static void builtin_mod(Interpreter *intr) {
+	int b = taggedToInt(intr->pop());
+	int a = taggedToInt(intr->pop());
 	int mod;
 	int_divmod(a,b,&mod);
-	intr->push(mod);
+	intr->push(intToTagged(mod));
 }
 
-static void native_divmod(Interpreter *intr) {
-	int b = intr->pop();
-	int a = intr->pop();
+static void builtin_divmod(Interpreter *intr) {
+	int b = taggedToInt(intr->pop());
+	int a = taggedToInt(intr->pop());
 	int mod;
 	int q = int_divmod(a,b,&mod);
-	intr->push(mod);
-	intr->push(q);
+	intr->push(intToTagged(mod));
+	intr->push(intToTagged(q));
 }
 
-static void native_define_word(Interpreter *intr) {
-	string name = intr->nextWord();
+static void builtin_define_word(Interpreter *intr) {
+	string name = intr->reader.nextWord();
 	Wordlist words;
 	while(1) {
-		string w = intr->nextWord();
+		string w = intr->reader.nextWord();
 		if(w == "") {
-			cout << "*** END OF INPUT WHILE LOOKING FOR ; ***\n";
-			return;
+			throw LangError("End of input while looking for ;");
 		}
 		else if(w == ";") {
 			WORDS[name] = words;
@@ -94,11 +98,11 @@ static void native_define_word(Interpreter *intr) {
 	}
 }
 
-static void native_comment(Interpreter *intr) {
+static void builtin_comment(Interpreter *intr) {
 	while(1) {
-		string w = intr->nextWord();
+		string w = intr->reader.nextWord();
 		if(w == "") {
-			cout << "*** End of input looking for ) ***\n";
+			throw LangError("End of input looking for )");
 		}
 		else if(w == ")") {
 			return;
@@ -106,32 +110,32 @@ static void native_comment(Interpreter *intr) {
 	}
 }
 
-static void native_clear(Interpreter *intr) {
+static void builtin_clear(Interpreter *intr) {
 	intr->SP = intr->SP_EMPTY;
 }
 
-static void native_dot(Interpreter *intr) {
-	printf("%d ", intr->pop());
+static void builtin_dot(Interpreter *intr) {
+	printf("%s ", reprTagged(intr->pop()).c_str());
 	fflush(stdout);
 }
 
-static void native_cr(Interpreter *intr) {
+static void builtin_cr(Interpreter *intr) {
 	printf("\n");
 }
 
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
-	{"+", native_add},
-	{"-", native_subtract},
-	{"*", native_multiply},
-	{"/", native_divide},
-	{"mod", native_mod},
-	{"/mod", native_divmod},
-	{":", native_define_word},
+	{"+", builtin_add},
+	{"-", builtin_subtract},
+	{"*", builtin_multiply},
+	{"/", builtin_divide},
+	{"mod", builtin_mod},
+	{"/mod", builtin_divmod},
+	{":", builtin_define_word},
 	// synonym for ':', for readability
-	{"def", native_define_word},
-	{"(", native_comment},
-	{"clear", native_clear},
-	{".", native_dot},
-	{"CR", native_cr},
+	{"def", builtin_define_word},
+	{"(", builtin_comment},
+	{"clear", builtin_clear},
+	{".", builtin_dot},
+	{"CR", builtin_cr},
 };
 

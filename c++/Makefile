@@ -1,6 +1,6 @@
 
-LIB_SRC = reader.cpp interpreter.cpp native.cpp
-HEADERS = reader.hpp interpreter.hpp native.hpp
+LIB_SRC = reader.cpp interpreter.cpp native.cpp tagging.cpp
+HEADERS = reader.hpp interpreter.hpp native.hpp tagging.hpp
 
 LIB_OBJS = $(LIB_SRC:.cpp=.o)
 

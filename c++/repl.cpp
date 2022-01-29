@@ -1,23 +1,40 @@
+/*
+	repl - run code interactively, run unittests, or run programs.
+	
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
 
 #include "interpreter.hpp"
+#include "errors.hpp"
 #include <readline/readline.h>
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <regex>
 using namespace std;
 namespace fs = std::filesystem;
 
 void repl() {
-	auto intr = new Interpreter();
+	auto intr = make_unique<Interpreter>();
+	//auto intr = new Interpreter();
 	
 	while(1) {
 		printf(">> ");
 		fflush(stdout);
 		string line;
 		getline(cin, line);
+		if (line == "quit") {
+			return;
+		}
 		intr->addText(line);
-		intr->run();
-		cout << "=> " << intr->reprStack() << endl;
+		try {
+			intr->run();
+			// assume reprStack could throw as well
+			cout << "=> " << intr->reprStack() << endl;
+		}
+		catch (LangError &err) {
+			cout << "*** " << err.what() << " ***\n";
+		}
 	}
 }
 
@@ -25,15 +42,27 @@ void repl() {
 // runs it, then prints the stack. this is intented for unittesting.
 void run_test_mode(string filename) {
 
+	regex blankline(R"""(^[ \t\r\n]*$)""");
+
 	auto intr = new Interpreter();
 	string line;
 	ifstream fileIn(filename);
 	
 	while(getline(fileIn, line)) {
+		// skip blank lines
+		if(regex_match(line, blankline)) {
+			continue;
+		}
 		cout << ">> " << line << endl;
 		intr->addText(line);
-		intr->run();
-		cout << "=> " << intr->reprStack() << endl;
+		try {
+			intr->run();
+			// assume reprStack could throw as well
+			cout << "=> " << intr->reprStack() << endl;
+		}
+		catch (LangError &err) {
+			cout << "*** " << err.what() << " ***\n";
+		}
 	}
 }
 

@@ -1,0 +1,123 @@
+>> ( unittest_core - test basic language features, roughly in the order that they will usually be implemented )
+=> 
+>> ( very basic check first )
+=> 
+>> 1
+=> 1 
+>> 2
+=> 1 2 
+>> 3
+=> 1 2 3 
+>> 4 5 6 7
+=> 1 2 3 4 5 6 7 
+>> . . . . CR 
+7 6 5 4 
+=> 1 2 3 
+>> 7 6 5 4
+=> 1 2 3 7 6 5 4 
+>> ( math +, -, * )
+=> 1 2 3 7 6 5 4 
+>> clear
+=> 
+>> 10 20 30 40
+=> 10 20 30 40 
+>> +
+=> 10 20 70 
+>> -
+=> 10 -50 
+>> * 
+=> -500 
+>> +
+*** Stack underflow ***
+>> ( *** rounding of / -- should round to nearest *** )
+=> 
+>> ( round down 8.3 -> 8 )
+=> 
+>> clear
+=> 
+>> 639 77 /
+=> 8 
+>> -639 77 /
+=> 8 -8 
+>> 639 77 /mod
+=> 8 -8 23 8 
+>> -639 77 /mod
+=> 8 -8 23 8 -23 -8 
+>> 639 77 mod
+=> 8 -8 23 8 -23 -8 23 
+>> -639 77 mod
+=> 8 -8 23 8 -23 -8 23 -23 
+>> ( round down 7.8 -> 7 )
+=> 8 -8 23 8 -23 -8 23 -23 
+>> clear
+=> 
+>> 335 43 /
+=> 7 
+>> -335 43 /
+=> 7 -7 
+>> 335 43 /mod
+=> 7 -7 34 7 
+>> -335 43 /mod
+=> 7 -7 34 7 -34 -7 
+>> 335 43 mod
+=> 7 -7 34 7 -34 -7 34 
+>> -335 43 mod
+=> 7 -7 34 7 -34 -7 34 -34 
+>> ( round 6.5 -> 6 )
+=> 7 -7 34 7 -34 -7 34 -34 
+>> clear
+=> 
+>> 403 62 /
+=> 6 
+>> -403 62 /
+=> 6 -6 
+>> 403 62 /mod
+=> 6 -6 31 6 
+>> -403 62 /mod
+=> 6 -6 31 6 -31 -6 
+>> 403 62 mod
+=> 6 -6 31 6 -31 -6 31 
+>> -403 62 mod
+=> 6 -6 31 6 -31 -6 31 -31 
+>> ( numerical limits )
+=> 6 -6 31 6 -31 -6 31 -31 
+>> clear
+=> 
+>> 1073741823
+=> 1073741823 
+>> -1073741823
+=> 1073741823 -1073741823 
+>> 1073741824
+*** Integer overflow ***
+>> -1073741824
+*** Integer overflow ***
+>> 1073741823 1 +
+*** Integer overflow ***
+>> -1073741823 1 -
+*** Integer overflow ***
+>> 2000000
+=> 1073741823 -1073741823 2000000 
+>> 1000
+=> 1073741823 -1073741823 2000000 1000 
+>> *
+*** Integer overflow ***
+>> 100 0 /
+*** Divide by zero ***
+>> ( parsing errors )
+=> 1073741823 -1073741823 
+>> : aaa 123 456
+*** End of input while looking for ; ***
+>> ( bad comment
+*** End of input looking for ) ***
+>> ( interpreter errors )
+=> 1073741823 -1073741823 
+>> foobarbadword
+*** Unknown word foobarbadword ***
+>> ( stack errors )
+=> 1073741823 -1073741823 
+>> clear
+=> 
+>> +
+*** Stack underflow ***
+>> 10 +
+*** Stack underflow ***

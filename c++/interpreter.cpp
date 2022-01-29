@@ -1,6 +1,18 @@
+/*
+	Interpreter - runs code.
+
+	There is no compilation step, not really even a parsing step -- the interpreter
+	runs directly from the wordlists from the Reader. This makes the code smaller and
+	makes e.g. forward declarations really easy since nothing is evaluated until it
+	runs.
+
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
+
 #include <iostream>
 #include "interpreter.hpp"
 #include "native.hpp"
+#include "errors.hpp"
 using namespace std;
 
 map<string,Wordlist> WORDS;
@@ -25,40 +37,34 @@ void Interpreter::addText(const string &text) {
 	reader.addText(text);
 }
 
-void Interpreter::push(int obj) {
+void Interpreter::push(tagged obj) {
 	if(SP <= SP_MIN) {
-		printf("*** STACK OVERFLOW ***\n");
-		return;
+		throw LangError("Stack overflow");
 	}
 	RAM[--SP] = obj;
 }
 
-int Interpreter::pop() {
+tagged Interpreter::pop() {
 	if(SP >= SP_EMPTY) {
-		printf("*** STACK UNDERFLOW ***\n");
-		return -1;
+		throw LangError("Stack underflow");
 	}
 	return RAM[SP++];
 }
 
-std::string Interpreter::nextWord() {
-	return reader.nextWord();
-}	
-
 string Interpreter::reprStack() const {
 	string s = "";
 	for(int i=SP_EMPTY-1; i>=SP; --i) {
-		s += to_string(RAM[i]) + " ";
+		s += reprTagged(RAM[i]) + " ";
 	}
 	return s;
 }
 
 void Interpreter::run() {
-	while(1) {
+	while(true) {
 		const string &word = reader.nextWord();
 		if(word == "") {
 			// i could be returning from a word that had no 'return',
-			// to pop words like i would if it were return
+			// so pop words like i would if it were a return
 			if(reader.hasPushedWords()) {
 				reader.popWords();
 				continue;
@@ -69,7 +75,7 @@ void Interpreter::run() {
 		}
 		smatch match;
 		if(regex_match(word, match, *re_integer)) {
-			push(stoi(word));
+			push(intToTagged(stoi(word)));
 			continue;
 		}
 
@@ -97,7 +103,6 @@ void Interpreter::run() {
 			continue;
 		}
 
-		cout << "*** UNKNOWN WORD: " << word << endl;
-		return;
+		throw LangError(string("Unknown word ") + word);
 	}
 }
