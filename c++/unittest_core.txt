@@ -117,3 +117,35 @@ def zzz 123 456 return ;
 zzz
 return
 
+( local stack )
+clear
+10 20 30 40
+>L 
+>L 
+>L 
+>L 
+
+L>
+L>
+L>
+L>
+
+L>
+
+clear
+10 20 30 40
+>L 
+>L 
+>L 
+>L 
+
+111 LP set!
+222 LP 1 + set!
+333 LP 2 + set!
+444 LP 3 + set!
+L>
+L>
+L>
+L>
+
+

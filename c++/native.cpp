@@ -138,7 +138,7 @@ static void builtin_greater(Interpreter *intr) {
 static void builtin_set(Interpreter *intr) {
 	int addr = popInt(intr);
 	tagged t = intr->pop();
-	if(addr < 0 || addr >= intr->RAM.size()) {
+	if(addr < 0 || (unsigned int)addr >= intr->RAM.size()) {
 		throw LangError("Bad address in set!: " + to_string(addr));
 	}
 	intr->RAM[addr] = t;
@@ -146,7 +146,7 @@ static void builtin_set(Interpreter *intr) {
 
 static void builtin_ref(Interpreter *intr) {
 	int addr = popInt(intr);
-	if(addr < 0 || addr >= intr->RAM.size()) {
+	if(addr < 0 || (unsigned int)addr >= intr->RAM.size()) {
 		throw LangError("Bad address in set!: " + to_string(addr));
 	}
 	intr->push(intr->RAM[addr]);
@@ -158,6 +158,28 @@ static void builtin_setsp(Interpreter *intr) {
 		throw LangError("Bad address in SP!: " + to_string(addr));
 	}
 	intr->SP = addr;
+}
+
+static void builtin_setlp(Interpreter *intr) {
+	int addr = popInt(intr);
+	if(addr < intr->LP_MIN || addr > intr->LP_EMPTY) {
+		throw LangError("Bad address in LP!: " + to_string(addr));
+	}
+	intr->LP = addr;
+}
+
+static void builtin_tolocal(Interpreter *intr) {
+	if(intr->LP <= intr->LP_MIN) {
+		throw LangError("Locals overflow");
+	}
+	intr->RAM[--intr->LP] = intr->pop();
+}
+
+static void builtin_fromlocal(Interpreter *intr) {
+	if(intr->LP >= intr->LP_EMPTY) {
+		throw LangError("Locals underflow");
+	}
+	intr->push(intr->RAM[intr->LP++]);
 }
 
 static void builtin_print_string(Interpreter *intr) {
@@ -197,6 +219,11 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"SP",
 		[](Interpreter *intr){intr->push(intToTagged(intr->SP));}},
 	{"SP!", builtin_setsp},
+	{"LP",
+		[](Interpreter *intr){intr->push(intToTagged(intr->LP));}},
+	{"LP!", builtin_setlp},
+	{">L", builtin_tolocal},
+	{"L>", builtin_fromlocal},
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
 	{".\"", builtin_print_string},
