@@ -38,7 +38,7 @@ class Interpreter {
 
 	void run();
 
-	protected:
+	// all are public so builtins can use without a hassle
 	Reader reader;
 	std::array<int,RAM_SIZE> RAM;
 	// 3 memory areas: stack, locals, free memory

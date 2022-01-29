@@ -1,0 +1,46 @@
+( unittest_core - test basic language features, roughly in the order that they will usually be implemented )
+
+( very basic check first )
+1
+2
+3
+4 5 6 7
+. . . . CR 
+7 6 5 4
+
+( math +, -, * )
+clear
+10 20 30 40
++
+-
+* 
++
+
+( *** rounding of / -- should round to nearest *** )
+
+( round down 8.3 -> 8 )
+clear
+639 77 /
+-639 77 /
+639 77 /mod
+-639 77 /mod
+639 77 mod
+-639 77 mod
+
+( round down 7.8 -> 7 )
+clear
+335 43 /
+-335 43 /
+335 43 /mod
+-335 43 /mod
+335 43 mod
+-335 43 mod
+
+( round 6.5 -> 6 )
+clear
+403 62 /
+-403 62 /
+403 62 /mod
+-403 62 /mod
+403 62 mod
+-403 62 mod
