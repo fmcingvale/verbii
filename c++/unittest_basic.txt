@@ -8,5 +8,58 @@ depth
 SP 3 + SP!
 
 ." Hello world! " CR
+clear
+
+10 20 30
+drop
+drop
+drop
+
+111 222
+dup
+dup
+
+0
+dup?
+clear
+
+11 22 33
+swap
+swap
+clear
+
+11 22 33 44
+1 pick
+drop
+2 pick
+drop
+3 pick
+drop
+4 pick
+
+clear
+10 20 30 40
+over
+
+clear
+10 20 30 40 50 60
+2dup
+
+clear
+10 20 30 40
+2drop
+
+clear
+10 20 30 40 50 60
+2over 
+
+clear
+10 20 30 40 50 60
+2swap
+
+clear
+true
+false
+
 
 
