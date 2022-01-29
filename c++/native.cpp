@@ -5,7 +5,6 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 #include "native.hpp"
-#include "tagging.hpp"
 #include <cmath>
 #include <string>
 #include <vector>
@@ -14,21 +13,17 @@
 using namespace std;
 
 static void native_add(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
-	intr->push(intToTagged(a+b));
+	intr->push(intr->pop()+intr->pop());
 }
 
 static void native_subtract(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
-	intr->push(intToTagged(a-b));
+	int b = intr->pop();
+	int a = intr->pop();
+	intr->push(a-b);
 }
 
 static void native_multiply(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
-	intr->push(intToTagged(a*b));
+	intr->push(intr->pop()*intr->pop());
 }
 
 /*
@@ -55,9 +50,9 @@ static int int_divide(int a, int b) {
 }
 
 static void native_divide(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
-	intr->push(intToTagged(int_divide(a,b)));
+	int b = intr->pop();
+	int a = intr->pop();
+	intr->push(int_divide(a,b));
 }
 
 static void native_define_word(Interpreter *intr) {

@@ -25,7 +25,7 @@ void Interpreter::addText(const string &text) {
 	reader.addText(text);
 }
 
-void Interpreter::push(uint32 obj) {
+void Interpreter::push(int obj) {
 	if(SP <= SP_MIN) {
 		printf("*** STACK OVERFLOW ***\n");
 		return;
@@ -33,7 +33,7 @@ void Interpreter::push(uint32 obj) {
 	RAM[--SP] = obj;
 }
 
-uint32 Interpreter::pop() {
+int Interpreter::pop() {
 	if(SP >= SP_EMPTY) {
 		printf("*** STACK UNDERFLOW ***\n");
 		return -1;
@@ -45,10 +45,10 @@ std::string Interpreter::nextWord() {
 	return reader.nextWord();
 }	
 
-string Interpreter::repr_stack() const {
+string Interpreter::reprStack() const {
 	string s = "";
 	for(int i=SP_EMPTY-1; i>=SP; --i) {
-		s += to_string(taggedToInt(RAM[i])) + " ";
+		s += to_string(RAM[i]) + " ";
 	}
 	return s;
 }
@@ -69,7 +69,7 @@ void Interpreter::run() {
 		}
 		smatch match;
 		if(regex_match(word, match, *re_integer)) {
-			push(intToTagged(stoi(word)));
+			push(stoi(word));
 			continue;
 		}
 

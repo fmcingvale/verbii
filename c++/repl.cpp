@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 		getline(cin, line);
 		intr->addText(line);
 		intr->run();
-		cout << "=> " << intr->repr_stack() << endl;
+		cout << "=> " << intr->reprStack() << endl;
 	}
 	
 return 0;

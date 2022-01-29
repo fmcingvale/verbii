@@ -15,7 +15,6 @@
 #include <regex>
 #include <map>
 #include "reader.hpp"
-#include "tagging.hpp"
 
 const int RAM_SIZE = (1<<24);
 const int STACK_SIZE = (1<<16);
@@ -29,19 +28,19 @@ class Interpreter {
 
 	void addText(const std::string &text);
 
-	void push(uint32 obj);
-	uint32 pop();
+	void push(int obj);
+	int pop();
 
 	// provided for extensions that need to access the reader
 	std::string nextWord();
-
-	std::string repr_stack() const;
+	// get representation of stack for printing
+	std::string reprStack() const;
 
 	void run();
 
 	protected:
 	Reader reader;
-	std::array<uint32,RAM_SIZE> RAM;
+	std::array<int,RAM_SIZE> RAM;
 	// 3 memory areas: stack, locals, free memory
 	// RAM indexes: stack pointer, empty value and lowest usable index
 	int SP, SP_EMPTY, SP_MIN;
