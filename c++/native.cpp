@@ -160,6 +160,21 @@ static void builtin_setsp(Interpreter *intr) {
 	intr->SP = addr;
 }
 
+static void builtin_print_string(Interpreter *intr) {
+	while(true) {
+		auto word = intr->reader.nextWord();
+		if(word == "\"") {
+			return; // end of string
+		}
+		else if(word == "") {
+			throw LangError("End of input looking for \"");
+		}
+		else {
+			cout << word << " ";
+		}
+	}
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", builtin_add},
 	{"-", builtin_subtract},
@@ -184,5 +199,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"SP!", builtin_setsp},
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
+	{".\"", builtin_print_string},
 };
 

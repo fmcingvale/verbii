@@ -111,8 +111,10 @@ void Interpreter::run() {
 		}
 
 		if(word == "return") {
-			// return from word by popping back to previous wordlist
-			reader.popWords();
+			// return from word by popping back to previous wordlist (don't call at toplevel)
+			if(reader.hasPushedWords()) {
+				reader.popWords();
+			}
 			continue;
 		}
 

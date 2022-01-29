@@ -112,3 +112,8 @@ clear
 def ggg 123 456 789 ;
 ggg
 
+( make sure return doesn't crash )
+def zzz 123 456 return ;
+zzz
+return
+
