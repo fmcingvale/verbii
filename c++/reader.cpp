@@ -1,10 +1,15 @@
+/*
+	Reader - splits text into words and provides next/previous interface.
+
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
 
 #include "reader.hpp"
 #include <iostream>
 using namespace std;
 
 Reader::Reader() {
-	//words = new vector<string>();
+	wordlist = new Wordlist();
 	pos = 0;
 }
 
@@ -22,19 +27,17 @@ void Reader::addText(const string &text) {
 		}
 
 		if(word.size() > 0) {
-			words.push_back(word);
+			wordlist->push_back(word);
 		}
 	}	
 }
 
 
 // push current context and switch to new context
-void Reader::pushWords(std::vector<std::string> new_words) {
-	auto t = make_tuple(words,pos);
+void Reader::pushWords(Wordlist *new_words) {
+	stack.push_back(make_tuple(wordlist,pos));
 
-	stack.push_back(make_tuple(words,pos));
-
-	words = new_words;
+	wordlist = new_words;
 	pos = 0;
 }
 
@@ -42,27 +45,31 @@ void Reader::popWords() {
 	auto t = stack.back();
 	stack.pop_back();
 
-	words = get<0>(t);
+	wordlist = get<0>(t);
 	pos = get<1>(t);
+}
+
+bool Reader::hasPushedWords() {
+	return stack.size() > 0;
 }
 
 static string NONE("");
 
 const string& Reader::nextWord() {
-	if(pos >= words.size()) {
+	if(pos >= wordlist->size()) {
 		return NONE;
 	}
 	else {
-		return words[pos++];
+		return wordlist->at(pos++);
 	}
 }
 
 const string& Reader::peekWord() {
-	if(pos >= words.size()) {
+	if(pos >= wordlist->size()) {
 		return NONE;
 	}
 	else {
-		return words[pos];
+		return wordlist->at(pos);
 	}
 }
 
@@ -71,6 +78,6 @@ const string& Reader::prevWord() {
 		return NONE;
 	}
 	else {
-		return words[--pos];
+		return wordlist->at(--pos);
 	}
 }

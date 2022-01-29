@@ -1,3 +1,8 @@
+/*
+	Reader unittests
+
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
 #include "extern/doctest.h"
 #include "reader.hpp"
 #include <string>
@@ -62,15 +67,15 @@ TEST_CASE("reader:push-pop") {
 	CHECK(reader.nextWord() == "1-aaa");
 	CHECK(reader.nextWord() == "1-bbb");
 
-	vector<string> more = {"2-aaa","2-bbb","2-ccc"};
-	reader.pushWords(more);
+	Wordlist more{"2-aaa","2-bbb","2-ccc"};
+	reader.pushWords(&more);
 	
 	CHECK(reader.nextWord() == "2-aaa");
 	CHECK(reader.nextWord() == "2-bbb");
 	CHECK(reader.nextWord() == "2-ccc");
 	
-	vector<string> more2 = {"3-aaa","3-bbb","3-ccc"};
-	reader.pushWords(more2);
+	Wordlist more2{"3-aaa","3-bbb","3-ccc"};
+	reader.pushWords(&more2);
 	
 	CHECK(reader.nextWord() == "3-aaa");
 	CHECK(reader.nextWord() == "3-bbb");

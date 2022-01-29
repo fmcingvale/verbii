@@ -1,16 +1,16 @@
 
-LIB_SRC = reader.cpp
-HEADERS = reader.hpp
+LIB_SRC = reader.cpp interpreter.cpp tagging.cpp native.cpp
+HEADERS = reader.hpp interpreter.hpp tagging.hpp native.hpp
 
 LIB_OBJS = $(LIB_SRC:.cpp=.o)
 
 TEST_SRC = test_reader.cpp
 
-CFLAGS = -g 
+#CFLAGS = -g 
 #CFLAGS = -pg
-#CFLAGS = -O3 -DNDEBUG
+CFLAGS = -O3 -DNDEBUG
 
-all: test.exe
+all: test.exe repl.exe
 
 %.o: %.cpp $(HEADERS)
 	g++ $(CFLAGS) -Wall -c $< -o $@
@@ -23,3 +23,6 @@ clean:
 
 test.exe: test.cpp $(TEST_SRC) mineylib.a
 	g++ $(CFLAGS) -Wall -o test test.cpp $(TEST_SRC) mineylib.a
+
+repl.exe: repl.cpp mineylib.a
+	g++ $(CFLAGS) -Wall -o repl repl.cpp mineylib.a -lreadline

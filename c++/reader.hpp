@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <memory>
+
+typedef std::vector<std::string> Wordlist;
 
 class Reader {
 	public:
@@ -17,9 +20,11 @@ class Reader {
 
 	// push current context and switch to new context.
 	// caller must keep pointer valid until popWords()
-	void pushWords(std::vector<std::string> words);
+	void pushWords(Wordlist *words);
 	// return to previous context, discarding current context
 	void popWords();
+	// are their wordlists left on the stack?
+	bool hasPushedWords();
 
 	// get next word or "" if none
 	const std::string& nextWord();
@@ -29,9 +34,9 @@ class Reader {
 	const std::string& prevWord();
 
 	protected:
-	std::vector<std::string> words;
+	Wordlist *wordlist;
 	size_t pos;
-	std::vector<std::tuple<std::vector<std::string>,size_t>> stack;
+	std::vector<std::tuple<Wordlist*,size_t>> stack;
 };
 
 
