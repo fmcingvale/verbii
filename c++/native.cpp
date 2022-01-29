@@ -123,6 +123,17 @@ static void builtin_cr(Interpreter *intr) {
 	printf("\n");
 }
 
+static void builtin_equal(Interpreter *intr) {
+	intr->push(boolToTagged(taggedToInt(intr->pop()) == taggedToInt(intr->pop())));
+}
+
+static void builtin_greater(Interpreter *intr) {
+	int b = taggedToInt(intr->pop());
+	int a = taggedToInt(intr->pop());
+	
+	intr->push(boolToTagged(a>b));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", builtin_add},
 	{"-", builtin_subtract},
@@ -137,5 +148,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"clear", builtin_clear},
 	{".", builtin_dot},
 	{"CR", builtin_cr},
+	{"==", builtin_equal},
+	{">", builtin_greater},
 };
 

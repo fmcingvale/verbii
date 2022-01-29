@@ -121,3 +121,29 @@
 *** Stack underflow ***
 >> 10 +
 *** Stack underflow ***
+>> ( booleans )
+=> 
+>> clear
+=> 
+>> 12 12 ==
+=> true 
+>> -34 -34 ==
+=> true true 
+>> 20 8 ==
+=> true true false 
+>> -12 8 >
+=> true true false false 
+>> 100 2 >
+=> true true false false true 
+>> 212 -84 >
+=> true true false false true true 
+>> 123 123 >
+=> true true false false true true false 
+>> -456 -456 >
+=> true true false false true true false false 
+>> ( jumps )
+=> true true false false true true false false 
+>> clear
+=> 
+>> 11 22 >>THREE @FIVE 55 66 >>SEVEN @THREE 33 44 <<FIVE @SEVEN 77 88
+=> 11 22 33 44 55 66 77 88 

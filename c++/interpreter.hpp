@@ -48,6 +48,8 @@ class Interpreter {
 	// next memory address available and last usable
 	int MEM_NEXT, MEM_LAST; 
 	std::regex *re_integer;
+
+	void do_jump(const std::string &jumpword);
 };
 
 

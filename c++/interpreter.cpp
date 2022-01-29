@@ -59,6 +59,36 @@ string Interpreter::reprStack() const {
 	return s;
 }
 
+void Interpreter::do_jump(const string &jumpword) {
+	if(jumpword.substr(0,2) == ">>") {
+		// forward jump, find word (>>NAME -> @NAME)
+		while(true) {
+			auto word = reader.nextWord();
+			if(word == "") {
+				throw new LangError("Can't find jump target for " + jumpword);
+			}
+			else if(word.substr(1) == jumpword.substr(2)) {
+				return; // found word, stop
+			}
+		}
+	}
+	else if(jumpword.substr(0,2) == "<<") {
+		// backward jump
+		while(true) {
+			auto word = reader.prevWord();
+			if(word == "") {
+				throw new LangError("Can't find jump target for " + jumpword);
+			}
+			else if(word.substr(1) == jumpword.substr(2)) {
+				return; // found word, stop
+			}
+		}
+	}
+	else {
+		throw LangError("Bad jumpword " + jumpword);
+	}
+}
+
 void Interpreter::run() {
 	while(true) {
 		const string &word = reader.nextWord();
@@ -82,6 +112,16 @@ void Interpreter::run() {
 		if(word == "return") {
 			// return from word by popping back to previous wordlist
 			reader.popWords();
+			continue;
+		}
+
+		if(word.substr(0,2) == ">>" || word.substr(0,2) == "<<") {
+			do_jump(word);
+			continue;
+		}
+
+		if(word.substr(0,1) == "@") {
+			// jump target -- ignore
 			continue;
 		}
 

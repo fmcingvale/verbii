@@ -70,5 +70,18 @@ clear
 +
 10 +
 
+( booleans )
+clear
+12 12 ==
+-34 -34 ==
+20 8 ==
+-12 8 >
+100 2 >
+212 -84 >
+123 123 >
+-456 -456 >
 
+( jumps )
+clear
+11 22 >>THREE @FIVE 55 66 >>SEVEN @THREE 33 44 <<FIVE @SEVEN 77 88
 
