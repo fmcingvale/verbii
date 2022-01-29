@@ -1,0 +1,6 @@
+
+def . repr 32 .c ;
+def CR 10 .c 13 .c ;
+def clear SP depth + 1 - SP! ;
+
+

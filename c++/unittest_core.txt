@@ -106,3 +106,9 @@ clear
 : eee 33 fff 66 ;
 : fff 44 55 ;
 ccc
+
+( alternate syntax )
+clear
+def ggg 123 456 789 ;
+ggg
+

@@ -14,18 +14,30 @@
 #include <iostream>
 using namespace std;
 
+static int popInt(Interpreter *intr) {
+	return taggedToInt(intr->pop());
+}
+
+static void pushInt(Interpreter *intr, int i) {
+	intr->push(intToTagged(i));
+}
+
+static void pushBool(Interpreter *intr, bool b) {
+	intr->push(boolToTagged(b));
+}
+
 static void builtin_add(Interpreter *intr) {
-	intr->push(intToTagged(taggedToInt(intr->pop())+taggedToInt(intr->pop())));
+	pushInt(intr, popInt(intr) + popInt(intr));
 }
 
 static void builtin_subtract(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
-	intr->push(intToTagged(a-b));
+	int b = popInt(intr);
+	int a = popInt(intr);
+	pushInt(intr, a-b);
 }
 
 static void builtin_multiply(Interpreter *intr) {
-	intr->push(intToTagged(taggedToInt(intr->pop())*taggedToInt(intr->pop())));
+	pushInt(intr, popInt(intr) * popInt(intr));
 }
 
 /*
@@ -57,27 +69,27 @@ static int int_divmod(int a, int b, int *mod) {
 }
 
 static void builtin_divide(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
+	int b = popInt(intr);
+	int a = popInt(intr);
 	int mod;
-	intr->push(intToTagged(int_divmod(a,b,&mod)));
+	pushInt(intr, int_divmod(a,b,&mod));
 }
 
 static void builtin_mod(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
+	int b = popInt(intr);
+	int a = popInt(intr);
 	int mod;
 	int_divmod(a,b,&mod);
-	intr->push(intToTagged(mod));
+	pushInt(intr, mod);
 }
 
 static void builtin_divmod(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
+	int b = popInt(intr);
+	int a = popInt(intr);
 	int mod;
 	int q = int_divmod(a,b,&mod);
-	intr->push(intToTagged(mod));
-	intr->push(intToTagged(q));
+	pushInt(intr, mod);
+	pushInt(intr, q);
 }
 
 static void builtin_define_word(Interpreter *intr) {
@@ -110,28 +122,42 @@ static void builtin_comment(Interpreter *intr) {
 	}
 }
 
-static void builtin_clear(Interpreter *intr) {
-	intr->SP = intr->SP_EMPTY;
-}
-
-static void builtin_dot(Interpreter *intr) {
-	printf("%s ", reprTagged(intr->pop()).c_str());
-	fflush(stdout);
-}
-
-static void builtin_cr(Interpreter *intr) {
-	printf("\n");
-}
-
-static void builtin_equal(Interpreter *intr) {
-	intr->push(boolToTagged(taggedToInt(intr->pop()) == taggedToInt(intr->pop())));
+static void builtin_printchar(Interpreter *intr) {
+	int c = popInt(intr);
+	putc(c,stdout);
 }
 
 static void builtin_greater(Interpreter *intr) {
-	int b = taggedToInt(intr->pop());
-	int a = taggedToInt(intr->pop());
+	int b = popInt(intr);
+	int a = popInt(intr);
 	
-	intr->push(boolToTagged(a>b));
+	pushBool(intr, a>b);
+}
+
+/* ( obj addr -- ) - save obj to addr */
+static void builtin_set(Interpreter *intr) {
+	int addr = popInt(intr);
+	tagged t = intr->pop();
+	if(addr < 0 || addr >= intr->RAM.size()) {
+		throw LangError("Bad address in set!: " + to_string(addr));
+	}
+	intr->RAM[addr] = t;
+}
+
+static void builtin_ref(Interpreter *intr) {
+	int addr = popInt(intr);
+	if(addr < 0 || addr >= intr->RAM.size()) {
+		throw LangError("Bad address in set!: " + to_string(addr));
+	}
+	intr->push(intr->RAM[addr]);
+}
+
+static void builtin_setsp(Interpreter *intr) {
+	int addr = popInt(intr);
+	if(addr < intr->SP_MIN || addr > intr->SP_EMPTY) {
+		throw LangError("Bad address in SP!: " + to_string(addr));
+	}
+	intr->SP = addr;
 }
 
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
@@ -145,10 +171,18 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// synonym for ':', for readability
 	{"def", builtin_define_word},
 	{"(", builtin_comment},
-	{"clear", builtin_clear},
-	{".", builtin_dot},
-	{"CR", builtin_cr},
-	{"==", builtin_equal},
+	{".c", builtin_printchar},
+	{"repr", 
+		[](Interpreter *intr) {printf("%s", reprTagged(intr->pop()).c_str());}},
+	{"==", 
+		[](Interpreter *intr) {pushBool(intr, popInt(intr) == popInt(intr));}},
 	{">", builtin_greater},
+	{"depth", 
+		[](Interpreter *intr){intr->push(intToTagged(intr->SP_EMPTY - intr->SP));}},
+	{"SP",
+		[](Interpreter *intr){intr->push(intToTagged(intr->SP));}},
+	{"SP!", builtin_setsp},
+	{"ref", builtin_ref},
+	{"set!", builtin_set},
 };
 

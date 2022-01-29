@@ -1,6 +1,6 @@
 /*
 	repl - run code interactively, run unittests, or run programs.
-	
+
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 
@@ -14,9 +14,17 @@
 using namespace std;
 namespace fs = std::filesystem;
 
+string readfile(string filename) {
+	ifstream fileIn(filename);
+	string line, buf;
+	while(getline(fileIn, line)) {
+		buf += "\n" + line;
+	}
+	return buf;
+}
+
 void repl() {
 	auto intr = make_unique<Interpreter>();
-	//auto intr = new Interpreter();
 	
 	while(1) {
 		printf(">> ");
@@ -45,6 +53,11 @@ void run_test_mode(string filename) {
 	regex blankline(R"""(^[ \t\r\n]*$)""");
 
 	auto intr = new Interpreter();
+
+	auto buf = readfile("initlib.txt");
+	intr->addText(buf);
+	intr->run();
+	
 	string line;
 	ifstream fileIn(filename);
 	

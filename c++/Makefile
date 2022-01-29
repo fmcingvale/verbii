@@ -25,4 +25,4 @@ test.exe: test.cpp $(TEST_SRC) mineylib.a
 	g++ $(CFLAGS) -Wall -o test test.cpp $(TEST_SRC) mineylib.a
 
 repl.exe: repl.cpp mineylib.a
-	g++ $(CFLAGS) -Wall -o repl repl.cpp mineylib.a -lreadline
+	g++ $(CFLAGS) -Wall -o repl repl.cpp mineylib.a
