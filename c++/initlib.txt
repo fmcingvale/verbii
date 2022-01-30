@@ -20,4 +20,8 @@ def 2swap ( a b c d -- c d a b )
 def true ( -- true ) 1 1 == ;
 def false ( -- false ) 1 0 == ;
 
+def not ( a -- not[a] ) if >>true true return @true false ;
+def or ( a b -- a|b ) if >>true1 if >>true2 false return @true1 drop @true2 true ;
+def and ( a b -- a&b ) if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
+
 

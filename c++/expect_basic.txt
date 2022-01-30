@@ -96,3 +96,29 @@ Hello world!
 => true 
 >> false
 => true false 
+>> clear
+=> 
+>> true not
+=> false 
+>> false not
+=> false true 
+>> clear
+=> 
+>> true true or
+=> true 
+>> true false or
+=> true true 
+>> false true or
+=> true true true 
+>> false false or
+=> true true true false 
+>> clear
+=> 
+>> true true and
+=> true 
+>> true false and
+=> true false 
+>> false true and
+=> true false false 
+>> false false and
+=> true false false false 

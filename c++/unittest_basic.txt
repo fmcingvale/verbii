@@ -61,5 +61,21 @@ clear
 true
 false
 
+clear
+true not
+false not
+
+clear
+true true or
+true false or
+false true or
+false false or
+
+clear
+true true and
+true false and
+false true and
+false false and
+
 
 
