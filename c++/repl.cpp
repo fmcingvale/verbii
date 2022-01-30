@@ -26,6 +26,11 @@ string readfile(string filename) {
 void repl() {
 	auto intr = make_unique<Interpreter>();
 	
+	// run initlib to load its words first
+	auto buf = readfile("initlib.txt");
+	intr->addText(buf);
+	intr->run();
+	
 	while(1) {
 		printf(">> ");
 		fflush(stdout);
@@ -34,26 +39,26 @@ void repl() {
 		if (line == "quit") {
 			return;
 		}
+		cout << "LINE: " << line << endl;
 		intr->addText(line);
-		try {
-			intr->run();
-			// assume reprStack could throw as well
-			cout << "=> " << intr->reprStack() << endl;
-		}
-		catch (LangError &err) {
-			cout << "*** " << err.what() << " ***\n";
-		}
+
+		intr->run();
+		cout << "=> " << intr->reprStack() << endl;
 	}
 }
 
 // like a non-interactive repl, reads a line at a time, prints it,
 // runs it, then prints the stack. this is intented for unittesting.
-void run_test_mode(string filename) {
+// maxline is maximum line that ran OK last time so i ca restart.
+void run_test_mode(string filename, int &maxline, bool &done) {
+
+	done = false;
 
 	regex blankline(R"""(^[ \t\r\n]*$)""");
 
 	auto intr = new Interpreter();
 
+	// run initlib to load its words first
 	auto buf = readfile("initlib.txt");
 	intr->addText(buf);
 	intr->run();
@@ -61,22 +66,24 @@ void run_test_mode(string filename) {
 	string line;
 	ifstream fileIn(filename);
 	
+	int lines_read = 0;
 	while(getline(fileIn, line)) {
+		++lines_read;
 		// skip blank lines
 		if(regex_match(line, blankline)) {
 			continue;
 		}
+		if(lines_read <= maxline) {
+			continue;
+		}
 		cout << ">> " << line << endl;
 		intr->addText(line);
-		try {
-			intr->run();
-			// assume reprStack could throw as well
-			cout << "=> " << intr->reprStack() << endl;
-		}
-		catch (LangError &err) {
-			cout << "*** " << err.what() << " ***\n";
-		}
+		intr->run();
+		cout << "=> " << intr->reprStack() << endl;
+		// update maxline only after the above runs ok
+		maxline = lines_read;
 	}
+	done = true; // done
 }
 
 int main(int argc, char *argv[]) {
@@ -96,10 +103,35 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(filename == "") {
-		repl();
+		bool exited = false;
+		while(!exited) {
+			// restart repl on exceptions - continue until it exits OK.
+			// (continuing after the exception gives weird errors so something
+			// is getting corrupted in the interpreter)
+			try {
+				repl();
+				exited = true;
+			}
+			catch (LangError &err) {
+				cout << "*** " << err.what() << " ***\n";
+			}
+		}
 	}
 	else if(testMode) {
-		run_test_mode(filename);
+		int maxline = 0;
+		bool done = false;
+		while(!done) {
+			// when exception occurs, need to restart interpreter, or
+			// weird errors happen. track max line that i ran before so
+			// it restarts on next line
+			try {
+				run_test_mode(filename, maxline, done);
+			}
+			catch (LangError &err) {
+				cout << "*** " << err.what() << " ***\n";
+				++maxline; // skip line that failed last time
+			}
+		}
 	}
 	#if 0
 	else {

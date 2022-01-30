@@ -65,7 +65,7 @@ void Interpreter::do_jump(const string &jumpword) {
 		while(true) {
 			auto word = reader.nextWord();
 			if(word == "") {
-				throw new LangError("Can't find jump target for " + jumpword);
+				throw LangError("Can't find jump target for " + jumpword);
 			}
 			else if(word.substr(1) == jumpword.substr(2)) {
 				return; // found word, stop
@@ -77,7 +77,7 @@ void Interpreter::do_jump(const string &jumpword) {
 		while(true) {
 			auto word = reader.prevWord();
 			if(word == "") {
-				throw new LangError("Can't find jump target for " + jumpword);
+				throw LangError("Can't find jump target for " + jumpword);
 			}
 			else if(word.substr(1) == jumpword.substr(2)) {
 				return; // found word, stop

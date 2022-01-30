@@ -57,6 +57,7 @@ clear
 10 20 30 40 50 60
 2swap
 
+( logical operations )
 clear
 true
 false
@@ -76,6 +77,81 @@ true true and
 true false and
 false true and
 false false and
+
+( stack operations )
+clear
+11 22 33 44 55 66 77
+4 ndrop
+
+clear
+111 222 333 444 555
+5 ndrop
+
+clear
+111 222 333
+nip
+
+clear
+10 20 30 tuck
+
+clear
+10 20 30 40
+rot
+-rot
+
+( relational operators )
+clear
+10 20 >=
+30 20 >=
+40 40 >=
+
+clear
+10 20 <
+30 10 <
+40 40 <
+
+clear
+15 20 <=
+35 21 <=
+40 40 <=
+
+( math )
+clear
+123 
+neg
+-456
+neg
+
+clear
+123 456 
+max
+-500 200 
+max
+300 -44
+max
+444 444 
+max
+
+clear
+100 200 
+min
+-400 500 
+min
+123 -40 
+min
+77 77
+min
+
+clear
+123
+abs
+-99
+abs
+0
+abs
+
+
+
 
 
 

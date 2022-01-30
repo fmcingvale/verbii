@@ -68,21 +68,6 @@ static int int_divmod(int a, int b, int *mod) {
 	}
 }
 
-static void builtin_divide(Interpreter *intr) {
-	int b = popInt(intr);
-	int a = popInt(intr);
-	int mod;
-	pushInt(intr, int_divmod(a,b,&mod));
-}
-
-static void builtin_mod(Interpreter *intr) {
-	int b = popInt(intr);
-	int a = popInt(intr);
-	int mod;
-	int_divmod(a,b,&mod);
-	pushInt(intr, mod);
-}
-
 static void builtin_divmod(Interpreter *intr) {
 	int b = popInt(intr);
 	int a = popInt(intr);
@@ -147,7 +132,7 @@ static void builtin_set(Interpreter *intr) {
 static void builtin_ref(Interpreter *intr) {
 	int addr = popInt(intr);
 	if(addr < 0 || (unsigned int)addr >= intr->RAM.size()) {
-		throw LangError("Bad address in set!: " + to_string(addr));
+		throw LangError("Bad address in ref: " + to_string(addr));
 	}
 	intr->push(intr->RAM[addr]);
 }
@@ -201,8 +186,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"+", builtin_add},
 	{"-", builtin_subtract},
 	{"*", builtin_multiply},
-	{"/", builtin_divide},
-	{"mod", builtin_mod},
 	{"/mod", builtin_divmod},
 	{":", builtin_define_word},
 	// synonym for ':', for readability

@@ -6,7 +6,7 @@ def clear ( xn ... x1 -- ) SP depth + 1 - SP! ;
 def drop ( a -- ) SP 1 + SP! ; 
 def dup ( a -- a a ) SP ref ; 
 def dup? ( a -- a a, only if a != 0 ) dup 0 == if >>ZERO dup @ZERO ; 
-def swap ( a b -- b a ) >L >L LP 1 + ref LP ref LP 2 + LP! ; 
+def swap ( a b -- b a ) over >L >L drop L> L> ;
 def pick ( Sn .. S1 i -- Sn .. S1 Si ) SP + ref ; 
 
 def over ( a b -- a b a ) SP 1 + ref ; 
@@ -17,6 +17,12 @@ def 2swap ( a b c d -- c d a b )
     >L >L >L >L  
     LP 2 + ref LP 3 + ref LP ref LP 1 + ref LP 4 + LP! ; 
 
+def ndrop ( xn .. x1 N -- ) SP + 1 + SP! ;
+def nip ( a b -- b ) >L drop L> ;
+def tuck ( a b -- b a b ) swap 2 pick ;
+def rot ( a b c -- b c a ) 3 pick >L >L >L drop L> L> L> ;
+def -rot ( b c a -- a b c ) 2 pick >L 3 pick >L >L drop drop L> L> L> ;
+
 def true ( -- true ) 1 1 == ;
 def false ( -- false ) 1 0 == ;
 
@@ -24,4 +30,14 @@ def not ( a -- not[a] ) if >>true true return @true false ;
 def or ( a b -- a|b ) if >>true1 if >>true2 false return @true1 drop @true2 true ;
 def and ( a b -- a&b ) if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
 
+def >= ( a b -- a>=b ) 2dup > -rot == or ;
+def < ( a b -- a<b ) swap > ;
+def <= ( a b -- a<=b ) > not ;
 
+
+def neg ( a -- -a ) 0 swap - ;
+def max ( a b -- max[a,b] ) 2dup > if >>A nip return @A drop ;
+def min ( a b -- min[a,b] ) 2dup > if >>B drop return @B nip ;
+def abs ( a -- abs[a] ) dup 0 < if >>neg return @neg neg ;
+def / ( a b -- quotient a/b ) /mod swap drop ;
+def mod ( a b -- remainder a/b ) /mod drop ;
