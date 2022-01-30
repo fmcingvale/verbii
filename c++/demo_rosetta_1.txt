@@ -1,0 +1,69 @@
+( 	
+	demos based on rosetta code tasks -- not necessarily the complete solutions for each, just
+	the parts I found interesting 
+)
+
+( https://rosettacode.org/wiki/Fibonacci_sequence )
+
+def fibonacci ( nr -- print first nr numbers of fibonacci sequence )
+0 . 1 - ( print 0 first )
+0 1 ( N 0 1 )
+@loop
+( N a b )
+2dup + rot drop dup . ( N b a+b )
+rot 1 - dup 0 == if >>end ( b a+b N-1 )
+-rot <<loop 
+@end drop drop drop ;
+
+." First 20 fibonacci numbers: "
+20 fibonacci CR
+
+( https://rosettacode.org/wiki/Sum_digits_of_an_integer )
+
+def sumDigits ( nr -- sum of digits )
+0 swap ( sum nr )
+@loop 
+dup 10 /mod >L rot + swap drop L> ( rem+sum quot )
+dup? 0 == if >>end <<loop
+@end ;
+
+." Sum digits: 6982 (25) -- " 6982 sumDigits . CR
+." Sum digits: 48395019 (39) -- " 48395019 sumDigits . CR
+." Sum digits: 1073741823 (36) -- " 1073741823 sumDigits . CR
+
+( https://rosettacode.org/wiki/Proper_divisors )
+
+def printProperDivisors ( n -- prints proper divisors of n )
+( special case ) dup 1 == if >>eq1
+( start divisor at 1 )
+1 ( n d )
+@loop
+2dup mod 0 == if >>proper >>recur ( n d )
+@proper ( n d ) 
+dup .
+@recur
+1 + 2dup swap 2 / > ( n d+1 d+1>n/2 ) ( can stop at n/2 )
+if >>done <<loop
+@done drop drop
+@eq1 ;
+
+." Proper divisors of 100: " 100 printProperDivisors CR
+." Proper divisors of 256: " 256 printProperDivisors CR
+
+
+( --- tasks I want to do but haven't done yet and/or language missing features to make them easier --- )
+
+( https://rosettacode.org/wiki/Pi )
+
+( https://rosettacode.org/wiki/Safe_primes_and_unsafe_primes )
+
+( https://rosettacode.org/wiki/100_doors )
+
+( https://rosettacode.org/wiki/Multiplication_tables )
+
+( -- non-rosetta tasks -- )
+
+( -- compute sqrt -- )
+( -- compute other functions like cos, sin, tan -- )
+( -- N-queens -- )
+( -- prime numbers -- )

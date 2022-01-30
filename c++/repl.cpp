@@ -86,6 +86,21 @@ void run_test_mode(string filename, int &maxline, bool &done) {
 	done = true; // done
 }
 
+void run_file(string filename) {
+
+	auto intr = new Interpreter();
+
+	// run initlib to load its words first
+	auto buf = readfile("initlib.txt");
+	intr->addText(buf);
+	intr->run();
+	
+	// run file
+	buf = readfile(filename);
+	intr->addText(buf);
+	intr->run();
+}
+
 int main(int argc, char *argv[]) {
 	bool testMode = false;
 	string filename = "";
@@ -133,11 +148,14 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
-	#if 0
 	else {
-		run_file(filename);
+		try {
+			run_file(filename);
+		}
+		catch (LangError &err) {
+			cout << "*** " << err.what() << " ***\n";
+		}
 	}
-	#endif
 	return 0;
 }
 
