@@ -89,6 +89,14 @@ void Interpreter::do_jump(const string &jumpword) {
 	}
 }
 
+string Interpreter::nextWordOrFail() {
+	auto word = reader.nextWord();
+	if(word == "") {
+		throw LangError("Unexpected end of input");
+	}
+	return word;
+}
+
 void Interpreter::run() {
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
@@ -144,6 +152,31 @@ void Interpreter::run() {
 
 		if(word.substr(0,1) == "@") {
 			// jump target -- ignore
+			continue;
+		}
+
+		if(word == "var") {
+			auto name = nextWordOrFail();
+			auto count = stoi(nextWordOrFail());
+			// must be unique userword
+			if(WORDS.find(name) != WORDS.end()) {
+				throw LangError("Trying to redefine userword " + name);
+			}
+			// reserve count bytes
+			int addr = MEM_NEXT;
+			MEM_NEXT += count;
+			// make name a word that returns the address so set! and ref can use the variable
+			WORDS[name] = Wordlist{to_string(addr)};
+			continue;
+		}
+
+		if(word == "del") {
+			auto name = nextWordOrFail();
+			auto userword = WORDS.find(name);
+			if(userword == WORDS.end()) {
+				throw LangError("Trying to delete non-existant userword " + name);
+			}
+			WORDS.erase(name);
 			continue;
 		}
 

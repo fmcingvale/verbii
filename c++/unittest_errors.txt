@@ -1,0 +1,46 @@
+( -- test that the correct errors are caught and reported -- )
+( -- this is split off from unittest_core since it was -- )
+( -- getting hard to read the results with a mix of errors -- )
+( -- and non-errors -- also now I could add a command line option -- )
+( -- along with -test to say stop on errors for the non-error cases -- )
+		
+( -- another benefit is that the non-error testcases can be run -- )
+( -- without -test and can run to completion -- )
+
+( -- side note: multiline comments are fine normally, they just have to be single line in -- )
+( -- -test mode since it processes one line at a time so it can restart on errors -- )
+
+( cause error in math operations )
+1 +
+2 -
+3 *
+4 /
+clear
++
+
+( integer overflows )
+1073741824
+-1073741824
+1073741823 1 +
+-1073741823 1 -
+583923 1839 *
+583923 -1839 *
+
+( divide by zero )
+4 0 /
+-8 0 /
+
+( parsing errors )
+: aaa 123 456
+( bad comment
+          
+( interpreter errors )
+foobarbadword
+
+( locals underflow )
+10 20 30 
+>L >L >L
+>L
+
+
+

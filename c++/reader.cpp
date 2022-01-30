@@ -32,6 +32,12 @@ void Reader::addText(const string &text) {
 	}	
 }
 
+void Reader::clearAll() {
+	stack.clear();
+	delete wordlist;
+	wordlist = new Wordlist();
+	pos = 0;
+}
 
 // push current context and switch to new context
 void Reader::pushWords(Wordlist *new_words) {

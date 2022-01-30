@@ -10,7 +10,7 @@
 
 ( math +, -, * )
 clear
-10 20 30 40
+10 20 30 40 50
 +
 -
 * 
@@ -20,55 +20,44 @@ clear
 
 ( round down 8.3 -> 8 )
 clear
+639 77 /mod
+77 * +
+-639 77 /mod
+77 * +
 639 77 /
 -639 77 /
-639 77 /mod
--639 77 /mod
 639 77 mod
 -639 77 mod
 
 ( round down 7.8 -> 7 )
 clear
+335 43 /mod
+43 * +
+-335 43 /mod
+43 * +
 335 43 /
 -335 43 /
-335 43 /mod
--335 43 /mod
 335 43 mod
 -335 43 mod
 
 ( round 6.5 -> 6 )
 clear
+403 62 /mod
+62 * +
+-403 62 /mod
+62 * +
 403 62 /
 -403 62 /
-403 62 /mod
--403 62 /mod
 403 62 mod
 -403 62 mod
 
-( numerical limits )
+( numerical limits -- non-error cases )
 clear
 1073741823
 -1073741823
-1073741824
--1073741824
-1073741823 1 +
--1073741823 1 -
-2000000
-1000
-*
-100 0 /
+1073741813 10 +
+-1073741800 23 -
 
-( parsing errors )
-: aaa 123 456
-( bad comment
-          
-( interpreter errors )
-foobarbadword
-
-( stack errors )
-clear
-+
-10 +
 
 ( booleans )
 clear
@@ -130,8 +119,6 @@ L>
 L>
 L>
 
-L>
-
 clear
 10 20 30 40
 >L 
@@ -147,5 +134,20 @@ L>
 L>
 L>
 L>
+
+( var )
+clear
+var x 4
+11 x set! 22 x 1 + set! 33 x 2 + set! 44 x 3 + set!
+x 1 + ref
+x 3 + ref
+x 2 + ref
+x ref
+
+( show redefining after del works )
+clear
+del x   
+var x 1
+
 
 

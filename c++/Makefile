@@ -6,9 +6,9 @@ LIB_OBJS = $(LIB_SRC:.cpp=.o)
 
 TEST_SRC = test_reader.cpp
 
-#CFLAGS = -g 
+CFLAGS = -g 
 #CFLAGS = -pg
-CFLAGS = -O3 -DNDEBUG
+#CFLAGS = -O3 -DNDEBUG
 
 all: test.exe repl.exe
 

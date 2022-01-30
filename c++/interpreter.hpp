@@ -50,6 +50,8 @@ class Interpreter {
 	std::regex *re_integer;
 
 	void do_jump(const std::string &jumpword);
+	// require a non-null word next or throw exception
+	std::string nextWordOrFail();
 };
 
 

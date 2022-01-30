@@ -50,8 +50,9 @@ void repl() {
 // like a non-interactive repl, reads a line at a time, prints it,
 // runs it, then prints the stack. this is intented for unittesting.
 // maxline is maximum line that ran OK last time so i ca restart.
-void run_test_mode(string filename, int &maxline, bool &done) {
+void run_test_mode(string filename, int &maxrunline, bool &done) {
 
+	//cout << "Test mode starting ... " << endl;
 	done = false;
 
 	regex blankline(R"""(^[ \t\r\n]*$)""");
@@ -66,14 +67,19 @@ void run_test_mode(string filename, int &maxline, bool &done) {
 	string line;
 	ifstream fileIn(filename);
 	
-	int lines_read = 0;
+	int runnable_lines = 0; // how many runnable lines have i seen (i.e. not counting blank lines)
 	while(getline(fileIn, line)) {
-		++lines_read;
 		// skip blank lines
 		if(regex_match(line, blankline)) {
 			continue;
 		}
-		if(lines_read <= maxline) {
+		++runnable_lines;
+		//cout << "On runnable line# " << runnable_lines << ", maxrunline " << maxrunline << endl;
+
+		if(runnable_lines <= maxrunline) {
+			//cout << "Skipping line ... " << endl;
+			// counts as running
+			maxrunline = max(maxrunline,runnable_lines);
 			continue;
 		}
 		cout << ">> " << line << endl;
@@ -81,24 +87,46 @@ void run_test_mode(string filename, int &maxline, bool &done) {
 		intr->run();
 		cout << "=> " << intr->reprStack() << endl;
 		// update maxline only after the above runs ok
-		maxline = lines_read;
+		maxrunline = runnable_lines;
 	}
 	done = true; // done
 }
 
-void run_file(string filename) {
-
-	auto intr = new Interpreter();
-
-	// run initlib to load its words first
-	auto buf = readfile("initlib.txt");
-	intr->addText(buf);
-	intr->run();
-	
+void run_file(Interpreter *intr, string filename) {
 	// run file
-	buf = readfile(filename);
+	auto buf = readfile(filename);
 	intr->addText(buf);
 	intr->run();
+}
+
+void backtrace_curframe(Interpreter *intr) {
+	string trace = "";
+	int nr = 7;
+	while(nr--) {
+		auto w = intr->reader.prevWord();
+		if(w == "") {
+			cout << trace << endl;
+			return;
+		}
+		else {
+			trace = w + ' ' + trace;
+		}
+	}
+	cout << trace << endl;
+}
+
+void print_backtrace(Interpreter *intr) {
+	int i=0;
+	while(1) {
+		cout << "FRAME " << i++ << ": ";
+		backtrace_curframe(intr);
+		if(intr->reader.hasPushedWords()) {
+			intr->reader.popWords();
+		}
+		else {
+			return;
+		}
+	}
 }
 
 int main(int argc, char *argv[]) {
@@ -133,27 +161,37 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	else if(testMode) {
-		int maxline = 0;
+		int maxrunline = 0;
 		bool done = false;
 		while(!done) {
 			// when exception occurs, need to restart interpreter, or
 			// weird errors happen. track max line that i ran before so
 			// it restarts on next line
 			try {
-				run_test_mode(filename, maxline, done);
+				run_test_mode(filename, maxrunline, done);
 			}
 			catch (LangError &err) {
 				cout << "*** " << err.what() << " ***\n";
-				++maxline; // skip line that failed last time
+				++maxrunline; // skip line that failed last time
 			}
 		}
 	}
-	else {
+	else {		
+		auto intr = new Interpreter();
+
+		// run initlib to load its words first
+		auto buf = readfile("initlib.txt");
+		intr->addText(buf);
+		intr->run();
+		// don't want initlib in the backtrace history, once it has successfully loaded
+		intr->reader.clearAll();
+
 		try {
-			run_file(filename);
+			run_file(intr, filename);
 		}
 		catch (LangError &err) {
 			cout << "*** " << err.what() << " ***\n";
+			print_backtrace(intr);
 		}
 	}
 	return 0;

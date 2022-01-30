@@ -65,5 +65,5 @@ if >>done <<loop
 
 ( -- compute sqrt -- )
 ( -- compute other functions like cos, sin, tan -- )
-( -- N-queens -- )
+( https://rosettacode.org/wiki/N-queens_problem )
 ( -- prime numbers -- )

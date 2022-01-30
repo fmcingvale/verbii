@@ -18,6 +18,10 @@ class Reader {
 	// add more text to current context
 	void addText(const std::string &text);
 
+	// clear EVERYTHING - can be nice when switching files to get
+	// rid of history that wouldn't be relevant in a backtrace for example
+	void clearAll();
+
 	// push current context and switch to new context.
 	// caller must keep pointer valid until popWords()
 	void pushWords(Wordlist *words);
