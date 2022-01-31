@@ -55,9 +55,9 @@
 >> ( parsing errors )
 => 
 >> : aaa 123 456
-*** End of input while looking for ; ***
+*** Unexpected end of input ***
 >> ( bad comment
-*** End of input looking for ) ***
+*** Unexpected end of input ***
 >> ( interpreter errors )
 => 
 >> foobarbadword

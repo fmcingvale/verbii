@@ -50,8 +50,12 @@ class Interpreter {
 	std::regex *re_integer;
 
 	void do_jump(const std::string &jumpword);
-	// require a non-null word next or throw exception
+
+	// to avoid a lot of 'if word==""' checks, these require a non-empty
+	// or or they throw an exception ... for use in cases where there MUST
+	// be a next/previous word, or its a syntax error
 	std::string nextWordOrFail();
+	std::string prevWordOrFail();
 };
 
 

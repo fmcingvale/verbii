@@ -78,14 +78,11 @@ static void builtin_divmod(Interpreter *intr) {
 }
 
 static void builtin_define_word(Interpreter *intr) {
-	string name = intr->reader.nextWord();
+	string name = intr->nextWordOrFail();
 	Wordlist words;
 	while(1) {
-		string w = intr->reader.nextWord();
-		if(w == "") {
-			throw LangError("End of input while looking for ;");
-		}
-		else if(w == ";") {
+		string w = intr->nextWordOrFail();
+		if(w == ";") {
 			WORDS[name] = words;
 			return;
 		}
@@ -97,11 +94,8 @@ static void builtin_define_word(Interpreter *intr) {
 
 static void builtin_comment(Interpreter *intr) {
 	while(1) {
-		string w = intr->reader.nextWord();
-		if(w == "") {
-			throw LangError("End of input looking for )");
-		}
-		else if(w == ")") {
+		string w = intr->nextWordOrFail();
+		if(w == ")") {
 			return;
 		}
 	}
@@ -169,12 +163,9 @@ static void builtin_fromlocal(Interpreter *intr) {
 
 static void builtin_print_string(Interpreter *intr) {
 	while(true) {
-		auto word = intr->reader.nextWord();
+		auto word = intr->nextWordOrFail();
 		if(word == "\"") {
 			return; // end of string
-		}
-		else if(word == "") {
-			throw LangError("End of input looking for \"");
 		}
 		else {
 			cout << word << " ";

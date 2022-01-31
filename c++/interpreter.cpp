@@ -63,11 +63,8 @@ void Interpreter::do_jump(const string &jumpword) {
 	if(jumpword.substr(0,2) == ">>") {
 		// forward jump, find word (>>NAME -> @NAME)
 		while(true) {
-			auto word = reader.nextWord();
-			if(word == "") {
-				throw LangError("Can't find jump target for " + jumpword);
-			}
-			else if(word.substr(1) == jumpword.substr(2)) {
+			auto word = nextWordOrFail();
+			if(word.substr(1) == jumpword.substr(2)) {
 				return; // found word, stop
 			}
 		}
@@ -75,11 +72,8 @@ void Interpreter::do_jump(const string &jumpword) {
 	else if(jumpword.substr(0,2) == "<<") {
 		// backward jump
 		while(true) {
-			auto word = reader.prevWord();
-			if(word == "") {
-				throw LangError("Can't find jump target for " + jumpword);
-			}
-			else if(word.substr(1) == jumpword.substr(2)) {
+			auto word = prevWordOrFail();
+			if(word.substr(1) == jumpword.substr(2)) {
 				return; // found word, stop
 			}
 		}
@@ -97,6 +91,14 @@ string Interpreter::nextWordOrFail() {
 	return word;
 }
 
+string Interpreter::prevWordOrFail() {
+	auto word = reader.prevWord();
+	if(word == "") {
+		throw LangError("Unable to find previous word");
+	}
+	return word;
+}
+
 void Interpreter::run() {
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
@@ -107,6 +109,9 @@ void Interpreter::run() {
 		// affect the interpreter inner state vs. functions that operate on data that go into
 		// native.cpp. however, that's not always the case. basically, there's nothing magical
 		// about why a word is here vs in native.cpp.
+		// another consideration is how often words run -- better to have the most commonly run
+		// words here since 'if(word == ...)' is a lot faster than a map lookup. But .. again ..
+		// no hard and fast rule about it.
 		if(word == "") {
 			// i could be returning from a word that had no 'return',
 			// so pop words like i would if it were a return
