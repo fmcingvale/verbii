@@ -1,4 +1,6 @@
->> ( unittest_core - test basic language features, roughly in the order that they will usually be implemented )
+>> ( -- unittest_core - test basic language features, roughly in the order that they will usually be implemented -- )
+=> 
+>> ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
 => 
 >> ( very basic check first )
 => 

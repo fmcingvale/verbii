@@ -5,6 +5,7 @@
 */
 
 #include "reader.hpp"
+#include "errors.hpp"
 #include <iostream>
 using namespace std;
 
@@ -87,3 +88,17 @@ const string& Reader::prevWord() {
 		return wordlist->at(--pos);
 	}
 }
+
+void Reader::deletePrevWord() {
+	if(pos == 0) {
+		throw LangError("No previous word to delete!");
+	}
+	wordlist->erase(wordlist->begin()+pos-1);
+	--pos;
+}
+
+void Reader::insertPrevWord(const string &word) {
+	wordlist->insert(wordlist->begin()+pos, word);
+	++pos;
+}
+

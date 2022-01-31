@@ -1,3 +1,7 @@
+>> ( -- test library functions and other basic things not covered in unittest_core -- )
+=> 
+>> ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+=> 
 >> 10 20 30 
 => 10 20 30 
 >> depth
@@ -256,3 +260,62 @@ Hello world!
 >> .showdef foobar
 foobar: 11 22 33 44 ;
 => 10 20 30 40 
+>> clear
+=> 
+>> ( -- lambdas -- )
+=> 
+>> { 4 5 6 }
+=> lambda<0> 
+>> call
+=> 4 5 6 
+>> clear
+=> 
+>> { 1 2 3 { 7 8 9 } 4 5 6 }
+=> lambda<1> 
+>> call
+=> 1 2 3 lambda<2> 4 5 6 
+>> 3 ndrop
+=> 1 2 3 lambda<2> 
+>> call
+=> 1 2 3 7 8 9 
+>> clear
+=> 
+>> { 111 222 333 }
+=> lambda<3> 
+>> dup
+=> lambda<3> lambda<3> 
+>> dup
+=> lambda<3> lambda<3> lambda<3> 
+>> call
+=> lambda<3> lambda<3> 111 222 333 
+>> 3 ndrop
+=> lambda<3> lambda<3> 
+>> call
+=> lambda<3> 111 222 333 
+>> 3 ndrop
+=> lambda<3> 
+>> call
+=> 111 222 333 
+>> clear
+=> 
+>> ( -- simple example of passing lambdas to another function -- )
+=> 
+>> def saything ( lambda -- ) dup ." The " 1 swap call ." is " 2 swap call CR ;
+=> 
+>> ( called with cmd on TOS )
+=> 
+>> { 1 == if >>one ." blue " return @one ." ocean " }
+=> lambda<4> 
+>> { 1 == if >>one ." green " return @one ." grass " }
+=> lambda<4> lambda<5> 
+>> { 1 == if >>one ." red " return @one ." rose " }
+=> lambda<4> lambda<5> lambda<6> 
+>> saything
+The rose is red 
+=> lambda<4> lambda<5> 
+>> saything
+The grass is green 
+=> lambda<4> 
+>> saything
+The ocean is blue 
+=> 

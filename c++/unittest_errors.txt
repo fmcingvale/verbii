@@ -1,4 +1,6 @@
 ( -- test that the correct errors are caught and reported -- )
+( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+
 ( -- this is split off from unittest_core since it was -- )
 ( -- getting hard to read the results with a mix of errors -- )
 ( -- and non-errors -- also now I could add a command line option -- )

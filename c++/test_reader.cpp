@@ -115,6 +115,45 @@ TEST_CASE("reader:push-pop") {
 	CHECK(reader.nextWord() == "1-ddd");
 }
 
+TEST_CASE("reader:insert+delete") {
+	auto reader = Reader();
+	reader.addText("   one  two   three  four   ");
+	CHECK(reader.nextWord() == "one");
+	CHECK(reader.nextWord() == "two");
+	reader.deletePrevWord();
+	CHECK(reader.nextWord() == "three");
+	CHECK(reader.prevWord() == "three");
+	CHECK(reader.prevWord() == "one");
+	CHECK(reader.prevWord() == "");
+
+	CHECK(reader.nextWord() == "one");
+	CHECK(reader.nextWord() == "three");
+	reader.insertPrevWord("new-1");
+	CHECK(reader.nextWord() == "four");
+	CHECK(reader.prevWord() == "four");
+	CHECK(reader.prevWord() == "new-1");
+	CHECK(reader.prevWord() == "three");
+	CHECK(reader.prevWord() == "one");
+	reader.insertPrevWord("new-2");
+	CHECK(reader.prevWord() == "new-2");
+	CHECK(reader.nextWord() == "new-2");
+	CHECK(reader.nextWord() == "one");
+	
+	reader.clearAll();
+	reader.addText("  111   222   333   ");
+	CHECK(reader.nextWord() == "111");
+	reader.deletePrevWord();
+	reader.insertPrevWord("new-1");
+	reader.insertPrevWord("new-2");
+	CHECK(reader.prevWord() == "new-2");
+	CHECK(reader.prevWord() == "new-1");
+	CHECK(reader.prevWord() == "");
+	CHECK(reader.nextWord() == "new-1");
+	CHECK(reader.nextWord() == "new-2");
+	CHECK(reader.nextWord() == "222");
+	CHECK(reader.nextWord() == "333");
+	CHECK(reader.nextWord() == "");
+}
 
 
 	

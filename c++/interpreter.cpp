@@ -101,6 +101,12 @@ void Interpreter::run() {
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
 		const string &word = reader.nextWord();
+		// general note: there is kind of an artificial separation between words that are
+		// recognized here, and words implemented in native.cpp. In priciple, all these words
+		// could be implemented in native.cpp. However, I tend to put words here that directly
+		// affect the interpreter inner state vs. functions that operate on data that go into
+		// native.cpp. however, that's not always the case. basically, there's nothing magical
+		// about why a word is here vs in native.cpp.
 		if(word == "") {
 			// i could be returning from a word that had no 'return',
 			// so pop words like i would if it were a return
@@ -177,6 +183,18 @@ void Interpreter::run() {
 				throw LangError("Trying to delete non-existant userword " + name);
 			}
 			WORDS.erase(name);
+			continue;
+		}
+
+		if(word == "call") {
+			// top of stack must be a tagged wordlist ('lambda')
+			auto val = pop();
+			if(!taggedIsWordlist(val)) {
+				throw LangError("call expects a lambda, but got: " + reprTagged(val));
+			}
+			// now this is just like calling a userword, below
+			// TODO -- tail call elimination??
+			reader.pushWords(taggedToWordlist(val));
 			continue;
 		}
 

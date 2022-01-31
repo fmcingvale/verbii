@@ -39,7 +39,7 @@ void repl() {
 		if (line == "quit") {
 			return;
 		}
-		cout << "LINE: " << line << endl;
+		//cout << "LINE: " << line << endl;
 		intr->addText(line);
 
 		intr->run();

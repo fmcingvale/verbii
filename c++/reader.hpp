@@ -36,6 +36,11 @@ class Reader {
 	const std::string& peekWord();
 	// get previous word or "" if none
 	const std::string& prevWord();
+	// delete the word before the current position in the stream
+	void deletePrevWord();
+	// insert a word before the current position (would be read by 
+	// a subsequent prevWord())
+	void insertPrevWord(const std::string &word);
 
 	protected:
 	Wordlist *wordlist;

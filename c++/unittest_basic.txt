@@ -1,3 +1,5 @@
+( -- test library functions and other basic things not covered in unittest_core -- )
+( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
 
 10 20 30 
 depth
@@ -157,6 +159,41 @@ clear
 
 : foobar 11 22 33 44 ;
 .showdef foobar
+
+clear
+( -- lambdas -- )
+{ 4 5 6 }
+call
+clear
+{ 1 2 3 { 7 8 9 } 4 5 6 }
+call
+3 ndrop
+call
+
+clear
+{ 111 222 333 }
+dup
+dup
+call
+3 ndrop
+call
+3 ndrop
+call
+
+clear
+
+( -- simple example of passing lambdas to another function -- )
+def saything ( lambda -- ) dup ." The " 1 swap call ." is " 2 swap call CR ;
+
+( called with cmd on TOS )
+{ 1 == if >>one ." blue " return @one ." ocean " }
+{ 1 == if >>one ." green " return @one ." grass " }
+{ 1 == if >>one ." red " return @one ." rose " }
+saything
+saything
+saything
+
+
 
 
 

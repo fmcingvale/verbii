@@ -1,6 +1,8 @@
 ( 	
 	demos based on rosetta code tasks -- not necessarily the complete solutions for each, just
 	the parts I found interesting 
+
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
 )
 
 ( https://rosettacode.org/wiki/Fibonacci_sequence )
@@ -50,10 +52,73 @@ if >>done <<loop
 ." Proper divisors of 100: " 100 printProperDivisors CR
 ." Proper divisors of 256: " 256 printProperDivisors CR
 
-
-( --- tasks I want to do but haven't done yet and/or language missing features to make them easier --- )
-
 ( https://rosettacode.org/wiki/Pi )
+
+( -- translated from Python version -- )
+var Q 1 
+var R 1
+var T 1
+var K 1
+var N 1
+var L 1
+var NR 1
+var NN 1
+1 Q set!
+0 R set!
+1 T set!
+1 K set!
+3 N set!
+3 L set!
+0 NR set!
+0 NN set!
+
+def calcPI ( NRDIGITS -- prints digits )
+( NRDIGITS )
+@loop
+4 Q ref * R ref + T ref -
+N ref T ref * < ( 4*q+r-t < n*t )
+if >>true >>false
+@true
+	N ref .
+	( NRDIGITS )
+	1 - dup? 0 == if >>done
+	R ref
+	N ref T ref * - 10 * NR set! ( nr = 10*(r-n*t) )
+	3 Q ref * R ref + 10 * T ref / N ref 10 * - N set! ( n = ((10*(3*q+r))//t)-10*n )
+	Q ref 10 * Q set! ( q *= 10 )
+	NR ref R set! ( r = nr )
+	<<loop
+@false
+	Q ref 2 * R ref + L ref * NR set! ( nr = (2*q+r)*l )
+	K ref 7 * Q ref * 2 + R ref L ref * + T ref L ref * / NN set! ( nn = (q*(7*k)+2+(r*l))//(t*l) )
+	Q ref K ref * Q set! ( q *= k )
+	T ref L ref * T set! ( t *= l )
+	L ref 2 + L set! ( l += 2 )
+	K ref 1 + K set! ( k += 1 )
+	NN ref N set! ( n = nn )
+	NR ref R set! ( r = nr )
+	<<loop
+@done ;
+( -- this above method can only reach 3 digits of PI without bignum support -- )
+." 3 digits of PI ... " 3 calcPI CR
+
+del Q del R del T del K del N del L del NR del NN
+
+( -- https://rosettacode.org/wiki/Anonymous_recursion -- )
+
+( --- this seemed like a good one to add, after adding lambdas to the language. note the 
+		rosetta task says to calculate the fibonacci sequence, but since i already 
+		did that above, i'm doing a countdown instead -- )
+
+( -- this is true anonymous recursion, no names are defined ... 
+		done in Y-combinator-ish fashion where the lambdas passe itself as 
+		an argument to itself -- )
+		
+." Print 20 .. 1, with anonymous recursion: "
+{ ( lambda N -- ) dup? 0 == if >>done dup . 1 - over call @done }
+20 over call CR
+
+( --- tasks I want to do but haven't done yet and/or language missing features to make them easier/possible --- )
 
 ( https://rosettacode.org/wiki/Safe_primes_and_unsafe_primes )
 
@@ -67,3 +132,48 @@ if >>done <<loop
 ( -- compute other functions like cos, sin, tan -- )
 ( https://rosettacode.org/wiki/N-queens_problem )
 ( -- prime numbers -- )
+
+( -- some experiments .. need to categorize these later -- )
+
+( -- it sort of depends on the definition, but 'currying' isn't really
+	applicable in the sense that without formal argument lists, there is
+	no such thing as partial function application.
+
+	however, currying in the sense of making a function that creates a wrapped
+	version of another function can done -- )
+
+( -- for example, builtin functions like +, and even user-defined words, cannot
+	be passed to functions expecting a lambda. however, it is trivial to wrap those
+	functions in a lambda to make it work .. i.e. { + } makes the builtin function +
+	into a lambda that can be passed -- )
+
+: make-add-10 { 10 + } ; ( function returning a wrapped function )
+
+var adder 1 ( can save to a variable and call )
+make-add-10 adder set!
+
+." Expect 110: " 100 adder ref call . CR
+
+{ 20 + } adder set! ( or just create it directly without make-add-10 )
+." Expect 120: " 100 adder ref call . CR
+
+( shortcut local names )
+: L0 LP ;
+: L1 LP 1 + ;
+
+: repeat ( lambda NR -- call lambda NR times }
+	( caller might have args to lambda stashed below lambda OR lambda might affect stack,
+  	so store my params in locals -- a correctly written lambda won't disturb my locals )
+	>L >L ( L1 = NR, L0 = lambda )
+	@loop
+	L1 ref 0 == if >>done ( NR == 0? )
+	L0 ref call ( call lambda, now with access to any args that were below it )
+	L1 ref 1 - L1 set! ( NR -= 1 ) <<loop
+	@done LP 2 + LP! ; ( remove locals )
+
+: nmax ( xn ... x1 NR -- max of NR numbers )
+	{ max } swap 1 - repeat ; ( call 'max' NR-1 times )
+
+." Expect 50: "
+5 10 50 30 -20 8 19 41 0 12 10 nmax . CR
+

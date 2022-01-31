@@ -197,6 +197,56 @@ static void builtin_show_def(Interpreter *intr) {
 	cout << ";\n";
 }
 
+static void builtin_make_lambda(Interpreter *intr) {
+	// turn { ... } into an anonymous wordlist
+	//
+	// the FIRST time I see { .. }, create a tagged wordlist,
+	// REWRITE the { ... } into the tagged value and push the tagged
+	// value to the stack.
+	//
+	// each SUBSEQUENT time the same code runs, the tagged value will be
+	// in the wordlist, so will be pushed to the stack.
+	//
+	// from the perspective of the user, the same thing happened both times --
+	// the tagged lambda was pushed to the stack, ready to be called, stored, etc.
+	
+	// { was just read -- read the words until }
+
+	// TODO -- need to unify handling/storage of wordlists - right now WORDS holds
+	// Wordlists by value and tagging is done by pointer.
+	auto wordlist = new Wordlist();
+	int nesting = 1;
+	while(true) {
+		auto word = intr->nextWordOrFail();
+		// delete the { ... } as I read it -- will replace it with a tagged wordlist
+		intr->reader.deletePrevWord();
+		if(word == "{") {
+			// if I find inner lambdas, just copy them for now and later when they are run, 
+			// this same process will happen for them
+			++nesting;
+			wordlist->push_back(word);
+		}
+		else if(word == "}") {
+			if(--nesting > 0) {
+				wordlist->push_back(word);
+				continue;
+			}
+			// new wordlist ('lambda') does NOT exist in WORDS; it only exists
+			// as a tagged value that must be called.
+			tagged t = makeTaggedWordlist(wordlist);
+			// put tagged value into wordlist, replacing the { ... }, so subsequent
+			// calls will push the tagged value
+			intr->reader.insertPrevWord(to_string(t.v));
+			// the first time, I have to push the tagged value here
+			intr->push(t);
+			return;
+		}
+		else {
+			wordlist->push_back(word);
+		}
+	}
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", builtin_add},
 	{"-", builtin_subtract},
@@ -226,5 +276,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"set!", builtin_set},
 	{".\"", builtin_print_string},
 	{".showdef", builtin_show_def},
+	{"{", builtin_make_lambda},
 };
 

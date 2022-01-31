@@ -1,3 +1,5 @@
+( -- default library, loaded at startup -- )
+( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
 
 def . repr 32 .c ;
 def CR ( -- , prints CR LF ) 10 .c 13 .c ;
