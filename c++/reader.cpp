@@ -7,6 +7,7 @@
 #include "reader.hpp"
 #include "errors.hpp"
 #include <iostream>
+#include <sstream>
 using namespace std;
 
 Reader::Reader() {
@@ -16,21 +17,15 @@ Reader::Reader() {
 
 // add more text to current context
 void Reader::addText(const string &text) {
-	size_t i=0;
-	while(i < text.length()) {
-		while(i < text.length() && isspace(text[i])) {
-			++i;
+	istringstream input(text);
+	string word;
+	while(true) {
+		input >> word; // read words, delimited by whitespace
+		if(input.fail()) {
+			return; // reached end of file (probably some whitespace was left, so failed to read a word)
 		}
-
-		string word;
-		while(i < text.length() && !isspace(text[i])) {
-			word.push_back(text[i++]);
-		}
-
-		if(word.size() > 0) {
-			wordlist->push_back(word);
-		}
-	}	
+		wordlist->push_back(word);
+	}
 }
 
 void Reader::clearAll() {

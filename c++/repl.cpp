@@ -23,14 +23,18 @@ string readfile(string filename) {
 	return buf;
 }
 
-void repl() {
+void repl(bool noinit) {
 	auto intr = make_unique<Interpreter>();
 	
-	// run initlib to load its words first
-	auto buf = readfile("initlib.txt");
-	intr->addText(buf);
-	intr->run();
-	
+	// run initlib to load its words first, unless -noinit was given
+	if(!noinit) {
+		auto buf = readfile("initlib.txt");
+		intr->addText(buf);
+		intr->run();
+		// don't want initlib in the backtrace history, once it has successfully loaded
+		intr->reader.clearAll();
+	}
+
 	while(1) {
 		printf(">> ");
 		fflush(stdout);
@@ -50,7 +54,7 @@ void repl() {
 // like a non-interactive repl, reads a line at a time, prints it,
 // runs it, then prints the stack. this is intented for unittesting.
 // maxline is maximum line that ran OK last time so i ca restart.
-void run_test_mode(string filename, int &maxrunline, bool &done) {
+void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 
 	//cout << "Test mode starting ... " << endl;
 	done = false;
@@ -59,11 +63,15 @@ void run_test_mode(string filename, int &maxrunline, bool &done) {
 
 	auto intr = new Interpreter();
 
-	// run initlib to load its words first
-	auto buf = readfile("initlib.txt");
-	intr->addText(buf);
-	intr->run();
-	
+	if(!noinit) {
+		// run initlib to load its words first
+		auto buf = readfile("initlib.txt");
+		intr->addText(buf);
+		intr->run();
+		// don't want initlib in the backtrace history, once it has successfully loaded
+		intr->reader.clearAll();
+	}
+
 	string line;
 	ifstream fileIn(filename);
 	
@@ -132,9 +140,13 @@ void print_backtrace(Interpreter *intr) {
 int main(int argc, char *argv[]) {
 	bool testMode = false;
 	string filename = "";
+	bool noinit = false;
 	for(int i=1; i<argc; ++i) {
 		if(!strcmp(argv[i], "-test")) {
 			testMode = true;
+		}
+		else if(!strcmp(argv[i], "-noinit")) {
+			noinit = true;
 		}
 		else if(fs::exists(argv[i])) {
 			filename = argv[i];
@@ -152,7 +164,7 @@ int main(int argc, char *argv[]) {
 			// (continuing after the exception gives weird errors so something
 			// is getting corrupted in the interpreter)
 			try {
-				repl();
+				repl(noinit);
 				exited = true;
 			}
 			catch (LangError &err) {
@@ -168,7 +180,7 @@ int main(int argc, char *argv[]) {
 			// weird errors happen. track max line that i ran before so
 			// it restarts on next line
 			try {
-				run_test_mode(filename, maxrunline, done);
+				run_test_mode(filename, noinit, maxrunline, done);
 			}
 			catch (LangError &err) {
 				cout << "*** " << err.what() << " ***\n";
@@ -180,11 +192,13 @@ int main(int argc, char *argv[]) {
 		auto intr = new Interpreter();
 
 		// run initlib to load its words first
-		auto buf = readfile("initlib.txt");
-		intr->addText(buf);
-		intr->run();
-		// don't want initlib in the backtrace history, once it has successfully loaded
-		intr->reader.clearAll();
+		if(!noinit) {
+			auto buf = readfile("initlib.txt");
+			intr->addText(buf);
+			intr->run();
+			// don't want initlib in the backtrace history, once it has successfully loaded
+			intr->reader.clearAll();
+		}
 
 		try {
 			run_file(intr, filename);
