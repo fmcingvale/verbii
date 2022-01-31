@@ -155,6 +155,8 @@ clear
 10 20 30 40
 .S 
 
+: foobar 11 22 33 44 ;
+.showdef foobar
 
 
 

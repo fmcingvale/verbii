@@ -182,6 +182,21 @@ static void builtin_print_string(Interpreter *intr) {
 	}
 }
 
+static void builtin_show_def(Interpreter *intr) {
+	auto name = intr->nextWordOrFail();
+	auto word = WORDS.find(name);
+	if(word == WORDS.end()) {
+		cout << "No such word: " << name << endl;
+		return;
+	}
+	auto wordlist = word->second;
+	cout << name << ": ";
+	for(auto w : wordlist) {
+		cout << w << " ";
+	}
+	cout << ";\n";
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", builtin_add},
 	{"-", builtin_subtract},
@@ -210,5 +225,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
 	{".\"", builtin_print_string},
+	{".showdef", builtin_show_def},
 };
 
