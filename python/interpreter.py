@@ -57,6 +57,7 @@ class Interpreter(object):
 
 		obj = self.RAM[self.SP]
 		self.SP += 1
+		return obj
 
 	def reprStack(self) -> str:
 		# TODO -- fixme to print objects like in C++ version
@@ -88,6 +89,7 @@ class Interpreter(object):
 		return word
 		
 	def run(self) -> None:
+		from native import BUILTINS
 		# run one word at a time in a loop, with the reader position as the continuation		
 		while True:
 			# see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
@@ -104,6 +106,25 @@ class Interpreter(object):
 
 			if self.re_integer.match(word):
 				self.push(int(word))
+				continue
+
+			if word in BUILTINS:
+				argtypes,func = BUILTINS[word]
+				if (self.SP + len(argtypes)) > self.SP_EMPTY:
+					raise LangError("Stack underflow")
+
+				args = []
+				for t in reversed(argtypes):
+					v = self.pop()
+					print("POPPED",v)
+					if type(v) != t:
+						raise Exception("Expecting type " + str(t) + " but got type " + str(type(v)) + " ({0})".format(v))
+
+					args.insert(0,v)
+
+				# func gets Interpreter as first arg
+				args.insert(0,self)
+				func(*args)
 				continue
 
 			raise LangError("Unknown word " + word)
