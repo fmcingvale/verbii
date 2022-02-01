@@ -27,7 +27,7 @@ class Reader {
 	void pushWords(Wordlist *words);
 	// return to previous context, discarding current context
 	void popWords();
-	// are their wordlists left on the stack?
+	// are there wordlists left on the stack?
 	bool hasPushedWords();
 
 	// get next word or "" if none
