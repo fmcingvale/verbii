@@ -100,6 +100,23 @@ class Interpreter(object):
 	
 		return word
 		
+	def do_jump(self, jumpword: str):
+		"take word like '>>NAME' or '<<NAME' and jump to '@NAME'"
+		if jumpword[:2] == ">>":
+			# forward jump, find word (>>NAME -> @NAME)
+			while True:
+				word = self.nextWordOrFail()
+				if word[1:] == jumpword[2:]:
+					return # found word, stop
+		elif jumpword[:2] == "<<":
+			# backward jump
+			while True:
+				word = self.prevWordOrFail()
+				if word[1:] == jumpword[2:]:
+					return # found word, stop
+		else:
+			raise LangError("Bad jumpword " + jumpword)
+
 	def run(self) -> None:
 		from native import BUILTINS
 		# run one word at a time in a loop, with the reader position as the continuation		
@@ -128,6 +145,32 @@ class Interpreter(object):
 			
 				continue
 		
+			if word == "if":
+				# true jump is required
+				true_jump = self.reader.nextWord()
+				# false word is optional
+				if self.reader.peekWord()[:2] == "<<" or self.reader.peekWord()[:2] == ">>":
+					false_jump = self.reader.nextWord()
+				else:
+					false_jump = None
+			
+				cond = self.pop()
+				# these don't run the jump, they just reposition the reader
+				if cond:
+					self.do_jump(true_jump)
+				elif false_jump is not None:
+					self.do_jump(false_jump)
+			
+				continue
+
+			if word[:2] == ">>" or word[:2] == "<<":
+				self.do_jump(word)
+				continue
+
+			if word[0] == "@":
+				# jump target -- ignore
+				continue
+
 			if word in BUILTINS:
 				argtypes,func = BUILTINS[word]
 				if (self.SP + len(argtypes)) > self.SP_EMPTY:
