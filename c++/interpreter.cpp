@@ -124,6 +124,7 @@ void Interpreter::run() {
 			}
 		}
 		smatch match;
+		// integers just get pushed to the stack
 		if(regex_match(word, match, *re_integer)) {
 			push(intToTagged(stoi(word)));
 			continue;

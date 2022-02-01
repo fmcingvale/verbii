@@ -6,6 +6,7 @@ from __future__ import annotations
 
 	This mirrors the C++ implentation, but hopefully more Pythonically.
 """
+from errors import LangError
 class Reader(object):
 	def __init__(self):
 		self.clearAll()
@@ -63,7 +64,7 @@ class Reader(object):
 	def deletePrevWord(self):
 		"delete the word before the current position in the stream"
 		if self.pos == 0: 
-			raise Exception("No previous word to delete!")
+			raise LangError("No previous word to delete!")
 		
 		del self.wordlist[self.pos-1]
 		self.pos -= 1

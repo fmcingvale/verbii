@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 	Reader unittests
 
@@ -9,8 +10,6 @@
 
 	This implements the same tests as the C++ version.
 """
-from asyncore import read
-import re
 import unittest
 from reader import Reader
 

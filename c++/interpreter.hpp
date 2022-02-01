@@ -52,7 +52,7 @@ class Interpreter {
 	void do_jump(const std::string &jumpword);
 
 	// to avoid a lot of 'if word==""' checks, these require a non-empty
-	// or or they throw an exception ... for use in cases where there MUST
+	// word or they throw an exception ... for use in cases where there MUST
 	// be a next/previous word, or its a syntax error
 	std::string nextWordOrFail();
 	std::string prevWordOrFail();
