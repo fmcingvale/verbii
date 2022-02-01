@@ -1,3 +1,4 @@
 *.a
 *.o
 *.exe
+python/__pycache__/
