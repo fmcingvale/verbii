@@ -59,6 +59,7 @@ string Interpreter::reprStack() const {
 	return s;
 }
 
+// take word like '>>NAME' or '<<NAME' and jump to '@NAME'
 void Interpreter::do_jump(const string &jumpword) {
 	if(jumpword.substr(0,2) == ">>") {
 		// forward jump, find word (>>NAME -> @NAME)
@@ -132,7 +133,7 @@ void Interpreter::run() {
 
 		if(word == "return") {
 			// return from word by popping back to previous wordlist (don't call at toplevel)
-			if(reader.hasPushedWords()) {
+			if(reader.hasPushedWords()) {	
 				reader.popWords();
 			}
 			continue;
