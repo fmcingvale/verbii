@@ -113,7 +113,7 @@ static void builtin_greater(Interpreter *intr) {
 	pushBool(intr, a>b);
 }
 
-/* ( obj addr -- ) - save obj to addr */
+// ( obj addr -- ) - save obj to addr
 static void builtin_set(Interpreter *intr) {
 	int addr = popInt(intr);
 	tagged t = intr->pop();
@@ -123,6 +123,7 @@ static void builtin_set(Interpreter *intr) {
 	intr->RAM[addr] = t;
 }
 
+// ( addr -- obj ) load obj from addr and push to stack
 static void builtin_ref(Interpreter *intr) {
 	int addr = popInt(intr);
 	if(addr < 0 || (unsigned int)addr >= intr->RAM.size()) {
@@ -131,6 +132,7 @@ static void builtin_ref(Interpreter *intr) {
 	intr->push(intr->RAM[addr]);
 }
 
+// set stack pointer from addr on stack
 static void builtin_setsp(Interpreter *intr) {
 	int addr = popInt(intr);
 	if(addr < intr->SP_MIN || addr > intr->SP_EMPTY) {
@@ -139,6 +141,7 @@ static void builtin_setsp(Interpreter *intr) {
 	intr->SP = addr;
 }
 
+// set locals pointer from addr on stack
 static void builtin_setlp(Interpreter *intr) {
 	int addr = popInt(intr);
 	if(addr < intr->LP_MIN || addr > intr->LP_EMPTY) {
@@ -147,6 +150,7 @@ static void builtin_setlp(Interpreter *intr) {
 	intr->LP = addr;
 }
 
+// pop top of stack and push to locals
 static void builtin_tolocal(Interpreter *intr) {
 	if(intr->LP <= intr->LP_MIN) {
 		throw LangError("Locals overflow");
@@ -154,6 +158,7 @@ static void builtin_tolocal(Interpreter *intr) {
 	intr->RAM[--intr->LP] = intr->pop();
 }
 
+// pop top locals and push to stack
 static void builtin_fromlocal(Interpreter *intr) {
 	if(intr->LP >= intr->LP_EMPTY) {
 		throw LangError("Locals underflow");
@@ -161,6 +166,7 @@ static void builtin_fromlocal(Interpreter *intr) {
 	intr->push(intr->RAM[intr->LP++]);
 }
 
+// ." some string here " -- print string
 static void builtin_print_string(Interpreter *intr) {
 	while(true) {
 		auto word = intr->nextWordOrFail();
