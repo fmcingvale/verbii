@@ -3,6 +3,7 @@
 - Simple - any languages features that become un-simple are out.
 - Small & easy to port - ability to run on many host languages for fun/comparison purposes.
 	- Goal: Source for any particular port should be around 1000 lines or less of host language code (as counted by cloc), not counting any unittests in the host language.
+	- C++ implementation currently at 780 lines of native code, excluding unittests.
 - Interpreted-only - no parsing, compiling, etc. Run directly from source texts. In addition to simplicity, this allows things like forward-refererences for free, since nothing is evaluated until runtime. Plus it allows easy source-level introspection since nothing is translated, and can even do interesting things like rewrite the source at runtime.
 
 ## Types:
