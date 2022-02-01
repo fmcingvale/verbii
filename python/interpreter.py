@@ -19,6 +19,8 @@ class Interpreter(object):
 	RAM_SIZE = (1<<24)
 	STACK_SIZE = (1<<16)
 	LOCALS_SIZE = (1<<10)
+	MAX_INT_31 = (1<<30) - 1
+	MIN_INT_31 = -MAX_INT_31
 
 	def __init__(self):
 		self.reader = Reader()
@@ -39,6 +41,9 @@ class Interpreter(object):
 
 		self.re_integer = re.compile(r"""(^[+\-]?[0-9]+$)""")
 		
+		# user-defined words
+		self.WORDS = {}
+
 	def addText(self, text):
 		self.reader.addText(text)
 
@@ -50,6 +55,13 @@ class Interpreter(object):
 
 		self.SP -= 1
 		self.RAM[self.SP] = obj
+
+	def pushInt(self, a):
+		"like push but checks for valid integer range"
+		if a > Interpreter.MAX_INT_31 or a < Interpreter.MIN_INT_31:
+			raise LangError("Integer overflow")
+
+		self.push(a)
 
 	def pop(self):
 		if self.SP >= self.SP_EMPTY:
@@ -105,9 +117,17 @@ class Interpreter(object):
 					return
 
 			if self.re_integer.match(word):
-				self.push(int(word))
+				# integers just get pushed to the stack
+				self.pushInt(int(word))
 				continue
 
+			if word == "return":
+				# return from word by popping back to previous wordlist (don't call at toplevel)
+				if self.reader.hasPushedWords():
+					self.reader.popWords()
+			
+				continue
+		
 			if word in BUILTINS:
 				argtypes,func = BUILTINS[word]
 				if (self.SP + len(argtypes)) > self.SP_EMPTY:
@@ -116,8 +136,8 @@ class Interpreter(object):
 				args = []
 				for t in reversed(argtypes):
 					v = self.pop()
-					print("POPPED",v)
-					if type(v) != t:
+					#print("POPPED",v,t)
+					if type(v) != t and t != object:
 						raise Exception("Expecting type " + str(t) + " but got type " + str(type(v)) + " ({0})".format(v))
 
 					args.insert(0,v)
@@ -127,5 +147,12 @@ class Interpreter(object):
 				func(*args)
 				continue
 
+			if word in self.WORDS:
+				# TODO -- tail call elimination
+			
+				# execute word by pushing its wordlist and continuing
+				self.reader.pushWords(self.WORDS[word])
+				continue;
+	
 			raise LangError("Unknown word " + word)
 			

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from errors import LangError
 """
 	repl - run code interactively, run unittests, or run programs.
 
@@ -20,9 +21,12 @@ def repl():
 		
 		intr.addText(line)
 
-		intr.run()
-		print("=> " + intr.reprStack())
-		
+		try:
+			intr.run()
+			print("=> " + intr.reprStack())
+		except LangError as exc:
+			print("*** " + exc.msg + " ***")
+			
 if __name__ == '__main__':
 	repl()
 	
