@@ -187,7 +187,7 @@ void Interpreter::run() {
 			auto name = nextWordOrFail();
 			auto userword = WORDS.find(name);
 			if(userword == WORDS.end()) {
-				throw LangError("Trying to delete non-existant userword " + name);
+				throw LangError("Trying to delete non-existent userword " + name);
 			}
 			WORDS.erase(name);
 			continue;

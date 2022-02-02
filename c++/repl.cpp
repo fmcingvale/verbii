@@ -86,7 +86,7 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 
 		if(runnable_lines <= maxrunline) {
 			//cout << "Skipping line ... " << endl;
-			// counts as running
+			// counts as running, since if i fail i want to restart at the NEXT line
 			maxrunline = max(maxrunline,runnable_lines);
 			continue;
 		}
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
 		else if(!strcmp(argv[i], "-noinit")) {
 			noinit = true;
 		}
-		else if(fs::exists(argv[i])) {
+		else if(filename == "" && fs::exists(argv[i])) {
 			filename = argv[i];
 		}
 		else {

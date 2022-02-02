@@ -265,35 +265,35 @@ foobar: 11 22 33 44 ;
 >> ( -- lambdas -- )
 => 
 >> { 4 5 6 }
-=> lambda<0> 
+=> <lambda> 
 >> call
 => 4 5 6 
 >> clear
 => 
 >> { 1 2 3 { 7 8 9 } 4 5 6 }
-=> lambda<1> 
+=> <lambda> 
 >> call
-=> 1 2 3 lambda<2> 4 5 6 
+=> 1 2 3 <lambda> 4 5 6 
 >> 3 ndrop
-=> 1 2 3 lambda<2> 
+=> 1 2 3 <lambda> 
 >> call
 => 1 2 3 7 8 9 
 >> clear
 => 
 >> { 111 222 333 }
-=> lambda<3> 
+=> <lambda> 
 >> dup
-=> lambda<3> lambda<3> 
+=> <lambda> <lambda> 
 >> dup
-=> lambda<3> lambda<3> lambda<3> 
+=> <lambda> <lambda> <lambda> 
 >> call
-=> lambda<3> lambda<3> 111 222 333 
+=> <lambda> <lambda> 111 222 333 
 >> 3 ndrop
-=> lambda<3> lambda<3> 
+=> <lambda> <lambda> 
 >> call
-=> lambda<3> 111 222 333 
+=> <lambda> 111 222 333 
 >> 3 ndrop
-=> lambda<3> 
+=> <lambda> 
 >> call
 => 111 222 333 
 >> clear
@@ -305,17 +305,17 @@ foobar: 11 22 33 44 ;
 >> ( called with cmd on TOS )
 => 
 >> { 1 == if >>one ." blue " return @one ." ocean " }
-=> lambda<4> 
+=> <lambda> 
 >> { 1 == if >>one ." green " return @one ." grass " }
-=> lambda<4> lambda<5> 
+=> <lambda> <lambda> 
 >> { 1 == if >>one ." red " return @one ." rose " }
-=> lambda<4> lambda<5> lambda<6> 
+=> <lambda> <lambda> <lambda> 
 >> saything
 The rose is red 
-=> lambda<4> lambda<5> 
+=> <lambda> <lambda> 
 >> saything
 The grass is green 
-=> lambda<4> 
+=> <lambda> 
 >> saything
 The ocean is blue 
 => 

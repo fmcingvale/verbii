@@ -117,7 +117,7 @@ string reprTagged(tagged t) {
 		return taggedToBool(t) ? "true" : "false";
 	}
 	else if(taggedIsWordlist(t)) {
-		return string("lambda<") + to_string(getTaggedPointerIndex(t)) + ">";
+		return "<lambda>";
 	}
 	else {
 		throw LangError("Unknown type in reprTagged: " + to_string(t.v));
