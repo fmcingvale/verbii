@@ -1,4 +1,6 @@
 from __future__ import annotations
+from ast import Call
+
 """
 	Interpreter - runs code.
 
@@ -14,6 +16,11 @@ from __future__ import annotations
 import re
 from errors import LangError
 from reader import Reader
+
+class CallableWordlist(object):
+	"from { ... } - a lambda/anonymous word"
+	def __init__(self, wordlist):
+		self.wordlist = wordlist
 
 class Interpreter(object):
 	RAM_SIZE = (1<<24)
@@ -72,11 +79,12 @@ class Interpreter(object):
 		return obj
 
 	def reprStack(self) -> str:
+		from native import reprObject
 		# TODO -- fixme to print objects like in C++ version
 		s = ""
 		i = self.SP_EMPTY-1
 		while i >= self.SP:
-			s += str(self.RAM[i]) + ' '
+			s += reprObject(self.RAM[i]) + ' '
 			i -= 1
 
 		return s
@@ -171,6 +179,41 @@ class Interpreter(object):
 				# jump target -- ignore
 				continue
 
+			if word == "var":
+				name = self.nextWordOrFail()
+				count = int(self.nextWordOrFail())
+				# must be unique userword
+				if name in self.WORDS:
+					raise LangError("Trying to redefine userword " + name)
+			
+				# reserve count bytes
+				addr = self.MEM_NEXT
+				self.MEM_NEXT += count
+				# make name a word that returns the address so set! and ref can use the variable
+				self.WORDS[name] = [str(addr)]
+				continue
+		
+			if word == "del":
+				name = self.nextWordOrFail()
+				if name not in self.WORDS:
+					raise LangError("Trying to delete non-existent userword " + name)
+				
+				del self.WORDS[name]
+				continue
+		
+			if word == "call":
+				from native import reprObject
+
+				# top of stack must be a CallableWordlist
+				obj = self.pop()
+				if not isinstance(obj,CallableWordlist):
+					raise LangError("call expects a lambda, but got: " + reprObject(obj))
+
+				# now this is just like calling a userword, below
+				# TODO -- tail call elimination??
+				self.reader.pushWords(obj.wordlist)
+				continue
+		
 			if word in BUILTINS:
 				argtypes,func = BUILTINS[word]
 				if (self.SP + len(argtypes)) > self.SP_EMPTY:

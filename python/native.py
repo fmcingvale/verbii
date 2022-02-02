@@ -6,6 +6,7 @@
 	Ported from C++ version
 """
 from math import floor
+from typing import Callable
 from errors import LangError
 from interpreter import Interpreter
 
@@ -100,6 +101,75 @@ def builtin_fromlocal(I: Interpreter):
 	I.push(I.RAM[I.LP])
 	I.LP += 1
 
+def reprObject(obj):
+	from interpreter import CallableWordlist
+	if type(obj) is int:
+		return str(obj)
+	elif obj is True:
+		return "true"
+	elif obj is False:
+		return "false"
+	elif isinstance(obj, CallableWordlist):
+		return "<lambda>"
+	else:
+		raise LangError("Don't know how to print object: " + str(obj))
+
+def builtin_showdef(I):
+	name = I.nextWordOrFail()
+	if name not in I.WORDS:
+		print("No such word: " + name)
+		return
+
+	wordlist = I.WORDS[name]
+	sys.stdout.write(name + ": ")
+	for w in wordlist:
+		sys.stdout.write(w + " ")
+
+	print(";")
+	
+def builtin_make_lambda(intr: Interpreter):
+	"This is straight from the C++ version; see comments there. For brevity I omitted most of them here"
+	from interpreter import CallableWordlist
+	wordlist = []
+	nesting = 1
+	while True:
+		word = intr.nextWordOrFail()
+		# delete the { ... } as I read it -- will replace it with a callable object
+		intr.reader.deletePrevWord()
+		if word == "{":
+			# if I find inner lambdas, just copy them for now and later when they are run, 
+			# this same process will happen for them
+			nesting += 1
+			wordlist.append(word)
+		
+		elif word == "}":
+			nesting -= 1
+			if nesting > 0:
+				wordlist.append(word)
+				continue
+			
+			# create CallableWordlist from wordlist
+			# put in interpreter memory so I can push its address on the stack
+			#addr = intr.MEM_NEXT
+			#intr.MEM_NEXT += 1
+			#if intr.MEM_NEXT > intr.MEM_LAST:
+			#	raise LangError("Out of memory!")
+
+			#intr.RAM[addr] = CallableWordlist(wordlist)
+			_callable = CallableWordlist(wordlist)
+			# replace { ... } in wordlist with address so a subsequent 'call'
+			# will find it
+			#intr.reader.insertPrevWord(str(addr))
+			intr.reader.insertPrevWord(_callable)
+			# the first time I see { ... }, I have to push the tagged value here.
+			# every subsequent time, the address will be pushed by the wordlist i just modified
+			intr.push(_callable)
+			#print("MADE LAMBDA, addr = ",addr)
+			return
+		
+		else:
+			wordlist.append(word)
+
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -111,7 +181,7 @@ BUILTINS = {
 	'>': ([int,int], lambda I,a,b: I.push(a>b)),
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
 	# object means any type
-	'repr': ([object], lambda I,o: sys.stdout.write(str(o))),
+	'repr': ([object], lambda I,o: sys.stdout.write(reprObject(o))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
 	'(': ([], builtin_comment),
@@ -126,5 +196,7 @@ BUILTINS = {
 	'LP!': ([int], builtin_setlp),
 	'>L': ([], builtin_tolocal),
 	'L>': ([], builtin_fromlocal),
+	'.showdef': ([], builtin_showdef),
+	'{': ([], builtin_make_lambda),
 }
 
