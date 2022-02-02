@@ -14,6 +14,8 @@
 using namespace std;
 namespace fs = std::filesystem;
 
+string INITLIB = "../lib/init.txt";
+
 string readfile(string filename) {
 	ifstream fileIn(filename);
 	string line, buf;
@@ -28,7 +30,7 @@ void repl(bool noinit) {
 	
 	// run initlib to load its words first, unless -noinit was given
 	if(!noinit) {
-		auto buf = readfile("initlib.txt");
+		auto buf = readfile(INITLIB);
 		intr->addText(buf);
 		intr->run();
 		// don't want initlib in the backtrace history, once it has successfully loaded
@@ -65,7 +67,7 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 
 	if(!noinit) {
 		// run initlib to load its words first
-		auto buf = readfile("initlib.txt");
+		auto buf = readfile(INITLIB);
 		intr->addText(buf);
 		intr->run();
 		// don't want initlib in the backtrace history, once it has successfully loaded
@@ -193,7 +195,7 @@ int main(int argc, char *argv[]) {
 
 		// run initlib to load its words first
 		if(!noinit) {
-			auto buf = readfile("initlib.txt");
+			auto buf = readfile(INITLIB);
 			intr->addText(buf);
 			intr->run();
 			// don't want initlib in the backtrace history, once it has successfully loaded
