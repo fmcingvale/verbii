@@ -9,9 +9,25 @@ from errors import LangError
 """
 from interpreter import Interpreter
 import sys, re, os
-def repl():
-	"Run interactively"
+
+INITLIB = "../lib/init.txt"
+
+def new_interpreter(noinit: bool):
+	"convenience to start interpreter and optionally load init lib"
 	intr = Interpreter()
+	
+	if not noinit:
+		# run initlib to load its words first
+		intr.addText(open(INITLIB,'r').read())
+		intr.run()
+		# don't want initlib in the backtrace history, once it has successfully loaded
+		intr.reader.clearAll()
+
+	return intr
+
+def repl(noinit: bool):
+	"Run interactively"
+	intr = new_interpreter(noinit)
 	
 	while(True):
 		sys.stdout.write(">> ")
@@ -27,17 +43,12 @@ def repl():
 			print("=> " + intr.reprStack())
 		except LangError as exc:
 			print("*** " + exc.msg + " ***")
-			
-def run_test_mode(filename: str, noinit: bool, maxlinerun: int):
-	intr = Interpreter()
 
-	if not noinit:
-		# run initlib to load its words first
-		intr.addText(open("initlib.txt",'r').read())
-		intr.run()
-		# don't want initlib in the backtrace history, once it has successfully loaded
-		intr.reader.clearAll()
-	
+def run_test_mode(filename: str, noinit: bool, status: dict):
+	"""read one line at a time from file and run, printing results and stack. 
+	used for unit testing"""
+	intr = new_interpreter(noinit)
+
 	re_blankline = re.compile(r"""(^[ \t\r\n]*$)""")
 	fileIn = open(filename,'r')
 	runnable_lines = 0 # how many lines have I seen that are non-blank
@@ -46,19 +57,24 @@ def run_test_mode(filename: str, noinit: bool, maxlinerun: int):
 			continue # don't count blank lines
 
 		runnable_lines += 1
+		#print("LINE:",runnable_lines)
 
-		if runnable_lines <= maxlinerun:
-			# counts as running, since if i fail i want to restart at the NEXT line
-			maxlinerun = max(maxlinerun,runnable_lines)
+		if runnable_lines <= status['max-count']:
+			# skipping line counts as running since either i successfully ran
+			# it previously, or am skipping it because it crashed
+			status['max-count'] = max(status['max-count'],runnable_lines)
 			continue
 		
-		# as above, update line before i run it
-		maxlinerun = runnable_lines
-
 		sys.stdout.write(">> " + line) # line has \n at end already
 		intr.addText(line)
 		intr.run()
 		print("=> " + intr.reprStack())
+		# update count AFTER above suceeds
+		status['max-count'] = runnable_lines
+		#print(status['max-count'])
+
+	# made it all the way through, set 'done'
+	status['done'] = True
 
 if __name__ == '__main__':
 	noinit = False
@@ -76,12 +92,15 @@ if __name__ == '__main__':
 			sys.exit(1)
 
 	if filename is None:
-		repl()
+		repl(noinit)
 	elif testmode is True:
-		try:
-			run_test_mode(filename, noinit, 0)
-		except LangError as exc:
-			print("*** " + exc.msg + " ***")
-			# TODO - need to restart after error
+		status = {'done': False, 'max-count': 0}
+		while not status['done']:
+			try:
+				run_test_mode(filename, noinit, status)
+			except LangError as exc:
+				print("*** " + exc.msg + " ***")
+				#print("MAX LINE:",status)
+				status['max-count'] += 1
 	else:
 		print("Not implemented yet")

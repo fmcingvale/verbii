@@ -51,6 +51,7 @@ def builtin_define_word(I: Interpreter):
 	words = []
 	while True:
 		w = I.nextWordOrFail()
+		#print("DEFINE WORD:",w)
 		if w == ';':
 			I.WORDS[name] = words
 			return

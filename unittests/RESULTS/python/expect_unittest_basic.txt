@@ -1,0 +1,321 @@
+>> ( -- test library functions and other basic things not covered in unittest_core -- )
+=> 
+>> ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+=> 
+>> 10 20 30 
+=> 10 20 30 
+>> depth
+=> 10 20 30 3 
+>> . . . . CR
+3 30 20 10 
+=> 
+>> depth
+=> 0 
+>> 10 20 30 40 50 60
+=> 0 10 20 30 40 50 60 
+>> SP 3 + SP!
+=> 0 10 20 30 
+>> ." Hello world! " CR
+Hello world! 
+=> 0 10 20 30 
+>> clear
+=> 
+>> 10 20 30
+=> 10 20 30 
+>> drop
+=> 10 20 
+>> drop
+=> 10 
+>> drop
+=> 
+>> 111 222
+=> 111 222 
+>> dup
+=> 111 222 222 
+>> dup
+=> 111 222 222 222 
+>> 0
+=> 111 222 222 222 0 
+>> dup?
+=> 111 222 222 222 0 
+>> clear
+=> 
+>> 11 22 33
+=> 11 22 33 
+>> swap
+=> 11 33 22 
+>> swap
+=> 11 22 33 
+>> clear
+=> 
+>> 11 22 33 44
+=> 11 22 33 44 
+>> 1 pick
+=> 11 22 33 44 44 
+>> drop
+=> 11 22 33 44 
+>> 2 pick
+=> 11 22 33 44 33 
+>> drop
+=> 11 22 33 44 
+>> 3 pick
+=> 11 22 33 44 22 
+>> drop
+=> 11 22 33 44 
+>> 4 pick
+=> 11 22 33 44 11 
+>> clear
+=> 
+>> 10 20 30 40
+=> 10 20 30 40 
+>> over
+=> 10 20 30 40 30 
+>> clear
+=> 
+>> 10 20 30 40 50 60
+=> 10 20 30 40 50 60 
+>> 2dup
+=> 10 20 30 40 50 60 50 60 
+>> clear
+=> 
+>> 10 20 30 40
+=> 10 20 30 40 
+>> 2drop
+=> 10 20 
+>> clear
+=> 
+>> 10 20 30 40 50 60
+=> 10 20 30 40 50 60 
+>> 2over 
+=> 10 20 30 40 50 60 30 40 
+>> clear
+=> 
+>> 10 20 30 40 50 60
+=> 10 20 30 40 50 60 
+>> 2swap
+=> 10 20 50 60 30 40 
+>> ( logical operations )
+=> 10 20 50 60 30 40 
+>> clear
+=> 
+>> true
+=> true 
+>> false
+=> true false 
+>> clear
+=> 
+>> true not
+=> false 
+>> false not
+=> false true 
+>> clear
+=> 
+>> true true or
+=> true 
+>> true false or
+=> true true 
+>> false true or
+=> true true true 
+>> false false or
+=> true true true false 
+>> clear
+=> 
+>> true true and
+=> true 
+>> true false and
+=> true false 
+>> false true and
+=> true false false 
+>> false false and
+=> true false false false 
+>> ( stack operations )
+=> true false false false 
+>> clear
+=> 
+>> 11 22 33 44 55 66 77
+=> 11 22 33 44 55 66 77 
+>> 4 ndrop
+=> 11 22 33 
+>> clear
+=> 
+>> 111 222 333 444 555
+=> 111 222 333 444 555 
+>> 5 ndrop
+=> 
+>> clear
+=> 
+>> 111 222 333
+=> 111 222 333 
+>> nip
+=> 111 333 
+>> clear
+=> 
+>> 10 20 30 tuck
+=> 10 30 20 30 
+>> clear
+=> 
+>> 10 20 30 40
+=> 10 20 30 40 
+>> rot
+=> 10 30 40 20 
+>> -rot
+=> 10 20 30 40 
+>> ( relational operators )
+=> 10 20 30 40 
+>> clear
+=> 
+>> 10 20 >=
+=> false 
+>> 30 20 >=
+=> false true 
+>> 40 40 >=
+=> false true true 
+>> clear
+=> 
+>> 10 20 <
+=> true 
+>> 30 10 <
+=> true false 
+>> 40 40 <
+=> true false false 
+>> clear
+=> 
+>> 15 20 <=
+=> true 
+>> 35 21 <=
+=> true false 
+>> 40 40 <=
+=> true false true 
+>> ( math )
+=> true false true 
+>> clear
+=> 
+>> 123 
+=> 123 
+>> neg
+=> -123 
+>> -456
+=> -123 -456 
+>> neg
+=> -123 456 
+>> clear
+=> 
+>> 123 456 
+=> 123 456 
+>> max
+=> 456 
+>> -500 200 
+=> 456 -500 200 
+>> max
+=> 456 200 
+>> 300 -44
+=> 456 200 300 -44 
+>> max
+=> 456 200 300 
+>> 444 444 
+=> 456 200 300 444 444 
+>> max
+=> 456 200 300 444 
+>> clear
+=> 
+>> 100 200 
+=> 100 200 
+>> min
+=> 100 
+>> -400 500 
+=> 100 -400 500 
+>> min
+=> 100 -400 
+>> 123 -40 
+=> 100 -400 123 -40 
+>> min
+=> 100 -400 -40 
+>> 77 77
+=> 100 -400 -40 77 77 
+>> min
+=> 100 -400 -40 77 
+>> clear
+=> 
+>> 123
+=> 123 
+>> abs
+=> 123 
+>> -99
+=> 123 -99 
+>> abs
+=> 123 99 
+>> 0
+=> 123 99 0 
+>> abs
+=> 123 99 0 
+>> clear
+=> 
+>> 10 20 30 40
+=> 10 20 30 40 
+>> .S 
+=> 10 20 30 40 
+=> 10 20 30 40 
+>> : foobar 11 22 33 44 ;
+=> 10 20 30 40 
+>> .showdef foobar
+foobar: 11 22 33 44 ;
+=> 10 20 30 40 
+>> clear
+=> 
+>> ( -- lambdas -- )
+=> 
+>> { 4 5 6 }
+=> <lambda> 
+>> call
+=> 4 5 6 
+>> clear
+=> 
+>> { 1 2 3 { 7 8 9 } 4 5 6 }
+=> <lambda> 
+>> call
+=> 1 2 3 <lambda> 4 5 6 
+>> 3 ndrop
+=> 1 2 3 <lambda> 
+>> call
+=> 1 2 3 7 8 9 
+>> clear
+=> 
+>> { 111 222 333 }
+=> <lambda> 
+>> dup
+=> <lambda> <lambda> 
+>> dup
+=> <lambda> <lambda> <lambda> 
+>> call
+=> <lambda> <lambda> 111 222 333 
+>> 3 ndrop
+=> <lambda> <lambda> 
+>> call
+=> <lambda> 111 222 333 
+>> 3 ndrop
+=> <lambda> 
+>> call
+=> 111 222 333 
+>> clear
+=> 
+>> ( -- simple example of passing lambdas to another function -- )
+=> 
+>> def saything ( lambda -- ) dup ." The " 1 swap call ." is " 2 swap call CR ;
+=> 
+>> ( called with cmd on TOS )
+=> 
+>> { 1 == if >>one ." blue " return @one ." ocean " }
+=> <lambda> 
+>> { 1 == if >>one ." green " return @one ." grass " }
+=> <lambda> <lambda> 
+>> { 1 == if >>one ." red " return @one ." rose " }
+=> <lambda> <lambda> <lambda> 
+>> saything
+The rose is red 
+=> <lambda> <lambda> 
+>> saything
+The grass is green 
+=> <lambda> 
+>> saything
+The ocean is blue 
+=> 
