@@ -125,13 +125,16 @@ class Interpreter(object):
 		else:
 			raise LangError("Bad jumpword " + jumpword)
 
-	def run(self) -> None:
+	def run(self, stephook=None) -> None:
 		from native import BUILTINS
 		# run one word at a time in a loop, with the reader position as the continuation		
 		while True:
 			# see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
 
 			word = self.reader.nextWord()
+			if stephook is not None:
+				stephook(self, word)
+
 			if word is None:
 				# i could be returning from a word that had no 'return',
 				# so pop words like i would if it were a return

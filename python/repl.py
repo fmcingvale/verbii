@@ -76,15 +76,60 @@ def run_test_mode(filename: str, noinit: bool, status: dict):
 	# made it all the way through, set 'done'
 	status['done'] = True
 
+def backtrace_curframe(intr: Interpreter):
+	trace = ""
+	nr = 7; # number of words to print in each frame
+	while nr > 0:
+		w = intr.reader.prevWord()
+		if(w == None):
+			print(trace)
+			return
+		else:
+			trace = w + ' ' + trace
+		
+		nr -= 1
+	
+	print(trace)
+
+def print_backtrace(intr: Interpreter):
+	i=0
+	while True:
+		sys.stdout.write("FRAME " + str(i) + ": ")
+		i += 1
+		backtrace_curframe(intr)
+		if intr.reader.hasPushedWords():
+			intr.reader.popWords()
+		else:
+			return
+
+def debug_hook(intr: Interpreter, word: str):
+	print("=> " + intr.reprStack())
+	print("Run: " + word)
+	sys.stdout.write("press ENTER to continue ...")
+	sys.stdout.flush()
+	sys.stdin.readline()
+
+def run_file(intr: Interpreter, filename: str, singlestep: bool):
+	# run file
+	buf = open(filename,'r').read()
+	intr.addText(buf)
+	if singlestep:
+		intr.run(debug_hook)
+	else:
+		intr.run()
+
 if __name__ == '__main__':
 	noinit = False
 	testmode = False
 	filename = None
+	singlestep = False
 	for arg in sys.argv[1:]:
 		if arg == '-noinit':
 			noinit = True
 		elif arg == '-test':
 			testmode = True
+		elif arg == '-step':
+			singlestep = True
 		elif filename is None and os.path.exists(arg):
 			filename = arg
 		else:
@@ -103,4 +148,11 @@ if __name__ == '__main__':
 				#print("MAX LINE:",status)
 				status['max-count'] += 1
 	else:
-		print("Not implemented yet")
+		intr = new_interpreter(noinit)
+
+		try:
+			run_file(intr, filename, singlestep)
+		except LangError as err:
+			print("*** " + err.msg + " ***")
+			print_backtrace(intr)
+		

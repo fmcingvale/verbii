@@ -111,7 +111,7 @@ void run_file(Interpreter *intr, string filename) {
 
 void backtrace_curframe(Interpreter *intr) {
 	string trace = "";
-	int nr = 7;
+	int nr = 7; // number of words to print in each frame
 	while(nr--) {
 		auto w = intr->reader.prevWord();
 		if(w == "") {

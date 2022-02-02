@@ -32,10 +32,10 @@ def not ( a -- not[a] ) if >>true true return @true false ;
 def or ( a b -- a|b ) if >>true1 if >>true2 false return @true1 drop @true2 true ;
 def and ( a b -- a&b ) if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
 
+def != ( a b -- a!=b ) == not ;
 def >= ( a b -- a>=b ) 2dup > -rot == or ;
 def < ( a b -- a<b ) swap > ;
 def <= ( a b -- a<=b ) > not ;
-
 
 def neg ( a -- -a ) 0 swap - ;
 def max ( a b -- max[a,b] ) 2dup > if >>A nip return @A drop ;
