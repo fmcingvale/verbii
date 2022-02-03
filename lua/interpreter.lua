@@ -12,6 +12,7 @@
 ]]
 
 require("reader")
+require("native")
 
 Interpreter = {}
 
@@ -104,6 +105,27 @@ function Interpreter:run()
 			goto MAINLOOP
 		end
 
+		if BUILTINS[word] ~= nil then
+			argtypes = BUILTINS[word][1]
+			args = {}
+			--print("POP " .. tostring(#argtypes) .. " args")
+			for i=#argtypes,1,-1 do
+				val = self:pop()
+				if type(val) ~= argtypes[i] then
+					error("Expecting type " .. argtypes[i] .. " but got " .. type(val))
+				end
+				table.insert(args, 1, val)
+			end
+			table.insert(args, 1, self)
+			BUILTINS[word][2](table.unpack(args))
+			goto MAINLOOP
+		end
+
+		if self.WORDS[word] ~= nil then
+			self.reader:pushWords(self.WORDS[word])
+			goto MAINLOOP
+		end
+
 		error("Unknown word " .. word)
 	end
 end
@@ -128,14 +150,27 @@ function Interpreter:new(obj)
 	obj.SP_EMPTY = obj.SP_MAX + 1
 	obj.SP = obj.SP_EMPTY
 
+	-- prefill stack
+	for i=obj.SP_MIN,obj.SP_MAX do
+		obj.RAM[i] = 0
+	end
+
 	obj.LP_MIN = obj.SP_MAX + 1
 	obj.LP_MAX = obj.LP_MIN + obj.LOCALS_SIZE - 1
 	obj.LP_EMPTY = obj.LP_MAX + 1
 	obj.LP = obj.LP_EMPTY
 
+	-- prefill locals
+	for i=obj.LP_MIN,obj.LP_MAX do
+		obj.RAM[i] = 0
+	end
+	
 	obj.MEM_NEXT = obj.LP_MAX + 1
 	-- no max ram size, just allow to keep growing
 
+	-- user-defined words
+	obj.WORDS = {}
+	
 	obj.reader = new_Reader()
 
 	return obj
