@@ -80,7 +80,6 @@ class Interpreter(object):
 
 	def reprStack(self) -> str:
 		from native import reprObject
-		# TODO -- fixme to print objects like in C++ version
 		s = ""
 		i = self.SP_EMPTY-1
 		while i >= self.SP:
