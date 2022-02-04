@@ -10,7 +10,7 @@ function int_divmod(a, b)
 	-- see notes in C++ implementation of this function.
 	--  this returns (quotient,mod) instead of taking mod as a return param.
 	if b == 0 then
-		error("Divide by zero")
+		error(">>>Divide by zero")
 	end
 		
 	quot = math.floor(math.abs(a) / math.abs(b))
@@ -52,7 +52,7 @@ function reprObject(obj)
 	elseif isCallableWordlist(obj) then
 		return "<lambda>"
 	else
-		error("Don't know how to print object: " .. tostring(obj))
+		error(">>>Don't know how to print object: " .. tostring(obj))
 	end
 end
 
@@ -90,7 +90,7 @@ end
 -- ( obj addr -- ) - save obj to addr
 function builtin_set(intr, obj, addr)
 	if addr < 0 or addr >= intr.MEM_NEXT then
-		error("Bad address in set!: " .. tostring(addr))
+		error(">>>Bad address in set!: " .. tostring(addr))
 	end
 
 	intr.RAM[addr] = obj -- like Python, can just store obj directly
@@ -99,7 +99,7 @@ end
 -- ( addr -- obj ) load obj from addr and push to stack
 function builtin_ref(intr, addr)
 	if addr < 0 or addr >= intr.MEM_NEXT then
-		error("Bad address in ref: " .. tostring(addr))
+		error(">>>Bad address in ref: " .. tostring(addr))
 	end
 	intr:push(intr.RAM[addr])
 end
@@ -107,7 +107,7 @@ end
 -- set stack pointer from addr on stack
 function builtin_setsp(intr, addr)
 	if addr < 0 or addr > intr.SP_EMPTY then
-		error("Bad address in SP!: " .. tostring(addr))
+		error(">>>Bad address in SP!: " .. tostring(addr))
 	end	
 	intr.SP = addr
 end
@@ -115,7 +115,7 @@ end
 -- set locals pointer from addr on stack
 function builtin_setlp(intr, addr)
 	if addr < intr.LP_MIN or addr > intr.LP_EMPTY then
-		error("Bad address in LP!: " .. tostring(addr))
+		error(">>>Bad address in LP!: " .. tostring(addr))
 	end
 	intr.LP = addr
 end
@@ -123,7 +123,7 @@ end
 -- pop top of stack and push to locals
 function builtin_tolocal(intr)
 	if intr.LP <= intr.LP_MIN then
-		error("Locals overflow")
+		error(">>>Locals overflow")
 	end	
 	intr.LP = intr.LP - 1
 	intr.RAM[intr.LP] = intr:pop()
@@ -132,7 +132,7 @@ end
 -- pop top locals and push to stack
 function builtin_fromlocal(intr)
 	if intr.LP >= intr.LP_EMPTY then
-		error("Locals underflow")
+		error(">>>Locals underflow")
 	end
 	intr:push(intr.RAM[intr.LP])
 	intr.LP = intr.LP + 1

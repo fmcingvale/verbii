@@ -99,7 +99,7 @@ for i=1,#arg do
 	elseif filename == nil then
 		filename = arg[i]
 	else
-		error("Bad command line argument: " .. arg[i])
+		error(">>>Bad command line argument: " .. arg[i])
 	end
 end
 
@@ -111,7 +111,9 @@ elseif test_mode then
 		local result,error = pcall(run_test_mode, filename, noinit, status)
 		--print("RESULT:",result)
 		if result == false then
-			print("*** " .. error .. " ***")
+			-- match sequence >>> to strip out filename from error message that lua added
+			match = string.match(error, "^.+>>>")
+			print("*** " .. string.sub(error, #match+1) .. " ***")
 			--print("MAX COUNT " .. tostring(status["max-count"]))
 			status["max-count"] = status["max-count"] + 1
 		elseif result==true then

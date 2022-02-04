@@ -58,7 +58,7 @@ end
 
 function Reader:popWords(words)
 	if #self.stack < 1 then
-		error("Empty word stack, cannot pop")
+		error(">>>Empty word stack, cannot pop")
 	end
 	entry = table.remove(self.stack)
 	self.wordlist = entry[1]
@@ -67,7 +67,7 @@ end
 
 function Reader:deletePrevWord()
 	if self.pos <= 1 then
-		error("No previous word to delete")
+		error(">>>No previous word to delete")
 	end
 	table.remove(self.wordlist, self.pos-1)
 	self.pos = self.pos - 1

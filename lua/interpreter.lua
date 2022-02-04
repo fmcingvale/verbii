@@ -23,7 +23,7 @@ end
 function Interpreter:push(obj)
 	-- like Python (and unlike C++), I can just push Lua objects here
 	if self.SP <= self.SP_MIN then
-		error("Stack overflow")
+		error(">>>Stack overflow")
 	end
 	self.SP = self.SP - 1
 	self.RAM[self.SP] = obj
@@ -32,7 +32,7 @@ end
 function Interpreter:pushInt(val)
 	-- like push but checks for valid integer range
 	if val > self.MAX_INT_31 or val < self.MIN_INT_31 then
-		error("Integer overflow")
+		error(">>>Integer overflow")
 	end
 
 	self:push(val)
@@ -40,7 +40,7 @@ end
 
 function Interpreter:pop()
 	if self.SP >= self.SP_EMPTY then
-		error("Stack underflow")
+		error(">>>Stack underflow")
 	end
 
 	obj = self.RAM[self.SP]
@@ -64,7 +64,7 @@ function Interpreter:nextWordOrFail()
 	-- get next word, which must be non-None, or error
 	word = self.reader:nextWord()
 	if word == "" then
-		error ("Unexpected end of input")
+		error(">>>Unexpected end of input")
 	end
 	
 	return word
@@ -74,7 +74,7 @@ function Interpreter:prevWordOrFail()
 	-- get previous word, which must be non-None, or error
 	word = self.reader:prevWord()
 	if word == "" then
-		error ("Unable to find previous word")
+		error(">>>Unable to find previous word")
 	end
 	
 	return word
@@ -102,7 +102,7 @@ function Interpreter:do_jump(jumpword)
 			end
 		end
 	else
-		error("Bad jumpword " .. jumpword)
+		error(">>>Bad jumpword " .. jumpword)
 	end
 end
 
@@ -158,7 +158,7 @@ function Interpreter:run()
 			-- get true|false condition
 			cond = self:pop()
 			if cond ~= true and cond ~= false then
-				error("'if' expects true or false but got: " .. reprObject(cond))
+				error(">>>'if' expects true or false but got: " .. reprObject(cond))
 			end
 			-- these don't run the jump, they just reposition the reader
 			if cond == true then
@@ -184,7 +184,7 @@ function Interpreter:run()
 			count = tonumber(self:nextWordOrFail())
 			-- must be unique userword
 			if self.WORDS[name] ~= nil then
-				error("Trying to redefine userword "  .. name)
+				error(">>>Trying to redefine userword "  .. name)
 			end
 		
 			-- reserve count bytes
@@ -197,7 +197,7 @@ function Interpreter:run()
 		if word == "del" then
 			name = self:nextWordOrFail()
 			if self.WORDS[name] == nil then
-				error("Trying to delete non-existent userword " .. name)
+				error(">>>Trying to delete non-existent userword " .. name)
 			end
 			
 			self.WORDS[name] = nil
@@ -208,7 +208,7 @@ function Interpreter:run()
 			-- top of stack must be a CallableWordlist
 			obj = self:pop()
 			if not isCallableWordlist(obj) then
-				error("call expects a lambda, but got: " .. reprObject(obj))
+				error(">>>call expects a lambda, but got: " .. reprObject(obj))
 			end
 
 			-- now this is just like calling a userword, below
@@ -224,7 +224,7 @@ function Interpreter:run()
 			for i=#argtypes,1,-1 do
 				val = self:pop()
 				if (type(val) ~= argtypes[i]) and (argtypes[i] ~= "any") then
-					error("Expecting type " .. argtypes[i] .. " but got " .. type(val))
+					error(">>>Expecting type " .. argtypes[i] .. " but got " .. type(val))
 				end
 				table.insert(args, 1, val)
 			end
@@ -238,7 +238,7 @@ function Interpreter:run()
 			goto MAINLOOP
 		end
 
-		error("Unknown word " .. word)
+		error(">>>Unknown word " .. word)
 	end
 end
 
