@@ -81,6 +81,7 @@ end
 function Reader:new(obj)
 	setmetatable(obj, self)
 	self.__index = self
+	obj.__class__ = "Reader"
 	obj:clearAll()
 	return obj
 end

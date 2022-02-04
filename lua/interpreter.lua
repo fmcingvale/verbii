@@ -53,7 +53,7 @@ function Interpreter:reprStack()
 	s = ""
 	i = self.SP_EMPTY-1
 	while i >= self.SP do
-		s = s .. string.format("%q", self.RAM[i]) .. " "
+		s = s .. reprObject(self.RAM[i]) .. " "
 		i = i - 1
 	end
 
@@ -105,13 +105,26 @@ function Interpreter:run()
 			goto MAINLOOP
 		end
 
+		if word == "call" then
+			-- top of stack must be a CallableWordlist
+			obj = self:pop()
+			if not isCallableWordlist(obj) then
+				error("call expects a lambda, but got: " .. reprObject(obj))
+			end
+
+			-- now this is just like calling a userword, below
+			-- TODO -- tail call elimination??
+			self.reader:pushWords(obj.wordlist)
+			goto MAINLOOP
+		end
+
 		if BUILTINS[word] ~= nil then
 			argtypes = BUILTINS[word][1]
 			args = {}
 			--print("POP " .. tostring(#argtypes) .. " args")
 			for i=#argtypes,1,-1 do
 				val = self:pop()
-				if type(val) ~= argtypes[i] then
+				if (type(val) ~= argtypes[i]) and (argtypes[i] ~= "any") then
 					error("Expecting type " .. argtypes[i] .. " but got " .. type(val))
 				end
 				table.insert(args, 1, val)
@@ -133,6 +146,7 @@ end
 function Interpreter:new(obj)
 	setmetatable(obj, self)
 	self.__index = self
+	obj.__class__ = "Interpreter"
 	
 	obj.STACK_SIZE = (1<<16)
 	obj.LOCALS_SIZE = (1<<10)
@@ -165,7 +179,9 @@ function Interpreter:new(obj)
 		obj.RAM[i] = 0
 	end
 	
-	obj.MEM_NEXT = obj.LP_MAX + 1
+	obj.MEM_FIRST = obj.LP_MAX + 1 -- first usable address
+	obj.MEM_NEXT = obj.LP_MAX + 1 -- next address to be allocated
+
 	-- no max ram size, just allow to keep growing
 
 	-- user-defined words
