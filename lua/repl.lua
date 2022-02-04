@@ -89,10 +89,13 @@ end
 
 filename = nil
 noinit = false
+test_mode = false
 
 for i=1,#arg do
 	if arg[i] == "-noinit" then
 		noinit = true
+	elseif arg[i] == "-test" then
+		test_mode = true
 	elseif filename == nil then
 		filename = arg[i]
 	else
@@ -102,7 +105,9 @@ end
 
 if filename == nil then
 	repl()
-else
+elseif test_mode then
 	run_test_mode(filename, noinit, {})
+else
+	print("NOT IMPLEMENTED YET")
 end
 

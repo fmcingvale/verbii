@@ -106,6 +106,13 @@ function Interpreter:do_jump(jumpword)
 	end
 end
 
+-- allocate count memory slots and return start address
+function Interpreter:allocate(count)
+	addr = self.MEM_NEXT
+	self.MEM_NEXT = self.MEM_NEXT + count
+	return addr
+end
+
 function Interpreter:run()
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
@@ -172,6 +179,31 @@ function Interpreter:run()
 			goto MAINLOOP
 		end
 
+		if word == "var" then
+			name = self:nextWordOrFail()
+			count = tonumber(self:nextWordOrFail())
+			-- must be unique userword
+			if self.WORDS[name] ~= nil then
+				error("Trying to redefine userword "  .. name)
+			end
+		
+			-- reserve count bytes
+			addr = self:allocate(count)
+			-- make name a word that returns the address so set! and ref can use the variable
+			self.WORDS[name] = {tostring(addr)}
+			goto MAINLOOP
+		end
+			
+		if word == "del" then
+			name = self:nextWordOrFail()
+			if self.WORDS[name] == nil then
+				error("Trying to delete non-existent userword " .. name)
+			end
+			
+			self.WORDS[name] = nil
+			goto MAINLOOP
+		end
+			
 		if word == "call" then
 			-- top of stack must be a CallableWordlist
 			obj = self:pop()
