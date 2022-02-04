@@ -150,22 +150,13 @@ def builtin_make_lambda(intr: Interpreter):
 				continue
 			
 			# create CallableWordlist from wordlist
-			# put in interpreter memory so I can push its address on the stack
-			#addr = intr.MEM_NEXT
-			#intr.MEM_NEXT += 1
-			#if intr.MEM_NEXT > intr.MEM_LAST:
-			#	raise LangError("Out of memory!")
-
-			#intr.RAM[addr] = CallableWordlist(wordlist)
 			_callable = CallableWordlist(wordlist)
-			# replace { ... } in wordlist with address so a subsequent 'call'
+			# replace { ... } in wordlist with CallableWordlist so a subsequent 'call'
 			# will find it
-			#intr.reader.insertPrevWord(str(addr))
 			intr.reader.insertPrevWord(_callable)
-			# the first time I see { ... }, I have to push the tagged value here.
-			# every subsequent time, the address will be pushed by the wordlist i just modified
+			# the first time I see { ... }, I have to push the CallableWordlist.
+			# every subsequent time, the object will be pushed by the wordlist i just modified
 			intr.push(_callable)
-			#print("MADE LAMBDA, addr = ",addr)
 			return
 		
 		else:
