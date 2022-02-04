@@ -80,6 +80,32 @@ function Interpreter:prevWordOrFail()
 	return word
 end
 
+function Interpreter:do_jump(jumpword)
+	--print("DO JUMP " .. jumpword)
+	-- take word like '>>NAME' or '<<NAME' and jump to '@NAME'
+	if string.sub(jumpword,1,2) == ">>" then
+		-- forward jump, find word (>>NAME -> @NAME)
+		while true do
+			word = self:nextWordOrFail()
+			--print("WORD " .. word)
+			if string.sub(word,2) == string.sub(jumpword,3) then
+				return -- found word, stop
+			end
+		end
+	elseif string.sub(jumpword,1,2) == "<<" then
+		-- backward jump
+		while true do
+			word = self:prevWordOrFail()
+			--print("FIND BACKWARD: " .. jumpword .. ", " .. word)
+			if string.sub(word,2) == string.sub(jumpword,3) then
+				return -- found word, stop
+			end
+		end
+	else
+		error("Bad jumpword " .. jumpword)
+	end
+end
+
 function Interpreter:run()
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
@@ -99,9 +125,50 @@ function Interpreter:run()
 			end
 		end
 			
-		if string.match(word, "^[%d]+$") then
+		if string.match(word, "^[%-]?[%d]+$") then
 			-- integers just get pushed to the stack
 			self:pushInt(tonumber(word))
+			goto MAINLOOP
+		end
+
+		if word == "return" then
+			-- return from word by popping back to previous wordlist (don't call at toplevel)
+			if self.reader:hasPushedWords() then
+				self.reader:popWords()
+			end
+			goto MAINLOOP
+		end
+
+		if word == "if" then
+			-- true jump is required
+			true_jump = self.reader:nextWord()
+			-- false word is optional
+			if string.sub(self.reader:peekWord(),1,2) == "<<" or string.sub(self.reader:peekWord(),1,2) == ">>" then
+				false_jump = self.reader:nextWord()
+			else
+				false_jump = nil
+			end
+			-- get true|false condition
+			cond = self:pop()
+			if cond ~= true and cond ~= false then
+				error("'if' expects true or false but got: " .. reprObject(cond))
+			end
+			-- these don't run the jump, they just reposition the reader
+			if cond == true then
+				self:do_jump(true_jump)
+			elseif false_jump ~= nil then
+				self:do_jump(false_jump)
+			end
+			goto MAINLOOP
+		end
+
+		if string.sub(word, 1, 2) == ">>" or string.sub(word, 1, 2) == "<<" then
+			self:do_jump(word)
+			goto MAINLOOP
+		end
+
+		if string.sub(word, 1, 1) == "@" then
+			-- jump target -- ignore
 			goto MAINLOOP
 		end
 
