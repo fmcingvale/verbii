@@ -165,6 +165,9 @@ class Interpreter(object):
 					false_jump = None
 			
 				cond = self.pop()
+				if cond != True and cond != False:
+					raise LangError("'if' expects true or false but got: " + str(cond))
+			
 				# these don't run the jump, they just reposition the reader
 				if cond:
 					self.do_jump(true_jump)
