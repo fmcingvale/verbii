@@ -213,9 +213,9 @@ function builtin_make_lambda(intr)
 end
 
 BUILTINS = {
-	["+"] = { {"number","number"}, function(intr,a,b) intr:push(a+b) end },
-	["-"] = { {"number","number"}, function(intr,a,b) intr:push(a-b) end },
-	["*"] = { {"number","number"}, function(intr,a,b) intr:push(a*b) end },
+	["+"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a+b) end },
+	["-"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a-b) end },
+	["*"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a*b) end },
 	["/mod"] = { {"number","number"}, builtin_divmod },
 	["=="] = { {"number","number"}, function(intr,a,b) intr:push(a==b) end },
 	[">"] = { {"number","number"}, function(intr,a,b) intr:push(a>b) end },

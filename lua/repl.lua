@@ -49,13 +49,13 @@ end
 function run_test_mode(filename, noinit, status)
 	-- read one line at a time from file and run, printing results and stack. 
 	-- used for unit testing
-	intr = make_interpreter(noinit)
+	local intr = make_interpreter(noinit)
 
 	if status["max-count"] == nil then status["max-count"] = 0 end
 	status["done"] = false
 
-	fileIn = io.open(filename,"r")
-	runnable_lines = 0 -- how many lines have I seen that are non-blank
+	local fileIn = io.open(filename,"r")
+	local runnable_lines = 0 -- how many lines have I seen that are non-blank
 	while true do
 		::LOOP::
 		line = fileIn:read("L")
@@ -71,7 +71,7 @@ function run_test_mode(filename, noinit, status)
 		if runnable_lines <= status["max-count"] then
 			-- skipping line counts as running since either i successfully ran
 			-- it previously, or am skipping it because it crashed
-			status["max-count"] = max(status["max-count"],runnable_lines)
+			status["max-count"] = math.max(status["max-count"],runnable_lines)
 			goto LOOP
 		end
 		
@@ -106,7 +106,18 @@ end
 if filename == nil then
 	repl()
 elseif test_mode then
-	run_test_mode(filename, noinit, {})
+	status = {}
+	while not status["done"] do
+		local result,error = pcall(run_test_mode, filename, noinit, status)
+		--print("RESULT:",result)
+		if result == false then
+			print("*** " .. error .. " ***")
+			--print("MAX COUNT " .. tostring(status["max-count"]))
+			status["max-count"] = status["max-count"] + 1
+		elseif result==true then
+			break
+		end
+	end
 else
 	print("NOT IMPLEMENTED YET")
 end
