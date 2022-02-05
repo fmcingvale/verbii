@@ -42,7 +42,7 @@ class Object {
 
 	// get value (make sure to check first)
 	unsigned int asInt() const { return data.i; }
-	bool asBool() const { return data.i == 0 ? false : true; }
+	bool asBool() const { return data.b; }
 	int asLambdaIndex() const { return data.i; };
 	MemoryArray* asMemArray() { return data.memarray; }
 
