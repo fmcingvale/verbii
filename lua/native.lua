@@ -178,6 +178,10 @@ end
 
 function builtin_make_lambda(intr)
 	 -- Ported from the Python version -- see C++ version for full comments
+
+	 -- delete { that was just read
+	 intr.reader:deletePrevWord()
+
 	wordlist = {}
 	nesting = 1
 	while true do
@@ -199,9 +203,11 @@ function builtin_make_lambda(intr)
 			
 			-- create CallableWordlist from wordlist
 			callable = new_CallableWordlist(wordlist)
-			-- replace { ... } in wordlist with CallableWordlist so a subsequent 'call'
+			table.insert(intr.LAMBDAS, callable)
+			local index = #intr.LAMBDAS
+			-- replace { ... } in wordlist with $<lambda index> so a subsequent 'call'
 			-- will find it
-			intr.reader:insertPrevWord(callable)
+			intr.reader:insertPrevWord('$<lambda ' .. tostring(index) .. ">")
 			-- the first time I see { ... }, I have to push the CallableWordlist.
 			-- every subsequent time, the object will be pushed by the wordlist i just modified
 			intr:push(callable)

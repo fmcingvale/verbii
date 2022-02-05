@@ -6,7 +6,6 @@
 	Ported from C++ version
 """
 from math import floor
-from typing import Callable
 from errors import LangError
 from interpreter import Interpreter
 
@@ -124,13 +123,16 @@ def builtin_showdef(I):
 	wordlist = I.WORDS[name]
 	sys.stdout.write(name + ": ")
 	for w in wordlist:
-		sys.stdout.write(w + " ")
+		sys.stdout.write(str(w) + " ")
 
 	print(";")
 	
 def builtin_make_lambda(intr: Interpreter):
 	"This is straight from the C++ version; see comments there. For brevity I omitted most of them here"
 	from interpreter import CallableWordlist
+	# delete the { i just read (see below)
+	intr.reader.deletePrevWord()
+
 	wordlist = []
 	nesting = 1
 	while True:
@@ -151,9 +153,13 @@ def builtin_make_lambda(intr: Interpreter):
 			
 			# create CallableWordlist from wordlist
 			_callable = CallableWordlist(wordlist)
-			# replace { ... } in wordlist with CallableWordlist so a subsequent 'call'
-			# will find it
-			intr.reader.insertPrevWord(_callable)
+			intr.LAMBDAS.append(_callable)
+			index = len(intr.LAMBDAS)-1
+
+			# replace { ... } in wordlist with "$<lambda index>" so a subsequent 'call'
+			# will find it (note it would be impossible for user code to insert this word
+			# from source since it contains whitespace)
+			intr.reader.insertPrevWord("$<lambda {0}>".format(index))
 			# the first time I see { ... }, I have to push the CallableWordlist.
 			# every subsequent time, the object will be pushed by the wordlist i just modified
 			intr.push(_callable)

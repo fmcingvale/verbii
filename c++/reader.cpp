@@ -11,7 +11,7 @@
 using namespace std;
 
 Reader::Reader() {
-	wordlist = new Wordlist();
+	wordlist = new (GC) Wordlist();
 	pos = 0;
 }
 
@@ -31,7 +31,7 @@ void Reader::addText(const string &text) {
 void Reader::clearAll() {
 	stack.clear();
 	delete wordlist;
-	wordlist = new Wordlist();
+	wordlist = new (GC) Wordlist();
 	pos = 0;
 }
 

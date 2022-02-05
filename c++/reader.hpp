@@ -8,10 +8,11 @@
 #include <vector>
 #include <tuple>
 #include <memory>
+#include <gc/gc_cpp.h>
 
 typedef std::vector<std::string> Wordlist;
 
-class Reader {
+class Reader : public gc {
 	public:
 	Reader();
 
@@ -47,8 +48,3 @@ class Reader {
 	size_t pos;
 	std::vector<std::tuple<Wordlist*,size_t>> stack;
 };
-
-
-
-
-

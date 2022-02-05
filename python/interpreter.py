@@ -1,5 +1,5 @@
 from __future__ import annotations
-from ast import Call
+from ast import Call, Lambda
 
 """
 	Interpreter - runs code.
@@ -21,6 +21,9 @@ class CallableWordlist(object):
 	"from { ... } - a lambda/anonymous word"
 	def __init__(self, wordlist):
 		self.wordlist = wordlist
+
+	def __str__(self):
+		return "<lambda>"
 
 class Interpreter(object):
 	RAM_SIZE = (1<<24)
@@ -47,9 +50,12 @@ class Interpreter(object):
 		self.MEM_NEXT = 0
 
 		self.re_integer = re.compile(r"""(^[+\-]?[0-9]+$)""")
+		self.re_lambda = re.compile(r"""\$<lambda ([0-9]+)>""")
 		
 		# user-defined words
 		self.WORDS = {}
+		# anonymous functions - referred to by $<lambda index> in modified wordlists
+		self.LAMBDAS = []
 
 	def addText(self, text):
 		self.reader.addText(text)
@@ -146,6 +152,15 @@ class Interpreter(object):
 			if self.re_integer.match(word):
 				# integers just get pushed to the stack
 				self.pushInt(int(word))
+				continue
+
+			m = self.re_lambda.match(word)
+			if m:
+				index = int(m.group(1))
+				if index < 0 or index >= len(self.LAMBDAS):
+					raise LangError("Bad lamdba index: " + str(index))
+
+				self.push(self.LAMBDAS[index])
 				continue
 
 			if word == "return":

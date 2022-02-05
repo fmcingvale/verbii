@@ -25,8 +25,8 @@ string readfile(string filename) {
 	return buf;
 }
 
-void repl(bool noinit) {
-	auto intr = make_unique<Interpreter>();
+Interpreter* newInterpreter(bool noinit) {
+	auto intr = new Interpreter();
 	
 	// run initlib to load its words first, unless -noinit was given
 	if(!noinit) {
@@ -35,8 +35,15 @@ void repl(bool noinit) {
 		intr->run();
 		// don't want initlib in the backtrace history, once it has successfully loaded
 		intr->reader.clearAll();
+		// also GC after loading large file
+		GC_gcollect();
 	}
+	return intr;
+}
 
+void repl(bool noinit) {
+	auto intr = newInterpreter(noinit);
+	
 	while(1) {
 		printf(">> ");
 		fflush(stdout);
@@ -63,16 +70,7 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 
 	regex blankline(R"""(^[ \t\r\n]*$)""");
 
-	auto intr = new Interpreter();
-
-	if(!noinit) {
-		// run initlib to load its words first
-		auto buf = readfile(INITLIB);
-		intr->addText(buf);
-		intr->run();
-		// don't want initlib in the backtrace history, once it has successfully loaded
-		intr->reader.clearAll();
-	}
+	auto intr = newInterpreter(noinit);
 
 	string line;
 	ifstream fileIn(filename);
@@ -139,16 +137,32 @@ void print_backtrace(Interpreter *intr) {
 	}
 }
 
+void print_gc_stats() {
+	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
+	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
+	cout << "Heap size: " << pheap_size << endl;
+	cout << "Free bytes: " << pfree_bytes << endl;
+	cout << "Unmapped bytes: " << punmapped_bytes << endl;
+	cout << "Bytes since gc: " << pbytes_since_gc << endl;
+	cout << "Total bytes: " << ptotal_bytes << endl;
+}
+
 int main(int argc, char *argv[]) {
+	GC_INIT();
+
 	bool testMode = false;
 	string filename = "";
 	bool noinit = false;
+	bool gcstats = false;
 	for(int i=1; i<argc; ++i) {
 		if(!strcmp(argv[i], "-test")) {
 			testMode = true;
 		}
 		else if(!strcmp(argv[i], "-noinit")) {
 			noinit = true;
+		}
+		else if(!strcmp(argv[i], "-showgc")) {
+			gcstats = true;
 		}
 		else if(filename == "" && fs::exists(argv[i])) {
 			filename = argv[i];
@@ -191,16 +205,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	else {		
-		auto intr = new Interpreter();
-
-		// run initlib to load its words first
-		if(!noinit) {
-			auto buf = readfile(INITLIB);
-			intr->addText(buf);
-			intr->run();
-			// don't want initlib in the backtrace history, once it has successfully loaded
-			intr->reader.clearAll();
-		}
+		auto intr = newInterpreter(noinit);
 
 		try {
 			run_file(intr, filename);
@@ -209,6 +214,12 @@ int main(int argc, char *argv[]) {
 			cout << "*** " << err.what() << " ***\n";
 			print_backtrace(intr);
 		}
+	}
+
+	//GC_gcollect();
+	if(gcstats) {
+		print_gc_stats();
+		cout << "size of Object: " << sizeof(Object) << endl;
 	}
 	return 0;
 }

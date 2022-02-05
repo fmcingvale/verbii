@@ -5,8 +5,8 @@
 */
 
 #include "native.hpp"
-#include "tagging.hpp"
 #include "errors.hpp"
+#include <gc/gc_cpp.h>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -15,15 +15,19 @@
 using namespace std;
 
 static int popInt(Interpreter *intr) {
-	return taggedToInt(intr->pop());
+	Object obj = intr->pop();
+	if(!obj.isInt()) {
+		throw LangError("Expecting int but got: " + obj.repr());
+	}
+	return obj.asInt();
 }
 
 static void pushInt(Interpreter *intr, int i) {
-	intr->push(intToTagged(i));
+	intr->push(newInt(i));
 }
 
 static void pushBool(Interpreter *intr, bool b) {
-	intr->push(boolToTagged(b));
+	intr->push(newBool(b));
 }
 
 static void builtin_add(Interpreter *intr) {
@@ -103,7 +107,10 @@ static void builtin_comment(Interpreter *intr) {
 
 static void builtin_printchar(Interpreter *intr) {
 	int c = popInt(intr);
-	putc(c,stdout);
+	printf("%c", c);
+	if(c == 10 || c == 13) {
+		fflush(stdout);
+	}
 }
 
 static void builtin_greater(Interpreter *intr) {
@@ -116,11 +123,11 @@ static void builtin_greater(Interpreter *intr) {
 // ( obj addr -- ) - save obj to addr
 static void builtin_set(Interpreter *intr) {
 	int addr = popInt(intr);
-	tagged t = intr->pop();
+	Object obj = intr->pop();
 	if(addr < 0 || (unsigned int)addr >= intr->RAM.size()) {
 		throw LangError("Bad address in set!: " + to_string(addr));
 	}
-	intr->RAM[addr] = t;
+	intr->RAM[addr] = obj;
 }
 
 // ( addr -- obj ) load obj from addr and push to stack
@@ -174,7 +181,7 @@ static void builtin_print_string(Interpreter *intr) {
 			return; // end of string
 		}
 		else {
-			cout << word << " ";
+			printf("%s ", word.c_str());
 		}
 	}
 }
@@ -208,10 +215,13 @@ static void builtin_make_lambda(Interpreter *intr) {
 	// the tagged lambda was pushed to the stack, ready to be called, stored, etc.
 	
 	// { was just read -- read the words until }
+	
+	// delete the { that was just read
+	intr->reader.deletePrevWord();
 
 	// TODO -- need to unify handling/storage of wordlists - right now WORDS holds
 	// Wordlists by value and tagging is done by pointer.
-	auto wordlist = new Wordlist();
+	auto wordlist = new (GC) Wordlist();
 	int nesting = 1;
 	while(true) {
 		auto word = intr->nextWordOrFail();
@@ -228,14 +238,18 @@ static void builtin_make_lambda(Interpreter *intr) {
 				wordlist->push_back(word);
 				continue;
 			}
-			// new wordlist ('lambda') does NOT exist in WORDS; it only exists
-			// as a tagged value that must be called.
-			tagged t = makeTaggedWordlist(wordlist);
-			// put tagged value into wordlist, replacing the { ... }, so subsequent
-			// calls will push the tagged value
-			intr->reader.insertPrevWord(to_string(t.v));
-			// the first time, I have to push the tagged value here
-			intr->push(t);
+			// new unnamed wordlist will be placed into LAMBDAS, and its index placed
+			// on stack and in source wordlist so a subsequent 'call' can find it
+			LAMBDAS.push_back(wordlist);
+			int index = LAMBDAS.size()-1;
+
+			// replace { .. } in source wordlist with "$<lambda index>" so subsequent 'call'
+			// can find it (note it would be impossible for user code to insert this word
+			// from source since it contains whitespace)
+			intr->reader.insertPrevWord("$<lambda " + to_string(index) + ">");
+			// the first time, I have to push the lambda object as well -- interpreter
+			// will do this on subsequent calls when it sees "lambda<#>"
+			intr->push(newLambda(index));
 			return;
 		}
 		else {
@@ -255,17 +269,17 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"(", builtin_comment},
 	{".c", builtin_printchar},
 	{"repr", 
-		[](Interpreter *intr) {printf("%s", reprTagged(intr->pop()).c_str());}},
+		[](Interpreter *intr) {printf("%s", intr->pop().repr().c_str());}},
 	{"==", 
 		[](Interpreter *intr) {pushBool(intr, popInt(intr) == popInt(intr));}},
 	{">", builtin_greater},
 	{"depth", 
-		[](Interpreter *intr){intr->push(intToTagged(intr->SP_EMPTY - intr->SP));}},
+		[](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
 	{"SP",
-		[](Interpreter *intr){intr->push(intToTagged(intr->SP));}},
+		[](Interpreter *intr){intr->push(newInt(intr->SP));}},
 	{"SP!", builtin_setsp},
 	{"LP",
-		[](Interpreter *intr){intr->push(intToTagged(intr->LP));}},
+		[](Interpreter *intr){intr->push(newInt(intr->LP));}},
 	{"LP!", builtin_setlp},
 	{">L", builtin_tolocal},
 	{"L>", builtin_fromlocal},
@@ -275,4 +289,3 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{".showdef", builtin_show_def},
 	{"{", builtin_make_lambda},
 };
-

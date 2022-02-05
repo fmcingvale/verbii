@@ -138,6 +138,16 @@ function Interpreter:run()
 			goto MAINLOOP
 		end
 
+		local matches = string.match(word, "^%$<lambda ([%d]+)>$")
+		if matches then
+			index = tonumber(matches)
+			if index < 0 or index > #self.LAMBDAS then
+				error("Bad lambda index " .. tostring(index))
+			end
+			self:push(self.LAMBDAS[index])
+			goto MAINLOOP
+		end
+
 		if word == "return" then
 			-- return from word by popping back to previous wordlist (don't call at toplevel)
 			if self.reader:hasPushedWords() then
@@ -285,7 +295,9 @@ function Interpreter:new(obj)
 
 	-- user-defined words
 	obj.WORDS = {}
-	
+	-- anonymous words (referenced by index with $<lambda index> in modified wordlists)
+	obj.LAMBDAS = {}
+
 	obj.reader = new_Reader()
 
 	return obj

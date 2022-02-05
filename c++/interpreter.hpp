@@ -15,22 +15,24 @@
 #include <regex>
 #include <map>
 #include "reader.hpp"
-#include "tagging.hpp"
+#include "langtypes.hpp"
 
 const int RAM_SIZE = (1<<24);
 const int STACK_SIZE = (1<<16);
 const int LOCALS_SIZE = (1<<10);
 
 extern std::map<std::string,Wordlist> WORDS;
+extern std::vector<Wordlist*> LAMBDAS;
 
-class Interpreter {
+class Interpreter : public gc {
 	public:
 	Interpreter();
 
 	void addText(const std::string &text);
 
-	void push(tagged obj);
-	tagged pop();
+	// see notes in langtypes.hpp -- Object is meant to be passed by value
+	void push(Object obj);
+	Object pop();
 
 	// get representation of stack for printing
 	std::string reprStack() const;
@@ -39,15 +41,21 @@ class Interpreter {
 
 	// all are public so builtins can use without a hassle
 	Reader reader;
-	std::array<tagged,RAM_SIZE> RAM;
 	// 3 memory areas: stack, locals, free memory
+	//
+	// they must be contiguous (because i.e. 'ref' and 'set!' don't know what
+	// type of address they are using). they can be in any layout though.
+	//
+	std::array<Object,RAM_SIZE> RAM;
 	// RAM indexes: stack pointer, empty value and lowest usable index
 	int SP, SP_EMPTY, SP_MIN;
 	// same for locals 
 	int LP, LP_EMPTY, LP_MIN;
 	// next memory address available and last usable
-	int MEM_NEXT, MEM_LAST; 
+	int MEM_NEXT, MEM_LAST;
+	// regexes 
 	std::regex *re_integer;
+	std::regex *re_lambda;
 
 	void do_jump(const std::string &jumpword);
 

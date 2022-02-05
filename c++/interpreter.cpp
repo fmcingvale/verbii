@@ -16,6 +16,7 @@
 using namespace std;
 
 map<string,Wordlist> WORDS;
+vector<Wordlist*> LAMBDAS;
 
 Interpreter::Interpreter() {
 	// stack starts at top of memory and grows downward
@@ -31,20 +32,21 @@ Interpreter::Interpreter() {
 	MEM_NEXT = 0;
 
 	re_integer = new regex(R"""(^[+\-]?[0-9]+$)""");
+	re_lambda = new regex(R"""(\$<lambda ([0-9]+)>)""");
 }
 
 void Interpreter::addText(const string &text) {
 	reader.addText(text);
 }
 
-void Interpreter::push(tagged obj) {
+void Interpreter::push(Object obj) {
 	if(SP <= SP_MIN) {
 		throw LangError("Stack overflow");
 	}
 	RAM[--SP] = obj;
 }
 
-tagged Interpreter::pop() {
+Object Interpreter::pop() {
 	if(SP >= SP_EMPTY) {
 		throw LangError("Stack underflow");
 	}
@@ -54,7 +56,7 @@ tagged Interpreter::pop() {
 string Interpreter::reprStack() const {
 	string s = "";
 	for(int i=SP_EMPTY-1; i>=SP; --i) {
-		s += reprTagged(RAM[i]) + " ";
+		s += RAM[i].repr() + " ";
 	}
 	return s;
 }
@@ -127,7 +129,16 @@ void Interpreter::run() {
 		smatch match;
 		// integers just get pushed to the stack
 		if(regex_match(word, match, *re_integer)) {
-			push(intToTagged(stoi(word)));
+			push(newInt(stoi(word)));
+			continue;
+		}
+
+		if(regex_match(word, match, *re_lambda)) {
+			size_t index = stoi(match[1]);
+			if (index < 0 || index >= LAMBDAS.size()) {
+				throw LangError("Bad lambda index " + to_string(index));
+			}
+			push(newLambda(index));
 			continue;
 		}
 
@@ -147,9 +158,12 @@ void Interpreter::run() {
 			if(reader.peekWord().substr(0,2) == "<<" || reader.peekWord().substr(0,2) == ">>") {
 				false_jump = reader.nextWord();
 			}
-			bool cond = taggedToBool(pop());
+			Object cond = pop();
+			if(!cond.isBool()) {
+				throw LangError("'if' requires true|false but got: " + cond.repr());
+			}
 			// these don't run the jump, they just reposition the reader
-			if(cond) {
+			if(cond.asBool()) {
 				do_jump(true_jump);
 			}
 			else if(false_jump.size() > 0) {
@@ -196,12 +210,12 @@ void Interpreter::run() {
 		if(word == "call") {
 			// top of stack must be a tagged wordlist ('lambda')
 			auto val = pop();
-			if(!taggedIsWordlist(val)) {
-				throw LangError("call expects a lambda, but got: " + reprTagged(val));
+			if(!val.isLambda()) {
+				throw LangError("call expects a lambda, but got: " + val.repr());
 			}
 			// now this is just like calling a userword, below
 			// TODO -- tail call elimination??
-			reader.pushWords(taggedToWordlist(val));
+			reader.pushWords(LAMBDAS[val.asLambdaIndex()]);
 			continue;
 		}
 
