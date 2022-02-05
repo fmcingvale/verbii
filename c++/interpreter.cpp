@@ -13,10 +13,12 @@
 #include "interpreter.hpp"
 #include "native.hpp"
 #include "errors.hpp"
+#include <gc/gc_cpp.h>
 using namespace std;
 
 map<string,Wordlist> WORDS;
 vector<Wordlist*> LAMBDAS;
+map<string,Object> VARS;
 
 Interpreter::Interpreter() {
 
@@ -189,32 +191,29 @@ void Interpreter::run() {
 			// jump target -- ignore
 			continue;
 		}
-#if 0
+
 		if(word == "var") {
 			auto name = nextWordOrFail();
 			auto count = stoi(nextWordOrFail());
 			// must be unique userword
-			if(WORDS.find(name) != WORDS.end()) {
+			if(VARS.find(name) != VARS.end()) {
 				throw LangError("Trying to redefine userword " + name);
 			}
-			// reserve count bytes
-			int addr = MEM_NEXT;
-			MEM_NEXT += count;
-			// make name a word that returns the address so set! and ref can use the variable
-			WORDS[name] = Wordlist{to_string(addr)};
+			// add to VARS so name lookup works (below)
+			VARS[name] = newMemArray(count, 0);
 			continue;
 		}
 
 		if(word == "del") {
 			auto name = nextWordOrFail();
-			auto userword = WORDS.find(name);
-			if(userword == WORDS.end()) {
+			auto userword = VARS.find(name);
+			if(userword == VARS.end()) {
 				throw LangError("Trying to delete non-existent userword " + name);
 			}
-			WORDS.erase(name);
+			VARS.erase(name);
 			continue;
 		}
-#endif
+
 		if(word == "call") {
 			// top of stack must be a tagged wordlist ('lambda')
 			auto val = pop();
@@ -244,6 +243,12 @@ void Interpreter::run() {
 			}
 			// execute word by pushing its wordlist and continuing
 			reader.pushWords(&userword->second);
+			continue;
+		}
+
+		auto var = VARS.find(word);
+		if(var != VARS.end()) {
+			push(var->second);
 			continue;
 		}
 

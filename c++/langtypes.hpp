@@ -25,7 +25,7 @@ class Object;
 struct MemoryArray {
 	Object *array;
 	int count;
-	unsigned int offset; // when code does pointer math, this is adjusted
+	int offset; // when code does pointer math, this is adjusted
 };
 
 // this is intended to be a POD type, so no constructors, destructors, base classes,
@@ -34,16 +34,22 @@ class Object {
 	public:
 	// use one of the new* functions (below) to create Objects
 
+	// type checking
 	bool isInt() const { return type == TYPE_INT; }
 	bool isBool() const { return type == TYPE_BOOL; }
 	bool isLambda() const { return type == TYPE_LAMBDA; }
-	bool isMemArrayt() const { return type == TYPE_MEMARRAY; }
+	bool isMemArray() const { return type == TYPE_MEMARRAY; }
 
+	// get value (make sure to check first)
 	unsigned int asInt() const { return data.i; }
 	bool asBool() const { return data.i == 0 ? false : true; }
 	int asLambdaIndex() const { return data.i; };
-	const MemoryArray* asMemArray() const { return data.memarray; }
+	MemoryArray* asMemArray() { return data.memarray; }
 
+	// setters to change value of object, i.e. for reusing object
+	void setInt(int i);
+
+	// get printable version of object
 	std::string repr() const;
 
 	// do NOT read/write directly, always use functions above

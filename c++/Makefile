@@ -6,9 +6,11 @@ LIB_OBJS = $(LIB_SRC:.cpp=.o)
 
 TEST_SRC = test_reader.cpp
 
-CFLAGS = -g 
+CFLAGS = -g
+#CFLAGS = -g -O2 -fno-align-functions -fno-align-jumps -fno-align-labels -fno-align-loops -fno-optimize-strlen
+
 #CFLAGS = -pg
-#CFLAGS = -O3 -DNDEBUG
+#CFLAGS = -Os -DNDEBUG
 
 all: test.exe repl.exe gctest.exe
 

@@ -5,6 +5,7 @@
 */
 #include "langtypes.hpp"
 #include "errors.hpp"
+#include <gc/gc_cpp.h>
 using namespace std;
 
 // integers only allowed to use 31 bits, to be portable across host languages
@@ -19,6 +20,14 @@ Object newInt(int i) {
 	obj.type = TYPE_INT;
 	obj.data.i = i;
 	return obj;
+}
+
+void Object::setInt(int i) { 
+	if(i > MAX_INT_31 || i < MIN_INT_31) {
+		throw LangError("Integer overflow");
+	}
+	type = TYPE_INT; 
+	data.i = i; 
 }
 
 Object newBool(bool b) {
@@ -38,6 +47,12 @@ Object newLambda(int index) {
 Object newMemArray(int count, int offset) {
 	Object *array = (Object*)GC_malloc(count*sizeof(Object));
 	MemoryArray *memarray = (MemoryArray*)GC_malloc(sizeof(MemoryArray));
+
+	// set all to int=0 as default value
+	for(int i=0; i<count; ++i) {
+		array[i].type = TYPE_INT;
+		array[i].data.i = 0;
+	}
 
 	memarray->array = array;
 	memarray->count = count;
@@ -67,6 +82,7 @@ string Object::repr() const {
 		case TYPE_INT: return to_string(data.i);
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		case TYPE_LAMBDA: return "<lambda>";
+		case TYPE_MEMARRAY: return "var:" + to_string(data.memarray->count) + ":" + to_string(data.memarray->offset);
 		default: throw LangError("repr not implemented for this object");
 	}
 }

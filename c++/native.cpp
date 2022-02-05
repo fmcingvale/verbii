@@ -31,9 +31,27 @@ static void pushBool(Interpreter *intr, bool b) {
 }
 
 static void builtin_add(Interpreter *intr) {
-	pushInt(intr, popInt(intr) + popInt(intr));
+	Object b = intr->pop();
+	Object a = intr->pop();
+	if(a.isInt() && b.isInt()) {
+		// since a was popped by value, safe to overwrite 
+		// instead of making new object
+		a.setInt(a.asInt() + b.asInt());
+		intr->push(a);
+	}
+	else if(a.isMemArray() && b.isInt()) {
+		// can't directly reuse 'a' since offset and count are part of
+		// the allocated object, but can share underlying array
+		Object r = copyMemArray(a.asMemArray());
+		r.asMemArray()->offset += b.asInt();
+		intr->push(r);
+	}
+	else {
+		throw LangError("Can't add values: " + a.repr() + " + " + b.repr());
+	}
 }
 
+// i think only '+' makes sense for MemoryArray, so not implementing -
 static void builtin_subtract(Interpreter *intr) {
 	int b = popInt(intr);
 	int a = popInt(intr);
@@ -136,6 +154,13 @@ static void builtin_set(Interpreter *intr) {
 		}
 		intr->STACKLOCALS[index] = obj;
 	}
+	else if(addr.isMemArray()) {
+		auto arr = addr.asMemArray();
+		if(arr->offset < 0 || arr->offset >= arr->count) {
+			throw LangError("Offset out of bounds in set!");
+		}
+		arr->array[arr->offset] = obj;
+	}
 	else {
 		throw LangError("NOT IMPLEMENTED IN set!");
 	}
@@ -152,6 +177,13 @@ static void builtin_ref(Interpreter *intr) {
 			throw LangError("Bad address in ref: " + to_string(index));
 		}
 		intr->push(intr->STACKLOCALS[index]);
+	}
+	else if(addr.isMemArray()) {
+		auto arr = addr.asMemArray();
+		if(arr->offset < 0 || arr->offset >= arr->count) {
+			throw LangError("Offset out of bounds in set!");
+		}
+		intr->push(arr->array[arr->offset]);
 	}
 	else {
 		throw LangError("NOT IMPLEMENTED IN ref");

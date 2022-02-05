@@ -3,11 +3,12 @@
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
-
+#include <gc/gc_cpp.h>
 #include "reader.hpp"
 #include "errors.hpp"
 #include <iostream>
 #include <sstream>
+
 using namespace std;
 
 Reader::Reader() {
