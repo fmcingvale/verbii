@@ -8,11 +8,11 @@
 #include <vector>
 #include <tuple>
 #include <memory>
-#include <gc/gc_cpp.h>
+#include "xmalloc.hpp"
 
 typedef std::vector<std::string> Wordlist;
 
-class Reader : public gc {
+class Reader {
 	public:
 	Reader();
 

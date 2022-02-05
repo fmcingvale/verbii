@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <regex>
+#include "xmalloc.hpp"
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -36,7 +37,7 @@ Interpreter* newInterpreter(bool noinit) {
 		// don't want initlib in the backtrace history, once it has successfully loaded
 		intr->reader.clearAll();
 		// also GC after loading large file
-		GC_gcollect();
+		x_mem_gcollect();
 	}
 	return intr;
 }
@@ -100,11 +101,11 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 	done = true; // done
 }
 
-void run_file(Interpreter *intr, string filename) {
+void run_file(Interpreter *intr, string filename, bool singlestep) {
 	// run file
 	auto buf = readfile(filename);
 	intr->addText(buf);
-	intr->run();
+	intr->run(singlestep);
 }
 
 void backtrace_curframe(Interpreter *intr) {
@@ -138,6 +139,7 @@ void print_backtrace(Interpreter *intr) {
 }
 
 void print_gc_stats() {
+#if defined(USE_GCMALLOC)
 	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
 	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
 	cout << "Heap size: " << pheap_size << endl;
@@ -145,15 +147,19 @@ void print_gc_stats() {
 	cout << "Unmapped bytes: " << punmapped_bytes << endl;
 	cout << "Bytes since gc: " << pbytes_since_gc << endl;
 	cout << "Total bytes: " << ptotal_bytes << endl;
+#else
+	cout << "Not using GC\n";
+#endif
 }
 
 int main(int argc, char *argv[]) {
-	GC_INIT();
+	x_mem_init();
 
 	bool testMode = false;
 	string filename = "";
 	bool noinit = false;
 	bool gcstats = false;
+	bool singlestep = false;
 	for(int i=1; i<argc; ++i) {
 		if(!strcmp(argv[i], "-test")) {
 			testMode = true;
@@ -163,6 +169,9 @@ int main(int argc, char *argv[]) {
 		}
 		else if(!strcmp(argv[i], "-showgc")) {
 			gcstats = true;
+		}
+		else if(!strcmp(argv[i], "-step")) {
+			singlestep = true;
 		}
 		else if(filename == "" && fs::exists(argv[i])) {
 			filename = argv[i];
@@ -208,7 +217,7 @@ int main(int argc, char *argv[]) {
 		auto intr = newInterpreter(noinit);
 
 		try {
-			run_file(intr, filename);
+			run_file(intr, filename, singlestep);
 		}
 		catch (LangError &err) {
 			cout << "*** " << err.what() << " ***\n";

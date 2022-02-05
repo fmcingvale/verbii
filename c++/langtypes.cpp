@@ -5,7 +5,7 @@
 */
 #include "langtypes.hpp"
 #include "errors.hpp"
-#include <gc/gc_cpp.h>
+#include "xmalloc.hpp"
 using namespace std;
 
 // integers only allowed to use 31 bits, to be portable across host languages
@@ -45,8 +45,8 @@ Object newLambda(int index) {
 }
 
 Object newMemArray(int count, int offset) {
-	Object *array = (Object*)GC_malloc(count*sizeof(Object));
-	MemoryArray *memarray = (MemoryArray*)GC_malloc(sizeof(MemoryArray));
+	Object *array = (Object*)x_malloc(count*sizeof(Object));
+	MemoryArray *memarray = (MemoryArray*)x_malloc(sizeof(MemoryArray));
 
 	// set all to int=0 as default value
 	for(int i=0; i<count; ++i) {
@@ -65,7 +65,7 @@ Object newMemArray(int count, int offset) {
 }
 
 Object copyMemArray(MemoryArray *memarray) {
-	MemoryArray *arraycopy = (MemoryArray*)GC_malloc(sizeof(MemoryArray));
+	MemoryArray *arraycopy = (MemoryArray*)x_malloc(sizeof(MemoryArray));
 	arraycopy->array = memarray->array;
 	arraycopy->count = memarray->count;
 	arraycopy->offset = memarray->offset;

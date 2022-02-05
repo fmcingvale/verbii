@@ -6,7 +6,7 @@
 
 #include "native.hpp"
 #include "errors.hpp"
-#include <gc/gc_cpp.h>
+#include "xmalloc.hpp"
 #include <cmath>
 #include <string>
 #include <vector>
@@ -274,7 +274,7 @@ static void builtin_make_lambda(Interpreter *intr) {
 
 	// TODO -- need to unify handling/storage of wordlists - right now WORDS holds
 	// Wordlists by value and tagging is done by pointer.
-	auto wordlist = new (GC) Wordlist();
+	auto wordlist = new Wordlist();
 	int nesting = 1;
 	while(true) {
 		auto word = intr->nextWordOrFail();

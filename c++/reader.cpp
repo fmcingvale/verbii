@@ -3,7 +3,7 @@
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
-#include <gc/gc_cpp.h>
+#include "xmalloc.hpp"
 #include "reader.hpp"
 #include "errors.hpp"
 #include <iostream>
@@ -12,7 +12,7 @@
 using namespace std;
 
 Reader::Reader() {
-	wordlist = new (GC) Wordlist();
+	wordlist = new Wordlist();
 	pos = 0;
 }
 
@@ -32,7 +32,7 @@ void Reader::addText(const string &text) {
 void Reader::clearAll() {
 	stack.clear();
 	delete wordlist;
-	wordlist = new (GC) Wordlist();
+	wordlist = new Wordlist();
 	pos = 0;
 }
 

@@ -10,7 +10,7 @@
 */
 #pragma once
 #include "reader.hpp"
-#include "gc_cpp.h"
+#include "xmalloc.hpp"
 #include <string.h>
 #include <string>
 

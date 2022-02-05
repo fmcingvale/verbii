@@ -13,7 +13,7 @@
 #include "interpreter.hpp"
 #include "native.hpp"
 #include "errors.hpp"
-#include <gc/gc_cpp.h>
+#include "xmalloc.hpp"
 using namespace std;
 
 map<string,Wordlist> WORDS;
@@ -23,7 +23,7 @@ map<string,Object> VARS;
 Interpreter::Interpreter() {
 
 	SIZE_STACKLOCALS = STACK_SIZE+LOCALS_SIZE;
-	STACKLOCALS = (Object*)GC_malloc(SIZE_STACKLOCALS*sizeof(Object));
+	STACKLOCALS = (Object*)x_malloc(SIZE_STACKLOCALS*sizeof(Object));
 
 	// stack starts at top grows downward
 
@@ -73,11 +73,14 @@ string Interpreter::reprStack() const {
 
 // take word like '>>NAME' or '<<NAME' and jump to '@NAME'
 void Interpreter::do_jump(const string &jumpword) {
+	//cout << "DO_JUMP TO: " << jumpword << endl;
 	if(jumpword.substr(0,2) == ">>") {
 		// forward jump, find word (>>NAME -> @NAME)
 		while(true) {
 			auto word = nextWordOrFail();
+			//cout << "NEXT-WORD: " << word << endl;
 			if(word.substr(1) == jumpword.substr(2)) {
+				//cout << "FOUND" << endl;
 				return; // found word, stop
 			}
 		}
@@ -86,7 +89,9 @@ void Interpreter::do_jump(const string &jumpword) {
 		// backward jump
 		while(true) {
 			auto word = prevWordOrFail();
+			//cout << "PREV-WORD: " << word << endl;
 			if(word.substr(1) == jumpword.substr(2)) {
+				//cout << "FOUND" << endl;
 				return; // found word, stop
 			}
 		}
@@ -112,7 +117,7 @@ string Interpreter::prevWordOrFail() {
 	return word;
 }
 
-void Interpreter::run() {
+void Interpreter::run(bool singlestep) {
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
 		const string &word = reader.nextWord();
@@ -135,6 +140,12 @@ void Interpreter::run() {
 			else {
 				return;
 			}
+		}
+		if(singlestep) {
+			cout << "Run word: " << word << endl;
+			cout << "=> " << reprStack() << endl;
+			string line;
+			getline(cin, line);
 		}
 		smatch match;
 		// integers just get pushed to the stack
@@ -163,12 +174,15 @@ void Interpreter::run() {
 		if(word == "if") {
 			// true jump is required
 			auto true_jump = reader.nextWord();
+			//cout << "TRUE_JUMP: " << true_jump << endl;
 			// false word is optional
 			string false_jump;
 			if(reader.peekWord().substr(0,2) == "<<" || reader.peekWord().substr(0,2) == ">>") {
 				false_jump = reader.nextWord();
 			}
+			//cout << "FALSE_JUMP: " << false_jump << endl;
 			Object cond = pop();
+			//cout << "POPPED COND: " << cond.repr() << endl;
 			if(!cond.isBool()) {
 				throw LangError("'if' requires true|false but got: " + cond.repr());
 			}

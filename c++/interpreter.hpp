@@ -23,7 +23,7 @@ const int LOCALS_SIZE = (1<<10);
 extern std::map<std::string,Wordlist> WORDS;
 extern std::vector<Wordlist*> LAMBDAS;
 
-class Interpreter : public gc {
+class Interpreter {
 	public:
 	Interpreter();
 
@@ -36,7 +36,7 @@ class Interpreter : public gc {
 	// get representation of stack for printing
 	std::string reprStack() const;
 
-	void run();
+	void run(bool singlestep=false);
 
 	// all are public so builtins can use without a hassle
 	Reader reader;

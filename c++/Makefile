@@ -1,18 +1,23 @@
 
-LIB_SRC = reader.cpp interpreter.cpp native.cpp langtypes.cpp
-HEADERS = reader.hpp interpreter.hpp native.hpp langtypes.hpp
+LIB_SRC = reader.cpp interpreter.cpp native.cpp langtypes.cpp xmalloc.cpp
+HEADERS = reader.hpp interpreter.hpp native.hpp langtypes.hpp xmalloc.hpp
 
 LIB_OBJS = $(LIB_SRC:.cpp=.o)
 
 TEST_SRC = test_reader.cpp
 
-CFLAGS = -g
-#CFLAGS = -g -O2 -fno-align-functions -fno-align-jumps -fno-align-labels -fno-align-loops -fno-optimize-strlen
+# uncomment one set of GC_FLAGS/GC_LIBS to enable/disable GC
+#GC_FLAGS = 
+#GC_LIBS = 
 
-#CFLAGS = -pg
-#CFLAGS = -Os -DNDEBUG
+GC_FLAGS = -DUSE_GCMALLOC
+GC_LIBS = -lgc -lgccpp
 
-all: test.exe repl.exe gctest.exe
+CFLAGS = -g $(GC_FLAGS)
+# max optimization that works without crashing due to GC
+#CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
+
+all: test.exe repl.exe # gctest.exe
 
 %.o: %.cpp $(HEADERS)
 	g++ $(CFLAGS) -Wall -c $< -o $@
@@ -24,10 +29,10 @@ clean:
 	rm -f *.exe gmon.out *.o *.a
 
 test.exe: test.cpp $(TEST_SRC) mineylib.a
-	g++ $(CFLAGS) -Wall -o test test.cpp $(TEST_SRC) mineylib.a -lgc -lgccpp
+	g++ $(CFLAGS) -Wall -o test test.cpp $(TEST_SRC) mineylib.a $(GC_LIBS)
 
 repl.exe: repl.cpp mineylib.a
-	g++ $(CFLAGS) -Wall -o repl repl.cpp mineylib.a -lgc -lgccpp
+	g++ $(CFLAGS) -Wall -o repl repl.cpp mineylib.a $(GC_LIBS)
 
 gctest.exe: gctest.cpp
-	g++ $(CFLAGS) -Wall -o gctest gctest.cpp -lgc -lgccpp
+	g++ $(CFLAGS) -Wall -o gctest gctest.cpp $(GC_LIBS)
