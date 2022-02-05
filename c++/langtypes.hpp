@@ -14,42 +14,54 @@
 #include <string.h>
 #include <string>
 
-const int TYPE_VOID = 0;
-const int TYPE_INT = 1;
-const int TYPE_BOOL = 2;
-const int TYPE_LAMBDA = 3;
+const unsigned char TYPE_VOID = 0;
+const unsigned char TYPE_INT = 1;
+const unsigned char TYPE_BOOL = 2;
+const unsigned char TYPE_LAMBDA = 3;
+const unsigned char TYPE_MEMARRAY = 4;
 
-// this is intended to be small enough to pass as value -- the
-// large parts are in pointers
-class Object : public gc {
+class Object;
+
+struct MemoryArray {
+	Object *array;
+	int count;
+	unsigned int offset; // when code does pointer math, this is adjusted
+};
+
+// this is intended to be a POD type, so no constructors, destructors, base classes,
+// and small enough to pass as value -- any large parts will be stored in pointers
+class Object {
 	public:
-	// use one of the new* functions to create Objects, not this constructor
-	Object() { type = TYPE_VOID; memset(&data, 0, sizeof(data)); }
-	~Object() { memset(&data, 0, sizeof(data)); } // help gc by clearing pointer
-
-	friend Object newInt(int i);
-	friend Object newBool(bool b);
-	friend Object newLambda(int index); // index into LAMBDAS
+	// use one of the new* functions (below) to create Objects
 
 	bool isInt() const { return type == TYPE_INT; }
 	bool isBool() const { return type == TYPE_BOOL; }
 	bool isLambda() const { return type == TYPE_LAMBDA; }
+	bool isMemArrayt() const { return type == TYPE_MEMARRAY; }
 
 	unsigned int asInt() const { return data.i; }
 	bool asBool() const { return data.i == 0 ? false : true; }
 	int asLambdaIndex() const { return data.i; };
+	const MemoryArray* asMemArray() const { return data.memarray; }
 
 	std::string repr() const;
 
-	protected:
-	int type;
+	// do NOT read/write directly, always use functions above
+	unsigned char type;
 	union {
 		int i; // ints and lamda (index into LAMBDAS)
 		bool b;
+		MemoryArray *memarray;
 	} data;
 };
 
 Object newInt(int i);
 Object newBool(bool b);
 Object newLambda(int index);
+// allocates array and sets all objects to int with value 0
+Object newMemArray(int count, int offset);
+// make a copy of the given array, sharing its array, so it
+// can have its own offset without affecting original. 
+// offset is set the same as memarray.
+Object copyMemArray(MemoryArray *memarray);
 

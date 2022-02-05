@@ -121,25 +121,45 @@ static void builtin_greater(Interpreter *intr) {
 }
 
 // ( obj addr -- ) - save obj to addr
+//
+// two cases:
+//	* addr is integer == index into STACKLOCALS
+//	* addr is MemoryArray
 static void builtin_set(Interpreter *intr) {
-	int addr = popInt(intr);
+	Object addr = intr->pop();
 	Object obj = intr->pop();
-	if(addr < 0 || (unsigned int)addr >= intr->RAM.size()) {
-		throw LangError("Bad address in set!: " + to_string(addr));
+	if(addr.isInt()) {
+		// SP or LP index
+		int index = addr.asInt();
+		if(index < 0 || index > intr->SIZE_STACKLOCALS) {
+			throw LangError("Bad address in set!: " + to_string(index));
+		}
+		intr->STACKLOCALS[index] = obj;
 	}
-	intr->RAM[addr] = obj;
+	else {
+		throw LangError("NOT IMPLEMENTED IN set!");
+	}
 }
 
 // ( addr -- obj ) load obj from addr and push to stack
+//
+// as above, can be int or MemoryArray
 static void builtin_ref(Interpreter *intr) {
-	int addr = popInt(intr);
-	if(addr < 0 || (unsigned int)addr >= intr->RAM.size()) {
-		throw LangError("Bad address in ref: " + to_string(addr));
+	Object addr = intr->pop();
+	if(addr.isInt()) {
+		int index = addr.asInt();
+		if(index < 0 || index >= intr->SIZE_STACKLOCALS) {
+			throw LangError("Bad address in ref: " + to_string(index));
+		}
+		intr->push(intr->STACKLOCALS[index]);
 	}
-	intr->push(intr->RAM[addr]);
+	else {
+		throw LangError("NOT IMPLEMENTED IN ref");
+	}
 }
 
 // set stack pointer from addr on stack
+// (SP values must be integers)
 static void builtin_setsp(Interpreter *intr) {
 	int addr = popInt(intr);
 	if(addr < intr->SP_MIN || addr > intr->SP_EMPTY) {
@@ -149,6 +169,7 @@ static void builtin_setsp(Interpreter *intr) {
 }
 
 // set locals pointer from addr on stack
+// (LP values must be integers)
 static void builtin_setlp(Interpreter *intr) {
 	int addr = popInt(intr);
 	if(addr < intr->LP_MIN || addr > intr->LP_EMPTY) {
@@ -162,7 +183,7 @@ static void builtin_tolocal(Interpreter *intr) {
 	if(intr->LP <= intr->LP_MIN) {
 		throw LangError("Locals overflow");
 	}
-	intr->RAM[--intr->LP] = intr->pop();
+	intr->STACKLOCALS[--intr->LP] = intr->pop();
 }
 
 // pop top locals and push to stack
@@ -170,7 +191,7 @@ static void builtin_fromlocal(Interpreter *intr) {
 	if(intr->LP >= intr->LP_EMPTY) {
 		throw LangError("Locals underflow");
 	}
-	intr->push(intr->RAM[intr->LP++]);
+	intr->push(intr->STACKLOCALS[intr->LP++]);
 }
 
 // ." some string here " -- print string

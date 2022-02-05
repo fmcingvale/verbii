@@ -35,9 +35,35 @@ Object newLambda(int index) {
 	return obj;
 }
 
+Object newMemArray(int count, int offset) {
+	Object *array = (Object*)GC_malloc(count*sizeof(Object));
+	MemoryArray *memarray = (MemoryArray*)GC_malloc(sizeof(MemoryArray));
+
+	memarray->array = array;
+	memarray->count = count;
+	memarray->offset = offset;
+
+	Object obj;
+	obj.type = TYPE_MEMARRAY;
+	obj.data.memarray = memarray;
+	return obj;
+}
+
+Object copyMemArray(MemoryArray *memarray) {
+	MemoryArray *arraycopy = (MemoryArray*)GC_malloc(sizeof(MemoryArray));
+	arraycopy->array = memarray->array;
+	arraycopy->count = memarray->count;
+	arraycopy->offset = memarray->offset;
+
+	Object obj;
+	obj.type = TYPE_MEMARRAY;
+	obj.data.memarray = arraycopy;
+	return obj;
+}
+
 string Object::repr() const {
 	switch(type) {
-		case TYPE_VOID: return "<<VOID>>"; // should never happen
+		case TYPE_VOID: throw LangError("Got VOID object, something is wrong");
 		case TYPE_INT: return to_string(data.i);
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		case TYPE_LAMBDA: return "<lambda>";

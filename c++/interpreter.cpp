@@ -19,17 +19,25 @@ map<string,Wordlist> WORDS;
 vector<Wordlist*> LAMBDAS;
 
 Interpreter::Interpreter() {
-	// stack starts at top of memory and grows downward
-	SP_EMPTY = RAM_SIZE - 1;
+
+	SIZE_STACKLOCALS = STACK_SIZE+LOCALS_SIZE;
+	STACKLOCALS = (Object*)GC_malloc(SIZE_STACKLOCALS*sizeof(Object));
+
+	// stack starts at top grows downward
+
+	// the _EMPTY indexes are not valid storage locations, they indicated the
+	// respective stacks are emtpy
+	SP_EMPTY = SIZE_STACKLOCALS;
 	SP = SP_EMPTY;
 	SP_MIN = SP_EMPTY - STACK_SIZE;
 
 	LP_EMPTY = SP_MIN;
 	LP = LP_EMPTY;
 	LP_MIN = LP_EMPTY - LOCALS_SIZE;
-
-	MEM_LAST = LP_MIN - 1;
-	MEM_NEXT = 0;
+	// sanity that I did that math correctly ...
+	if(LP_MIN != 0) {
+		throw LangError("stacklocals size is wrong!");
+	}
 
 	re_integer = new regex(R"""(^[+\-]?[0-9]+$)""");
 	re_lambda = new regex(R"""(\$<lambda ([0-9]+)>)""");
@@ -43,20 +51,20 @@ void Interpreter::push(Object obj) {
 	if(SP <= SP_MIN) {
 		throw LangError("Stack overflow");
 	}
-	RAM[--SP] = obj;
+	STACKLOCALS[--SP] = obj;
 }
 
 Object Interpreter::pop() {
 	if(SP >= SP_EMPTY) {
 		throw LangError("Stack underflow");
 	}
-	return RAM[SP++];
+	return STACKLOCALS[SP++];
 }
 
 string Interpreter::reprStack() const {
 	string s = "";
 	for(int i=SP_EMPTY-1; i>=SP; --i) {
-		s += RAM[i].repr() + " ";
+		s += STACKLOCALS[i].repr() + " ";
 	}
 	return s;
 }
@@ -181,7 +189,7 @@ void Interpreter::run() {
 			// jump target -- ignore
 			continue;
 		}
-
+#if 0
 		if(word == "var") {
 			auto name = nextWordOrFail();
 			auto count = stoi(nextWordOrFail());
@@ -206,7 +214,7 @@ void Interpreter::run() {
 			WORDS.erase(name);
 			continue;
 		}
-
+#endif
 		if(word == "call") {
 			// top of stack must be a tagged wordlist ('lambda')
 			auto val = pop();

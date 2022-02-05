@@ -17,8 +17,7 @@
 #include "reader.hpp"
 #include "langtypes.hpp"
 
-const int RAM_SIZE = (1<<24);
-const int STACK_SIZE = (1<<16);
+const int STACK_SIZE = (1<<10);
 const int LOCALS_SIZE = (1<<10);
 
 extern std::map<std::string,Wordlist> WORDS;
@@ -43,16 +42,25 @@ class Interpreter : public gc {
 	Reader reader;
 	// 3 memory areas: stack, locals, free memory
 	//
-	// they must be contiguous (because i.e. 'ref' and 'set!' don't know what
-	// type of address they are using). they can be in any layout though.
-	//
-	std::array<Object,RAM_SIZE> RAM;
-	// RAM indexes: stack pointer, empty value and lowest usable index
+	// the stack and locals are of fixed size, so are allocated in one
+	// block. normal integer values are used to address them.
+	Object *STACKLOCALS;
+	int SIZE_STACKLOCALS;
+	
+	// within STACKLOCAKS, the stack & locals are defined by these indices:
+
+	// current stack pointer (points to item on top of stack), empty value and lowest usable index
 	int SP, SP_EMPTY, SP_MIN;
-	// same for locals 
+	// same for locals
 	int LP, LP_EMPTY, LP_MIN;
-	// next memory address available and last usable
-	int MEM_NEXT, MEM_LAST;
+
+	// program-allocated memory is stored as a MemoryArray instead of being
+	// part of a large block allocated here. having separately allocated
+	// objects for each memory array is bad for cache but very good in the
+	// sense that the GC takes care of it and i don't have to track which entries
+	// in a large array are still valid, etc. use newMemoryArray() or copyMemoryArray()
+	// to get program-allocated memory
+
 	// regexes 
 	std::regex *re_integer;
 	std::regex *re_lambda;
