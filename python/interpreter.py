@@ -258,7 +258,7 @@ class Interpreter(object):
 			
 				# execute word by pushing its wordlist and continuing
 				self.reader.pushWords(self.WORDS[word])
-				continue;
+				continue
 	
 			raise LangError("Unknown word " + word)
 			
