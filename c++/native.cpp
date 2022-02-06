@@ -131,13 +131,6 @@ static void builtin_printchar(Interpreter *intr) {
 	}
 }
 
-static void builtin_greater(Interpreter *intr) {
-	int b = popInt(intr);
-	int a = popInt(intr);
-	
-	pushBool(intr, a>b);
-}
-
 // ( obj addr -- ) - save obj to addr
 //
 // two cases:
@@ -325,7 +318,8 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 		[](Interpreter *intr) {printf("%s", intr->pop().repr().c_str());}},
 	{"==", 
 		[](Interpreter *intr) {pushBool(intr, popInt(intr) == popInt(intr));}},
-	{">", builtin_greater},
+	{">", 
+		[](Interpreter *intr) {pushBool(intr, popInt(intr) < popInt(intr));}},
 	{"depth", 
 		[](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
 	{"SP",
