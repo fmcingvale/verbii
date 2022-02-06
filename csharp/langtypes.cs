@@ -23,5 +23,14 @@ public class LangInt : LangObject {
 	public override string repr() { return value.ToString(); } 
 }
 
+public class LangBool : LangObject {
+	public LangBool(bool b) {
+		value = b;
+	}
+
+	public bool value;
+
+	public override string repr() { return value ? "true" : "false"; }
+}
 
 

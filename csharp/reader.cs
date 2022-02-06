@@ -8,10 +8,6 @@
 using System;
 using System.Collections.Generic;
 
-public class LangError : System.Exception {
-	public LangError(string message) : base(message) { }
-};
-
 public class Reader {
 	public Reader() {
 		clearAll();

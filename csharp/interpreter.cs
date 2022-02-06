@@ -32,6 +32,9 @@ public class Interpreter {
 
 	Reader reader;
 
+	// user defined words
+	public Dictionary<string,List<string>> WORDS;
+
 	public Interpreter() {
 		SIZE_STACKLOCALS = STACK_SIZE + LOCALS_SIZE;
 		STACKLOCALS = new List<LangObject>(SIZE_STACKLOCALS);
@@ -55,7 +58,8 @@ public class Interpreter {
 		reader = new Reader();
 
 		re_integer = new Regex(@"^[\+-]?\d+$");
-
+		
+		WORDS = new Dictionary<string,List<string>>();
 	}
 
 	public void addText(string text) {
@@ -118,6 +122,24 @@ public class Interpreter {
 			if(re_integer.IsMatch(word)) {
 				int i = int.Parse(word);
 				push(new LangInt(i));
+				continue;
+			}
+
+			if(Builtins.builtins.ContainsKey(word)) {
+				Builtins.builtins[word](this);
+				continue;
+			}
+
+			if(WORDS.ContainsKey(word)) {
+				// tail call elimination -- if I'm at the end of this wordlist OR next word is 'return', then
+				// i don't need to come back here, so pop my wordlist first to stop stack from growing
+				if(reader.peekWord() == "" || reader.peekWord() == "return") {
+					if(reader.hasPushedWords()) { // in case i'm at the toplevel
+						reader.popWords();
+					}
+				}
+				// execute word by pushing its wordlist and continuing
+				reader.pushWords(WORDS[word]);
 				continue;
 			}
 
