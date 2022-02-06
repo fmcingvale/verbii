@@ -6,14 +6,11 @@
 
 #include "interpreter.hpp"
 #include "errors.hpp"
-#include <readline/readline.h>
 #include <iostream>
-#include <filesystem>
 #include <fstream>
 #include <regex>
 #include "xmalloc.hpp"
 using namespace std;
-namespace fs = std::filesystem;
 
 string INITLIB = "../lib/init.txt";
 
@@ -154,6 +151,13 @@ void print_gc_stats() {
 	cout << "# LAMBDAS: " << LAMBDAS.size() << endl;
 }
 
+#include <sys/stat.h>
+
+bool file_exists(char* filename) {
+	struct stat st;
+	return stat(filename, &st) == 0;
+}
+
 int main(int argc, char *argv[]) {
 	x_mem_init();
 
@@ -175,7 +179,7 @@ int main(int argc, char *argv[]) {
 		else if(!strcmp(argv[i], "-step")) {
 			singlestep = true;
 		}
-		else if(filename == "" && fs::exists(argv[i])) {
+		else if(filename == "" && file_exists(argv[i])) {
 			filename = argv[i];
 		}
 		else {
