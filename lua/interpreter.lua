@@ -113,13 +113,16 @@ function Interpreter:allocate(count)
 	return addr
 end
 
-function Interpreter:run()
+function Interpreter:run(stephook)
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
 		::MAINLOOP::
 		-- see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
 
 		word = self.reader:nextWord()
+		if stephook ~= nil then
+			stephook(self,word)
+		end
 		
 		if word == "" then
 			-- i could be returning from a word that had no 'return',

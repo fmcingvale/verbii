@@ -218,6 +218,13 @@ function builtin_make_lambda(intr)
 	end
 end
 
+function builtin_printchar(intr,a) 
+	io.write(string.char(a))
+	if a == 10 or a == 13 then
+		io.flush()
+	end
+end
+
 BUILTINS = {
 	["+"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a+b) end },
 	["-"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a-b) end },
@@ -227,7 +234,7 @@ BUILTINS = {
 	[">"] = { {"number","number"}, function(intr,a,b) intr:push(a>b) end },
 	["repr"] = { {}, builtin_repr },
 	[".\""] = {  {}, builtin_print_string },
-	[".c"] = { {"number"}, function(intr,a) io.write(string.char(a)) end },
+	[".c"] = { {"number"}, builtin_printchar },
 	["SP"] = { {}, function(intr) intr:push(intr.SP) end },
 	["SP!"] = { {"number"}, builtin_setsp},
 	["LP"] = { {}, function(intr) intr:push(intr.LP) end },

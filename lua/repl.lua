@@ -87,15 +87,70 @@ function run_test_mode(filename, noinit, status)
 	status["done"] = True
 end
 
+function backtrace_curframe(intr)
+	local trace = ""
+	local nr = 7 -- number of words to print in each frame
+	while nr > 0 do
+		w = intr.reader:prevWord()
+		if w == "" then
+			print(trace)
+			return
+		else
+			trace = w .. " " .. trace
+		end
+		nr = nr - 1
+	end
+	
+	print(trace)
+end
+
+function print_backtrace(intr)
+	local i=0
+	while true do
+		io.write("FRAME " .. tostring(i) .. ": ")
+		i = i + 1
+		backtrace_curframe(intr)
+		if intr.reader:hasPushedWords() then
+			intr.reader:popWords()
+		else
+			return
+		end
+	end
+end
+
+function debug_hook(intr, word)
+	print("=> " .. intr:reprStack())
+	print("Run: " .. word)
+	io.write("press ENTER to continue ...")
+	io.flush()
+	io.read()
+end
+
+function run_file(intr, filename, singlestep)
+	-- run file
+	f = io.open(filename, "r")
+	buf = f:read("a")
+	io.close(f)
+	intr:addText(buf)
+	if singlestep then
+		intr:run(debug_hook)
+	else
+		intr:run()
+	end
+end
+
 filename = nil
 noinit = false
 test_mode = false
+singlestep = false
 
 for i=1,#arg do
 	if arg[i] == "-noinit" then
 		noinit = true
 	elseif arg[i] == "-test" then
 		test_mode = true
+	elseif arg[i] == "-step" then
+		singlestep = true
 	elseif filename == nil then
 		filename = arg[i]
 	else
@@ -121,6 +176,13 @@ elseif test_mode then
 		end
 	end
 else
-	print("NOT IMPLEMENTED YET")
+	local intr = make_interpreter(noinit)
+	local result,error = pcall(run_file, intr, filename, singlestep)
+	if result == false then
+		-- match sequence >>> to strip out filename from error message that lua added
+		match = string.match(error, "^.+>>>")
+		print("*** " .. string.sub(error, #match+1) .. " ***")
+		print_backtrace(intr)
+	end
 end
 
