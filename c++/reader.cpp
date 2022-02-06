@@ -90,7 +90,7 @@ const string& Reader::peekPrevWord() {
 		return NONE;
 	}
 	else {
-		return wordlist->at(pos);
+		return wordlist->at(pos-1);
 	}
 }
 
