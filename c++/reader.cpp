@@ -30,7 +30,8 @@ void Reader::addText(const string &text) {
 }
 
 void Reader::clearAll() {
-	stack.clear();
+	stack_wordlists.clear();
+	stack_pos.clear();
 	delete wordlist;
 	wordlist = new Wordlist();
 	pos = 0;
@@ -38,22 +39,22 @@ void Reader::clearAll() {
 
 // push current context and switch to new context
 void Reader::pushWords(Wordlist *new_words) {
-	stack.push_back(make_tuple(wordlist,pos));
-
+	stack_wordlists.push_back(wordlist);
+	stack_pos.push_back(pos);
+	
 	wordlist = new_words;
 	pos = 0;
 }
 
 void Reader::popWords() {
-	auto t = stack.back();
-	stack.pop_back();
-
-	wordlist = get<0>(t);
-	pos = get<1>(t);
+	wordlist = stack_wordlists.back();
+	pos = stack_pos.back();
+	stack_wordlists.pop_back();
+	stack_pos.pop_back();
 }
 
 bool Reader::hasPushedWords() {
-	return stack.size() > 0;
+	return stack_wordlists.size() > 0;
 }
 
 static string NONE("");

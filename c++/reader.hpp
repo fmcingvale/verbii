@@ -48,5 +48,6 @@ class Reader {
 	protected:
 	Wordlist *wordlist;
 	size_t pos;
-	std::vector<std::tuple<Wordlist*,size_t>> stack;
+	std::vector<Wordlist*> stack_wordlists;
+	std::vector<size_t> stack_pos;
 };
