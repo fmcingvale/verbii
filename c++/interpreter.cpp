@@ -40,9 +40,6 @@ Interpreter::Interpreter() {
 	if(LP_MIN != 0) {
 		throw LangError("stacklocals size is wrong!");
 	}
-
-	re_integer = new regex(R"""(^[+\-]?[0-9]+$)""");
-	re_lambda = new regex(R"""(\$<lambda ([0-9]+)>)""");
 }
 
 void Interpreter::addText(const string &text) {
@@ -145,20 +142,44 @@ void Interpreter::run(bool singlestep) {
 			string line;
 			getline(cin, line);
 		}
-		smatch match;
-		// integers just get pushed to the stack
-		if(regex_match(word, match, *re_integer)) {
-			push(newInt(stoi(word)));
-			continue;
+		
+		// NOTE - i was originally using c++ regexes here to check for
+		// integers and lambdas. after profiling and discovering they
+		// were the using most of the program runtime, i changed to parsing
+		// them myself. WITH regexes, runtime was 4.5x higher and memory
+		// usage was 1500x (!!) larger (see commit [556839e] for the regex version)
+		{
+			// see if it's an integer
+			bool has_digits = false;
+			const char *s = word.c_str();
+			if(*s == '+' || *s == '-') 
+				++s;
+
+			while(isdigit(*s)) {
+				has_digits = true;
+				++s;
+			}
+
+			// integers are just pushed to stack
+			if(!*s && has_digits) {
+				//cout << "MATCHED INT:" << word << endl;
+				push(newInt(stoi(word)));
+				continue;
+			}
 		}
 
-		if(regex_match(word, match, *re_lambda)) {
-			size_t index = stoi(match[1]);
-			if (index < 0 || index >= LAMBDAS.size()) {
-				throw LangError("Bad lambda index " + to_string(index));
+		{
+			// check for $<lambda NN>
+			if(!strncmp(word.c_str(), "$<lambda ", 9)) {
+				const char *s = word.c_str() + 9;
+				int num = 0;
+				while(isdigit(*s)) {
+					num = num*10 + *s - '0';
+					++s;
+				}
+				push(newLambda(num));
+				continue;
 			}
-			push(newLambda(index));
-			continue;
 		}
 
 		if(word == "return") {

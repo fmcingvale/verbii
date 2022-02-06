@@ -14,6 +14,7 @@ GC_FLAGS = -DUSE_GCMALLOC
 GC_LIBS = -lgc -lgccpp
 
 CFLAGS = -g $(GC_FLAGS)
+#CFLAGS = -pg $(GC_FLAGS)
 # max optimization that works without crashing due to GC
 #CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
 

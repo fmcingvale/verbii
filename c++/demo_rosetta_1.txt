@@ -111,7 +111,7 @@ del Q del R del T del K del N del L del NR del NN
 		did that above, i'm doing a countdown instead -- )
 
 ( -- this is true anonymous recursion, no names are defined ... 
-		done in Y-combinator-ish fashion where the lambdas passe itself as 
+		done in Y-combinator-ish fashion where the lambdam passes itself as 
 		an argument to itself -- )
 		
 ." Print 20 .. 1, with anonymous recursion: "

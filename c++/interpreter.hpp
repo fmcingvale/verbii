@@ -61,10 +61,6 @@ class Interpreter {
 	// in a large array are still valid, etc. use newMemoryArray() or copyMemoryArray()
 	// to get program-allocated memory
 
-	// regexes 
-	std::regex *re_integer;
-	std::regex *re_lambda;
-
 	void do_jump(const std::string &jumpword);
 
 	// to avoid a lot of 'if word==""' checks, these require a non-empty
