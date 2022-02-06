@@ -16,9 +16,11 @@ public class Repl {
 			if(line == "quit") {
 				return;
 			}
-			intr.addText(line);
-			intr.run();
-			Console.Write("=> " + intr.reprStack() + "\n");
+			if(line != null) {
+				intr.addText(line);
+				intr.run();
+				Console.Write("=> " + intr.reprStack() + "\n");
+			}
 		}
 	} 
 }

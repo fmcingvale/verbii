@@ -2,3 +2,6 @@
 *.o
 *.exe
 python/__pycache__/
+c++/repl
+csharp/bin/
+csharp/obj/

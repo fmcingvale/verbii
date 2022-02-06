@@ -10,7 +10,11 @@ using System.Collections.Generic;
 
 public class Reader {
 	public Reader() {
-		clearAll();
+		// dotnet build complains if I do 'clearAll()' instead of doing the same thing inline here ...
+		// (doesn't see that the references are set by clearAll())
+		wordlist = new List<string>();
+		pos = 0;
+		stack = new List<Tuple<List<string>,int>>();
 	}
 
 	// add more text to current context
