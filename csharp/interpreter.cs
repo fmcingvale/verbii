@@ -102,6 +102,36 @@ public class Interpreter {
 		return reader.prevWord();
 	}
 
+	// take word like '>>NAME' or '<<NAME' and jump to '@NAME'
+	public void do_jump(string jumpword) {
+		//cout << "DO_JUMP TO: " << jumpword << endl;
+		if(jumpword.Substring(0,2) == ">>") {
+			// forward jump, find word (>>NAME -> @NAME)
+			while(true) {
+				var word = nextWordOrFail();
+				//cout << "NEXT-WORD: " << word << endl;
+				if(word.Substring(1) == jumpword.Substring(2)) {
+					//cout << "FOUND" << endl;
+					return; // found word, stop
+				}
+			}
+		}
+		else if(jumpword.Substring(0,2) == "<<") {
+			// backward jump
+			while(true) {
+				var word = prevWordOrFail();
+				//cout << "PREV-WORD: " << word << endl;
+				if(word.Substring(1) == jumpword.Substring(2)) {
+					//cout << "FOUND" << endl;
+					return; // found word, stop
+				}
+			}
+		}
+		else {
+			throw new LangError("Bad jumpword " + jumpword);
+		}
+	}
+
 	public void run() {
 		// see C++ version for comments, only brief comments here
 		while(true) {
@@ -122,6 +152,51 @@ public class Interpreter {
 			if(re_integer.IsMatch(word)) {
 				int i = int.Parse(word);
 				push(new LangInt(i));
+				continue;
+			}
+
+			if(word == "return") {
+				// return from word by popping back to previous wordlist (don't call at toplevel)
+				if(reader.hasPushedWords()) {	
+					reader.popWords();
+				}
+				else {
+					return; // top level return exits program
+				}
+				continue;
+			}
+
+			if(word == "if") {
+				// true jump is required
+				var true_jump = reader.nextWord();
+				// false word is optional
+				bool have_false_jump = false;
+				if(reader.peekWord().Substring(0,2) == "<<" || reader.peekWord().Substring(0,2) == ">>") {
+					have_false_jump = true;
+				}
+				var cond = pop() as LangBool;
+				if(cond == null) {
+					throw new LangError("'if' requires true|false but got: " + cond.repr());
+				}
+				// these don't run the jump, they just reposition the reader
+				if(cond.value) {
+					// no need to actually skip false jump since i'll be looking for '@'
+					do_jump(true_jump);
+				}
+				else if(have_false_jump) {
+					var false_jump = reader.nextWord();
+					do_jump(false_jump);
+				}
+				continue;
+			}
+
+			if(word.Substring(0,2) == ">>" || word.Substring(0,2) == "<<") {
+				do_jump(word);
+				continue;
+			}
+
+			if(word[0] == '@') {
+				// jump target -- ignore
 				continue;
 			}
 
