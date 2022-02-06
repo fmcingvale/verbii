@@ -34,6 +34,8 @@ public class Interpreter {
 
 	// user defined words
 	public Dictionary<string,List<string>> WORDS;
+	// user defined variables
+	public Dictionary<string,LangMemoryArray> VARS;
 
 	public Interpreter() {
 		SIZE_STACKLOCALS = STACK_SIZE + LOCALS_SIZE;
@@ -60,6 +62,7 @@ public class Interpreter {
 		re_integer = new Regex(@"^[\+-]?\d+$");
 		
 		WORDS = new Dictionary<string,List<string>>();
+		VARS = new Dictionary<string,LangMemoryArray>();
 	}
 
 	public void addText(string text) {
@@ -174,12 +177,13 @@ public class Interpreter {
 				if(reader.peekWord().Substring(0,2) == "<<" || reader.peekWord().Substring(0,2) == ">>") {
 					have_false_jump = true;
 				}
-				var cond = pop() as LangBool;
-				if(cond == null) {
+				var cond = pop();
+				var b_cond = cond as LangBool;
+				if(b_cond == null) {
 					throw new LangError("'if' requires true|false but got: " + cond.repr());
 				}
 				// these don't run the jump, they just reposition the reader
-				if(cond.value) {
+				if(b_cond.value) {
 					// no need to actually skip false jump since i'll be looking for '@'
 					do_jump(true_jump);
 				}
@@ -190,7 +194,7 @@ public class Interpreter {
 				continue;
 			}
 
-			if(word.Substring(0,2) == ">>" || word.Substring(0,2) == "<<") {
+			if(word.Length >= 2 && (word.Substring(0,2) == ">>" || word.Substring(0,2) == "<<")) {
 				do_jump(word);
 				continue;
 			}
@@ -199,6 +203,29 @@ public class Interpreter {
 				// jump target -- ignore
 				continue;
 			}
+
+			if(word == "var") {
+				var name = nextWordOrFail();
+				var count = int.Parse(nextWordOrFail());
+				// must be unique userword
+				if(VARS.ContainsKey(name)) {
+					throw new LangError("Trying to redefine userword " + name);
+				}
+				// add to VARS so name lookup works (below)
+				VARS[name] = new LangMemoryArray(count);
+				continue;
+			}
+
+			if(word == "del") {
+				var name = nextWordOrFail();
+				if(!VARS.ContainsKey(name)) {
+					throw new LangError("Trying to delete non-existent userword " + name);
+				}
+				VARS.Remove(name);
+				continue;
+			}
+			
+			// builtins, then userwords, then vars
 
 			if(Builtins.builtins.ContainsKey(word)) {
 				Builtins.builtins[word](this);
@@ -215,6 +242,11 @@ public class Interpreter {
 				}
 				// execute word by pushing its wordlist and continuing
 				reader.pushWords(WORDS[word]);
+				continue;
+			}
+
+			if(VARS.ContainsKey(word)) {
+				push(VARS[word]);
 				continue;
 			}
 

@@ -9,19 +9,39 @@ using System;
 using System.Collections.Generic;
 
 class Builtins {
-	public static LangInt popInt(Interpreter intr) {
+	public static int popInt(Interpreter intr) {
 		var obj = intr.pop();
 		var i = obj as LangInt;
 		if(i == null) {
 			throw new LangError("Expecting int but got: " + obj.repr());
 		}
-		return i;
+		return i.value;
+	}
+
+	public static void add(Interpreter intr) {
+		var b = intr.pop();
+		var a = intr.pop();
+		var a_i = a as LangInt;
+		var b_i = b as LangInt;
+		if(a_i != null && b_i != null) {
+			intr.push(new LangInt(a_i.value + b_i.value));
+			return;
+		}
+		var a_m = a as LangMemoryArray;
+		if(a_m != null && b_i != null) {
+			var m = new LangMemoryArray(a_m);
+			m.offset += b_i.value;
+			intr.push(m);
+			return;
+		}
+		
+		throw new LangError("Don't know how to add " + a.repr() + " and " + b.repr());
 	}
 
 	// see C++ version for extensive comments on divmod
 	public static void int_divmod(Interpreter intr) {
-		var b = popInt(intr).value;
-		var a = popInt(intr).value;
+		var b = popInt(intr);
+		var a = popInt(intr);
 	
 		if(b == 0) {
 			throw new LangError("Divide by zero");
@@ -59,7 +79,7 @@ class Builtins {
 	}
 
 	public static void printchar(Interpreter intr) {
-		int c = popInt(intr).value;
+		int c = popInt(intr);
 		char ch = (char)c;
 		Console.Write(ch);
 		if(c == 10 || c == 13) {
@@ -80,21 +100,122 @@ class Builtins {
 		}
 	}
 
+	public static void comment(Interpreter intr) {
+		while(intr.nextWordOrFail() != ")") {
+		}
+	}
+
+	// set stack pointer from addr on stack
+	// (SP values must be integers)
+	public static void setsp(Interpreter intr) {
+		int addr = popInt(intr);
+		if(addr < intr.SP_MIN || addr > intr.SP_EMPTY) {
+			throw new LangError("Bad address in SP!: " + addr.ToString());
+		}
+		intr.SP = addr;
+	}
+
+	// set locals pointer from addr on stack
+	// (LP values must be integers)
+	public static void setlp(Interpreter intr) {
+		int addr = popInt(intr);
+		if(addr < intr.LP_MIN || addr > intr.LP_EMPTY) {
+			throw new LangError("Bad address in LP!: " + addr.ToString());
+		}
+		intr.LP = addr;
+	}
+
+	// pop top of stack and push to locals
+	public static void tolocal(Interpreter intr) {
+		if(intr.LP <= intr.LP_MIN) {
+			throw new LangError("Locals overflow");
+		}
+		intr.STACKLOCALS[--intr.LP] = intr.pop();
+	}
+
+	// pop top locals and push to stack
+	public static void fromlocal(Interpreter intr) {
+		if(intr.LP >= intr.LP_EMPTY) {
+			throw new LangError("Locals underflow");
+		}
+		intr.push(intr.STACKLOCALS[intr.LP++]);
+	}
+
+	// ( obj addr -- ) - save obj to addr
+	//
+	// two cases:
+	//	* addr is integer == index into STACKLOCALS
+	//	* addr is MemoryArray
+	public static void set(Interpreter intr) {
+		var addr = intr.pop();
+		var obj = intr.pop();
+		var addr_i = addr as LangInt;
+		var addr_m = addr as LangMemoryArray;
+		if(addr_i != null) {
+			// SP or LP index
+			if(addr_i.value < 0 || addr_i.value > intr.SIZE_STACKLOCALS) {
+				throw new LangError("Bad address in set!: " + addr_i.value.ToString());
+			}
+			intr.STACKLOCALS[addr_i.value] = obj;
+		}
+		else if(addr_m != null) {
+			if(addr_m.offset < 0 || addr_m.offset >= addr_m.array.Count()) {
+				throw new LangError("Offset out of bounds in set!");
+			}
+			addr_m.array[addr_m.offset] = obj;
+		}
+		else {
+			throw new LangError("NOT IMPLEMENTED IN set!");
+		}
+	}
+
+	// ( addr -- obj ) load obj from addr and push to stack
+	//
+	// as above, addr can be int or MemoryArray
+	public static void _ref(Interpreter intr) {
+		var addr = intr.pop();
+		var addr_i = addr as LangInt;
+		var addr_m = addr as LangMemoryArray;
+		if(addr_i != null) {
+			if(addr_i.value < 0 || addr_i.value >= intr.SIZE_STACKLOCALS) {
+				throw new LangError("Bad address in ref: " + addr_i.value.ToString());
+			}
+			intr.push(intr.STACKLOCALS[addr_i.value]);
+		}
+		else if(addr_m != null) {
+			if(addr_m.offset < 0 || addr_m.offset >= addr_m.array.Count()) {
+				throw new LangError("Offset out of bounds in set!");
+			}
+			intr.push(addr_m.array[addr_m.offset]);
+		}
+		else {
+			throw new LangError("NOT IMPLEMENTED IN ref");
+		}
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
-		{"+", intr => intr.push(new LangInt(popInt(intr).value + popInt(intr).value))},
-		{"-", intr => intr.push(new LangInt(-popInt(intr).value + popInt(intr).value))},
-		{"*", intr => intr.push(new LangInt(popInt(intr).value * popInt(intr).value))},
+		{"+", add},
+		{"-", intr => intr.push(new LangInt(-popInt(intr) + popInt(intr)))},
+		{"*", intr => intr.push(new LangInt(popInt(intr) * popInt(intr)))},
 		{"/mod", int_divmod},
-		{"==", intr => intr.push(new LangBool(popInt(intr).value == popInt(intr).value))},
-		{">", intr => intr.push(new LangBool(popInt(intr).value < popInt(intr).value))},
+		{"==", intr => intr.push(new LangBool(popInt(intr) == popInt(intr)))},
+		{">", intr => intr.push(new LangBool(popInt(intr) < popInt(intr)))},
 		{":", define_word},
+		{"def", define_word}, // synonym for :
 		{".c", printchar},
 		{".\"", print_string},
 		{"repr", intr => Console.Write(intr.pop().repr())},
 		{"depth", intr => intr.push(new LangInt(intr.SP_EMPTY - intr.SP))},
 		{"SP", intr => intr.push(new LangInt(intr.SP))},
+		{"SP!", setsp},
 		{"LP", intr => intr.push(new LangInt(intr.LP))},
+		{"LP!", setlp},
+		{">L", tolocal},
+		{"L>", fromlocal},
+		{"(", comment},
+		{"set!", set},
+		{"ref", _ref},
 		
 	};
 }
