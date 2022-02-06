@@ -70,8 +70,8 @@ class Interpreter {
 	// to avoid a lot of 'if word==""' checks, these require a non-empty
 	// word or they throw an exception ... for use in cases where there MUST
 	// be a next/previous word, or its a syntax error
-	std::string nextWordOrFail();
-	std::string prevWordOrFail();
+	const std::string &nextWordOrFail();
+	const std::string &prevWordOrFail();
 };
 
 

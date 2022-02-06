@@ -101,26 +101,24 @@ void Interpreter::do_jump(const string &jumpword) {
 	}
 }
 
-string Interpreter::nextWordOrFail() {
-	auto word = reader.nextWord();
-	if(word == "") {
+const string& Interpreter::nextWordOrFail() {
+	if(reader.peekWord() == "") {
 		throw LangError("Unexpected end of input");
 	}
-	return word;
+	return reader.nextWord();
 }
 
-string Interpreter::prevWordOrFail() {
-	auto word = reader.prevWord();
-	if(word == "") {
+const string& Interpreter::prevWordOrFail() {
+	if(reader.peekPrevWord() == "") {
 		throw LangError("Unable to find previous word");
 	}
-	return word;
+	return reader.prevWord();
 }
 
 void Interpreter::run(bool singlestep) {
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
-		const string &word = reader.nextWord();
+		auto word = reader.nextWord();
 		// general note: there is kind of an artificial separation between words that are
 		// recognized here, and words implemented in native.cpp. In priciple, all these words
 		// could be implemented in native.cpp. However, I tend to put words here that directly
@@ -176,9 +174,9 @@ void Interpreter::run(bool singlestep) {
 			auto true_jump = reader.nextWord();
 			//cout << "TRUE_JUMP: " << true_jump << endl;
 			// false word is optional
-			string false_jump;
+			bool have_false_jump = false;
 			if(reader.peekWord().substr(0,2) == "<<" || reader.peekWord().substr(0,2) == ">>") {
-				false_jump = reader.nextWord();
+				have_false_jump = true;
 			}
 			//cout << "FALSE_JUMP: " << false_jump << endl;
 			Object cond = pop();
@@ -188,9 +186,11 @@ void Interpreter::run(bool singlestep) {
 			}
 			// these don't run the jump, they just reposition the reader
 			if(cond.asBool()) {
+				// no need to actually skip false jump since i'll be looking for '@'
 				do_jump(true_jump);
 			}
-			else if(false_jump.size() > 0) {
+			else if(have_false_jump) {
+				const string& false_jump = reader.nextWord();
 				do_jump(false_jump);
 			}
 			continue;

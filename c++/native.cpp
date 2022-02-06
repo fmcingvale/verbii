@@ -100,10 +100,10 @@ static void builtin_divmod(Interpreter *intr) {
 }
 
 static void builtin_define_word(Interpreter *intr) {
-	string name = intr->nextWordOrFail();
+	auto name = intr->nextWordOrFail();
 	Wordlist words;
 	while(1) {
-		string w = intr->nextWordOrFail();
+		auto w = intr->nextWordOrFail();
 		if(w == ";") {
 			WORDS[name] = words;
 			return;
@@ -116,7 +116,7 @@ static void builtin_define_word(Interpreter *intr) {
 
 static void builtin_comment(Interpreter *intr) {
 	while(1) {
-		string w = intr->nextWordOrFail();
+		auto w = intr->nextWordOrFail();
 		if(w == ")") {
 			return;
 		}

@@ -85,6 +85,15 @@ const string& Reader::prevWord() {
 	}
 }
 
+const string& Reader::peekPrevWord() {
+	if(pos <= 0) {
+		return NONE;
+	}
+	else {
+		return wordlist->at(pos);
+	}
+}
+
 void Reader::deletePrevWord() {
 	if(pos == 0) {
 		throw LangError("No previous word to delete!");
