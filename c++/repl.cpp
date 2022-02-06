@@ -148,8 +148,10 @@ void print_gc_stats() {
 	cout << "Bytes since gc: " << pbytes_since_gc << endl;
 	cout << "Total bytes: " << ptotal_bytes << endl;
 #else
-	cout << "Not using GC\n";
+	cout << "xmalloc bytes: " << X_BYTES_ALLOCATED << endl;
 #endif
+	cout << "# WORDS: " << WORDS.size() << endl;
+	cout << "# LAMBDAS: " << LAMBDAS.size() << endl;
 }
 
 int main(int argc, char *argv[]) {

@@ -17,10 +17,13 @@ void x_mem_gcollect() {
 
 #else // !USE_GCMALLOC
 
+unsigned long long X_BYTES_ALLOCATED = 0;
+
 void x_mem_init() {
 }
 
 void* x_malloc(size_t size) {
+	X_BYTES_ALLOCATED += size;
 	return malloc(size);
 }
 
