@@ -57,11 +57,6 @@ static void builtin_subtract(Interpreter *intr) {
 	int a = popInt(intr);
 	pushInt(intr, a-b);
 }
-
-static void builtin_multiply(Interpreter *intr) {
-	pushInt(intr, popInt(intr) * popInt(intr));
-}
-
 /*
 	can't count on rounding behavior of host language -- i.e. some languages/systems
 	round differently on +/- values.
@@ -73,7 +68,11 @@ static void builtin_multiply(Interpreter *intr) {
 	also I divide the absolute values and adjust the sign afterwards, to get
 	consistent behavior regardless of signs
 */
-static int int_divmod(int a, int b, int *mod) {
+static void builtin_divmod(Interpreter *intr) {
+	int b = popInt(intr);
+	int a = popInt(intr);
+	int mod;
+
 	if(b == 0) {
 		throw LangError("Divide by zero");
 	}
@@ -81,22 +80,15 @@ static int int_divmod(int a, int b, int *mod) {
 
 	bool samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
 	if(samesign) {
-		*mod = a - quot*b;
-		return quot;
+		mod = a - quot*b;
 	}
 	else {
-		*mod = a + quot*b;
-		return -quot;
+		mod = a + quot*b;
+		quot = -quot;
 	}
-}
 
-static void builtin_divmod(Interpreter *intr) {
-	int b = popInt(intr);
-	int a = popInt(intr);
-	int mod;
-	int q = int_divmod(a,b,&mod);
 	pushInt(intr, mod);
-	pushInt(intr, q);
+	pushInt(intr, quot);
 }
 
 static void builtin_define_word(Interpreter *intr) {
@@ -307,7 +299,8 @@ static void builtin_make_lambda(Interpreter *intr) {
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", builtin_add},
 	{"-", builtin_subtract},
-	{"*", builtin_multiply},
+	{"*", 
+		[](Interpreter *intr) {pushInt(intr, popInt(intr) * popInt(intr));}},
 	{"/mod", builtin_divmod},
 	{":", builtin_define_word},
 	// synonym for ':', for readability
