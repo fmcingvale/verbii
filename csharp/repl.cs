@@ -70,6 +70,7 @@ public class Repl {
 				continue;
 			}
 			Console.WriteLine(">> " + line);
+			intr.reader.clearAll(); // remove any leftover text from previous line run
 			intr.addText(line);
 			intr.run();
 			Console.WriteLine("=> " + intr.reprStack());

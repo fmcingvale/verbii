@@ -89,6 +89,7 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 			continue;
 		}
 		cout << ">> " << line << endl;
+		intr->reader.clearAll(); // ensure no leftover text from previous line
 		intr->addText(line);
 		intr->run();
 		cout << "=> " << intr->reprStack() << endl;

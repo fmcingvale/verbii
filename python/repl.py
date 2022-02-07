@@ -66,6 +66,7 @@ def run_test_mode(filename: str, noinit: bool, status: dict):
 			continue
 		
 		sys.stdout.write(">> " + line) # line has \n at end already
+		intr.reader.clearAll() # clear any leftover text from previous line run
 		intr.addText(line)
 		intr.run()
 		print("=> " + intr.reprStack())

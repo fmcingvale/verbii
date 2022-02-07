@@ -76,6 +76,7 @@ function run_test_mode(filename, noinit, status)
 		end
 		
 		io.write(">> " .. line) -- line has \n at end already
+		intr.reader:clearAll() -- remove any leftover text from previous line run
 		intr:addText(line)
 		intr:run()
 		print("=> " .. intr:reprStack())
