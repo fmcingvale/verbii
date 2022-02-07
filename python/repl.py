@@ -33,6 +33,8 @@ def repl(noinit: bool):
 		sys.stdout.write(">> ")
 		sys.stdout.flush()
 		line = sys.stdin.readline()
+		if len(line) == 0:
+			return # eof
 		if line == "quit":
 			return
 		

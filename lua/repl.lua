@@ -36,7 +36,9 @@ function repl()
 		io.write(">> ")
 		io.flush()
 		line = io.read()
-		if line == "quit" then
+		if line == nil then
+			return -- eof
+		elseif line == "quit" then
 			return
 		end
 		

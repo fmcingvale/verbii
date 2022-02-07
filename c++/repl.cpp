@@ -46,7 +46,9 @@ void repl(bool noinit) {
 		printf(">> ");
 		fflush(stdout);
 		string line;
-		getline(cin, line);
+		if(!getline(cin, line)) {
+			return;
+		}
 		if (line == "quit") {
 			return;
 		}

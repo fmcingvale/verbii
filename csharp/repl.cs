@@ -28,7 +28,7 @@ public class Repl {
 			Console.Write(">> ");
 			Console.Out.Flush();
 			var line = Console.In.ReadLine();
-			if(line == "quit") {
+			if(line == null || line == "quit") {
 				return;
 			}
 			if(line != null) {
