@@ -1,0 +1,11 @@
+
+Setting up build environment:
+
+* mingw-x64
+
+	- Add packages: python, lua, ?? libgc ??
+
+
+* ubuntu:
+
+	- Add packages: gcc, g++, make and libgc-dev
