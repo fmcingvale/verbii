@@ -38,11 +38,8 @@ public class Reader {
 	// caller must keep pointer valid until popWords()
 	public void pushWords(List<string> words) {
 		stack.Add(Tuple.Create(wordlist,pos));
-		wordlist = new List<string>();
+		wordlist = words;
 		pos = 0;
-		foreach(var word in words) {
-			wordlist.Add(word);
-		}
 	}
 
 	// return to previous context, discarding current context
@@ -112,6 +109,17 @@ public class Reader {
 	public void insertPrevWord(string word) {
 		wordlist.Insert(pos, word);
 		++pos;
+	}
+
+	public void debug_print_words() {
+		Console.Write("WORDS: ");
+		for(int i=0; i<wordlist.Count(); ++i) {
+			if(pos == i) {
+				Console.Write("[POS->] ");
+			}
+			Console.Write(wordlist[i] + " ");
+		}
+		Console.Write("\n");
 	}
 
 	protected List<string> wordlist;

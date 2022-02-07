@@ -30,12 +30,14 @@ public class Interpreter {
 
 	protected Regex re_integer;
 
-	Reader reader;
+	public Reader reader;
 
 	// user defined words
 	public Dictionary<string,List<string>> WORDS;
 	// user defined variables
 	public Dictionary<string,LangMemoryArray> VARS;
+	// unnamed functions
+	public List<List<String>> LAMBDAS;
 
 	public Interpreter() {
 		SIZE_STACKLOCALS = STACK_SIZE + LOCALS_SIZE;
@@ -63,6 +65,7 @@ public class Interpreter {
 		
 		WORDS = new Dictionary<string,List<string>>();
 		VARS = new Dictionary<string,LangMemoryArray>();
+		LAMBDAS = new List<List<String>>();
 	}
 
 	public void addText(string text) {
@@ -158,6 +161,13 @@ public class Interpreter {
 				continue;
 			}
 
+			// check for "$$LAMBDA index"
+			if(word.Length >= 10 && word.Substring(0,9) == "$$LAMBDA ") {
+				var index = int.Parse(word.Substring(9));
+				push(new LangLambda(index));
+				continue;
+			}
+
 			if(word == "return") {
 				// return from word by popping back to previous wordlist (don't call at toplevel)
 				if(reader.hasPushedWords()) {	
@@ -174,7 +184,8 @@ public class Interpreter {
 				var true_jump = reader.nextWord();
 				// false word is optional
 				bool have_false_jump = false;
-				if(reader.peekWord().Substring(0,2) == "<<" || reader.peekWord().Substring(0,2) == ">>") {
+				var peek = reader.peekWord();
+				if(peek.Length >= 2 && (peek.Substring(0,2) == "<<" || peek.Substring(0,2) == ">>")) {
 					have_false_jump = true;
 				}
 				var cond = pop();
@@ -222,6 +233,19 @@ public class Interpreter {
 					throw new LangError("Trying to delete non-existent userword " + name);
 				}
 				VARS.Remove(name);
+				continue;
+			}
+			
+			if(word == "call") {
+				// top of stack must be a lambda
+				var val = pop();
+				var lambda = val as LangLambda;
+				if(lambda == null) {
+					throw new LangError("call expects a lambda, but got: " + val.repr());
+				}
+				// now this is just like calling a userword, below
+				// TODO -- tail call elimination??
+				reader.pushWords(LAMBDAS[lambda.index]);
 				continue;
 			}
 			

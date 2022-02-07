@@ -14,7 +14,14 @@ public class LangObject {
 }
 
 public class LangInt : LangObject {
+	// integers only allowed to use 31 bits, to be portable across host languages
+	const int MAX_INT_31 = (1<<30) - 1;
+	const int MIN_INT_31 = -MAX_INT_31;
+
 	public LangInt(int i) {
+		if(i > MAX_INT_31 || i < MIN_INT_31) {
+			throw new LangError("Integer overflow");
+		}
 		value = i;
 	}
 
@@ -54,9 +61,17 @@ public class LangMemoryArray : LangObject {
 	}
 
 	public override string repr() { return "var:" + array.Count().ToString() + ":" + offset.ToString(); }
-	
+
 	public List<LangObject> array;
 	public int offset;
 }
 
+public class LangLambda : LangObject {
+	public LangLambda(int index) {
+		this.index = index;
+	}
 
+	public int index; // index into Interpreter.LAMBDAS
+
+	public override string repr() { return "<lambda>"; }
+}

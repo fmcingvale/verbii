@@ -193,6 +193,64 @@ class Builtins {
 		}
 	}
 
+	// see C++ version for verbose comments; minimal comments here
+	public static void make_lambda(Interpreter intr) {
+		// turn { ... } into an anonymous wordlist
+		
+		// delete the { that was just read
+		intr.reader.deletePrevWord();
+
+		var wordlist = new List<String>();
+		int nesting = 1;
+		while(true) {
+			var word = intr.nextWordOrFail();
+			// delete the { ... } as I read it -- will replace it with a lambda reference
+			intr.reader.deletePrevWord();
+			if(word == "{") {
+				// if I find inner lambdas, just copy them for now and later when they are run, 
+				// this same process will happen for them
+				++nesting;
+				wordlist.Add(word);
+			}
+			else if(word == "}") {
+				if(--nesting > 0) {
+					wordlist.Add(word);
+					continue;
+				}
+				// new unnamed wordlist will be placed into LAMBDAS, and its index placed
+				// on stack and in source wordlist so a subsequent 'call' can find it
+				intr.LAMBDAS.Add(wordlist);
+				int index = intr.LAMBDAS.Count()-1;
+
+				// replace { .. } in source wordlist with pseudo opcode "$$LAMBDA index" so 
+				// subsequent 'call' can find it (note it would be impossible for user code 
+				// to insert this word from source since it contains whitespace)
+				intr.reader.insertPrevWord("$$LAMBDA " + index.ToString());
+				// the first time, I have to push the lambda object as well -- interpreter
+				// will do this on subsequent calls when it sees "lambda<#>"
+				intr.push(new LangLambda(index));
+				return;
+			}
+			else {
+				wordlist.Add(word);
+			}
+		}
+	}
+
+	public static void showdef(Interpreter intr) {
+		var name = intr.nextWordOrFail();
+		if(!intr.WORDS.ContainsKey(name)) {
+			Console.WriteLine("No such word: " + name);
+			return;
+		}
+		var wordlist = intr.WORDS[name];
+		Console.Write(name + ": ");
+		foreach(var w in wordlist) {
+			Console.Write(w + " ");
+		}
+		Console.WriteLine(";");
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -216,6 +274,8 @@ class Builtins {
 		{"(", comment},
 		{"set!", set},
 		{"ref", _ref},
+		{"{", make_lambda},
+		{".showdef", showdef},
 		
 	};
 }
