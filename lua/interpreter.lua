@@ -152,9 +152,11 @@ function Interpreter:run(stephook)
 		end
 
 		if word == "return" then
-			-- return from word by popping back to previous wordlist (don't call at toplevel)
+			-- return from word by popping back to previous wordlist (if not at toplevel)
 			if self.reader:hasPushedWords() then
 				self.reader:popWords()
+			else
+				return -- return from top level exits program
 			end
 			goto MAINLOOP
 		end

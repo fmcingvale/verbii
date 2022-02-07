@@ -153,7 +153,7 @@ static void builtin_set(Interpreter *intr) {
 
 // ( addr -- obj ) load obj from addr and push to stack
 //
-// as above, can be int or MemoryArray
+// as above, addr can be int or MemoryArray
 static void builtin_ref(Interpreter *intr) {
 	Object addr = intr->pop();
 	if(addr.isInt()) {

@@ -183,9 +183,12 @@ void Interpreter::run(bool singlestep) {
 		}
 
 		if(word == "return") {
-			// return from word by popping back to previous wordlist (don't call at toplevel)
+			// return from word by popping back to previous wordlist (if not at toplevel)
 			if(reader.hasPushedWords()) {	
 				reader.popWords();
+			}
+			else {
+				return; // return from top level exits program
 			}
 			continue;
 		}
@@ -250,7 +253,7 @@ void Interpreter::run(bool singlestep) {
 		}
 
 		if(word == "call") {
-			// top of stack must be a tagged wordlist ('lambda')
+			// top of stack must be a lambda
 			auto val = pop();
 			if(!val.isLambda()) {
 				throw LangError("call expects a lambda, but got: " + val.repr());
@@ -260,6 +263,8 @@ void Interpreter::run(bool singlestep) {
 			reader.pushWords(LAMBDAS[val.asLambdaIndex()]);
 			continue;
 		}
+
+		// builtins, then userwords, then vars
 
 		auto bltin = BUILTINS.find(word);
 		if(bltin != BUILTINS.end()) {

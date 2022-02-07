@@ -18,7 +18,7 @@ CFLAGS = -g $(GC_FLAGS)
 # max optimization that works without crashing due to GC
 #CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
 
-all: test.exe repl.exe # gctest.exe
+all: test.exe repl.exe  # gctest.exe
 
 %.o: %.cpp $(HEADERS)
 	g++ $(CFLAGS) -Wall -c $< -o $@
@@ -27,7 +27,7 @@ mineylib.a: $(LIB_OBJS)
 	ar rvs mineylib.a $(LIB_OBJS)
 
 clean:
-	rm -f *.exe gmon.out *.o *.a
+	rm -f *.exe gmon.out *.o *.a repl test
 
 test.exe: test.cpp $(TEST_SRC) mineylib.a
 	g++ $(CFLAGS) -Wall -o test test.cpp $(TEST_SRC) mineylib.a $(GC_LIBS)

@@ -164,9 +164,11 @@ class Interpreter(object):
 				continue
 
 			if word == "return":
-				# return from word by popping back to previous wordlist (don't call at toplevel)
+				# return from word by popping back to previous wordlist (if not at toplevel)
 				if self.reader.hasPushedWords():
 					self.reader.popWords()
+				else:
+					return # top level return exits program
 			
 				continue
 		
