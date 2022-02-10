@@ -1,0 +1,269 @@
+>> ( -- unittest_core - test basic language features, roughly in the order that they will usually be implemented -- )
+=> 
+>> ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+=> 
+>> ( very basic check first )
+=> 
+>> 1
+=> 1 
+>> 2
+=> 1 2 
+>> 3
+=> 1 2 3 
+>> 4 5 6 7
+=> 1 2 3 4 5 6 7 
+>> . . . . CR 
+7 6 5 4 
+=> 1 2 3 
+>> 7 6 5 4
+=> 1 2 3 7 6 5 4 
+>> ( math +, -, * )
+=> 1 2 3 7 6 5 4 
+>> clear
+=> 
+>> 10 20 30 40 50
+=> 10 20 30 40 50 
+>> +
+=> 10 20 30 90 
+>> -
+=> 10 20 -60 
+>> * 
+=> 10 -1200 
+>> +
+=> -1190 
+>> ( *** rounding of / -- should round to nearest *** )
+=> -1190 
+>> ( round down 8.3 -> 8 )
+=> -1190 
+>> clear
+=> 
+>> 639 77 /mod
+=> 23 8 
+>> 77 * +
+=> 639 
+>> -639 77 /mod
+=> 639 -23 -8 
+>> 77 * +
+=> 639 -639 
+>> 639 77 /
+=> 639 -639 8 
+>> -639 77 /
+=> 639 -639 8 -8 
+>> 639 77 mod
+=> 639 -639 8 -8 23 
+>> -639 77 mod
+=> 639 -639 8 -8 23 -23 
+>> ( round down 7.8 -> 7 )
+=> 639 -639 8 -8 23 -23 
+>> clear
+=> 
+>> 335 43 /mod
+=> 34 7 
+>> 43 * +
+=> 335 
+>> -335 43 /mod
+=> 335 -34 -7 
+>> 43 * +
+=> 335 -335 
+>> 335 43 /
+=> 335 -335 7 
+>> -335 43 /
+=> 335 -335 7 -7 
+>> 335 43 mod
+=> 335 -335 7 -7 34 
+>> -335 43 mod
+=> 335 -335 7 -7 34 -34 
+>> ( round 6.5 -> 6 )
+=> 335 -335 7 -7 34 -34 
+>> clear
+=> 
+>> 403 62 /mod
+=> 31 6 
+>> 62 * +
+=> 403 
+>> -403 62 /mod
+=> 403 -31 -6 
+>> 62 * +
+=> 403 -403 
+>> 403 62 /
+=> 403 -403 6 
+>> -403 62 /
+=> 403 -403 6 -6 
+>> 403 62 mod
+=> 403 -403 6 -6 31 
+>> -403 62 mod
+=> 403 -403 6 -6 31 -31 
+>> ( numerical limits -- non-error cases )
+=> 403 -403 6 -6 31 -31 
+>> clear
+=> 
+>> 1073741823
+=> 1073741823 
+>> -1073741823
+=> 1073741823 -1073741823 
+>> 1073741813 10 +
+=> 1073741823 -1073741823 1073741823 
+>> -1073741800 23 -
+=> 1073741823 -1073741823 1073741823 -1073741823 
+>> ( booleans )
+=> 1073741823 -1073741823 1073741823 -1073741823 
+>> clear
+=> 
+>> 12 12 ==
+=> true 
+>> -34 -34 ==
+=> true true 
+>> 20 8 ==
+=> true true false 
+>> -12 8 >
+=> true true false false 
+>> 100 2 >
+=> true true false false true 
+>> 212 -84 >
+=> true true false false true true 
+>> 123 123 >
+=> true true false false true true false 
+>> -456 -456 >
+=> true true false false true true false false 
+>> ( jumps )
+=> true true false false true true false false 
+>> clear
+=> 
+>> 11 22 >>THREE @FIVE 55 66 >>SEVEN @THREE 33 44 <<FIVE @SEVEN 77 88
+=> 11 22 33 44 55 66 77 88 
+>> ( if )
+=> 11 22 33 44 55 66 77 88 
+>> clear
+=> 
+>> 100 100 == if >>TRUE >>FALSE @TRUE 1234 >>END @FALSE 5678 @END
+=> 1234 
+>> 200 200 == if >>TRUE 8888 >>END @TRUE 5678 @END
+=> 1234 5678 
+>> 100 300 == if >>TRUE >>FALSE @TRUE 9999 >>END @FALSE 8765 @END
+=> 1234 5678 8765 
+>> 300 200 == if >>TRUE 4321 >>END @TRUE 9999 @END
+=> 1234 5678 8765 4321 
+>> ( defining words )
+=> 1234 5678 8765 4321 
+>> clear
+=> 
+>> : aaa 111 222 333 444 ;
+=> 
+>> : bbb 99 88 77 ;
+=> 
+>> aaa
+=> 111 222 333 444 
+>> bbb
+=> 111 222 333 444 99 88 77 
+>> clear
+=> 
+>> ( show that forward references are fine )
+=> 
+>> : ccc 11 ddd 88 ;
+=> 
+>> : ddd 22 eee 77 ;
+=> 
+>> : eee 33 fff 66 ;
+=> 
+>> : fff 44 55 ;
+=> 
+>> ccc
+=> 11 22 33 44 55 66 77 88 
+>> ( alternate syntax )
+=> 11 22 33 44 55 66 77 88 
+>> clear
+=> 
+>> def ggg 123 456 789 ;
+=> 
+>> ggg
+=> 123 456 789 
+>> ( make sure return doesn't crash )
+=> 123 456 789 
+>> def zzz 123 456 return ;
+=> 123 456 789 
+>> zzz
+=> 123 456 789 123 456 
+>> return
+=> 123 456 789 123 456 
+>> ( local stack )
+=> 123 456 789 123 456 
+>> clear
+=> 
+>> 10 20 30 40
+=> 10 20 30 40 
+>> >L 
+=> 10 20 30 
+>> >L 
+=> 10 20 
+>> >L 
+=> 10 
+>> >L 
+=> 
+>> L>
+=> 10 
+>> L>
+=> 10 20 
+>> L>
+=> 10 20 30 
+>> L>
+=> 10 20 30 40 
+>> clear
+=> 
+>> 10 20 30 40
+=> 10 20 30 40 
+>> >L 
+=> 10 20 30 
+>> >L 
+=> 10 20 
+>> >L 
+=> 10 
+>> >L 
+=> 
+>> 111 LP set!
+=> 
+>> 222 LP 1 + set!
+=> 
+>> 333 LP 2 + set!
+=> 
+>> 444 LP 3 + set!
+=> 
+>> L>
+=> 111 
+>> L>
+=> 111 222 
+>> L>
+=> 111 222 333 
+>> L>
+=> 111 222 333 444 
+>> ( var )
+=> 111 222 333 444 
+>> clear
+=> 
+>> var x 4
+=> 
+>> 11 x set! 22 x 1 + set! 33 x 2 + set! 44 x 3 + set!
+=> 
+>> x 1 + ref
+=> 22 
+>> x 3 + ref
+=> 22 44 
+>> x 2 + ref
+=> 22 44 33 
+>> x ref
+=> 22 44 33 11 
+>> ( show redefining after del works )
+=> 22 44 33 11 
+>> clear
+=> 
+>> del x   
+=> 
+>> var x 1
+=> 
+>> ( check that 'return' at the top level works correctly )
+=> 
+>> clear
+=> 
+>> 10 20 == if >>T 3333 return @T 4444
+=> 3333 
+>> 5555
+=> 3333 5555 
