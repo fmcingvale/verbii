@@ -141,6 +141,11 @@ function Interpreter:run(stephook)
 			goto MAINLOOP
 		end
 
+		if string.sub(word,1,1) == "#" then
+			self:push(new_Float(tonumber(string.sub(word, 2))))
+			goto MAINLOOP
+		end
+
 		local matches = string.match(word, "^%$<lambda ([%d]+)>$")
 		if matches then
 			index = tonumber(matches)

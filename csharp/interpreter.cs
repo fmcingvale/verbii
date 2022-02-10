@@ -161,6 +161,13 @@ public class Interpreter {
 				continue;
 			}
 
+			// floats: #NNN.NN
+			if(word.Substring(0,1) == "#") {
+				double d = double.Parse(word.Substring(1));
+				push(new LangFloat(d));
+				continue;
+			}
+
 			// check for "$$LAMBDA index"
 			if(word.Length >= 10 && word.Substring(0,9) == "$$LAMBDA ") {
 				var index = int.Parse(word.Substring(9));

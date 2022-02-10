@@ -30,6 +30,16 @@ public class LangInt : LangObject {
 	public override string repr() { return value.ToString(); } 
 }
 
+public class LangFloat : LangObject {
+	public LangFloat(double d) {
+		value = d;
+	}
+
+	public double value;
+
+	public override string repr() { return String.Format("{0:F17}", value); }
+}
+
 public class LangBool : LangObject {
 	public LangBool(bool b) {
 		value = b;

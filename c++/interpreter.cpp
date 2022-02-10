@@ -169,6 +169,15 @@ void Interpreter::run(bool singlestep) {
 		}
 
 		{
+			// to keep parsing simple (i.e. should be easy to do without regexes),
+			// floats are written like #n.nnn
+			if(word[0] == '#') {
+				push(newFloat(stod(word.c_str()+1)));
+				continue;
+			}
+		}
+
+		{
 			// check for $<lambda NN>
 			if(!strncmp(word.c_str(), "$<lambda ", 9)) {
 				const char *s = word.c_str() + 9;

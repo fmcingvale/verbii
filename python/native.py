@@ -105,6 +105,8 @@ def reprObject(obj):
 	from interpreter import CallableWordlist
 	if type(obj) is int:
 		return str(obj)
+	elif type(obj) is float:
+		return "{0:.17f}".format(obj)
 	elif obj is True:
 		return "true"
 	elif obj is False:
@@ -127,6 +129,13 @@ def builtin_showdef(I):
 
 	print(";")
 	
+def popIntOrFloat(I):
+	obj = I.pop()
+	if type(obj) == int or type(obj) == float:
+		return float(obj)
+	else:
+		raise LangError("Expecting float or int but got: " + reprObject(obj))
+		
 def builtin_make_lambda(intr: Interpreter):
 	"This is straight from the C++ version; see comments there. For brevity I omitted most of them here"
 	from interpreter import CallableWordlist
@@ -168,6 +177,29 @@ def builtin_make_lambda(intr: Interpreter):
 		else:
 			wordlist.append(word)
 
+def builtin_fadd(I):
+	b = popIntOrFloat(I)
+	a = popIntOrFloat(I)
+	I.push(a+b)
+
+def builtin_fsub(I):
+	b = popIntOrFloat(I)
+	a = popIntOrFloat(I)
+	I.push(a-b)
+
+def builtin_fmul(I):
+	b = popIntOrFloat(I)
+	a = popIntOrFloat(I)
+	I.push(a*b)
+
+def builtin_fdiv(I):
+	b = popIntOrFloat(I)
+	if b == 0:
+		raise LangError("Floating point overflow")
+
+	a = popIntOrFloat(I)
+	I.push(a/b)
+
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -175,6 +207,10 @@ BUILTINS = {
 	'-': ([int,int], lambda I,a,b: I.pushInt(a-b)),
 	'*': ([int,int], lambda I,a,b: I.pushInt(a*b)),
 	'/mod': ([int,int], builtin_divmod),
+	'f+': ([], builtin_fadd),
+	'f-': ([], builtin_fsub),
+	'f*': ([], builtin_fmul),
+	'f/': ([], builtin_fdiv),
 	'==': ([int,int], lambda I,a,b: I.push(a==b)),
 	'>': ([int,int], lambda I,a,b: I.push(a>b)),
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),

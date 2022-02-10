@@ -154,6 +154,11 @@ class Interpreter(object):
 				self.pushInt(int(word))
 				continue
 
+			# check for float '#NNN.NN'
+			if word[0] == '#':
+				self.push(float(word[1:]))
+				continue
+			
 			m = self.re_lambda.match(word)
 			if m:
 				index = int(m.group(1))

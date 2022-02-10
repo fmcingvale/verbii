@@ -18,6 +18,19 @@ class Builtins {
 		return i.value;
 	}
 
+	public static double popFloatOrInt(Interpreter intr) {
+		var obj = intr.pop();
+		if (obj is LangInt) {
+			return (double)((obj as LangInt)!.value);
+		}
+		else if (obj is LangFloat) {
+			return (obj as LangFloat)!.value;
+		}
+		else {
+			throw new LangError("Expecting int or float but got: " + obj.repr());
+		}
+	}
+
 	public static void add(Interpreter intr) {
 		var b = intr.pop();
 		var a = intr.pop();
@@ -251,11 +264,24 @@ class Builtins {
 		Console.WriteLine(";");
 	}
 
+	public static void fdiv(Interpreter intr) {
+		var b = popFloatOrInt(intr);
+		var a = popFloatOrInt(intr);
+		if(b == 0) {
+			throw new LangError("Floating point divide by zero");
+		}
+		intr.push(new LangFloat(a/b));
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
 		{"-", intr => intr.push(new LangInt(-popInt(intr) + popInt(intr)))},
 		{"*", intr => intr.push(new LangInt(popInt(intr) * popInt(intr)))},
+		{"f+", intr  => intr.push(new LangFloat(popFloatOrInt(intr) + popFloatOrInt(intr)))},
+		{"f-", intr => intr.push(new LangFloat(-popFloatOrInt(intr) + popFloatOrInt(intr)))},
+		{"f*", intr  => intr.push(new LangFloat(popFloatOrInt(intr) * popFloatOrInt(intr)))},
+		{"f/", fdiv},
 		{"/mod", int_divmod},
 		{"==", intr => intr.push(new LangBool(popInt(intr) == popInt(intr)))},
 		{">", intr => intr.push(new LangBool(popInt(intr) < popInt(intr)))},

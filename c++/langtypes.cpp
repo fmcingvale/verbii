@@ -6,6 +6,7 @@
 #include "langtypes.hpp"
 #include "errors.hpp"
 #include "xmalloc.hpp"
+#include <sstream>
 using namespace std;
 
 // integers only allowed to use 31 bits, to be portable across host languages
@@ -76,10 +77,23 @@ Object copyMemArray(MemoryArray *memarray) {
 	return obj;
 }
 
+Object newFloat(double d) {
+	Object obj;
+	obj.type = TYPE_FLOAT;
+	obj.data.d = d;
+	return obj;
+}
+
 string Object::repr() const {
 	switch(type) {
 		case TYPE_VOID: throw LangError("Got VOID object, something is wrong");
 		case TYPE_INT: return to_string(data.i);
+		case TYPE_FLOAT: 
+		{
+			char buf[40];
+			snprintf(buf, 39, "%.17lf", data.d);
+			return string(buf);
+		}
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		case TYPE_LAMBDA: return "<lambda>";
 		case TYPE_MEMARRAY: return "var:" + to_string(data.memarray->count) + ":" + to_string(data.memarray->offset);

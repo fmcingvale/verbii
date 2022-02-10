@@ -5,6 +5,7 @@
 
 	Ported from Python version
 ]]
+require("langtypes")
 
 function int_divmod(a, b)
 	-- see notes in C++ implementation of this function.
@@ -34,26 +35,6 @@ function builtin_divmod(intr, a, b)
 	quot,mod = int_divmod(a,b)
 	intr:pushInt(mod)
 	intr:pushInt(quot)
-end
-
-function isCallableWordlist(obj)
-	return type(obj) == "table" and obj.__class__ == "CallableWordlist"
-end
-
-function reprObject(obj)
-	if type(obj) == "number" then
-		return tostring(obj)
-	elseif type(obj) == "boolean" then
-		if obj then
-			return "true"
-		else
-			return "false"
-		end
-	elseif isCallableWordlist(obj) then
-		return "<lambda>"
-	else
-		error(">>>Don't know how to print object: " .. tostring(obj))
-	end
 end
 
 function builtin_repr(intr)
@@ -163,19 +144,6 @@ function builtin_showdef(intr)
 	print(";")
 end
 
-CallableWordlist = {}
-function CallableWordlist:new(obj, wordlist)
-	setmetatable(obj, self)
-	self.__index = self
-	obj.__class__ = "CallableWordlist"
-	obj.wordlist = wordlist
-	return obj
-end
-
-function new_CallableWordlist(wordlist)
-	return CallableWordlist:new({},wordlist)
-end
-
 function builtin_make_lambda(intr)
 	 -- Ported from the Python version -- see C++ version for full comments
 
@@ -225,11 +193,54 @@ function builtin_printchar(intr,a)
 	end
 end
 
+-- always returns a Float
+function popFloatOrInt(intr)
+	obj = intr:pop()
+	if type(obj) == "number" then
+		return obj
+	elseif isFloat(obj) then
+		return obj.value
+	else
+		error("Expecting int or float but got: " .. reprObject(obj))
+	end
+end
+
+function builtin_fadd(intr)
+	b = popFloatOrInt(intr)
+	a = popFloatOrInt(intr)
+	intr:push(new_Float(a+b))
+end
+
+function builtin_fsub(intr)
+	b = popFloatOrInt(intr)
+	a = popFloatOrInt(intr)
+	intr:push(new_Float(a-b))
+end
+
+function builtin_fmul(intr)
+	b = popFloatOrInt(intr)
+	a = popFloatOrInt(intr)
+	intr:push(new_Float(a*b))
+end
+
+function builtin_fdiv(intr)
+	b = popFloatOrInt(intr)
+	if b == 0 then
+		error("Floating point divide by zero")
+	end
+	a = popFloatOrInt(intr)
+	intr:push(new_Float(a/b))
+end
+
 BUILTINS = {
 	["+"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a+b) end },
 	["-"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a-b) end },
 	["*"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a*b) end },
 	["/mod"] = { {"number","number"}, builtin_divmod },
+	["f+"] = { {}, builtin_fadd},
+	["f-"] = { {}, builtin_fsub},
+	["f*"] = { {}, builtin_fmul},
+	["f/"] = { {}, builtin_fdiv},
 	["=="] = { {"number","number"}, function(intr,a,b) intr:push(a==b) end },
 	[">"] = { {"number","number"}, function(intr,a,b) intr:push(a>b) end },
 	["repr"] = { {}, builtin_repr },

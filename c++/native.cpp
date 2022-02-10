@@ -30,6 +30,50 @@ static void pushBool(Interpreter *intr, bool b) {
 	intr->push(newBool(b));
 }
 
+static double popFloatOrInt(Interpreter *intr) {
+	Object obj = intr->pop();
+	if(obj.isFloat()) {
+		return obj.data.d;
+	}
+	else if(obj.isInt()) {
+		return obj.data.i;
+	}
+	else {
+		throw LangError("Expecting int or float but got: " + obj.repr());
+	}
+}
+
+static void pushFloat(Interpreter *intr, double d) {
+	intr->push(newFloat(d));
+}
+
+static void builtin_add_float(Interpreter *intr) {
+	double b = popFloatOrInt(intr);
+	double a = popFloatOrInt(intr);
+	pushFloat(intr, a+b);
+}
+
+static void builtin_sub_float(Interpreter *intr) {
+	double b = popFloatOrInt(intr);
+	double a = popFloatOrInt(intr);
+	pushFloat(intr, a-b);
+}
+
+static void builtin_mul_float(Interpreter *intr) {
+	double b = popFloatOrInt(intr);
+	double a = popFloatOrInt(intr);
+	pushFloat(intr, a*b);
+}
+
+static void builtin_div_float(Interpreter *intr) {
+	double b = popFloatOrInt(intr);
+	if(b == 0) {
+		throw LangError("Floating point divide by zero");
+	}
+	double a = popFloatOrInt(intr);
+	pushFloat(intr, a/b);
+}
+
 static void builtin_add(Interpreter *intr) {
 	Object b = intr->pop();
 	Object a = intr->pop();
@@ -302,6 +346,10 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"*", 
 		[](Interpreter *intr) {pushInt(intr, popInt(intr) * popInt(intr));}},
 	{"/mod", builtin_divmod},
+	{"f+", builtin_add_float},
+	{"f-", builtin_sub_float},
+	{"f*", builtin_mul_float},
+	{"f/", builtin_div_float},
 	{":", builtin_define_word},
 	// synonym for ':', for readability
 	{"def", builtin_define_word},

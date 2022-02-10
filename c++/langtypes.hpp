@@ -19,6 +19,7 @@ const unsigned char TYPE_INT = 1;
 const unsigned char TYPE_BOOL = 2;
 const unsigned char TYPE_LAMBDA = 3;
 const unsigned char TYPE_MEMARRAY = 4;
+const unsigned char TYPE_FLOAT = 5;
 
 class Object;
 
@@ -39,13 +40,15 @@ class Object {
 	bool isBool() const { return type == TYPE_BOOL; }
 	bool isLambda() const { return type == TYPE_LAMBDA; }
 	bool isMemArray() const { return type == TYPE_MEMARRAY; }
+	bool isFloat() const { return type == TYPE_FLOAT; }
 
 	// get value (make sure to check first)
 	unsigned int asInt() const { return data.i; }
 	bool asBool() const { return data.b; }
 	int asLambdaIndex() const { return data.i; };
 	MemoryArray* asMemArray() { return data.memarray; }
-
+	double asFloat() { return data.d; }
+	
 	// setters to change value of object, i.e. for reusing object
 	void setInt(int i);
 
@@ -58,6 +61,7 @@ class Object {
 		int i; // ints and lamda (index into LAMBDAS)
 		bool b;
 		MemoryArray *memarray;
+		double d;
 	} data;
 };
 
@@ -70,4 +74,5 @@ Object newMemArray(int count, int offset);
 // can have its own offset without affecting original. 
 // offset is set the same as memarray.
 Object copyMemArray(MemoryArray *memarray);
+Object newFloat(double d);
 

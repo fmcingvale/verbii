@@ -12,6 +12,7 @@
 ## Types:
 - integers - range [-1073741823, +1073741823] - values outside this range must raise an error
 - booleans - values true & false - must be a distinct type from integers - must raise error when non-boolean received in boolean context (like "if")
+- floats - these are the host language double type. originally i was going to make a custom "lite" floating point implementation, to avoid cross-language issues with rounding, etc., but even a minimal version was 100+ lines of code. so i decided native floats are ok ("simplicity" rule) and will deal with rounding issues in the implementation of unittests.
 - ports can use any internal representation, but the integer range is chosen to fit in 31 bits to allow tagged values if desired, but tagging is not required. if a host language has a suitable object system, garbage collection, etc., those can be freely used as long as the type limitations are enforced. (currenly no ports use tagged values, however some scripting language have a 31 bit limit so this intended for compatibility with those languages)
 - related to the above, ports can use any memory model they wish, the only requirement is that pointer addition works as expected in the language -- i.e. 'SP 1 + ref', '123 X 10 + set!', 'LP 2 + ref', etc.
 

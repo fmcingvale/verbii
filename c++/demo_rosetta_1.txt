@@ -126,10 +126,8 @@ del Q del R del T del K del N del L del NR del NN
 
 ( https://rosettacode.org/wiki/Multiplication_tables )
 
-( -- non-rosetta tasks -- )
 
-( -- compute sqrt -- )
-( -- compute other functions like cos, sin, tan -- )
+
 ( https://rosettacode.org/wiki/N-queens_problem )
 ( -- prime numbers -- )
 
@@ -238,3 +236,23 @@ make-add-10 adder set!
 ." Expect 65536: " 2 16 pow . CR
 ." Expect 1000: " 10 3 pow . CR
 ." Expect 24137569: " 17 6 pow . CR
+
+( -- non-rosetta tasks -- )
+
+( -- compute sqrt using Babylonian method -- )
+: sqrt ( x -- sqrt(x) )
+20 swap  ( n[#terms] x )
+dup 2 f/  ( n x y0 [initial guess] )
+@loop ( n x y0 )
+( y1 = 0.5 * (y0 + (x/y0)) )
+ 2dup f/ over f+ 2 f/ swap drop ( n x [x/y0+y0]/2 )
+( n x y1 )
+rot 1 - dup? 0 == if >>end -rot <<loop ( n-1 x y1 )
+@end ( x y1 ) 
+swap drop ;
+
+." -- sqrt " CR
+." Expect 135.177660876: " 18273 sqrt dup . dup f* . CR 
+." Expect 439.1295025388297: " #192834.72 sqrt dup . dup f* . CR
+
+( -- compute other functions like cos, sin, tan -- )
