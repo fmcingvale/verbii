@@ -26,7 +26,7 @@ function Interpreter:push(obj)
 		error(">>>Stack overflow")
 	end
 	self.SP = self.SP - 1
-	self.RAM[self.SP] = obj
+	self.STACKLOCALS[self.SP] = obj
 end
 
 function Interpreter:pushInt(val)
@@ -43,7 +43,7 @@ function Interpreter:pop()
 		error(">>>Stack underflow")
 	end
 
-	obj = self.RAM[self.SP]
+	obj = self.STACKLOCALS[self.SP]
 	self.SP = self.SP + 1
 	return obj
 end
@@ -53,7 +53,7 @@ function Interpreter:reprStack()
 	s = ""
 	i = self.SP_EMPTY-1
 	while i >= self.SP do
-		s = s .. reprObject(self.RAM[i]) .. " "
+		s = s .. reprObject(self.STACKLOCALS[i]) .. " "
 		i = i - 1
 	end
 
@@ -150,7 +150,7 @@ function Interpreter:run(stephook)
 		if matches then
 			index = tonumber(matches)
 			if index < 0 or index > #self.LAMBDAS then
-				error("Bad lambda index " .. tostring(index))
+				error(">>>Bad lambda index " .. tostring(index))
 			end
 			self:push(self.LAMBDAS[index])
 			goto MAINLOOP
@@ -202,25 +202,22 @@ function Interpreter:run(stephook)
 		if word == "var" then
 			name = self:nextWordOrFail()
 			count = tonumber(self:nextWordOrFail())
-			-- must be unique userword
-			if self.WORDS[name] ~= nil then
-				error(">>>Trying to redefine userword "  .. name)
+			-- must be unique nmw
+			if self.VARS[name] ~= nil then
+				error(">>>Trying to redefine variable "  .. name)
 			end
 		
-			-- reserve count bytes
-			addr = self:allocate(count)
-			-- make name a word that returns the address so set! and ref can use the variable
-			self.WORDS[name] = {tostring(addr)}
+			self.VARS[name] = new_MemArray(count)
 			goto MAINLOOP
 		end
 			
 		if word == "del" then
 			name = self:nextWordOrFail()
-			if self.WORDS[name] == nil then
-				error(">>>Trying to delete non-existent userword " .. name)
+			if self.VARS[name] == nil then
+				error(">>>Trying to delete non-existent variable " .. name)
 			end
 			
-			self.WORDS[name] = nil
+			self.VARS[name] = nil
 			goto MAINLOOP
 		end
 			
@@ -236,6 +233,8 @@ function Interpreter:run(stephook)
 			self.reader:pushWords(obj.wordlist)
 			goto MAINLOOP
 		end
+
+		-- builtins then userwords then vars
 
 		if BUILTINS[word] ~= nil then
 			argtypes = BUILTINS[word][1]
@@ -258,6 +257,11 @@ function Interpreter:run(stephook)
 			goto MAINLOOP
 		end
 
+		if self.VARS[word] ~= nil then
+			self:push(self.VARS[word])
+			goto MAINLOOP
+		end
+
 		error(">>>Unknown word " .. word)
 	end
 end
@@ -272,41 +276,29 @@ function Interpreter:new(obj)
 	obj.MAX_INT_31 = (1<<30) - 1
 	obj.MIN_INT_31 = -obj.MAX_INT_31
 	
-	--[[ 
-		pre-creating a large array in Lua doesn't seem as straightforward as in Python
-		or C++ ... I think I'd have to fill in in a loop ... however, the table will
-		grow automatically, so I'm putting the stacks/locals at the start and then free
-		memory will grow on top on that ]]
-	obj.RAM = {}
-	obj.SP_MIN = 1
-	obj.SP_MAX = obj.SP_MIN + obj.STACK_SIZE - 1
+	obj.SIZE_STACKLOCALS = obj.STACK_SIZE + obj.LOCALS_SIZE
+	obj.STACKLOCALS = {}
+	-- prefill stack+locals
+	for i=1,obj.SIZE_STACKLOCALS do
+		obj.STACKLOCALS[i] = 0
+	end
+
+	obj.SP_MAX = obj.SIZE_STACKLOCALS - 1
 	obj.SP_EMPTY = obj.SP_MAX + 1
 	obj.SP = obj.SP_EMPTY
-
-	-- prefill stack
-	for i=obj.SP_MIN,obj.SP_MAX do
-		obj.RAM[i] = 0
-	end
-
-	obj.LP_MIN = obj.SP_MAX + 1
-	obj.LP_MAX = obj.LP_MIN + obj.LOCALS_SIZE - 1
+	obj.SP_MIN = obj.SP_EMPTY - obj.STACK_SIZE
+	
+	obj.LP_MAX = obj.SP_MIN - 1
 	obj.LP_EMPTY = obj.LP_MAX + 1
 	obj.LP = obj.LP_EMPTY
-
-	-- prefill locals
-	for i=obj.LP_MIN,obj.LP_MAX do
-		obj.RAM[i] = 0
-	end
+	obj.LP_MIN = obj.LP_EMPTY - obj.LOCALS_SIZE
 	
-	obj.MEM_FIRST = obj.LP_MAX + 1 -- first usable address
-	obj.MEM_NEXT = obj.LP_MAX + 1 -- next address to be allocated
-
-	-- no max ram size, just allow to keep growing
-
 	-- user-defined words
 	obj.WORDS = {}
 	-- anonymous words (referenced by index with $<lambda index> in modified wordlists)
 	obj.LAMBDAS = {}
+	-- vars
+	obj.VARS = {}
 
 	obj.reader = new_Reader()
 

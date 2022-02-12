@@ -251,8 +251,49 @@
 => 22 44 33 
 >> x ref
 => 22 44 33 11 
->> ( show redefining after del works )
+>> ( check that int+addr works as well )
 => 22 44 33 11 
+>> clear
+=> 
+>> 123 3 x + set!
+=> 
+>> 3 x + ref
+=> 123 
+>> ( show that dup'ing addresses works and they maintain separate offsets )
+=> 123 
+>> clear
+=> 
+>> var t 4
+=> 
+>> t 
+=> var:4:0 
+>> dup
+=> var:4:0 var:4:0 
+>> 1 +
+=> var:4:0 var:4:1 
+>> dup
+=> var:4:0 var:4:1 var:4:1 
+>> 1 +
+=> var:4:0 var:4:1 var:4:2 
+>> dup
+=> var:4:0 var:4:1 var:4:2 var:4:2 
+>> 1 +
+=> var:4:0 var:4:1 var:4:2 var:4:3 
+>> clear
+=> 
+>> var y 4
+=> 
+>> y dup 1 + dup 1 + dup 1 + ( y y+1 y+2 y+3 )
+=> var:4:0 var:4:1 var:4:2 var:4:3 
+>> 123 swap set! 456 swap set! 789 swap set! 910 swap set!
+=> 
+>> y 3 + dup -1 + dup -1 + dup -1 +
+=> var:4:3 var:4:2 var:4:1 var:4:0 
+>> ref . ref . ref . ref . CR
+910 789 456 123 
+=> 
+>> ( show redefining after del works )
+=> 
 >> clear
 => 
 >> del x   

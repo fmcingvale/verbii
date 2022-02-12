@@ -70,3 +70,27 @@
 => 
 >> >L
 *** Stack underflow ***
+>> ( out of bounds in variable access )
+=> 
+>> var x 4
+=> 
+>> 10 x 4 + set!
+*** Offset out of bounds in set! ***
+>> var y 5
+=> 
+>> y 5 + ref
+*** Offset out of bounds in ref ***
+>> var z 10 
+=> 
+>> z -1 + ref
+*** Offset out of bounds in ref ***
+>> ( show that trying to redefine a name fails )
+=> 
+>> var fff 4
+=> 
+>> var fff 1
+*** Trying to redefine variable fff ***
+>> ( deleting non existant var should fail )
+=> 
+>> del ggg
+*** Trying to delete non-existent variable ggg ***

@@ -70,19 +70,39 @@ end
 
 -- ( obj addr -- ) - save obj to addr
 function builtin_set(intr, obj, addr)
-	if addr < 0 or addr >= intr.MEM_NEXT then
-		error(">>>Bad address in set!: " .. tostring(addr))
-	end
+	-- see if its an integer or MemArray
+	if type(addr) == "number" then
+		if addr < 0 or addr >= intr.SIZE_STACKLOCALS then
+			error(">>>Bad address in set!: " .. tostring(addr))
+		end
 
-	intr.RAM[addr] = obj -- like Python, can just store obj directly
+		intr.STACKLOCALS[addr] = obj -- like Python, can just store obj directly
+	elseif isMemArray(addr) then
+		if addr.offset < 0 or addr.offset >= #addr.mem then
+			error(">>>Offset out of bounds in set!")
+		end
+		addr.mem[addr.offset] = obj
+	else
+		error(">>>Bad address in set!: " .. reprObject(addr))
+	end
 end
 
 -- ( addr -- obj ) load obj from addr and push to stack
 function builtin_ref(intr, addr)
-	if addr < 0 or addr >= intr.MEM_NEXT then
-		error(">>>Bad address in ref: " .. tostring(addr))
+	-- see if its an integer or MemArray
+	if type(addr) == "number" then
+		if addr < 0 or addr >= intr.SIZE_STACKLOCALS then
+			error(">>>Bad address in ref: " .. tostring(addr))
+		end
+		intr:push(intr.STACKLOCALS[addr])
+	elseif isMemArray(addr) then
+		if addr.offset < 0 or addr.offset >= #addr.mem then
+			error(">>>Offset out of bounds in ref")
+		end
+		intr:push(addr.mem[addr.offset])
+	else
+		error(">>>Bad address in ref: " .. reprObject(addr))
 	end
-	intr:push(intr.RAM[addr])
 end
 
 -- set stack pointer from addr on stack
@@ -107,7 +127,7 @@ function builtin_tolocal(intr)
 		error(">>>Locals overflow")
 	end	
 	intr.LP = intr.LP - 1
-	intr.RAM[intr.LP] = intr:pop()
+	intr.STACKLOCALS[intr.LP] = intr:pop()
 end
 
 -- pop top locals and push to stack
@@ -115,7 +135,7 @@ function builtin_fromlocal(intr)
 	if intr.LP >= intr.LP_EMPTY then
 		error(">>>Locals underflow")
 	end
-	intr:push(intr.RAM[intr.LP])
+	intr:push(intr.STACKLOCALS[intr.LP])
 	intr.LP = intr.LP + 1
 end
 
@@ -201,7 +221,7 @@ function popFloatOrInt(intr)
 	elseif isFloat(obj) then
 		return obj.value
 	else
-		error("Expecting int or float but got: " .. reprObject(obj))
+		error(">>>Expecting int or float but got: " .. reprObject(obj))
 	end
 end
 
@@ -226,14 +246,33 @@ end
 function builtin_fdiv(intr)
 	b = popFloatOrInt(intr)
 	if b == 0 then
-		error("Floating point divide by zero")
+		error(">>>Floating point divide by zero")
 	end
 	a = popFloatOrInt(intr)
 	intr:push(new_Float(a/b))
 end
 
+function builtin_add(intr)
+	local b = intr:pop()
+	local a = intr:pop();
+	if type(a) == "number" and type(b) == "number" then
+		intr:pushInt(a+b)
+	elseif isMemArray(a) and type(b) == "number" then
+		local arr = clone_MemArray(a)
+		arr.offset = arr.offset + b
+		intr:push(arr)
+	-- now with swapped args
+	elseif isMemArray(b) and type(a) == "number" then
+		local arr = clone_MemArray(b)
+		arr.offset = arr.offset + a
+		intr:push(arr)
+	else
+		error(">>>Don't know how to add " .. reprObject(a) .. " and " .. reprObject(b))
+	end
+end
+
 BUILTINS = {
-	["+"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a+b) end },
+	["+"] = { {}, builtin_add },
 	["-"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a-b) end },
 	["*"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a*b) end },
 	["/mod"] = { {"number","number"}, builtin_divmod },
@@ -253,8 +292,8 @@ BUILTINS = {
 	[":"] = { {}, builtin_define_word },
 	-- alias for ':'
 	["def"] = { {}, builtin_define_word },
-	["set!"] = { {"any","number"}, builtin_set},
-	["ref"] = { {"number"}, builtin_ref },
+	["set!"] = { {"any","any"}, builtin_set},
+	["ref"] = { {"any"}, builtin_ref },
 	[">L"] = { {}, builtin_tolocal},
 	["L>"] = { {}, builtin_fromlocal},
 	["depth"] = { {}, function(intr) intr:push(intr.SP_EMPTY - intr.SP) end },

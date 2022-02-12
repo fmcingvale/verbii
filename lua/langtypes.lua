@@ -22,6 +22,35 @@ function new_Float(value)
 	return Float:new({}, value)
 end
 
+MemArray = {}
+function MemArray:new(obj, count)
+	setmetatable(obj, self)
+	self.__index = self
+	obj.__class__ = "MemArray"
+	obj.mem = {}
+	for i=1,count do
+		obj.mem[i] = 0
+	end
+	obj.offset = 0
+	return obj
+end
+
+function isMemArray(obj)
+	return type(obj) == "table" and obj.__class__ == "MemArray"
+end
+
+function new_MemArray(count)
+	return MemArray:new({}, count)
+end
+
+-- copy MemArray, sharing .mem and with own offset
+function clone_MemArray(obj)
+	local arr = MemArray:new({}, 0)
+	arr.mem = obj.mem
+	arr.offset = obj.offset
+	return arr
+end
+
 function isCallableWordlist(obj)
 	return type(obj) == "table" and obj.__class__ == "CallableWordlist"
 end
@@ -51,6 +80,8 @@ function reprObject(obj)
 		else
 			return "false"
 		end
+	elseif isMemArray(obj) then
+		return "var:" .. tostring(#obj.mem) .. ":" .. tostring(obj.offset)
 	elseif isCallableWordlist(obj) then
 		return "<lambda>"
 	else
