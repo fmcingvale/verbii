@@ -47,6 +47,14 @@ class Builtins {
 			intr.push(m);
 			return;
 		}
+		// swapped args from above
+		var b_m = b as LangMemoryArray;
+		if(b_m != null && a_i != null) {
+			var m = new LangMemoryArray(b_m);
+			m.offset += a_i.value;
+			intr.push(m);
+			return;
+		}
 		
 		throw new LangError("Don't know how to add " + a.repr() + " and " + b.repr());
 	}
@@ -197,7 +205,7 @@ class Builtins {
 		}
 		else if(addr_m != null) {
 			if(addr_m.offset < 0 || addr_m.offset >= addr_m.array.Count()) {
-				throw new LangError("Offset out of bounds in set!");
+				throw new LangError("Offset out of bounds in ref");
 			}
 			intr.push(addr_m.array[addr_m.offset]);
 		}

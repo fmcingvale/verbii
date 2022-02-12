@@ -227,7 +227,7 @@ public class Interpreter {
 				var count = int.Parse(nextWordOrFail());
 				// must be unique userword
 				if(VARS.ContainsKey(name)) {
-					throw new LangError("Trying to redefine userword " + name);
+					throw new LangError("Trying to redefine variable " + name);
 				}
 				// add to VARS so name lookup works (below)
 				VARS[name] = new LangMemoryArray(count);
@@ -237,7 +237,7 @@ public class Interpreter {
 			if(word == "del") {
 				var name = nextWordOrFail();
 				if(!VARS.ContainsKey(name)) {
-					throw new LangError("Trying to delete non-existent userword " + name);
+					throw new LangError("Trying to delete non-existent variable " + name);
 				}
 				VARS.Remove(name);
 				continue;

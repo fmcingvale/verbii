@@ -67,7 +67,7 @@ public class LangMemoryArray : LangObject {
 	// init as shallow copy of other, but with my own offset
 	public LangMemoryArray(LangMemoryArray other) {
 		array = other.array;
-		offset = 0; // i have my own offset
+		offset = other.offset;
 	}
 
 	public override string repr() { return "var:" + array.Count().ToString() + ":" + offset.ToString(); }
