@@ -1,6 +1,8 @@
 from __future__ import annotations
 from ast import Call, Lambda
 
+from langtypes import MemArray
+
 """
 	Interpreter - runs code.
 
@@ -26,7 +28,6 @@ class CallableWordlist(object):
 		return "<lambda>"
 
 class Interpreter(object):
-	RAM_SIZE = (1<<24)
 	STACK_SIZE = (1<<16)
 	LOCALS_SIZE = (1<<10)
 	MAX_INT_31 = (1<<30) - 1
@@ -34,21 +35,20 @@ class Interpreter(object):
 
 	def __init__(self):
 		self.reader = Reader()
-		# 3 memory areas: stack, locals, free memory
-		self.RAM = [0] * self.RAM_SIZE
-		# RAM indexes: stack pointer, empty value and lowest usable index
+		# stack & locals live here -- integer addresses are indexes into this.
+		# variables live in allocated memory tied to a MemArray.
+		self.SIZE_STACKLOCALS = self.STACK_SIZE + self.LOCALS_SIZE
+		self.STACKLOCALS = [0] * self.SIZE_STACKLOCALS
+		# indexes: stack pointer, empty value and lowest usable index
 		# stack starts at top of memory and grows downward
-		self.SP_EMPTY = Interpreter.RAM_SIZE - 1
+		self.SP_EMPTY = self.SIZE_STACKLOCALS - 1
 		self.SP = self.SP_EMPTY
 		self.SP_MIN = self.SP_EMPTY - self.STACK_SIZE
 		# same for locals
 		self.LP_EMPTY = self.SP_MIN
 		self.LP = self.LP_EMPTY
 		self.LP_MIN = self.LP_EMPTY - self.LOCALS_SIZE
-		# next memory address available and last usable index
-		self.MEM_LAST = self.LP_MIN - 1
-		self.MEM_NEXT = 0
-
+	
 		self.re_integer = re.compile(r"""(^[+\-]?[0-9]+$)""")
 		self.re_lambda = re.compile(r"""\$<lambda ([0-9]+)>""")
 		
@@ -56,6 +56,8 @@ class Interpreter(object):
 		self.WORDS = {}
 		# anonymous functions - referred to by $<lambda index> in modified wordlists
 		self.LAMBDAS = []
+		# variables
+		self.VARS = {}
 
 	def addText(self, text):
 		self.reader.addText(text)
@@ -67,7 +69,7 @@ class Interpreter(object):
 			raise LangError("Stack overflow")
 
 		self.SP -= 1
-		self.RAM[self.SP] = obj
+		self.STACKLOCALS[self.SP] = obj
 
 	def pushInt(self, a):
 		"like push but checks for valid integer range"
@@ -80,7 +82,7 @@ class Interpreter(object):
 		if self.SP >= self.SP_EMPTY:
 			raise LangError("Stack underflow")
 
-		obj = self.RAM[self.SP]
+		obj = self.STACKLOCALS[self.SP]
 		self.SP += 1
 		return obj
 
@@ -89,7 +91,7 @@ class Interpreter(object):
 		s = ""
 		i = self.SP_EMPTY-1
 		while i >= self.SP:
-			s += reprObject(self.RAM[i]) + ' '
+			s += reprObject(self.STACKLOCALS[i]) + ' '
 			i -= 1
 
 		return s
@@ -210,22 +212,19 @@ class Interpreter(object):
 				name = self.nextWordOrFail()
 				count = int(self.nextWordOrFail())
 				# must be unique userword
-				if name in self.WORDS:
-					raise LangError("Trying to redefine userword " + name)
+				if name in self.VARS:
+					raise LangError("Trying to redefine variable " + name)
 			
-				# reserve count bytes
-				addr = self.MEM_NEXT
-				self.MEM_NEXT += count
-				# make name a word that returns the address so set! and ref can use the variable
-				self.WORDS[name] = [str(addr)]
+				# create MemArray and store in VARS
+				self.VARS[name] = MemArray(count, 0)
 				continue
 		
 			if word == "del":
 				name = self.nextWordOrFail()
-				if name not in self.WORDS:
-					raise LangError("Trying to delete non-existent userword " + name)
+				if name not in self.VARS:
+					raise LangError("Trying to delete non-existent variable " + name)
 				
-				del self.WORDS[name]
+				del self.VARS[name]
 				continue
 		
 			if word == "call":
@@ -241,12 +240,16 @@ class Interpreter(object):
 				self.reader.pushWords(obj.wordlist)
 				continue
 		
+			# builtins, then userwords, then vars
+
 			if word in BUILTINS:
 				argtypes,func = BUILTINS[word]
 				if (self.SP + len(argtypes)) > self.SP_EMPTY:
 					raise LangError("Stack underflow")
 
 				args = []
+				#print("WORD:",word)
+				#print("ARGTYPES:",argtypes)
 				for t in reversed(argtypes):
 					v = self.pop()
 					#print("POPPED",v,t)
@@ -267,5 +270,9 @@ class Interpreter(object):
 				self.reader.pushWords(self.WORDS[word])
 				continue
 	
+			if word in self.VARS:
+				self.push(self.VARS[word])
+				continue
+
 			raise LangError("Unknown word " + word)
 			

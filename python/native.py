@@ -5,9 +5,13 @@
 
 	Ported from C++ version
 """
+from doctest import REPORT_CDIFF
+from logging.handlers import MemoryHandler
 from math import floor
+from re import L
 from errors import LangError
 from interpreter import Interpreter
+from langtypes import MemArray
 
 # see notes in C++ implementation of this function.
 # this returns (quotient,mod) instead of taking mod as a return param.
@@ -59,17 +63,35 @@ def builtin_define_word(I: Interpreter):
 
 # ( obj addr -- ) - save obj to addr
 def builtin_set(I: Interpreter, obj, addr):
-	if addr < 0 or addr >= len(I.RAM):
-		raise LangError("Bad address in set!: " + str(addr))
-	
-	I.RAM[addr] = obj
+	# see if its a stack/locals address or allocated memory
+	if type(addr) == int:
+		if addr < 0 or addr >= I.SIZE_STACKLOCALS:
+			raise LangError("Bad address in set!: " + str(addr))
+		
+		I.STACKLOCALS[addr] = obj
+	elif isinstance(addr, MemArray):
+		if addr.offset < 0 or addr.offset >= len(addr.mem):
+			raise LangError("Offset out of bounds in set!")
 
+		addr.mem[addr.offset] = obj
+	else:
+		raise LangError("Bad address in set!: " + reprObject(addr))
+	
 # ( addr -- obj ) load obj from addr and push to stack
 def builtin_ref(I: Interpreter, addr):
-	if addr < 0 or addr >= len(I.RAM): 
-		raise LangError("Bad address in ref: " + str(addr))
-	
-	I.push(I.RAM[addr])
+	# see if its a stack/locals address or allocated memory
+	if type(addr) == int:
+		if addr < 0 or addr >= I.SIZE_STACKLOCALS: 
+			raise LangError("Bad address in ref: " + str(addr))
+		
+		I.push(I.STACKLOCALS[addr])
+	elif isinstance(addr, MemArray):
+		if addr.offset < 0 or addr.offset >= len(addr.mem):
+			raise LangError("Offset out of bounds in ref")
+
+		I.push(addr.mem[addr.offset])
+	else:
+		raise LangError("Bad address in ref: " + reprObject(addr))
 
 # set stack pointer from addr on stack
 def builtin_setsp(I: Interpreter, addr):
@@ -91,14 +113,14 @@ def builtin_tolocal(I: Interpreter):
 		raise LangError("Locals overflow")
 	
 	I.LP -= 1
-	I.RAM[I.LP] = I.pop()
+	I.STACKLOCALS[I.LP] = I.pop()
 
 # pop top locals and push to stack
 def builtin_fromlocal(I: Interpreter):
 	if I.LP >= I.LP_EMPTY:
 		raise LangError("Locals underflow")
 	
-	I.push(I.RAM[I.LP])
+	I.push(I.STACKLOCALS[I.LP])
 	I.LP += 1
 
 def reprObject(obj):
@@ -113,6 +135,8 @@ def reprObject(obj):
 		return "false"
 	elif isinstance(obj, CallableWordlist):
 		return "<lambda>"
+	elif isinstance(obj, MemArray):
+		return "var:{0}:{1}".format(len(obj.mem), obj.offset)
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))
 
@@ -200,10 +224,32 @@ def builtin_fdiv(I):
 	a = popIntOrFloat(I)
 	I.push(a/b)
 
+def builtin_add(I):
+	b = I.pop()
+	a = I.pop()
+
+	if type(a) == int and type(b) == int:
+		I.pushInt(a+b)
+	elif isinstance(a,MemArray) and type(b) == int:
+		# make & modify a clone, else dup'ing then adding would give
+		# you two of the same object
+		a_ = a.clone()
+		a_.offset += b
+		I.push(a_)
+	# now with swapped args
+	elif isinstance(b,MemArray) and type(a) == int:
+		# make & modify a clone, else dup'ing then adding would give
+		# you two of the same object
+		b_ = b.clone()
+		b_.offset += a
+		I.push(b_)
+	else:
+		raise LangError("Don't know how to add '{0}' and '{1}'".format(a,b))
+
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
-	'+': ([int,int], lambda I,a,b: I.pushInt(a+b)),
+	'+': ([], builtin_add),
 	'-': ([int,int], lambda I,a,b: I.pushInt(a-b)),
 	'*': ([int,int], lambda I,a,b: I.pushInt(a*b)),
 	'/mod': ([int,int], builtin_divmod),
@@ -222,8 +268,8 @@ BUILTINS = {
 	'."': ([], builtin_print_string),
 	':': ([], builtin_define_word),
 	'def': ([], builtin_define_word),
-	'ref': ([int], builtin_ref),
-	'set!': ([object,int], builtin_set),
+	'ref': ([object], builtin_ref),
+	'set!': ([object,object], builtin_set),
 	'SP': ([], lambda I: I.push(I.SP)),
 	'SP!': ([int], builtin_setsp),
 	'LP': ([], lambda I: I.push(I.LP)),
