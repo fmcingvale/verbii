@@ -122,13 +122,9 @@ del Q del R del T del K del N del L del NR del NN
 
 ( https://rosettacode.org/wiki/Safe_primes_and_unsafe_primes )
 
-( https://rosettacode.org/wiki/100_doors )
-
-( https://rosettacode.org/wiki/Multiplication_tables )
-
-
 
 ( https://rosettacode.org/wiki/N-queens_problem )
+
 ( -- prime numbers -- )
 
 ( -- some experiments .. need to categorize these later -- )
@@ -256,3 +252,77 @@ swap drop ;
 ." Expect 439.1295025388297: " #192834.72 sqrt dup . dup f* . CR
 
 ( -- compute other functions like cos, sin, tan -- )
+
+( local refs, convenience )
+: L0 LP ;
+: L1 LP 1 + ;
+: L2 LP 2 + ;
+: L3 LP 3 + ;
+
+( -- there are no builtin control structures in the language, other than >> and <<,
+	so you can invent whichever ones you like.
+
+	this is like a combination of a (for ..) and a (while ..)
+	-- )
+
+( for-while: loop that begins at start, increments by given value each time,
+			and stops when cond-while evaluates to false. cond-while and lambda
+			are called with current counter on top of stack.
+			cond-while is checked at the START of each loop. )
+: for-while ( start increment cond-whilend lambda )
+>L >L >L >L ( L3: lambda, L2: cond-while, L1: increment, L0: current )
+@loop
+L0 ref L2 ref call if >>continue >>end ( cond-end true|false for current counter? )
+@continue
+L0 ref L3 ref call ( call lambda with current value )
+L0 ref L1 ref + L0 set! ( current += increment )
+<<loop
+@end
+LP 4 + LP! ( clean up locals )
+;
+
+." Count 1 .. 10: " 1 1 { 10 <= } { . } for-while CR
+." Count 20 .. 0, by 4's: " 20 -4 { 0 >= } { . } for-while CR
+
+( -- https://rosettacode.org/wiki/Multiplication_tables -- )
+( -- needs some work -- supposed to only print top half and other formatting details -- )
+
+." Multiplication table ... " CR
+clear
+1 1 { 10 < } { 
+	1 1 { 10 < } {
+		( stack is: outer-counter inner-counter -- i can't destroy outer counter
+		  because it is only refreshed after all inner loops are finished, so copy
+		  it over to multiply ) 
+		over * . 32 .c } for-while CR
+} for-while
+
+( -- https://rosettacode.org/wiki/100_doors -- )
+
+var DOORS 101 ( numbering these 1..100 since 0 as increment would infinite loop )
+( -- set all to zero (closed) -- )
+1 1 { 100  <= } { 0 swap DOORS + set! } for-while
+
+: toggle ( n=1,0 -- 0,1 )
+1 == if >>zero 1 return @zero 0 ;
+
+( -- for i={1..100} visit in loop with increment=i, toggling doors )
+1 1 { 100 <= } {
+	( outer-count )
+	dup { 100 <= } ( outer outer .. -- start at outer with increment of outer )
+	{
+		( inner )
+		dup DOORS + ref ( inner DOORS[inner] )
+		toggle swap DOORS + set! ( DOORS[inner] = toggled )
+	} for-while
+} for-while
+
+." Opened doors ... "
+1 1 { 100 <= } { 
+	( outer )
+	dup DOORS + ref ( outer DOORS[outer] )
+	0 == if >>skip
+	. @skip } for-while CR
+	
+del DOORS 
+
