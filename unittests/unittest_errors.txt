@@ -44,5 +44,23 @@ foobarbadword
 >L >L >L
 >L
 
+( out of bounds in variable access )
+var x 4
+10 x 4 + set!
+
+var y 5
+y 5 + ref
+
+var z 10 
+z -1 + ref
+
+( show that trying to redefine a name fails )
+var fff 4
+var fff 1
+
+( deleting non existant var should fail )
+del ggg
+
+
 
 

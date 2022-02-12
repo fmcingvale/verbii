@@ -90,6 +90,12 @@ static void builtin_add(Interpreter *intr) {
 		r.asMemArray()->offset += b.asInt();
 		intr->push(r);
 	}
+	else if(a.isInt() && b.isMemArray()) {
+		// swapped version of above
+		Object r = copyMemArray(b.asMemArray());
+		r.asMemArray()->offset += a.asInt();
+		intr->push(r);
+	}
 	else {
 		throw LangError("Can't add values: " + a.repr() + " + " + b.repr());
 	}
@@ -210,7 +216,7 @@ static void builtin_ref(Interpreter *intr) {
 	else if(addr.isMemArray()) {
 		auto arr = addr.asMemArray();
 		if(arr->offset < 0 || arr->offset >= arr->count) {
-			throw LangError("Offset out of bounds in set!");
+			throw LangError("Offset out of bounds in ref");
 		}
 		intr->push(arr->array[arr->offset]);
 	}

@@ -145,6 +145,29 @@ x 3 + ref
 x 2 + ref
 x ref
 
+( check that int+addr works as well )
+clear
+123 3 x + set!
+3 x + ref
+
+( show that dup'ing addresses works and they maintain separate offsets )
+clear
+var t 4
+t 
+dup
+1 +
+dup
+1 +
+dup
+1 +
+
+clear
+var y 4
+y dup 1 + dup 1 + dup 1 + ( y y+1 y+2 y+3 )
+123 swap set! 456 swap set! 789 swap set! 910 swap set!
+y 3 + dup -1 + dup -1 + dup -1 +
+ref . ref . ref . ref . CR
+
 ( show redefining after del works )
 clear
 del x   

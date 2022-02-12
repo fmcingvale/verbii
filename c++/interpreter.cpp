@@ -244,7 +244,7 @@ void Interpreter::run(bool singlestep) {
 			auto count = stoi(nextWordOrFail());
 			// must be unique userword
 			if(VARS.find(name) != VARS.end()) {
-				throw LangError("Trying to redefine userword " + name);
+				throw LangError("Trying to redefine variable " + name);
 			}
 			// add to VARS so name lookup works (below)
 			VARS[name] = newMemArray(count, 0);
@@ -255,7 +255,7 @@ void Interpreter::run(bool singlestep) {
 			auto name = nextWordOrFail();
 			auto userword = VARS.find(name);
 			if(userword == VARS.end()) {
-				throw LangError("Trying to delete non-existent userword " + name);
+				throw LangError("Trying to delete non-existent variable " + name);
 			}
 			VARS.erase(name);
 			continue;

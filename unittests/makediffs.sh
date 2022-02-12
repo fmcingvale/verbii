@@ -23,4 +23,8 @@ do
 	done
 done
 
+for lang in ${Ports[@]}; 
+do
+	wc -l ./RESULTS/$lang/diff*
+done
 
