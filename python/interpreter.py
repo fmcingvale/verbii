@@ -254,7 +254,7 @@ class Interpreter(object):
 					v = self.pop()
 					#print("POPPED",v,t)
 					if type(v) != t and t != object:
-						raise Exception("Expecting type " + str(t) + " but got type " + str(type(v)) + " ({0})".format(v))
+						raise LangError("Expecting type " + str(t) + " but got type " + str(type(v)) + " ({0}) for word {1}".format(v,word))
 
 					args.insert(0,v)
 
