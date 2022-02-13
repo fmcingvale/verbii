@@ -294,6 +294,7 @@ BUILTINS = {
 	["f.setprec"] = { {"number"}, function(intr,a) FLOAT_PRECISION = a end },
 	["=="] = { {}, function(intr) intr:push(popFloatOrInt(intr)==popFloatOrInt(intr)) end },
 	[">"] = { {}, function(intr,a,b) intr:push(popFloatOrInt(intr)<popFloatOrInt(intr)) end },
+	["int?"] = { {"any"}, function(intr,o) intr:push(type(o) == "number") end},
 	["repr"] = { {}, builtin_repr },
 	[".\""] = {  {}, builtin_print_string },
 	[".c"] = { {"number"}, builtin_printchar },

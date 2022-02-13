@@ -275,6 +275,7 @@ BUILTINS = {
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
 	# object means any type
 	'repr': ([object], lambda I,o: sys.stdout.write(reprObject(o))),
+	'int?': ([object], lambda I,o: I.push(type(o) == int)),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
 	'(': ([], builtin_comment),

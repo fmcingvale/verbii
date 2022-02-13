@@ -294,6 +294,7 @@ class Builtins {
 		{"/mod", int_divmod},
 		{"==", intr => intr.push(new LangBool(popFloatOrInt(intr) == popFloatOrInt(intr)))},
 		{">", intr => intr.push(new LangBool(popFloatOrInt(intr) < popFloatOrInt(intr)))},
+		{"int?", intr => intr.push(new LangBool(intr.pop() is LangInt))},
 		{":", define_word},
 		{"def", define_word}, // synonym for :
 		{".c", printchar},
@@ -311,6 +312,5 @@ class Builtins {
 		{"ref", _ref},
 		{"{", make_lambda},
 		{".showdef", showdef},
-		
 	};
 }
