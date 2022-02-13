@@ -13,6 +13,8 @@ from errors import LangError
 from interpreter import Interpreter
 from langtypes import MemArray
 
+FLOAT_PRECISION = 17
+
 # see notes in C++ implementation of this function.
 # this returns (quotient,mod) instead of taking mod as a return param.
 def int_divmod(a, b):
@@ -128,7 +130,8 @@ def reprObject(obj):
 	if type(obj) is int:
 		return str(obj)
 	elif type(obj) is float:
-		return "{0:.17f}".format(obj)
+		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
+		return fmt.format(obj)
 	elif obj is True:
 		return "true"
 	elif obj is False:
@@ -246,6 +249,9 @@ def builtin_add(I):
 	else:
 		raise LangError("Don't know how to add '{0}' and '{1}'".format(a,b))
 
+def builtin_fsetprec(I, a):
+	global FLOAT_PRECISION 
+	FLOAT_PRECISION = a
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -259,6 +265,7 @@ BUILTINS = {
 	'f/': ([], builtin_fdiv),
 	'==': ([int,int], lambda I,a,b: I.push(a==b)),
 	'>': ([int,int], lambda I,a,b: I.push(a>b)),
+	'f.setprec': ([int], builtin_fsetprec),
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
 	# object means any type
 	'repr': ([object], lambda I,o: sys.stdout.write(reprObject(o))),

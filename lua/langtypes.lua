@@ -6,6 +6,8 @@
 
 -- lua doesn't differentiate between int and float, so need a class ...
 Float = {}
+FLOAT_PRECISION = 17
+
 function Float:new(obj, value)
 	setmetatable(obj, self)
 	self.__index = self
@@ -73,7 +75,8 @@ function reprObject(obj)
 	if type(obj) == "number" then
 		return tostring(obj)
 	elseif isFloat(obj) then
-		return string.format("%.17f", obj.value)
+		local fmt = "%." .. tostring(FLOAT_PRECISION) .. "g"
+		return string.format(fmt, obj.value)
 	elseif type(obj) == "boolean" then
 		if obj then
 			return "true"

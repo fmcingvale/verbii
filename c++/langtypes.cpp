@@ -84,6 +84,8 @@ Object newFloat(double d) {
 	return obj;
 }
 
+int FLOAT_PRECISION = 17;
+
 string Object::repr() const {
 	switch(type) {
 		case TYPE_VOID: throw LangError("Got VOID object, something is wrong");
@@ -91,7 +93,7 @@ string Object::repr() const {
 		case TYPE_FLOAT: 
 		{
 			char buf[40];
-			snprintf(buf, 39, "%.17lf", data.d);
+			snprintf(buf, 39, "%.*g", FLOAT_PRECISION, data.d);
 			return string(buf);
 		}
 		case TYPE_BOOL: return data.b ? "true" : "false";

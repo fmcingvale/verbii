@@ -290,6 +290,7 @@ class Builtins {
 		{"f-", intr => intr.push(new LangFloat(-popFloatOrInt(intr) + popFloatOrInt(intr)))},
 		{"f*", intr  => intr.push(new LangFloat(popFloatOrInt(intr) * popFloatOrInt(intr)))},
 		{"f/", fdiv},
+		{"f.setprec", intr => LangFloat.FLOAT_PRECISION = popInt(intr)},
 		{"/mod", int_divmod},
 		{"==", intr => intr.push(new LangBool(popInt(intr) == popInt(intr)))},
 		{">", intr => intr.push(new LangBool(popInt(intr) < popInt(intr)))},

@@ -35,9 +35,14 @@ public class LangFloat : LangObject {
 		value = d;
 	}
 
+	public static int FLOAT_PRECISION = 17;
+
 	public double value;
 
-	public override string repr() { return String.Format("{0:F17}", value); }
+	public override string repr() { 
+		// there has to be a better way .....
+		string fmt = "{0:G" + FLOAT_PRECISION.ToString() + "}"; 
+		return String.Format(fmt, value); }
 }
 
 public class LangBool : LangObject {

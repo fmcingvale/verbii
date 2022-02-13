@@ -282,6 +282,7 @@ BUILTINS = {
 	["f/"] = { {}, builtin_fdiv},
 	["=="] = { {"number","number"}, function(intr,a,b) intr:push(a==b) end },
 	[">"] = { {"number","number"}, function(intr,a,b) intr:push(a>b) end },
+	["f.setprec"] = { {"number"}, function(intr,a) FLOAT_PRECISION = a end },
 	["repr"] = { {}, builtin_repr },
 	[".\""] = {  {}, builtin_print_string },
 	[".c"] = { {"number"}, builtin_printchar },

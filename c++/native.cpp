@@ -356,6 +356,8 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"f-", builtin_sub_float},
 	{"f*", builtin_mul_float},
 	{"f/", builtin_div_float},
+	{"f.setprec",
+		[](Interpreter *intr) { FLOAT_PRECISION = popInt(intr); }},
 	{":", builtin_define_word},
 	// synonym for ':', for readability
 	{"def", builtin_define_word},

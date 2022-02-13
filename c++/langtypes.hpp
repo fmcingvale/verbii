@@ -23,6 +23,10 @@ const unsigned char TYPE_FLOAT = 5;
 
 class Object;
 
+// set this to control how many digits are printed (max is 17)
+// (this is TOTAL digits, not digits after the decimal ... so 'g' format for printf)
+extern int FLOAT_PRECISION;
+
 struct MemoryArray {
 	Object *array;
 	int count;
