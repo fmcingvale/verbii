@@ -1,0 +1,32 @@
+Global TODO
+
+* Add string type
+
+* After strings added, add 'error' to cause program exit with message
+	* change string parser to look for " at start/end of words, instead of as
+	separate words
+
+* After above, make expect-f exit test when %diff too large
+
+* More expect-* things to further automate unittests
+
+* More error checking of input types in library/tests/demos
+
+* 63-bit integers
+	* or ... maybe 52 since some host languages use floats for ints??
+
+* change parser to read ( ... ) as a single unit before it gets to interpreter
+
+* add lists
+	* this will enable things like closures where a list can be bound to lambda
+	and add an 'apply' that's like call except it pushes the bound list first
+
+* add bit level operations -- limit to 32 bits
+	* add random number generator (pcg32)
+
+* improve exp by reducing x like dividing by 100,1000,1e6,etc. and adjusting
+  at end since values for powers of 10 can be in a table (exp algorithm seems
+  to have trouble with larger values)
+  
+
+
