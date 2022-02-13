@@ -219,36 +219,42 @@ function popFloatOrInt(intr)
 	if type(obj) == "number" then
 		return obj
 	elseif isFloat(obj) then
-		return obj.value
+		return obj.value 
 	else
 		error(">>>Expecting int or float but got: " .. reprObject(obj))
 	end
 end
 
 function builtin_fadd(intr)
-	b = popFloatOrInt(intr)
-	a = popFloatOrInt(intr)
+
+	-- the +0.0 ensures it is really a float, else lua will keep large
+	-- values as integers, leading to overflow when usercode assumes a
+	-- float is being used. oddly, doing this in popFloatOrInt does NOT work
+	b = popFloatOrInt(intr) + 0.0
+	a = popFloatOrInt(intr) + 0.0
 	intr:push(new_Float(a+b))
 end
 
 function builtin_fsub(intr)
-	b = popFloatOrInt(intr)
-	a = popFloatOrInt(intr)
+	-- +0.0 as above
+	b = popFloatOrInt(intr) + 0.0
+	a = popFloatOrInt(intr) + 0.0
 	intr:push(new_Float(a-b))
 end
 
 function builtin_fmul(intr)
-	b = popFloatOrInt(intr)
-	a = popFloatOrInt(intr)
+	b = popFloatOrInt(intr) + 0.0
+	a = popFloatOrInt(intr) + 0.0
+	--print("FMUL " .. tostring(a) .. " * " .. tostring(b) .. " " .. tostring(a*b))
 	intr:push(new_Float(a*b))
 end
 
 function builtin_fdiv(intr)
-	b = popFloatOrInt(intr)
+	b = popFloatOrInt(intr) + 0.0
 	if b == 0 then
 		error(">>>Floating point divide by zero")
 	end
-	a = popFloatOrInt(intr)
+	a = popFloatOrInt(intr) + 0.0
 	intr:push(new_Float(a/b))
 end
 
