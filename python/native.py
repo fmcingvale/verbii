@@ -252,6 +252,12 @@ def builtin_add(I):
 def builtin_fsetprec(I, a):
 	global FLOAT_PRECISION 
 	FLOAT_PRECISION = a
+
+def builtin_gt(I):
+	b = popIntOrFloat(I)
+	a = popIntOrFloat(I)
+	I.push(a>b)
+
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -263,9 +269,9 @@ BUILTINS = {
 	'f-': ([], builtin_fsub),
 	'f*': ([], builtin_fmul),
 	'f/': ([], builtin_fdiv),
-	'==': ([int,int], lambda I,a,b: I.push(a==b)),
-	'>': ([int,int], lambda I,a,b: I.push(a>b)),
 	'f.setprec': ([int], builtin_fsetprec),
+	'==': ([], lambda I: I.push(popIntOrFloat(I)==popIntOrFloat(I))),
+	'>': ([], builtin_gt),
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
 	# object means any type
 	'repr': ([object], lambda I,o: sys.stdout.write(reprObject(o))),

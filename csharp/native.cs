@@ -292,8 +292,8 @@ class Builtins {
 		{"f/", fdiv},
 		{"f.setprec", intr => LangFloat.FLOAT_PRECISION = popInt(intr)},
 		{"/mod", int_divmod},
-		{"==", intr => intr.push(new LangBool(popInt(intr) == popInt(intr)))},
-		{">", intr => intr.push(new LangBool(popInt(intr) < popInt(intr)))},
+		{"==", intr => intr.push(new LangBool(popFloatOrInt(intr) == popFloatOrInt(intr)))},
+		{">", intr => intr.push(new LangBool(popFloatOrInt(intr) < popFloatOrInt(intr)))},
 		{":", define_word},
 		{"def", define_word}, // synonym for :
 		{".c", printchar},

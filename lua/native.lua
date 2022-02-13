@@ -271,6 +271,17 @@ function builtin_add(intr)
 	end
 end
 
+function popFloatOrInt(intr)
+	local o = intr:pop()
+	if type(o) == "number" then
+		return o
+	elseif isFloat(o) then
+		return o.value
+	else
+		error(">>>Expecting int or float but got: " .. reprObject(o))
+	end
+end
+
 BUILTINS = {
 	["+"] = { {}, builtin_add },
 	["-"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a-b) end },
@@ -280,9 +291,9 @@ BUILTINS = {
 	["f-"] = { {}, builtin_fsub},
 	["f*"] = { {}, builtin_fmul},
 	["f/"] = { {}, builtin_fdiv},
-	["=="] = { {"number","number"}, function(intr,a,b) intr:push(a==b) end },
-	[">"] = { {"number","number"}, function(intr,a,b) intr:push(a>b) end },
 	["f.setprec"] = { {"number"}, function(intr,a) FLOAT_PRECISION = a end },
+	["=="] = { {}, function(intr) intr:push(popFloatOrInt(intr)==popFloatOrInt(intr)) end },
+	[">"] = { {}, function(intr,a,b) intr:push(popFloatOrInt(intr)<popFloatOrInt(intr)) end },
 	["repr"] = { {}, builtin_repr },
 	[".\""] = {  {}, builtin_print_string },
 	[".c"] = { {"number"}, builtin_printchar },
