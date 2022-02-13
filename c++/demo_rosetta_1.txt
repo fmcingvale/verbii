@@ -218,38 +218,8 @@ make-add-10 adder set!
 ." Count by odds: " 40 { odd? } countdown-test CR
 ." Count by 5s: " 100 { 5 mod 0 == } countdown-test CR
 
-
-: %pow-inner ( P x y -- P*x x y-1, until y==0 then P ) 
-    dup 1 == if >>last >>recur 
-    @last drop drop return 
-    @recur ( P x y ) 
-    -rot 2dup * ( y P x P*x ) 
-    rot drop -rot swap 1 - %pow-inner ; ( P*x x y-1 )  
-
-( -- tail-recursive, with helper function above -- ) 
-: pow ( x y -- x^y ) over -rot ( x x y ) %pow-inner ; 	
-
-." Expect 65536: " 2 16 pow . CR
-." Expect 1000: " 10 3 pow . CR
-." Expect 24137569: " 17 6 pow . CR
-
 ( -- non-rosetta tasks -- )
 
-( -- compute sqrt using Babylonian method -- )
-: sqrt ( x -- sqrt(x) )
-20 swap  ( n[#terms] x )
-dup 2 f/  ( n x y0 [initial guess] )
-@loop ( n x y0 )
-( y1 = 0.5 * (y0 + (x/y0)) )
- 2dup f/ over f+ 2 f/ swap drop ( n x [x/y0+y0]/2 )
-( n x y1 )
-rot 1 - dup? 0 == if >>end -rot <<loop ( n-1 x y1 )
-@end ( x y1 ) 
-swap drop ;
-
-." -- sqrt " CR
-." Expect 135.177660876: " 18273 sqrt dup . dup f* . CR 
-." Expect 439.1295025388297: " #192834.72 sqrt dup . dup f* . CR
 
 ( -- compute other functions like cos, sin, tan -- )
 

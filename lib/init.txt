@@ -48,3 +48,16 @@ def mod ( a b -- remainder a/b ) /mod drop ;
 def .S  ." => " depth 
 @LOOP 
 	dup 0 > if >>true >>done @true dup SP + 1 + ref . 1 - <<LOOP @done drop 13 .c 10 .c ;
+
+( shortcuts for addresses of first 10 locals )
+: L0 LP ;
+: L1 LP 1 + ;
+: L2 LP 2 + ;
+: L3 LP 3 + ;
+: L4 LP 4 + ;
+: L5 LP 5 + ;
+: L6 LP 6 + ;
+: L7 LP 7 + ;
+: L8 LP 8 + ;
+: L9 LP 9 + ;
+

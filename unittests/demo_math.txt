@@ -1,0 +1,258 @@
+( -- test math functions. adds many math functions that may
+	eventually migrate to the default library -- )
+( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+
+( reduce precision [TOTAL significant digits printed!] when printing to avoid small rounding errors )
+14 f.setprec
+
+: pct-diff ( a b -- % difference between a & b [0 .. 100] )
+	2dup f+ 2 f/ -rot f- abs swap f/ 100 f* (  100 * abs[a-b] / [a+b]/2 )
+	;
+
+( takes a lambda that takes nothing from the stack and leaves one result on the stack.
+  compares the result to 'a' )
+: expect-f ( lambda a )
+	." Expect " dup . swap call ." got " dup . 
+	pct-diff ." ( " . ." %) " CR ;
+
+." -- pct-diff " CR
+{ 231 115 pct-diff } #67.05202312138728 expect-f
+{ #17.838 #47.639 pct-diff } #91.02738366143838 expect-f
+{ #-2.876 #12.341 pct-diff } #321.5425250924458 expect-f
+
+: pow-ii ( x y -- x^y; x & y are integers )
+	1 -rot 
+	@loop ( P x y )
+	dup 0 == if >>done
+	-rot 2dup * -rot swap drop rot 1 - <<loop ( P*x x y-1 )
+	@done drop drop ;
+
+." -- pow-ii " CR
+{ 2 16 pow-ii } 65536 expect-f
+{ 10 3 pow-ii } 1000 expect-f
+{ 17 6 pow-ii } 24137569 expect-f
+{ -1 5 pow-ii } -1 expect-f
+{ 10 0 pow-ii } 1 expect-f
+
+( floating point pow function )
+: pow-fi ( x y -- x^y; x is float|int, y is int )
+	1 -rot 
+	@loop ( P x y )
+	dup 0 == if >>done
+	-rot 2dup f* -rot swap drop rot 1 - <<loop ( P*x x y-1 )
+	@done drop drop ;
+
+." -- pow-fi -- " CR
+{ #1.27431 7 pow-fi } #5.4566442225796 expect-f
+{ #-18.564 5 pow-fi } #-2204742.1183508 expect-f
+{ -1 7 pow-fi } -1 expect-f
+{ #124.56 0 pow-fi } 1 expect-f
+
+( -- compute sqrt using Babylonian method -- )
+: sqrt ( x -- sqrt(x) )
+	15 swap  ( n[#terms] x )
+	dup 2 f/  ( n x y0 [initial guess] )
+	@loop ( n x y0 )
+	( y1 = 0.5 * (y0 + (x/y0)) )
+	2dup f/ over f+ 2 f/ swap drop ( n x [x/y0+y0]/2 )
+	( n x y1 )
+	rot 1 - dup? 0 == if >>end -rot <<loop ( n-1 x y1 )
+	@end ( x y1 ) 
+	swap drop ;
+
+." -- sqrt " CR
+{ 18273 sqrt } #135.17766087634 expect-f
+{ #192834.72 sqrt } #439.12950253883 expect-f
+
+( -- floating point factorial -- )
+: ffact ( n -- n! )
+	1 swap ( P n )
+	@loop
+	dup? 0 == if >>done
+	2dup f* rot drop swap 1 - <<loop ( P*n n-1 )
+	@done
+	;
+
+." -- ffact " CR
+{ 7 ffact } 5040 expect-f
+{ 23 ffact } #2.5852016738885e+22 expect-f
+{ 0 ffact } 1 expect-f
+
+(
+	def my_log2(x, n=64):
+		"From: http://www.claysturner.com/dsp/BinaryLogarithm.pdf"
+		y = 0
+		while x < 1 or x >= 2:
+			if x < 1:
+				x = 2.0*x
+				y -= 1
+			
+			if x >= 2:
+				x = x / 2.0
+				y += 1
+
+		b = 0.5
+		for i in range(n):
+			x = x*x
+			if x >= 2:
+				x = x / 2
+				y += b
+				
+			b = b / 2
+
+		return y
+)
+( -- log base 2 -- translated from the Python code shown above -- )
+: log2 ( x -- log2[x] )
+	0 swap ( y x )
+	@scale-x
+		dup 1 < if >>x*2
+		dup 2 >= if >>x/2 >>calc
+		@x*2
+			2 f* swap 1 - swap ( y-1 x*2 )
+			<<scale-x
+		@x/2
+			2 f/ swap 1 + swap ( y+x x/2 )
+			<<scale-x
+	@calc ( y x )
+		#0.5 -rot ( b y x )
+		( 52 bits of precision in double, so 52 should be good here )
+		52 >L ( L0 = #bits remaining )
+		@calc-loop ( b y x, L0=n )
+			L0 ref 0 == if >>done
+			dup f* ( b y x*x )
+			dup 2 >= if >>gotbit >>b/2
+			@gotbit
+				2 f/ -rot over f+ rot ( b y+b x/2 )
+			@b/2
+				rot 2 f/ -rot ( b/2 y+b x/2 )
+				L0 ref 1 - L0 set! ( --n )
+				<<calc-loop
+		@done
+			drop swap drop ;
+
+." -- log2 " CR
+
+{ 128 log2 } 7 expect-f 
+{ #8.0625 log2 } #3.0112272554233 expect-f
+{ #1234.5678 log2 } #10.269790353251 expect-f 
+{ #0.5678 log2 } #-0.81654524582506 expect-f
+
+( -- log2[10] and log2[e], for changing base -- )
+var LOG2_10 1
+#3.3219280948873626 LOG2_10 set!
+var LOG2_E 1
+#1.4426950408889634 LOG2_E set!
+
+: log10 ( x -- log10[x] )
+	( change of base == log2[x] / log2[10] )
+	log2 LOG2_10 ref f/ ;
+
+: log ( x -- logE[x] )
+	( change of base == log2[x] / log2[e] )
+	log2 LOG2_E ref f/ ;
+
+." -- log10 " CR
+
+{ 1000 log10 } 3 expect-f
+{ #1234.5678 log10 } #3.0915149455092 expect-f
+{ #0.5678 log10 } #-0.24580461181016 expect-f
+
+." -- log [natural log] " CR
+{ 1 log 1 f+ } 1 expect-f ( +1 so pctdiff won't have divide by zero )
+{ #0.5 log } #-0.69314718055995 expect-f
+{ #0.25 log } #-1.3862943611199 expect-f
+{ #0.1 log } #-2.3025850929941 expect-f
+{ #1234.5678 log } #7.1184762282978 expect-f
+
+( -- calc i'th term of Taylor series for sin[x] -- )
+: sin-term ( x n -- n'th term of sin[x] )
+	( numerator = (-1^n) * x^(2n+1) )
+	( denominator = (2n+1)! )
+	tuck 2 * 1 + ( n x 2n+1 )
+	dup ffact ( n x 2n+1 [2n+1]! )
+	-rot pow-fi swap f/ swap -1 swap pow-ii f*
+	;
+
+( -- calc i'th term of Taylor series for cos[x] -- )
+: cos-term ( x n -- n'th term of cos[x] )
+	( numerator = (-1^n) * x^(2n) )
+	( denominator = (2n)! )
+	tuck 2 * ( n x 2n )
+	dup ffact ( n x 2n [2n]! )
+	-rot pow-fi swap f/ swap -1 swap pow-ii f*
+	;
+
+( -- calc i'th term of Taylor series for exp[x] -- )
+: exp-term ( x n -- n'th term of exp[x] )
+	( term = (x^n)/(n!) )
+	dup ffact -rot pow-fi swap f/ ( x^n/n! ) ;
+
+( -- calc Taylor series -- )
+: taylor ( lambda x n start -- sum lambda[x,i] for i=start..n )
+	0 >L >L ( L0=i L1=sum )
+	@loop ( lambda x n )
+	dup L0 ref == if >>done ( i==n? )
+	over L0 ref 5 pick call ( lambda x n lambda[x,i] )
+	L1 ref f+ L1 set! ( sum += lambda[i] )
+	L0 ref 1 + L0 set! ( i += 1 )
+	<<loop
+	@done
+	drop drop drop L> L> swap drop ;
+
+( number of terms is tuned to give small% difference from expected results
+  -- currently allowing max 1e-8 % error )
+: sin ( x -- sin[x] ) { sin-term } swap 12 0 taylor ;
+: cos ( x -- cos[x] ) { cos-term } swap 12 0 taylor ;
+( takes a ridiculous number of terms to converge for larger values ... )
+: exp ( x -- exp[x] ) { exp-term } swap 40 0 taylor ;
+
+." -- sin " CR
+{ 1 sin } #0.8414709848079 expect-f
+{ #3.141 sin } #0.00059265355509945 expect-f
+
+var PI 1
+#3.141592653589793 PI set!
+
+{ 0 sin 1 f+ } 1 expect-f 
+{ PI ref sin 1 f+ } 1 expect-f
+{ PI ref 2 f/ sin } 1 expect-f
+
+." -- cos " CR
+{ 1 cos } #0.54030230586814 expect-f
+{ 2 cos } #-0.41614683654714 expect-f
+{ #3.14 cos } #-0.99999873172754 expect-f
+{ PI ref cos } -1 expect-f
+{ PI ref #1.9 f/ cos } #-0.08257934547233227 expect-f
+{ 0 cos } 1 expect-f
+
+: exp2 ( x -- exp[x] )
+	( based on: https://www.geeksforgeeks.org/program-to-efficiently-calculate-ex/ )
+	40 swap 1 ( n x sum )
+	@loop
+	3 pick 0 == if >>done
+	( sum = 1 + x * sum / n )
+	2dup f* 4 pick f/ 1 f+ nip rot 1 - -rot <<loop ( n x 1+[x*sum/n] )
+	@done nip nip ;
+
+." -- exp " CR
+{ #1.2345 exp } #3.4366597611705 expect-f
+{ #1.2345 exp2 } #3.4366597611705 expect-f
+{ #12.3456 exp } #229946.05110990 expect-f
+{ #12.3456 exp2 } #229946.05110990 expect-f
+{ #-3.4567 exp } #0.031533651556486 expect-f
+{ #-3.4567 exp2 } #0.031533651556486 expect-f
+
+( now can define full pow with float exponent using exp )
+: pow ( x y -- x^y, both float/int )
+	dup int? if >>intY ( if y is in, use pow-fi )
+	( x^y == exp(y*log(x)) )
+	swap log f* exp ( exp[y*log(x)] ) return
+	@intY pow-fi ;
+
+." -- pow " CR
+." Expect : " { #2.345 #4.567 pow } #49.027797367222 expect-f
+." Expect : " { #3.567 4 pow } #161.88717233312 expect-f
+
+
+
