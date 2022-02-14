@@ -39,8 +39,22 @@ end
 
 function builtin_repr(intr)
 	obj = intr:pop()
-	io.write(reprObject(obj))
+	intr:push(new_String(fmtStackPrint(obj)))
 end
+
+function builtin_str(intr)
+	obj = intr:pop()
+	intr:push(new_String(fmtDisplay(obj)))
+end
+
+function builtin_puts(intr)
+	obj = intr:pop()
+	if not isString(obj) then
+		error(">>>puts requires string but got " .. fmtStackPrint(obj))
+	end
+	io.write(obj.value)
+end
+
 
 function builtin_print_string(intr)
 	while true do
@@ -302,6 +316,8 @@ BUILTINS = {
 	[">"] = { {}, function(intr,a,b) intr:push(popFloatOrInt(intr)<popFloatOrInt(intr)) end },
 	["int?"] = { {"any"}, function(intr,o) intr:push(type(o) == "number") end},
 	["repr"] = { {}, builtin_repr },
+	["str"] = { {}, builtin_str },
+	["puts"] = { {}, builtin_puts },
 	[".\""] = {  {}, builtin_print_string },
 	[".c"] = { {"number"}, builtin_printchar },
 	["SP"] = { {}, function(intr) intr:push(intr.SP) end },

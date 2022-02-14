@@ -49,11 +49,10 @@ function Interpreter:pop()
 end
 
 function Interpreter:reprStack()
-	-- TODO -- fixme to print objects like in C++ version
 	s = ""
 	i = self.SP_EMPTY-1
 	while i >= self.SP do
-		s = s .. reprObject(self.STACKLOCALS[i]) .. " "
+		s = s .. fmtStackPrint(self.STACKLOCALS[i]) .. " "
 		i = i - 1
 	end
 
@@ -178,7 +177,7 @@ function Interpreter:run(stephook)
 			-- get true|false condition
 			cond = self:pop()
 			if cond ~= true and cond ~= false then
-				error(">>>'if' expects true or false but got: " .. reprObject(cond))
+				error(">>>'if' expects true or false but got: " .. fmtStackPrint(cond))
 			end
 			-- these don't run the jump, they just reposition the reader
 			if cond == true then
@@ -225,7 +224,7 @@ function Interpreter:run(stephook)
 			-- top of stack must be a CallableWordlist
 			obj = self:pop()
 			if not isCallableWordlist(obj) then
-				error(">>>call expects a lambda, but got: " .. reprObject(obj))
+				error(">>>call expects a lambda, but got: " .. fmtStackPrint(obj))
 			end
 
 			-- now this is just like calling a userword, below

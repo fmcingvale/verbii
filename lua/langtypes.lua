@@ -24,6 +24,26 @@ function new_Float(value)
 	return Float:new({}, value)
 end
 
+-- as in the Python port, regular Lua strings as used as symbols,
+-- and strings get their own type
+String = {}
+
+function String:new(obj, str)
+	setmetatable(obj, self)
+	self.__index = self
+	obj.__class__ = "String"
+	obj.value = str
+	return obj
+end
+
+function isString(obj)
+	return type(obj) == "table" and obj.__class__ == "String"
+end
+
+function new_String(str)
+	return String:new({}, str)
+end
+
 MemArray = {}
 function MemArray:new(obj, count)
 	setmetatable(obj, self)
@@ -71,7 +91,8 @@ function new_CallableWordlist(wordlist)
 	return CallableWordlist:new({},wordlist)
 end
 
-function reprObject(obj)
+-- format obj for normal program output, like '.'
+function fmtDisplay(obj)
 	if type(obj) == "number" then
 		return tostring(obj)
 	elseif isFloat(obj) then
@@ -87,8 +108,40 @@ function reprObject(obj)
 		return "var:" .. tostring(#obj.mem) .. ":" .. tostring(obj.offset)
 	elseif isCallableWordlist(obj) then
 		return "<lambda>"
+	elseif isString(obj) then
+		return obj.value
+	elseif type(obj) == "string" then
+		-- strings are symbols, they get ' here to differentiate from strings
+		return "\"" .. obj
 	else
 		error(">>>Don't know how to print object: " .. tostring(obj))
 	end
 end
 
+-- format obj for stack display
+function fmtStackPrint(obj)
+	if type(obj) == "number" then
+		return tostring(obj)
+	elseif isFloat(obj) then
+		local fmt = "%." .. tostring(FLOAT_PRECISION) .. "g"
+		return "#" .. string.format(fmt, obj.value)
+	elseif type(obj) == "boolean" then
+		if obj then
+			return "true"
+		else
+			return "false"
+		end
+	elseif isMemArray(obj) then
+		return "var:" .. tostring(#obj.mem) .. ":" .. tostring(obj.offset)
+	elseif isCallableWordlist(obj) then
+		return "<lambda>"
+	elseif isString(obj) then
+		-- in stack display, strings get " .. "
+		return '"' .. obj.value .. '"'
+	elseif type(obj) == "string" then
+		-- strings are symbols, in stack display they don't get '
+		return obj
+	else
+		error(">>>Don't know how to print object: " .. tostring(obj))
+	end
+end
