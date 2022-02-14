@@ -16,3 +16,12 @@ class MemArray(object):
 		c.mem = self.mem
 		c.offset = self.offset
 		return c
+
+# since symbols are far more common than strings,
+# Python strings are used for symbols and this class is used
+# for strings
+class LangString(object):
+	def __init__(self, s):
+		self.s = s
+
+	

@@ -87,11 +87,11 @@ class Interpreter(object):
 		return obj
 
 	def reprStack(self) -> str:
-		from native import reprObject
+		from native import fmtStackPrint
 		s = ""
 		i = self.SP_EMPTY-1
 		while i >= self.SP:
-			s += reprObject(self.STACKLOCALS[i]) + ' '
+			s += fmtStackPrint(self.STACKLOCALS[i]) + ' '
 			i -= 1
 
 		return s
@@ -228,12 +228,12 @@ class Interpreter(object):
 				continue
 		
 			if word == "call":
-				from native import reprObject
+				from native import fmtStackPrint
 
 				# top of stack must be a CallableWordlist
 				obj = self.pop()
 				if not isinstance(obj,CallableWordlist):
-					raise LangError("call expects a lambda, but got: " + reprObject(obj))
+					raise LangError("call expects a lambda, but got: " + fmtStackPrint(obj))
 
 				# now this is just like calling a userword, below
 				# TODO -- tail call elimination??

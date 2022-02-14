@@ -5,13 +5,10 @@
 
 	Ported from C++ version
 """
-from doctest import REPORT_CDIFF
-from logging.handlers import MemoryHandler
 from math import floor
-from re import L
 from errors import LangError
 from interpreter import Interpreter
-from langtypes import MemArray
+from langtypes import MemArray, LangString
 
 FLOAT_PRECISION = 17
 
@@ -125,7 +122,8 @@ def builtin_fromlocal(I: Interpreter):
 	I.push(I.STACKLOCALS[I.LP])
 	I.LP += 1
 
-def reprObject(obj):
+def fmtDisplay(obj):
+	"get obj as string for normal program output (like '.')"
 	from interpreter import CallableWordlist
 	if type(obj) is int:
 		return str(obj)
@@ -140,6 +138,36 @@ def reprObject(obj):
 		return "<lambda>"
 	elif isinstance(obj, MemArray):
 		return "var:{0}:{1}".format(len(obj.mem), obj.offset)
+	elif isinstance(obj, LangString):
+		return obj.s
+	elif type(obj) is str:
+		# strings are symbols - not normally printed, so they get a ' to differentiate from strings
+		return "'" + obj
+	else:
+		raise LangError("Don't know how to print object: " + str(obj))
+
+def fmtStackPrint(obj):
+	"get obj as verbose string for stack display"
+	from interpreter import CallableWordlist
+	if type(obj) is int:
+		return str(obj)
+	elif type(obj) is float:
+		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
+		return '#' + fmt.format(obj)
+	elif obj is True:
+		return "true"
+	elif obj is False:
+		return "false"
+	elif isinstance(obj, CallableWordlist):
+		return "<lambda>"
+	elif isinstance(obj, MemArray):
+		return "var:{0}:{1}".format(len(obj.mem), obj.offset)
+	elif isinstance(obj, LangString):
+		# in a stack display, strings get " ... "
+		return '"' + obj.s + '"'
+	elif type(obj) is str:
+		# ... and symbols do not get ' here
+		return obj
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))
 
@@ -258,6 +286,12 @@ def builtin_gt(I):
 	a = popIntOrFloat(I)
 	I.push(a>b)
 
+def builtin_puts(I, obj):
+	if not isinstance(obj, LangString):
+		raise LangError("puts requires string but got: " + fmtStackPrint(obj))
+
+	sys.stdout.write(obj.s)
+
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -274,7 +308,12 @@ BUILTINS = {
 	'>': ([], builtin_gt),
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
 	# object means any type
-	'repr': ([object], lambda I,o: sys.stdout.write(reprObject(o))),
+	# format TOS for stack display and push string
+	'repr': ([object], lambda I,o: I.push(LangString(fmtStackPrint(o)))),
+	# format TOS as display string and push
+	'str': ([object], lambda I,o: I.push(LangString(fmtDisplay(o)))),
+	# print string from TOS
+	'puts': ([object], builtin_puts),
 	'int?': ([object], lambda I,o: I.push(type(o) == int)),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
