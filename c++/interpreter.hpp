@@ -20,8 +20,8 @@
 const int STACK_SIZE = (1<<10);
 const int LOCALS_SIZE = (1<<10);
 
-extern std::map<std::string,Wordlist> WORDS;
-extern std::vector<Wordlist*> LAMBDAS;
+extern std::map<std::string,ObjList*> WORDS;
+extern std::vector<ObjList*> LAMBDAS;
 
 class Interpreter {
 	public:
@@ -61,13 +61,16 @@ class Interpreter {
 	// in a large array are still valid, etc. use newMemoryArray() or copyMemoryArray()
 	// to get program-allocated memory
 
-	void do_jump(const std::string &jumpword);
+	void do_jump(const char *jumpword);
 
 	// to avoid a lot of 'if word==""' checks, these require a non-empty
 	// word or they throw an exception ... for use in cases where there MUST
 	// be a next/previous word, or its a syntax error
-	const std::string &nextWordOrFail();
-	const std::string &prevWordOrFail();
+	const Object nextObjOrFail();
+	const Object prevObjOrFail();
+
+	// or to require a symbol
+	const Object nextSymbolOrFail();
 };
 
 

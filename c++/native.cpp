@@ -17,7 +17,7 @@ using namespace std;
 static int popInt(Interpreter *intr) {
 	Object obj = intr->pop();
 	if(!obj.isInt()) {
-		throw LangError("Expecting int but got: " + obj.repr());
+		throw LangError("Expecting int but got: " + obj.fmtStackPrint());
 	}
 	return obj.asInt();
 }
@@ -39,7 +39,7 @@ static double popFloatOrInt(Interpreter *intr) {
 		return obj.data.i;
 	}
 	else {
-		throw LangError("Expecting int or float but got: " + obj.repr());
+		throw LangError("Expecting int or float but got: " + obj.fmtStackPrint());
 	}
 }
 
@@ -97,7 +97,7 @@ static void builtin_add(Interpreter *intr) {
 		intr->push(r);
 	}
 	else {
-		throw LangError("Can't add values: " + a.repr() + " + " + b.repr());
+		throw LangError("Can't add values: " + a.fmtStackPrint() + " + " + b.fmtStackPrint());
 	}
 }
 
@@ -142,24 +142,24 @@ static void builtin_divmod(Interpreter *intr) {
 }
 
 static void builtin_define_word(Interpreter *intr) {
-	auto name = intr->nextWordOrFail();
-	Wordlist words;
+	auto name = intr->nextSymbolOrFail();
+	ObjList *objs = new ObjList();
 	while(1) {
-		auto w = intr->nextWordOrFail();
-		if(w == ";") {
-			WORDS[name] = words;
+		auto o = intr->nextObjOrFail();
+		if(o.isSymbol(";")) {
+			WORDS[name.asSymbol()] = objs;
 			return;
 		}
 		else {
-			words.push_back(w);
+			objs->push_back(o);
 		}
 	}
 }
 
 static void builtin_comment(Interpreter *intr) {
 	while(1) {
-		auto w = intr->nextWordOrFail();
-		if(w == ")") {
+		auto o = intr->nextObjOrFail();
+		if(o.isSymbol(")")) {
 			return;
 		}
 	}
@@ -167,10 +167,18 @@ static void builtin_comment(Interpreter *intr) {
 
 static void builtin_printchar(Interpreter *intr) {
 	int c = popInt(intr);
-	printf("%c", c);
+	putc(c, stdout);
 	if(c == 10 || c == 13) {
 		fflush(stdout);
 	}
+}
+
+static void builtin_puts(Interpreter *intr) {
+	auto obj = intr->pop();
+	if(!obj.isString()) {
+		throw LangError("puts requires string but got: " + obj.fmtStackPrint());
+	}
+	printf("%s", obj.asString());
 }
 
 // ( obj addr -- ) - save obj to addr
@@ -264,27 +272,27 @@ static void builtin_fromlocal(Interpreter *intr) {
 // ." some string here " -- print string
 static void builtin_print_string(Interpreter *intr) {
 	while(true) {
-		auto word = intr->nextWordOrFail();
-		if(word == "\"") {
+		auto obj = intr->nextObjOrFail();
+		if(obj.isSymbol("\"")) {
 			return; // end of string
 		}
 		else {
-			printf("%s ", word.c_str());
+			printf("%s ", obj.asSymbol());
 		}
 	}
 }
 
 static void builtin_show_def(Interpreter *intr) {
-	auto name = intr->nextWordOrFail();
-	auto word = WORDS.find(name);
+	auto name = intr->nextSymbolOrFail();
+	auto word = WORDS.find(name.asSymbol());
 	if(word == WORDS.end()) {
-		cout << "No such word: " << name << endl;
+		cout << "No such word: " << name.fmtStackPrint() << endl;
 		return;
 	}
-	auto wordlist = word->second;
-	cout << name << ": ";
-	for(auto w : wordlist) {
-		cout << w << " ";
+	auto objlist = word->second;
+	cout << name.fmtStackPrint() << ": ";
+	for(auto o : *objlist) {
+		cout << o.fmtStackPrint() << " ";
 	}
 	cout << ";\n";
 }
@@ -305,43 +313,44 @@ static void builtin_make_lambda(Interpreter *intr) {
 	// { was just read -- read the words until }
 	
 	// delete the { that was just read
-	intr->reader.deletePrevWord();
+	intr->reader.deletePrevObj();
 
-	// TODO -- need to unify handling/storage of wordlists - right now WORDS holds
-	// Wordlists by value and tagging is done by pointer.
-	auto wordlist = new Wordlist();
+	auto objlist = new ObjList();
 	int nesting = 1;
 	while(true) {
-		auto word = intr->nextWordOrFail();
+		auto obj = intr->nextObjOrFail();
 		// delete the { ... } as I read it -- will replace it with a tagged wordlist
-		intr->reader.deletePrevWord();
-		if(word == "{") {
+		intr->reader.deletePrevObj();
+		
+		if(obj.isSymbol("{")) {
 			// if I find inner lambdas, just copy them for now and later when they are run, 
 			// this same process will happen for them
 			++nesting;
-			wordlist->push_back(word);
+			objlist->push_back(obj);
 		}
-		else if(word == "}") {
+		else if(obj.isSymbol("}")) {
 			if(--nesting > 0) {
-				wordlist->push_back(word);
+				objlist->push_back(obj);
 				continue;
 			}
 			// new unnamed wordlist will be placed into LAMBDAS, and its index placed
 			// on stack and in source wordlist so a subsequent 'call' can find it
-			LAMBDAS.push_back(wordlist);
+			LAMBDAS.push_back(objlist);
 			int index = LAMBDAS.size()-1;
+
+			// XXX FIX ME -- just push Lambda object directly, don't even need LAMBDAS anymore
 
 			// replace { .. } in source wordlist with "$<lambda index>" so subsequent 'call'
 			// can find it (note it would be impossible for user code to insert this word
 			// from source since it contains whitespace)
-			intr->reader.insertPrevWord("$<lambda " + to_string(index) + ">");
+			intr->reader.insertPrevObj(newSymbol("$<lambda " + to_string(index) + ">"));
 			// the first time, I have to push the lambda object as well -- interpreter
 			// will do this on subsequent calls when it sees "lambda<#>"
 			intr->push(newLambda(index));
 			return;
 		}
 		else {
-			wordlist->push_back(word);
+			objlist->push_back(obj);
 		}
 	}
 }
@@ -363,8 +372,13 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"def", builtin_define_word},
 	{"(", builtin_comment},
 	{".c", builtin_printchar},
+	{"puts", builtin_puts},
+	// convert TOS to verbose printable string (like for stack display(
 	{"repr", 
-		[](Interpreter *intr) {printf("%s", intr->pop().repr().c_str());}},
+		[](Interpreter *intr) {intr->push(newString(intr->pop().fmtStackPrint()));}},
+	// convert TOS to normal printable string (like for '.')
+	{"str", 
+		[](Interpreter *intr) {intr->push(newString(intr->pop().fmtDisplay()));}},
 	{"==", 
 		[](Interpreter *intr) {pushBool(intr, popFloatOrInt(intr) == popFloatOrInt(intr));}},
 	{">", 

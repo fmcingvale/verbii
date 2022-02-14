@@ -9,17 +9,17 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 #pragma once
-#include "reader.hpp"
-#include "xmalloc.hpp"
 #include <string.h>
 #include <string>
 
-const unsigned char TYPE_VOID = 0;
+const unsigned char TYPE_NULL = 0;
 const unsigned char TYPE_INT = 1;
 const unsigned char TYPE_BOOL = 2;
 const unsigned char TYPE_LAMBDA = 3;
 const unsigned char TYPE_MEMARRAY = 4;
 const unsigned char TYPE_FLOAT = 5;
+const unsigned char TYPE_STRING = 6;
+const unsigned char TYPE_SYMBOL = 7;
 
 class Object;
 
@@ -37,28 +37,44 @@ struct MemoryArray {
 // and small enough to pass as value -- any large parts will be stored in pointers
 class Object {
 	public:
-	// use one of the new* functions (below) to create Objects
+	// not normally used -- use the new* functions below to create Objects
+	// this is only used to create the NULLOBJ
+	Object() { type=TYPE_NULL; data.str = NULL; }
 
 	// type checking
+	bool isNull() const { return type == TYPE_NULL; }
 	bool isInt() const { return type == TYPE_INT; }
 	bool isBool() const { return type == TYPE_BOOL; }
 	bool isLambda() const { return type == TYPE_LAMBDA; }
 	bool isMemArray() const { return type == TYPE_MEMARRAY; }
 	bool isFloat() const { return type == TYPE_FLOAT; }
+	bool isString() const { return type == TYPE_STRING; }
+	bool isSymbol() const { return type == TYPE_SYMBOL; }
+	// convenience -- test if symbol AND equal to given string
+	// if n>0 then only require that many chars to match
+	bool isSymbol(const char *s, int n=0) const 
+		{ return type == TYPE_SYMBOL && 
+			!strncmp(data.str, s, n==0 ? strlen(data.str) : n); }
 
 	// get value (make sure to check first)
 	unsigned int asInt() const { return data.i; }
 	bool asBool() const { return data.b; }
 	int asLambdaIndex() const { return data.i; };
-	MemoryArray* asMemArray() { return data.memarray; }
-	double asFloat() { return data.d; }
+	MemoryArray* asMemArray() const { return data.memarray; }
+	double asFloat() const { return data.d; }
+	const char *asString() const { return data.str; }
+	const char *asSymbol() const { return data.str; }
 	
 	// setters to change value of object, i.e. for reusing object
 	void setInt(int i);
 
-	// get printable version of object
-	std::string repr() const;
-
+	// get string representation of object for printing to output
+	// (like would be displayed in normal program output)
+	std::string fmtDisplay() const;
+	// get string representation of object for printing a stack
+	// (generally more verbose to convey extra type information)
+	std::string fmtStackPrint() const;
+	
 	// do NOT read/write directly, always use functions above
 	unsigned char type;
 	union {
@@ -66,8 +82,12 @@ class Object {
 		bool b;
 		MemoryArray *memarray;
 		double d;
+		const char *str; // strings & symbols, immutable
 	} data;
 };
+
+// single NULL object
+extern Object NULLOBJ;
 
 Object newInt(int i);
 Object newBool(bool b);
@@ -79,4 +99,11 @@ Object newMemArray(int count, int offset);
 // offset is set the same as memarray.
 Object copyMemArray(MemoryArray *memarray);
 Object newFloat(double d);
+// copies s, unless keepPointer is true, in which case it 
+// takes ownership of s (and len is ignored)
+Object newString(const char *s, size_t len, bool keepPointer=false);
+Object newString(const std::string& );
+// like above
+Object newSymbol(const char *s, size_t len, bool keepPointer=false);
+Object newSymbol(const std::string& );
 

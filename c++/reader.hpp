@@ -1,5 +1,7 @@
 /*
-	Reader - splits text into words and provides next/previous interface.
+	Reader - splits text into Objects and provides next/previous interface.
+			The objects will mostly be Symbols but Objects are used so the
+			caller can insert any kind of Object back into the stream.
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
@@ -9,8 +11,9 @@
 #include <tuple>
 #include <memory>
 #include "xmalloc.hpp"
+#include "langtypes.hpp"
 
-typedef std::vector<std::string> Wordlist;
+typedef std::vector<Object> ObjList;
 
 class Reader {
 	public:
@@ -25,29 +28,34 @@ class Reader {
 
 	// push current context and switch to new context.
 	// caller must keep pointer valid until popWords()
-	void pushWords(Wordlist *words);
+	void pushObjList(ObjList *objs);
 	// return to previous context, discarding current context
-	void popWords();
-	// are there wordlists left on the stack?
-	bool hasPushedWords();
+	void popObjList();
+	// are there ObjLists left on the stack?
+	bool hasPushedObjLists();
 
-	// get next word or "" if none
-	const std::string& nextWord();
-	// peek at next word or "" if none
-	const std::string& peekWord();
-	// get previous word or "" if none
-	const std::string& prevWord();
-	// peek at previous word
-	const std::string& peekPrevWord();
-	// delete the word before the current position in the stream
-	void deletePrevWord();
-	// insert a word before the current position (would be read by 
-	// a subsequent prevWord())
-	void insertPrevWord(const std::string &word);
+	// NOTE - these return Objects by value since pointers gets weird after
+	// inserting/deleting objects  while iterating
+
+	// get next object or NULLOBJ if none
+	const Object nextObj();
+	// peek at next object or NULLOBJ if none
+	const Object peekObj();
+	// get previous object or NULLOBJ if none
+	const Object prevObj();
+	// peek at previous object NULLOBJ if none
+	const Object peekPrevObj();
+	// delete the object before the current position in the stream
+	void deletePrevObj();
+	// insert an object before the current position (would be read by 
+	// a subsequent prevObj())
+	void insertPrevObj(const Object& obj);
+
+	void debugPrintObjList() const;
 
 	protected:
-	Wordlist *wordlist;
+	ObjList *objlist;
 	size_t pos;
-	std::vector<Wordlist*> stack_wordlists;
+	std::vector<ObjList*> stack_objlists;
 	std::vector<size_t> stack_pos;
 };

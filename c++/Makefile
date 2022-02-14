@@ -20,7 +20,7 @@ CFLAGS = -g $(GC_FLAGS)
 # this optimization level works fine under Ubuntu
 #CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
 
-all: test.exe repl.exe  # gctest.exe
+all: repl.exe  # test.exe gctest.exe
 
 %.o: %.cpp $(HEADERS)
 	g++ $(CFLAGS) -Wall -c $< -o $@

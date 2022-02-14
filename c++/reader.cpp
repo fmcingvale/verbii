@@ -12,7 +12,7 @@
 using namespace std;
 
 Reader::Reader() {
-	wordlist = new Wordlist();
+	objlist = new ObjList();
 	pos = 0;
 }
 
@@ -25,86 +25,93 @@ void Reader::addText(const string &text) {
 		if(input.fail()) {
 			return; // reached end of file (probably some whitespace was left, so failed to read a word)
 		}
-		wordlist->push_back(word);
+		objlist->push_back(newSymbol(word.c_str(), word.length()));
 	}
 }
 
 void Reader::clearAll() {
-	stack_wordlists.clear();
+	stack_objlists.clear();
 	stack_pos.clear();
-	delete wordlist;
-	wordlist = new Wordlist();
+	delete objlist;
+	objlist = new ObjList();
 	pos = 0;
 }
 
 // push current context and switch to new context
-void Reader::pushWords(Wordlist *new_words) {
-	stack_wordlists.push_back(wordlist);
+void Reader::pushObjList(ObjList *objs) {
+	stack_objlists.push_back(objlist);
 	stack_pos.push_back(pos);
 	
-	wordlist = new_words;
+	objlist = objs;
 	pos = 0;
 }
 
-void Reader::popWords() {
-	wordlist = stack_wordlists.back();
+void Reader::popObjList() {
+	objlist = stack_objlists.back();
 	pos = stack_pos.back();
-	stack_wordlists.pop_back();
+	stack_objlists.pop_back();
 	stack_pos.pop_back();
 }
 
-bool Reader::hasPushedWords() {
-	return stack_wordlists.size() > 0;
+bool Reader::hasPushedObjLists() {
+	return stack_objlists.size() > 0;
 }
 
-static string NONE("");
-
-const string& Reader::nextWord() {
-	if(pos >= wordlist->size()) {
-		return NONE;
+const Object Reader::nextObj() {
+	if(pos >= objlist->size()) {
+		return NULLOBJ;
 	}
 	else {
-		return wordlist->at(pos++);
+		return objlist->at(pos++);
 	}
 }
 
-const string& Reader::peekWord() {
-	if(pos >= wordlist->size()) {
-		return NONE;
+const Object Reader::peekObj() {
+	if(pos >= objlist->size()) {
+		return NULLOBJ;
 	}
 	else {
-		return wordlist->at(pos);
+		return objlist->at(pos);
 	}
 }
 
-const string& Reader::prevWord() {
+const Object Reader::prevObj() {
 	if(pos <= 0) {
-		return NONE;
+		return NULLOBJ;
 	}
 	else {
-		return wordlist->at(--pos);
+		return objlist->at(--pos);
 	}
 }
 
-const string& Reader::peekPrevWord() {
+const Object Reader::peekPrevObj() {
 	if(pos <= 0) {
-		return NONE;
+		return NULLOBJ;
 	}
 	else {
-		return wordlist->at(pos-1);
+		return objlist->at(pos-1);
 	}
 }
 
-void Reader::deletePrevWord() {
+void Reader::deletePrevObj() {
 	if(pos == 0) {
 		throw LangError("No previous word to delete!");
 	}
-	wordlist->erase(wordlist->begin()+pos-1);
+	objlist->erase(objlist->begin()+pos-1);
 	--pos;
 }
 
-void Reader::insertPrevWord(const string &word) {
-	wordlist->insert(wordlist->begin()+pos, word);
+void Reader::insertPrevObj(const Object& obj) {
+	objlist->insert(objlist->begin()+pos, obj);
 	++pos;
 }
+
+void Reader::debugPrintObjList() const {
+	cout << "Reader:objlist>> ";
+	for(auto obj : *objlist) {
+		cout << obj.fmtStackPrint() << " ";
+	}
+	cout << endl;
+}
+
 

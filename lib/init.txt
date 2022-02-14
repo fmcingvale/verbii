@@ -1,7 +1,7 @@
 ( -- default library, loaded at startup -- )
 ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
 
-def . repr 32 .c ;
+def . str puts 32 .c ;
 def CR ( -- , prints CR LF ) 10 .c 13 .c ;
 def clear ( xn ... x1 -- ) SP depth + 1 - SP! ;
 
@@ -47,7 +47,7 @@ def mod ( a b -- remainder a/b ) /mod drop ;
 ( .S - print stack without affecting it - good for debugging )
 def .S  ." => " depth 
 @LOOP 
-	dup 0 > if >>true >>done @true dup SP + 1 + ref . 1 - <<LOOP @done drop 13 .c 10 .c ;
+	dup 0 > if >>true >>done @true dup SP + 1 + ref repr puts 32 .c 1 - <<LOOP @done drop 13 .c 10 .c ;
 
 ( shortcuts for addresses of first 10 locals )
 : L0 LP ;

@@ -112,13 +112,13 @@ void backtrace_curframe(Interpreter *intr) {
 	string trace = "";
 	int nr = 7; // number of words to print in each frame
 	while(nr--) {
-		auto w = intr->reader.prevWord();
-		if(w == "") {
+		auto o = intr->reader.prevObj();
+		if(o.isNull()) {
 			cout << trace << endl;
 			return;
 		}
 		else {
-			trace = w + ' ' + trace;
+			trace = o.fmtStackPrint() + ' ' + trace;
 		}
 	}
 	cout << trace << endl;
@@ -129,8 +129,8 @@ void print_backtrace(Interpreter *intr) {
 	while(1) {
 		cout << "FRAME " << i++ << ": ";
 		backtrace_curframe(intr);
-		if(intr->reader.hasPushedWords()) {
-			intr->reader.popWords();
+		if(intr->reader.hasPushedObjLists()) {
+			intr->reader.popObjList();
 		}
 		else {
 			return;
