@@ -13,7 +13,7 @@ class Builtins {
 		var obj = intr.pop();
 		var i = obj as LangInt;
 		if(i == null) {
-			throw new LangError("Expecting int but got: " + obj.repr());
+			throw new LangError("Expecting int but got: " + obj.fmtStackPrint());
 		}
 		return i.value;
 	}
@@ -27,7 +27,7 @@ class Builtins {
 			return (obj as LangFloat)!.value;
 		}
 		else {
-			throw new LangError("Expecting int or float but got: " + obj.repr());
+			throw new LangError("Expecting int or float but got: " + obj.fmtStackPrint());
 		}
 	}
 
@@ -56,7 +56,7 @@ class Builtins {
 			return;
 		}
 		
-		throw new LangError("Don't know how to add " + a.repr() + " and " + b.repr());
+		throw new LangError("Don't know how to add " + a.fmtStackPrint() + " and " + b.fmtStackPrint());
 	}
 
 	// see C++ version for extensive comments on divmod
@@ -84,17 +84,18 @@ class Builtins {
 	}
 
 	public static void define_word(Interpreter intr) {
-		var name = intr.nextWordOrFail();
-		var words = new List<string>();
+		var name = intr.nextSymbolOrFail();
+		var objlist = new List<LangObject>();
 	
 		while(true) {
-			var w = intr.nextWordOrFail();
-			if(w == ";") {
-				intr.WORDS[name] = words;
+			var o = intr.nextObjOrFail();
+			var sym = o as LangSymbol;
+			if(sym != null && sym.match(";")) {
+				intr.WORDS[name.value] = objlist;
 				return;
 			}
 			else {
-				words.Add(w);
+				objlist.Add(o);
 			}
 		}
 	}
@@ -111,18 +112,26 @@ class Builtins {
 	// ." some string here " -- print string
 	public static void print_string(Interpreter intr) {
 		while(true) {
-			var word = intr.nextWordOrFail();
-			if(word == "\"") {
+			var obj = intr.nextObjOrFail();
+			var sym = obj as LangSymbol;
+			if(sym == null) {
+				throw new LangError("Bad value inside .\" : " + obj.fmtStackPrint());
+			}
+			else if(sym.value == "\"") {
 				return; // end of string
 			}
 			else {
-				Console.Write(word + " ");
+				Console.Write(sym.value + " ");
 			}
 		}
 	}
 
 	public static void comment(Interpreter intr) {
-		while(intr.nextWordOrFail() != ")") {
+		while(true) {
+			var sym = intr.nextObjOrFail() as LangSymbol;
+			if(sym != null && sym.value == ")") {
+				return;
+			}
 		}
 	}
 
@@ -219,55 +228,58 @@ class Builtins {
 		// turn { ... } into an anonymous wordlist
 		
 		// delete the { that was just read
-		intr.reader.deletePrevWord();
+		intr.reader.deletePrevObj();
 
-		var wordlist = new List<String>();
+		var objlist = new List<LangObject>();
 		int nesting = 1;
 		while(true) {
-			var word = intr.nextWordOrFail();
+			var obj = intr.nextObjOrFail();
+			var sym = obj as LangSymbol;
 			// delete the { ... } as I read it -- will replace it with a lambda reference
-			intr.reader.deletePrevWord();
-			if(word == "{") {
+			intr.reader.deletePrevObj();
+			if(sym != null && sym.match("{")) {
 				// if I find inner lambdas, just copy them for now and later when they are run, 
 				// this same process will happen for them
 				++nesting;
-				wordlist.Add(word);
+				objlist.Add(obj);
 			}
-			else if(word == "}") {
+			else if(sym != null && sym.match("}")) {
 				if(--nesting > 0) {
-					wordlist.Add(word);
+					objlist.Add(obj);
 					continue;
 				}
 				// new unnamed wordlist will be placed into LAMBDAS, and its index placed
 				// on stack and in source wordlist so a subsequent 'call' can find it
-				intr.LAMBDAS.Add(wordlist);
+				intr.LAMBDAS.Add(objlist);
 				int index = intr.LAMBDAS.Count()-1;
 
 				// replace { .. } in source wordlist with pseudo opcode "$$LAMBDA index" so 
 				// subsequent 'call' can find it (note it would be impossible for user code 
 				// to insert this word from source since it contains whitespace)
-				intr.reader.insertPrevWord("$$LAMBDA " + index.ToString());
+				//
+				// TODO - get rid of this and insert lambda directly
+				intr.reader.insertPrevObj(new LangSymbol("$$LAMBDA " + index.ToString()));
 				// the first time, I have to push the lambda object as well -- interpreter
 				// will do this on subsequent calls when it sees "lambda<#>"
 				intr.push(new LangLambda(index));
 				return;
 			}
 			else {
-				wordlist.Add(word);
+				objlist.Add(obj);
 			}
 		}
 	}
 
 	public static void showdef(Interpreter intr) {
-		var name = intr.nextWordOrFail();
-		if(!intr.WORDS.ContainsKey(name)) {
+		var name = intr.nextSymbolOrFail();
+		if(!intr.WORDS.ContainsKey(name.value)) {
 			Console.WriteLine("No such word: " + name);
 			return;
 		}
-		var wordlist = intr.WORDS[name];
-		Console.Write(name + ": ");
-		foreach(var w in wordlist) {
-			Console.Write(w + " ");
+		var objlist = intr.WORDS[name.value];
+		Console.Write(name.value + ": ");
+		foreach(var o in objlist) {
+			Console.Write(o.fmtStackPrint() + " ");
 		}
 		Console.WriteLine(";");
 	}
@@ -279,6 +291,17 @@ class Builtins {
 			throw new LangError("Floating point divide by zero");
 		}
 		intr.push(new LangFloat(a/b));
+	}
+
+	public static void _puts(Interpreter intr) {
+		var o = intr.pop();
+		var s = o as LangString;
+		if(s == null) {
+			throw new LangError("puts requires string but got: " + o.fmtStackPrint());
+		}
+		else {
+			Console.Write(s.value);
+		}
 	}
 
 	public static Dictionary<string,Action<Interpreter>> builtins = 
@@ -299,7 +322,9 @@ class Builtins {
 		{"def", define_word}, // synonym for :
 		{".c", printchar},
 		{".\"", print_string},
-		{"repr", intr => Console.Write(intr.pop().repr())},
+		{"repr", intr => intr.push(new LangString(intr.pop().fmtStackPrint()))},
+		{"str", intr => intr.push(new LangString(intr.pop().fmtDisplay()))},
+		{"puts", _puts},
 		{"depth", intr => intr.push(new LangInt(intr.SP_EMPTY - intr.SP))},
 		{"SP", intr => intr.push(new LangInt(intr.SP))},
 		{"SP!", setsp},

@@ -10,7 +10,16 @@
 */
 
 public class LangObject {
-	public virtual string repr() { return "<VOID>"; }
+	public virtual string fmtDisplay() { return "<VOID>"; }
+	public virtual string fmtStackPrint() { return "<VOID>"; }
+}
+
+public class LangNull : LangObject {
+	public LangNull() {
+	}
+
+	public override string fmtDisplay() { return "<null>"; }
+	public override string fmtStackPrint() { return fmtDisplay(); }
 }
 
 public class LangInt : LangObject {
@@ -27,7 +36,8 @@ public class LangInt : LangObject {
 
 	public int value;
 
-	public override string repr() { return value.ToString(); } 
+	public override string fmtDisplay() { return value.ToString(); }
+	public override string fmtStackPrint() { return fmtDisplay(); } 
 }
 
 public class LangFloat : LangObject {
@@ -39,10 +49,15 @@ public class LangFloat : LangObject {
 
 	public double value;
 
-	public override string repr() { 
+	public override string fmtDisplay() { 
 		// there has to be a better way .....
 		string fmt = "{0:G" + FLOAT_PRECISION.ToString() + "}"; 
-		return String.Format(fmt, value); }
+		return String.Format(fmt, value); 
+	}
+
+	public override string fmtStackPrint() { 
+		return "#" + fmtDisplay();
+	}
 }
 
 public class LangBool : LangObject {
@@ -52,7 +67,40 @@ public class LangBool : LangObject {
 
 	public bool value;
 
-	public override string repr() { return value ? "true" : "false"; }
+	public override string fmtDisplay() { return value ? "true" : "false"; }
+	public override string fmtStackPrint() { return fmtDisplay(); }
+}
+
+public class LangString : LangObject {
+	public LangString(string s) {
+		value = s;
+	}
+
+	public string value;
+
+	public override string fmtDisplay() { return value; }
+	public override string fmtStackPrint() { return "\"" + value + "\""; }
+}
+
+public class LangSymbol : LangObject {
+	public LangSymbol(string s) {
+		value = s;
+	}
+
+	public string value;
+
+	// compare symbol to name. if nr>0 then only match first nr chars of symbol.
+	public bool match(string name, int nr=0) { 
+		if(nr == 0) {
+			return value == name;
+		}
+		else {
+			return value.Length >= nr && value.Substring(0, nr) == name;
+		}
+	}
+
+	public override string fmtDisplay() { return "'" + value; }
+	public override string fmtStackPrint() { return value; }
 }
 
 // like in the C++ version, memory allocations are separate objects instead of
@@ -75,7 +123,8 @@ public class LangMemoryArray : LangObject {
 		offset = other.offset;
 	}
 
-	public override string repr() { return "var:" + array.Count().ToString() + ":" + offset.ToString(); }
+	public override string fmtDisplay() { return "var:" + array.Count().ToString() + ":" + offset.ToString(); }
+	public override string fmtStackPrint() { return fmtDisplay(); }
 
 	public List<LangObject> array;
 	public int offset;
@@ -88,5 +137,6 @@ public class LangLambda : LangObject {
 
 	public int index; // index into Interpreter.LAMBDAS
 
-	public override string repr() { return "<lambda>"; }
+	public override string fmtDisplay() { return "<lambda>"; }
+	public override string fmtStackPrint() { return fmtDisplay(); }
 }

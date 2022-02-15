@@ -33,11 +33,11 @@ public class Interpreter {
 	public Reader reader;
 
 	// user defined words
-	public Dictionary<string,List<string>> WORDS;
+	public Dictionary<string,List<LangObject>> WORDS;
 	// user defined variables
 	public Dictionary<string,LangMemoryArray> VARS;
 	// unnamed functions
-	public List<List<String>> LAMBDAS;
+	public List<List<LangObject>> LAMBDAS;
 
 	public Interpreter() {
 		SIZE_STACKLOCALS = STACK_SIZE + LOCALS_SIZE;
@@ -63,9 +63,9 @@ public class Interpreter {
 
 		re_integer = new Regex(@"^[\+-]?\d+$");
 		
-		WORDS = new Dictionary<string,List<string>>();
+		WORDS = new Dictionary<string,List<LangObject>>();
 		VARS = new Dictionary<string,LangMemoryArray>();
-		LAMBDAS = new List<List<String>>();
+		LAMBDAS = new List<List<LangObject>>();
 	}
 
 	public void addText(string text) {
@@ -89,64 +89,72 @@ public class Interpreter {
 	public string reprStack() {
 		string s = "";
 		for(int i=SP_EMPTY-1; i>=SP; --i) {
-			s += STACKLOCALS[i].repr() + " ";
+			s += STACKLOCALS[i].fmtStackPrint() + " ";
 		}
 		return s;
 	}
 
-	public string nextWordOrFail() {
-		if(reader.peekWord() == "") {
+	public LangObject nextObjOrFail() {
+		if(reader.peekObj() == null) {
 			throw new LangError("Unexpected end of input");
 		}
-		return reader.nextWord();
+		return reader.nextObj()!;
 	}
 
-	public string prevWordOrFail() {
-		if(reader.peekPrevWord() == "") {
+	public LangSymbol nextSymbolOrFail() {
+		var obj = nextObjOrFail();
+		if(!(obj is LangSymbol)) {
+			throw new LangError("Expecting symbol but got " + obj.fmtStackPrint());
+		}
+		return (obj as LangSymbol)!;
+	}
+
+	public LangObject prevObjOrFail() {
+		if(reader.peekPrevObj() == null) {
 			throw new LangError("Unable to find previous word");
 		}
-		return reader.prevWord();
+		return reader.prevObj()!;
 	}
 
-	// take word like '>>NAME' or '<<NAME' and jump to '@NAME'
-	public void do_jump(string jumpword) {
+	// take symbol like '>>NAME' or '<<NAME' and jump to '@NAME'
+	public void do_jump(LangSymbol jumpsym) {
 		//cout << "DO_JUMP TO: " << jumpword << endl;
-		if(jumpword.Substring(0,2) == ">>") {
+		if(jumpsym.match(">>",2)) {
 			// forward jump, find word (>>NAME -> @NAME)
 			while(true) {
-				var word = nextWordOrFail();
+				var sym = nextObjOrFail() as LangSymbol;
 				//cout << "NEXT-WORD: " << word << endl;
-				if(word.Substring(1) == jumpword.Substring(2)) {
+				if(sym != null && (sym.value.Substring(1) == jumpsym.value.Substring(2))) {
 					//cout << "FOUND" << endl;
 					return; // found word, stop
 				}
 			}
 		}
-		else if(jumpword.Substring(0,2) == "<<") {
+		else if(jumpsym.match("<<",2)) {
 			// backward jump
 			while(true) {
-				var word = prevWordOrFail();
+				var sym = prevObjOrFail() as LangSymbol;
 				//cout << "PREV-WORD: " << word << endl;
-				if(word.Substring(1) == jumpword.Substring(2)) {
+				if(sym != null && sym.value.Substring(1) == jumpsym.value.Substring(2)) {
 					//cout << "FOUND" << endl;
 					return; // found word, stop
 				}
 			}
 		}
 		else {
-			throw new LangError("Bad jumpword " + jumpword);
+			throw new LangError("Bad jumpword " + jumpsym.fmtStackPrint());
 		}
 	}
 
 	public void run() {
 		// see C++ version for comments, only brief comments here
 		while(true) {
-			var word = reader.nextWord();
-			if(word == "") {
+			var obj = reader.nextObj();
+			if(obj == null) {
 				// i could be returning from a word that had no 'return',
 				// so pop words like i would if it were a return
-				if(reader.hasPushedWords()) {
-					reader.popWords();
+				if(reader.hasPushedObjLists()) {
+					reader.popObjList();
 					continue;
 				}
 				else {
@@ -154,134 +162,141 @@ public class Interpreter {
 				}
 			}
 
-			// push integers to stack
-			if(re_integer.IsMatch(word)) {
-				int i = int.Parse(word);
-				push(new LangInt(i));
-				continue;
-			}
+			if (obj is LangSymbol) {
+				var sym = obj as LangSymbol;	
 
-			// floats: #NNN.NN
-			if(word.Substring(0,1) == "#") {
-				double d = double.Parse(word.Substring(1));
-				push(new LangFloat(d));
-				continue;
-			}
-
-			// check for "$$LAMBDA index"
-			if(word.Length >= 10 && word.Substring(0,9) == "$$LAMBDA ") {
-				var index = int.Parse(word.Substring(9));
-				push(new LangLambda(index));
-				continue;
-			}
-
-			if(word == "return") {
-				// return from word by popping back to previous wordlist (don't call at toplevel)
-				if(reader.hasPushedWords()) {	
-					reader.popWords();
+				// push integers to stack
+				if(re_integer.IsMatch(sym!.value)) {
+					int i = int.Parse(sym!.value);
+					push(new LangInt(i));
+					continue;
 				}
-				else {
-					return; // top level return exits program
-				}
-				continue;
-			}
 
-			if(word == "if") {
-				// true jump is required
-				var true_jump = reader.nextWord();
-				// false word is optional
-				bool have_false_jump = false;
-				var peek = reader.peekWord();
-				if(peek.Length >= 2 && (peek.Substring(0,2) == "<<" || peek.Substring(0,2) == ">>")) {
-					have_false_jump = true;
+				// floats: #NNN.NN
+				if(sym!.match("#",1)) {
+					double d = double.Parse(sym!.value.Substring(1));
+					push(new LangFloat(d));
+					continue;
 				}
-				var cond = pop();
-				var b_cond = cond as LangBool;
-				if(b_cond == null) {
-					throw new LangError("'if' requires true|false but got: " + cond.repr());
-				}
-				// these don't run the jump, they just reposition the reader
-				if(b_cond.value) {
-					// no need to actually skip false jump since i'll be looking for '@'
-					do_jump(true_jump);
-				}
-				else if(have_false_jump) {
-					var false_jump = reader.nextWord();
-					do_jump(false_jump);
-				}
-				continue;
-			}
 
-			if(word.Length >= 2 && (word.Substring(0,2) == ">>" || word.Substring(0,2) == "<<")) {
-				do_jump(word);
-				continue;
-			}
-
-			if(word[0] == '@') {
-				// jump target -- ignore
-				continue;
-			}
-
-			if(word == "var") {
-				var name = nextWordOrFail();
-				var count = int.Parse(nextWordOrFail());
-				// must be unique userword
-				if(VARS.ContainsKey(name)) {
-					throw new LangError("Trying to redefine variable " + name);
+				// check for "$$LAMBDA index"
+				// TODO -- remove me and push lambda to wordlist directly
+				if(sym!.value.Length >= 10 && sym!.value.Substring(0,9) == "$$LAMBDA ") {
+					var index = int.Parse(sym!.value.Substring(9));
+					push(new LangLambda(index));
+					continue;
 				}
-				// add to VARS so name lookup works (below)
-				VARS[name] = new LangMemoryArray(count);
-				continue;
-			}
 
-			if(word == "del") {
-				var name = nextWordOrFail();
-				if(!VARS.ContainsKey(name)) {
-					throw new LangError("Trying to delete non-existent variable " + name);
-				}
-				VARS.Remove(name);
-				continue;
-			}
-			
-			if(word == "call") {
-				// top of stack must be a lambda
-				var val = pop();
-				var lambda = val as LangLambda;
-				if(lambda == null) {
-					throw new LangError("call expects a lambda, but got: " + val.repr());
-				}
-				// now this is just like calling a userword, below
-				// TODO -- tail call elimination??
-				reader.pushWords(LAMBDAS[lambda.index]);
-				continue;
-			}
-			
-			// builtins, then userwords, then vars
-
-			if(Builtins.builtins.ContainsKey(word)) {
-				Builtins.builtins[word](this);
-				continue;
-			}
-
-			if(WORDS.ContainsKey(word)) {
-				// tail call elimination -- if I'm at the end of this wordlist OR next word is 'return', then
-				// i don't need to come back here, so pop my wordlist first to stop stack from growing
-				if(reader.peekWord() == "" || reader.peekWord() == "return") {
-					if(reader.hasPushedWords()) { // in case i'm at the toplevel
-						reader.popWords();
+				if(sym!.match("return")) {
+					// return from word by popping back to previous wordlist (don't call at toplevel)
+					if(reader.hasPushedObjLists()) {	
+						reader.popObjList();
 					}
+					else {
+						return; // top level return exits program
+					}
+					continue;
 				}
-				// execute word by pushing its wordlist and continuing
-				reader.pushWords(WORDS[word]);
-				continue;
-			}
 
-			if(VARS.ContainsKey(word)) {
-				push(VARS[word]);
-				continue;
-			}
+				if(sym!.match("if")) {
+					// true jump is required
+					var true_jump = nextSymbolOrFail();
+					// false word is optional
+					var false_jump = reader.peekObj() as LangSymbol;
+					if(false_jump == null || false_jump.value.Length < 2 ||
+						(false_jump.match("<<",2) == false && false_jump.match(">>",2) == false)) {
+						false_jump = null;
+					}
+					var cond = pop();
+					var b_cond = cond as LangBool;
+					if(b_cond == null) {
+						throw new LangError("'if' requires true|false but got: " + cond.fmtStackPrint());
+					}
+					// these don't run the jump, they just reposition the reader
+					if(b_cond.value) {
+						// no need to actually skip false jump since i'll be looking for '@'
+						do_jump(true_jump);
+					}
+					else if(false_jump != null) {
+						reader.nextObj(); // only peeked above, so read it now
+						do_jump(false_jump);
+					}
+					continue;
+				}
 
-			throw new LangError("Unknown word " + word);
+				if(sym!.match(">>",2) || sym!.match("<<",2)) {
+					do_jump(sym);
+					continue;
+				}
+
+				if(sym!.match("@",1)) {
+					// jump target -- ignore
+					continue;
+				}
+
+				if(sym!.match("var")) {
+					var name = nextSymbolOrFail();
+					var count = int.Parse(nextSymbolOrFail().value);
+					// must be unique userword
+					if(VARS.ContainsKey(name.value)) {
+						throw new LangError("Trying to redefine variable " + name.value);
+					}
+					// add to VARS so name lookup works (below)
+					VARS[name.value] = new LangMemoryArray(count);
+					continue;
+				}
+
+				if(sym!.match("del")) {
+					var name = nextSymbolOrFail();
+					if(!VARS.ContainsKey(name.value)) {
+						throw new LangError("Trying to delete non-existent variable " + name.value);
+					}
+					VARS.Remove(name.value);
+					continue;
+				}
+				
+				if(sym!.match("call")) {
+					// top of stack must be a lambda
+					var val = pop();
+					var lambda = val as LangLambda;
+					if(lambda == null) {
+						throw new LangError("call expects a lambda, but got: " + val.fmtStackPrint());
+					}
+					// now this is just like calling a userword, below
+					// TODO -- tail call elimination??
+					reader.pushObjList(LAMBDAS[lambda.index]);
+					continue;
+				}
+			
+				// builtins, then userwords, then vars
+
+				if(Builtins.builtins.ContainsKey(sym!.value)) {
+					Builtins.builtins[sym!.value](this);
+					continue;
+				}
+
+				if(WORDS.ContainsKey(sym!.value)) {
+					// tail call elimination -- if I'm at the end of this wordlist OR next word is 'return', then
+					// i don't need to come back here, so pop my wordlist first to stop stack from growing
+					var nextObj = reader.peekObj();
+					var nextSym = reader.peekObj() as LangSymbol;
+
+					if(nextObj == null || nextSym == null || nextSym.match("return")) {
+						if(reader.hasPushedObjLists()) { // in case i'm at the toplevel
+							reader.popObjList();
+						}
+					}
+					// execute word by pushing its wordlist and continuing
+					reader.pushObjList(WORDS[sym!.value]);
+					continue;
+				}
+
+				if(VARS.ContainsKey(sym!.value)) {
+					push(VARS[sym!.value]);
+					continue;
+				}
+			}
+			throw new LangError("Unknown word " + obj.fmtStackPrint());
 		}
 	}
 }

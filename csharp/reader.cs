@@ -12,9 +12,9 @@ public class Reader {
 	public Reader() {
 		// dotnet build complains if I do 'clearAll()' instead of doing the same thing inline here ...
 		// (doesn't see that the references are set by clearAll())
-		wordlist = new List<string>();
+		objlist = new List<LangObject>();
 		pos = 0;
-		stack = new List<Tuple<List<string>,int>>();
+		stack = new List<Tuple<List<LangObject>,int>>();
 	}
 
 	// add more text to current context
@@ -22,109 +22,109 @@ public class Reader {
 		string[] whitespace = { " ", "\n", "\r", "\t" };
 		string[] words = text.Split(whitespace, System.StringSplitOptions.RemoveEmptyEntries);
 		foreach(var word in words) {
-			wordlist.Add(word);
+			objlist.Add(new LangSymbol(word));
 		}
 	}
 
 	// clear EVERYTHING - can be nice when switching files to get
 	// rid of history that wouldn't be relevant in a backtrace for example
 	public void clearAll() {
-		wordlist = new List<string>();
+		objlist = new List<LangObject>();
 		pos = 0;
-		stack = new List<Tuple<List<string>,int>>();
+		stack = new List<Tuple<List<LangObject>,int>>();
 	}
 
 	// push current context and switch to new context.
-	// caller must keep pointer valid until popWords()
-	public void pushWords(List<string> words) {
-		stack.Add(Tuple.Create(wordlist,pos));
-		wordlist = words;
+	// caller must keep pointer valid until popObjList()
+	public void pushObjList(List<LangObject> objs) {
+		stack.Add(Tuple.Create(objlist,pos));
+		objlist = objs;
 		pos = 0;
 	}
 
 	// return to previous context, discarding current context
-	public void popWords() {
+	public void popObjList() {
 		var tup = stack[stack.Count-1];
-		wordlist = tup.Item1;
+		objlist = tup.Item1;
 		pos = tup.Item2;
 		stack.RemoveAt(stack.Count-1);
 	}
 
-	// are there wordlists left on the stack?
-	public bool hasPushedWords() {
+	// are there objlists left on the stack?
+	public bool hasPushedObjLists() {
 		return stack.Count > 0;
 	}
 
-	// get next word or "" if none
-	public string nextWord() {
-		if(pos >= wordlist.Count) {
-			return "";
+	// get next word or null if none
+	public LangObject? nextObj() {
+		if(pos >= objlist.Count) {
+			return null;
 		}
 		else {
-			return wordlist[pos++];
+			return objlist[pos++];
 		}
 	}
 
-	// peek at next word or "" if none
-	public string peekWord() {
-		if(pos >= wordlist.Count) {
-			return "";
+	// peek at next word or null if none
+	public LangObject? peekObj() {
+		if(pos >= objlist.Count) {
+			return null;
 		}
 		else {
-			return wordlist[pos];
+			return objlist[pos];
 		}
 	}
 
-	// get previous word or "" if none
-	public string prevWord() {
+	// get previous word or null if none
+	public LangObject? prevObj() {
 		if(pos <= 0) {
-			return "";
+			return null;
 		}
 		else {
-			return wordlist[--pos];
+			return objlist[--pos];
 		}
 	}
 	
-	// peek previous word or "" if none
-	public string peekPrevWord() {
+	// peek previous word or null if none
+	public LangObject? peekPrevObj() {
 		if(pos <= 0) {
-			return "";
+			return null;
 		}
 		else {
-			return wordlist[pos-1];
+			return objlist[pos-1];
 		}
 	}
 
 	// delete the word before the current position in the stream
-	public void deletePrevWord() {
+	public void deletePrevObj() {
 		if(pos == 0) {
 			throw new LangError("No previous word to delete!");
 		}
-		wordlist.RemoveAt(pos-1);
+		objlist.RemoveAt(pos-1);
 		--pos;
 	}
 
 	// insert a word before the current position (would be read by 
 	// a subsequent prevWord())
-	public void insertPrevWord(string word) {
-		wordlist.Insert(pos, word);
+	public void insertPrevObj(LangObject obj) {
+		objlist.Insert(pos, obj);
 		++pos;
 	}
 
-	public void debug_print_words() {
+	public void debug_print_objlist() {
 		Console.Write("WORDS: ");
-		for(int i=0; i<wordlist.Count(); ++i) {
+		for(int i=0; i<objlist.Count(); ++i) {
 			if(pos == i) {
 				Console.Write("[POS->] ");
 			}
-			Console.Write(wordlist[i] + " ");
+			Console.Write(objlist[i] + " ");
 		}
 		Console.Write("\n");
 	}
 
-	protected List<string> wordlist;
+	protected List<LangObject> objlist;
 	protected int pos;
-	protected List<Tuple<List<string>,int>> stack;
+	protected List<Tuple<List<LangObject>,int>> stack;
 }
 
 
