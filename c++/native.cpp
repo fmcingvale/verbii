@@ -373,7 +373,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"(", builtin_comment},
 	{".c", builtin_printchar},
 	{"puts", builtin_puts},
-	// convert TOS to verbose printable string (like for stack display(
+	// convert TOS to verbose printable string (like for stack display)
 	{"repr", 
 		[](Interpreter *intr) {intr->push(newString(intr->pop().fmtStackPrint()));}},
 	// convert TOS to normal printable string (like for '.')
