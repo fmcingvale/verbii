@@ -7,6 +7,7 @@
 */
 using System;
 using System.Collections.Generic;
+#nullable enable
 
 public class Reader {
 	public Reader() {
@@ -113,7 +114,7 @@ public class Reader {
 
 	public void debug_print_objlist() {
 		Console.Write("WORDS: ");
-		for(int i=0; i<objlist.Count(); ++i) {
+		for(int i=0; i<objlist.Count; ++i) {
 			if(pos == i) {
 				Console.Write("[POS->] ");
 			}

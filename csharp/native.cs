@@ -189,7 +189,7 @@ class Builtins {
 			intr.STACKLOCALS[addr_i.value] = obj;
 		}
 		else if(addr_m != null) {
-			if(addr_m.offset < 0 || addr_m.offset >= addr_m.array.Count()) {
+			if(addr_m.offset < 0 || addr_m.offset >= addr_m.array.Count) {
 				throw new LangError("Offset out of bounds in set!");
 			}
 			addr_m.array[addr_m.offset] = obj;
@@ -213,7 +213,7 @@ class Builtins {
 			intr.push(intr.STACKLOCALS[addr_i.value]);
 		}
 		else if(addr_m != null) {
-			if(addr_m.offset < 0 || addr_m.offset >= addr_m.array.Count()) {
+			if(addr_m.offset < 0 || addr_m.offset >= addr_m.array.Count) {
 				throw new LangError("Offset out of bounds in ref");
 			}
 			intr.push(addr_m.array[addr_m.offset]);
@@ -251,7 +251,7 @@ class Builtins {
 				// new unnamed wordlist will be placed into LAMBDAS, and its index placed
 				// on stack and in source wordlist so a subsequent 'call' can find it
 				intr.LAMBDAS.Add(objlist);
-				int index = intr.LAMBDAS.Count()-1;
+				int index = intr.LAMBDAS.Count-1;
 
 				// replace { .. } in source wordlist with pseudo opcode "$$LAMBDA index" so 
 				// subsequent 'call' can find it (note it would be impossible for user code 

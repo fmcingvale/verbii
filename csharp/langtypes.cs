@@ -8,6 +8,8 @@
 	unions and not sure if faking it with StructLayout mechanism is
 	a great idea or not.
 */
+using System;
+using System.Collections.Generic;
 
 public class LangObject {
 	public virtual string fmtDisplay() { return "<VOID>"; }
@@ -123,7 +125,7 @@ public class LangMemoryArray : LangObject {
 		offset = other.offset;
 	}
 
-	public override string fmtDisplay() { return "var:" + array.Count().ToString() + ":" + offset.ToString(); }
+	public override string fmtDisplay() { return "var:" + array.Count.ToString() + ":" + offset.ToString(); }
 	public override string fmtStackPrint() { return fmtDisplay(); }
 
 	public List<LangObject> array;

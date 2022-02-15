@@ -9,3 +9,4 @@ unittests/RESULTS/c++/actual_demo_math.txt
 unittests/RESULTS/csharp/actual_demo_math.txt
 unittests/RESULTS/lua/actual_demo_math.txt
 unittests/RESULTS/python/actual_demo_math.txt
+csharp/repl.pdb
