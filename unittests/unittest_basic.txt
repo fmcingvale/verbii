@@ -197,12 +197,32 @@ clear
 : zzz { 10 . 20 . ." Hello lambda! " 30 . 40 . } call CR ;
 ( subtlety here -- have to run zzz at least twice to make sure it's working -- )
 ( the FIRST time, the { .. } will be parsed and directly pushed as a lambda object ... )
-( ... modifying the source to remove the { .. } and replace it with code that will push )
-( ... the lambda on subsequent runs )
+( ... modifying the source to remove the { .. } and replacing it with the lambda object that )
+( ... will be pushed as an immediate value on subsequent runs )
 ( so have to run the SECOND time to make sure the modified wordlist is correct )
 zzz
 zzz
 zzz ( once more for good measure )
+
+( this will fail if comments aren't removed in the syntax layer since the )
+( interpreter expects the name immediately after 'var' )
+var ( hello ) t33 ( there ) 1
+1445 t33 set! 
+t33 ref . CR
+
+( make sure saving lambdas to vars works )
+clear
+{ 133 244 355 } t33 set!
+t33 ref call 
+t33 ref call
+
+( make sure ." .. is converted to code and not printed immediately when seen )
+clear
+{ 123 . ." in lambda 1 " 456 . } 
+." calling lambda 1 " call 789 . CR
+
+clear
+123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
 
 
 

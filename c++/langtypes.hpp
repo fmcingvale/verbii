@@ -57,8 +57,9 @@ class Object {
 	// if n>0 then only require that many chars to match
 	bool isSymbol(const char *s, int n=0) const 
 		{ return type == TYPE_SYMBOL && 
-			!strncmp(data.str, s, n==0 ? strlen(data.str) : n); }
-
+			((n == 0 && !strcmp(data.str,s)) ||
+			(n > 0 && !strncmp(data.str, s, n))); }
+			
 	// get value (make sure to check first)
 	unsigned int asInt() const { return data.i; }
 	bool asBool() const { return data.b; }

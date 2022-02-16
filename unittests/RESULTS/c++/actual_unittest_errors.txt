@@ -57,7 +57,7 @@
 >> : aaa 123 456
 *** Unexpected end of input ***
 >> ( bad comment
-*** Unexpected end of input ***
+*** Unexpect end of input in comment ***
 >> ( interpreter errors )
 => 
 >> foobarbadword

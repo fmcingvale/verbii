@@ -134,7 +134,7 @@ void Interpreter::run(bool singlestep) {
 		}
 		
 		// check for literal objects that just get pushed
-		if(obj.isInt() || obj.isLambda()) {
+		if(obj.isInt() || obj.isLambda() || obj.isString()) {
 			push(obj);
 			continue;
 		}

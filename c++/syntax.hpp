@@ -32,6 +32,8 @@ class Syntax {
 
 	protected:
 	Reader reader;
+	Object parse_comment();
 	Object parse_lambda();
+	Object parse_quote_printstring();
 };
 

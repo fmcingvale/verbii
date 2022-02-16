@@ -1,0 +1,52 @@
+--- ./expect_unittest_basic.txt	2022-02-15 21:46:45.677398400 -0600
++++ ./RESULTS/lua/actual_unittest_basic.txt	2022-02-13 22:34:00.559325600 -0600
+@@ -327,9 +327,9 @@
+ => 
+ >> ( the FIRST time, the { .. } will be parsed and directly pushed as a lambda object ... )
+ => 
+->> ( ... modifying the source to remove the { .. } and replacing it with the lambda object that )
++>> ( ... modifying the source to remove the { .. } and replace it with code that will push )
+ => 
+->> ( ... will be pushed as an immediate value on subsequent runs )
++>> ( ... the lambda on subsequent runs )
+ => 
+ >> ( so have to run the SECOND time to make sure the modified wordlist is correct )
+ => 
+@@ -342,37 +342,3 @@
+ >> zzz ( once more for good measure )
+ 10 20 Hello lambda! 30 40 
+ => 
+->> ( this will fail if comments aren't removed in the syntax layer since the )
+-=> 
+->> ( interpreter expects the name immediately after 'var' )
+-=> 
+->> var ( hello ) t33 ( there ) 1
+-=> 
+->> 1445 t33 set! 
+-=> 
+->> t33 ref . CR
+-1445 
+-=> 
+->> ( make sure saving lambdas to vars works )
+-=> 
+->> clear
+-=> 
+->> { 133 244 355 } t33 set!
+-=> 
+->> t33 ref call 
+-=> 133 244 355 
+->> t33 ref call
+-=> 133 244 355 133 244 355 
+->> ( make sure ." .. is converted to code and not printed immediately when seen )
+-=> 133 244 355 133 244 355 
+->> clear
+-=> 
+->> { 123 . ." in lambda 1 " 456 . } 
+-=> <lambda> 
+->> ." calling lambda 1 " call 789 . CR
+-calling lambda 1 123 in lambda 1 456 789 
+-=> 
+->> clear
+-=> 
+->> 123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
+-=> 123 456 

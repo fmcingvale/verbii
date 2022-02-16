@@ -145,6 +145,12 @@ static void builtin_divmod(Interpreter *intr) {
 	pushInt(intr, quot);
 }
 
+// TODO - move this to syntax layer and change WORDS to a linear list and
+// convert words to index values -- add new 'call-word' in interpreter
+//
+// actually, could push as a lambda (or maybe a new class, since lambdas need an
+// explicit call, and words don't) then interpreter doesn't need to know
+// what WORDS is
 static void builtin_define_word(Interpreter *intr) {
 	auto name = intr->syntax->nextSymbolOrFail();
 	ObjList *objs = new ObjList();
@@ -156,15 +162,6 @@ static void builtin_define_word(Interpreter *intr) {
 		}
 		else {
 			objs->push_back(o);
-		}
-	}
-}
-
-static void builtin_comment(Interpreter *intr) {
-	while(1) {
-		auto o = intr->syntax->nextObjOrFail();
-		if(o.isSymbol(")")) {
-			return;
 		}
 	}
 }
@@ -273,19 +270,6 @@ static void builtin_fromlocal(Interpreter *intr) {
 	intr->push(intr->STACKLOCALS[intr->LP++]);
 }
 
-// ." some string here " -- print string
-static void builtin_print_string(Interpreter *intr) {
-	while(true) {
-		auto obj = intr->syntax->nextObjOrFail();
-		if(obj.isSymbol("\"")) {
-			return; // end of string
-		}
-		else {
-			printf("%s ", obj.asSymbol());
-		}
-	}
-}
-
 static void builtin_show_def(Interpreter *intr) {
 	auto name = intr->syntax->nextSymbolOrFail();
 	auto word = WORDS.find(name.asSymbol());
@@ -317,7 +301,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{":", builtin_define_word},
 	// synonym for ':', for readability
 	{"def", builtin_define_word},
-	{"(", builtin_comment},
 	{".c", builtin_printchar},
 	{"puts", builtin_puts},
 	// convert TOS to verbose printable string (like for stack display)
@@ -344,6 +327,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"L>", builtin_fromlocal},
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
-	{".\"", builtin_print_string},
 	{".showdef", builtin_show_def},
 };

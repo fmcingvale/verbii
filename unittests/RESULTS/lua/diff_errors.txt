@@ -1,0 +1,11 @@
+--- ./expect_unittest_errors.txt	2022-02-15 21:47:11.220702600 -0600
++++ ./RESULTS/lua/actual_unittest_errors.txt	2022-02-13 22:34:00.749306900 -0600
+@@ -57,7 +57,7 @@
+ >> : aaa 123 456
+ *** Unexpected end of input ***
+ >> ( bad comment
+-*** Unexpect end of input in comment ***
++*** Unexpected end of input ***
+ >> ( interpreter errors )
+ => 
+ >> foobarbadword

@@ -49,6 +49,12 @@ const Object Syntax::nextObj() {
 			if(obj.isSymbol("{")) {
 				return parse_lambda();
 			}
+			if(obj.isSymbol("(")) {
+				return parse_comment(); // returns obj AFTER comment
+			}
+			if(obj.isSymbol(".\"")) {
+				return parse_quote_printstring();
+			}
 		}
 	}
 
@@ -77,20 +83,42 @@ Object Syntax::nextSymbolOrFail() {
 	return obj;
 }
 
+Object Syntax::parse_comment() {
+	// skip comment and return NEXT word -- assumes ( was just read
+	//
+	// allow nested comments
+	int nesting = 1;
+	while(true) {
+		auto obj = reader.nextObj();
+		if(obj.isSymbol(")")) {
+			if(--nesting == 0) {
+				// end of comment - return NEXT object
+				return nextObj();
+			}
+		}
+		else if(obj.isSymbol("(")) {
+			++nesting;
+		}
+		else if(obj.isNull()) {
+			throw LangError("Unexpect end of input in comment");
+		}
+	}
+}
+
 Object Syntax::parse_lambda() {
-	// turn { ... } into an anonymous wordlist
+	// turn { ... } into an anonymous objlist
 	//
-	// the FIRST time I see { .. }, create a tagged wordlist,
-	// REWRITE the { ... } into the tagged value and push the tagged
-	// value to the stack.
+	// the FIRST time I see { .. }, create a Lambda, then
+	// REMOVE the { ... } and replace it with the Lambda. return the
+	// Lambda as the parsed object.
 	//
-	// each SUBSEQUENT time the same code runs, the tagged value will be
-	// in the wordlist, so will be pushed to the stack.
+	// each SUBSEQUENT time the same code runs, the Lambda will be
+	// in the objlist, so will be pushed to the stack.
 	//
 	// from the perspective of the user, the same thing happened both times --
-	// the tagged lambda was pushed to the stack, ready to be called, stored, etc.
+	// the lambda was pushed to the stack, ready to be called, stored, etc.
 	
-	// { was just read -- read the words until }
+	// "{" was just read -- read the words until }
 	
 	// delete the { that was just read
 	reader.deletePrevObj();
@@ -122,6 +150,41 @@ Object Syntax::parse_lambda() {
 		}
 		else {
 			objlist->push_back(obj);
+		}
+	}
+}
+
+Object Syntax::parse_quote_printstring() {
+	// ." some string here " -- rewrite to '"some string here" .'
+	string s;
+	// delete ."
+	reader.deletePrevObj();
+	while(true) {
+		auto obj = reader.nextObj(); // *NOT* Syntax::nextObj() - don't want any processing, i.e.
+									// don't want numbers in middle of string to be converted to ints
+		reader.deletePrevObj(); // delete each obj as I read it, will replace at end
+		if(obj.isSymbol("\"")) {
+			// end of string - write new code
+			reader.insertPrevObj(newString(s));
+			// use only builtin functions so it works even with -noinit
+			reader.insertPrevObj(newSymbol("puts"));
+			// (will have blank at end, due to concatenation code below, so don't need to add one)
+			// since i rewrote into multiple objects (unlike the lambda case above), 
+			// backup the reader to string and return it
+			for(int i=0; i<2; ++i) {
+				reader.prevObj();
+			}
+			return reader.nextObj();
+		}
+		else if(obj.isNull()) {
+			throw LangError("Unexpected end of input inside .\"");
+		}
+		else if(!obj.isSymbol()) {
+			throw LangError("Got non-symbol from Reader (!!):" + obj.fmtStackPrint());
+		}
+		else {
+			// since i called reader.nextObj(), this will always be a symbol
+			s += string(obj.asSymbol()) + " ";
 		}
 	}
 }
