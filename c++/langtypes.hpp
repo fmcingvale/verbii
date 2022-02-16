@@ -11,6 +11,7 @@
 #pragma once
 #include <string.h>
 #include <string>
+#include <vector>
 
 const unsigned char TYPE_NULL = 0;
 const unsigned char TYPE_INT = 1;
@@ -22,6 +23,8 @@ const unsigned char TYPE_STRING = 6;
 const unsigned char TYPE_SYMBOL = 7;
 
 class Object;
+
+typedef std::vector<Object> ObjList;
 
 // set this to control how many digits are printed (max is 17)
 // (this is TOTAL digits, not digits after the decimal ... so 'g' format for printf)
@@ -59,7 +62,7 @@ class Object {
 	// get value (make sure to check first)
 	unsigned int asInt() const { return data.i; }
 	bool asBool() const { return data.b; }
-	int asLambdaIndex() const { return data.i; };
+	ObjList* asLambda() const { return data.objlist; };
 	MemoryArray* asMemArray() const { return data.memarray; }
 	double asFloat() const { return data.d; }
 	const char *asString() const { return data.str; }
@@ -81,6 +84,7 @@ class Object {
 		int i; // ints and lamda (index into LAMBDAS)
 		bool b;
 		MemoryArray *memarray;
+		ObjList *objlist; // for lambdas
 		double d;
 		const char *str; // strings & symbols, immutable
 	} data;
@@ -91,7 +95,7 @@ extern Object NULLOBJ;
 
 Object newInt(int i);
 Object newBool(bool b);
-Object newLambda(int index);
+Object newLambda(ObjList *objlist);
 // allocates array and sets all objects to int with value 0
 Object newMemArray(int count, int offset);
 // make a copy of the given array, sharing its array, so it

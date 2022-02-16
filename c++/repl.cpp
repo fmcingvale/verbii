@@ -32,7 +32,7 @@ Interpreter* newInterpreter(bool noinit) {
 		intr->addText(buf);
 		intr->run();
 		// don't want initlib in the backtrace history, once it has successfully loaded
-		intr->reader.clearAll();
+		intr->syntax->clearAll();
 		// also GC after loading large file
 		x_mem_gcollect();
 	}
@@ -91,7 +91,7 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 			continue;
 		}
 		cout << ">> " << line << endl;
-		intr->reader.clearAll(); // ensure no leftover text from previous line
+		intr->syntax->clearAll(); // ensure no leftover text from previous line
 		intr->addText(line);
 		intr->run();
 		cout << "=> " << intr->reprStack() << endl;
@@ -112,7 +112,7 @@ void backtrace_curframe(Interpreter *intr) {
 	string trace = "";
 	int nr = 7; // number of words to print in each frame
 	while(nr--) {
-		auto o = intr->reader.prevObj();
+		auto o = intr->syntax->prevObj();
 		if(o.isNull()) {
 			cout << trace << endl;
 			return;
@@ -129,8 +129,8 @@ void print_backtrace(Interpreter *intr) {
 	while(1) {
 		cout << "FRAME " << i++ << ": ";
 		backtrace_curframe(intr);
-		if(intr->reader.hasPushedObjLists()) {
-			intr->reader.popObjList();
+		if(intr->syntax->hasPushedObjLists()) {
+			intr->syntax->popObjList();
 		}
 		else {
 			return;

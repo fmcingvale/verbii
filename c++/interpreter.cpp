@@ -15,6 +15,7 @@
 #include "errors.hpp"
 #include "xmalloc.hpp"
 #include "string.h"
+#include "langtypes.hpp"
 using namespace std;
 
 map<string,ObjList*> WORDS; // user defined words
@@ -22,6 +23,8 @@ vector<ObjList*> LAMBDAS;   // anonymous words
 map<string,Object> VARS;
 
 Interpreter::Interpreter() {
+
+	syntax = new Syntax();
 
 	SIZE_STACKLOCALS = STACK_SIZE+LOCALS_SIZE;
 	STACKLOCALS = (Object*)x_malloc(SIZE_STACKLOCALS*sizeof(Object));
@@ -44,7 +47,7 @@ Interpreter::Interpreter() {
 }
 
 void Interpreter::addText(const string &text) {
-	reader.addText(text);
+	syntax->addText(text);
 }
 
 void Interpreter::push(Object obj) {
@@ -75,7 +78,7 @@ void Interpreter::do_jump(const char *jumpword) {
 	if(!strncmp(jumpword, ">>", 2)) {
 		// forward jump, find word (>>NAME -> @NAME)
 		while(true) {
-			auto obj = nextObjOrFail();
+			auto obj = syntax->nextObjOrFail();
 			//cout << "NEXT-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
 				//cout << "FOUND" << endl;
@@ -86,7 +89,7 @@ void Interpreter::do_jump(const char *jumpword) {
 	else if(!strncmp(jumpword, "<<", 2)) {
 		// backward jump
 		while(true) {
-			auto obj = prevObjOrFail();
+			auto obj = syntax->prevObjOrFail();
 			//cout << "PREV-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
 				//cout << "FOUND" << endl;
@@ -99,32 +102,10 @@ void Interpreter::do_jump(const char *jumpword) {
 	}
 }
 
-const Object Interpreter::nextObjOrFail() {
-	if(reader.peekObj().isNull()) {
-		throw LangError("Unexpected end of input");
-	}
-	return reader.nextObj();
-}
-
-const Object Interpreter::prevObjOrFail() {
-	if(reader.peekPrevObj().isNull()) {
-		throw LangError("Unable to find previous word");
-	}
-	return reader.prevObj();
-}
-
-const Object Interpreter::nextSymbolOrFail() {
-	auto obj = nextObjOrFail();
-	if(!obj.isSymbol()) {
-		throw LangError("Expecting symbol, got: " + obj.fmtStackPrint());
-	}
-	return obj;
-}
-
 void Interpreter::run(bool singlestep) {
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
-		auto obj = reader.nextObj();
+		auto obj = syntax->nextObj();
 		// general note: there is kind of an artificial separation between words that are
 		// recognized here, and words implemented in native.cpp. In priciple, all these words
 		// could be implemented in native.cpp. However, I tend to put words here that directly
@@ -137,8 +118,8 @@ void Interpreter::run(bool singlestep) {
 		if(obj.isNull()) {
 			// i could be returning from a word that had no 'return',
 			// so pop words like i would if it were a return
-			if(reader.hasPushedObjLists()) {
-				reader.popObjList();
+			if(syntax->hasPushedObjLists()) {
+				syntax->popObjList();
 				continue;
 			}
 			else {
@@ -152,61 +133,16 @@ void Interpreter::run(bool singlestep) {
 			getline(cin, line);
 		}
 		
-		// NOTE - i was originally using c++ regexes here to check for
-		// integers and lambdas. after profiling and discovering they
-		// were the using most of the program runtime, i changed to parsing
-		// them myself. WITH regexes, runtime was 4.5x higher and memory
-		// usage was 1500x (!!) larger (see commit [556839e] for the regex version)
-		if(obj.isSymbol()) {
-			{
-				// see if it's an integer
-				bool has_digits = false;
-				const char *s = obj.asSymbol();
-				if(*s == '+' || *s == '-') 
-					++s;
-
-				while(isdigit(*s)) {
-					has_digits = true;
-					++s;
-				}
-
-				// integers are just pushed to stack
-				if(!*s && has_digits) {
-					//cout << "MATCHED INT:" << word << endl;
-					push(newInt(stoi(obj.asSymbol())));
-					continue;
-				}
-			}
-
-			{
-				// to keep parsing simple (i.e. should be easy to do without regexes),
-				// floats are written like #n.nnn
-				if(obj.asSymbol()[0] == '#') {
-					push(newFloat(stod(obj.asSymbol()+1)));
-					continue;
-				}
-			}
-
-			{
-				// check for $<lambda NN>
-				// TODO get rid of this and put lambda in objlist when parsed in native.cpp
-				if(!strncmp(obj.asSymbol(), "$<lambda ", 9)) {
-					const char *s = obj.asSymbol() + 9;
-					int num = 0;
-					while(isdigit(*s)) {
-						num = num*10 + *s - '0';
-						++s;
-					}
-					push(newLambda(num));
-					continue;
-				}
-			}
+		// check for literal objects that just get pushed
+		if(obj.isInt() || obj.isLambda()) {
+			push(obj);
+			continue;
 		}
 
 		if(obj.isSymbol("return")) {
 			// return from word by popping back to previous wordlist (if not at toplevel)
-			if(reader.hasPushedObjLists()) {	
-				reader.popObjList();
+			if(syntax->hasPushedObjLists()) {	
+				syntax->popObjList();
 			}
 			else {
 				return; // return from top level exits program
@@ -216,10 +152,10 @@ void Interpreter::run(bool singlestep) {
 
 		if(obj.isSymbol("if")) {
 			// true jump is required
-			auto true_jump = nextSymbolOrFail();
+			auto true_jump = syntax->nextSymbolOrFail();
 			//cout << "TRUE_JUMP: " << true_jump << endl;
 			// false word is optional
-			auto false_jump = reader.peekObj();
+			auto false_jump = syntax->peekObj();
 			if(!false_jump.isSymbol("<<",2) && !false_jump.isSymbol(">>",2)) {
 				false_jump = NULLOBJ;
 			}
@@ -235,7 +171,7 @@ void Interpreter::run(bool singlestep) {
 				do_jump(true_jump.asSymbol());
 			}
 			else if(!false_jump.isNull()) {
-				reader.nextObj(); // only peeked it above
+				syntax->nextObj(); // only peeked it above
 				do_jump(false_jump.asSymbol());
 			}
 			continue;
@@ -252,19 +188,22 @@ void Interpreter::run(bool singlestep) {
 		}
 
 		if(obj.isSymbol("var")) {
-			auto name = nextSymbolOrFail();
-			auto count = stoi(nextSymbolOrFail().asSymbol());
+			auto name = syntax->nextSymbolOrFail();
+			auto count = syntax->nextObjOrFail();
+			if(!count.isInt()) {
+				throw LangError("Count must be int, got: " + count.fmtStackPrint());
+			}
 			// must be unique userword
 			if(VARS.find(name.asSymbol()) != VARS.end()) {
 				throw LangError("Trying to redefine variable " + name.fmtStackPrint());
 			}
 			// add to VARS so name lookup works (below) 
-			VARS[name.asSymbol()] = newMemArray(count, 0);
+			VARS[name.asSymbol()] = newMemArray(count.asInt(), 0);
 			continue;
 		}
 
 		if(obj.isSymbol("del")) {
-			auto name = nextSymbolOrFail();
+			auto name = syntax->nextSymbolOrFail();
 			auto userword = VARS.find(name.asSymbol());
 			if(userword == VARS.end()) {
 				throw LangError("Trying to delete non-existent variable " + name.fmtStackPrint());
@@ -281,7 +220,7 @@ void Interpreter::run(bool singlestep) {
 			}
 			// now this is just like calling a userword, below
 			// TODO -- tail call elimination??
-			reader.pushObjList(LAMBDAS[val.asLambdaIndex()]);
+			syntax->pushObjList(val.asLambda());
 			continue;
 		}
 
@@ -297,13 +236,13 @@ void Interpreter::run(bool singlestep) {
 			if(userword != WORDS.end()) {
 				// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 				// i don't need to come back here, so pop my wordlist first to stop stack from growing
-				if(reader.peekObj().isNull() || reader.peekObj().isSymbol("return")) {
-					if(reader.hasPushedObjLists()) { // in case i'm at the toplevel
-						reader.popObjList();
+				if(syntax->peekObj().isNull() || syntax->peekObj().isSymbol("return")) {
+					if(syntax->hasPushedObjLists()) { // in case i'm at the toplevel
+						syntax->popObjList();
 					}
 				}
 				// execute word by pushing its wordlist and continuing
-				reader.pushObjList(userword->second);
+				syntax->pushObjList(userword->second);
 				continue;
 			}
 

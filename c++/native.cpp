@@ -4,6 +4,10 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 
+//
+// TODO -- the functions that call intr->syntax-> should probably really be in Syntax
+//
+
 #include "native.hpp"
 #include "errors.hpp"
 #include "xmalloc.hpp"
@@ -142,10 +146,10 @@ static void builtin_divmod(Interpreter *intr) {
 }
 
 static void builtin_define_word(Interpreter *intr) {
-	auto name = intr->nextSymbolOrFail();
+	auto name = intr->syntax->nextSymbolOrFail();
 	ObjList *objs = new ObjList();
 	while(1) {
-		auto o = intr->nextObjOrFail();
+		auto o = intr->syntax->nextObjOrFail();
 		if(o.isSymbol(";")) {
 			WORDS[name.asSymbol()] = objs;
 			return;
@@ -158,7 +162,7 @@ static void builtin_define_word(Interpreter *intr) {
 
 static void builtin_comment(Interpreter *intr) {
 	while(1) {
-		auto o = intr->nextObjOrFail();
+		auto o = intr->syntax->nextObjOrFail();
 		if(o.isSymbol(")")) {
 			return;
 		}
@@ -272,7 +276,7 @@ static void builtin_fromlocal(Interpreter *intr) {
 // ." some string here " -- print string
 static void builtin_print_string(Interpreter *intr) {
 	while(true) {
-		auto obj = intr->nextObjOrFail();
+		auto obj = intr->syntax->nextObjOrFail();
 		if(obj.isSymbol("\"")) {
 			return; // end of string
 		}
@@ -283,7 +287,7 @@ static void builtin_print_string(Interpreter *intr) {
 }
 
 static void builtin_show_def(Interpreter *intr) {
-	auto name = intr->nextSymbolOrFail();
+	auto name = intr->syntax->nextSymbolOrFail();
 	auto word = WORDS.find(name.asSymbol());
 	if(word == WORDS.end()) {
 		cout << "No such word: " << name.fmtStackPrint() << endl;
@@ -297,63 +301,6 @@ static void builtin_show_def(Interpreter *intr) {
 	cout << ";\n";
 }
 
-static void builtin_make_lambda(Interpreter *intr) {
-	// turn { ... } into an anonymous wordlist
-	//
-	// the FIRST time I see { .. }, create a tagged wordlist,
-	// REWRITE the { ... } into the tagged value and push the tagged
-	// value to the stack.
-	//
-	// each SUBSEQUENT time the same code runs, the tagged value will be
-	// in the wordlist, so will be pushed to the stack.
-	//
-	// from the perspective of the user, the same thing happened both times --
-	// the tagged lambda was pushed to the stack, ready to be called, stored, etc.
-	
-	// { was just read -- read the words until }
-	
-	// delete the { that was just read
-	intr->reader.deletePrevObj();
-
-	auto objlist = new ObjList();
-	int nesting = 1;
-	while(true) {
-		auto obj = intr->nextObjOrFail();
-		// delete the { ... } as I read it -- will replace it with a tagged wordlist
-		intr->reader.deletePrevObj();
-		
-		if(obj.isSymbol("{")) {
-			// if I find inner lambdas, just copy them for now and later when they are run, 
-			// this same process will happen for them
-			++nesting;
-			objlist->push_back(obj);
-		}
-		else if(obj.isSymbol("}")) {
-			if(--nesting > 0) {
-				objlist->push_back(obj);
-				continue;
-			}
-			// new unnamed wordlist will be placed into LAMBDAS, and its index placed
-			// on stack and in source wordlist so a subsequent 'call' can find it
-			LAMBDAS.push_back(objlist);
-			int index = LAMBDAS.size()-1;
-
-			// XXX FIX ME -- just push Lambda object directly, don't even need LAMBDAS anymore
-
-			// replace { .. } in source wordlist with "$<lambda index>" so subsequent 'call'
-			// can find it (note it would be impossible for user code to insert this word
-			// from source since it contains whitespace)
-			intr->reader.insertPrevObj(newSymbol("$<lambda " + to_string(index) + ">"));
-			// the first time, I have to push the lambda object as well -- interpreter
-			// will do this on subsequent calls when it sees "lambda<#>"
-			intr->push(newLambda(index));
-			return;
-		}
-		else {
-			objlist->push_back(obj);
-		}
-	}
-}
 
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", builtin_add},
@@ -399,5 +346,4 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"set!", builtin_set},
 	{".\"", builtin_print_string},
 	{".showdef", builtin_show_def},
-	{"{", builtin_make_lambda},
 };

@@ -40,10 +40,10 @@ Object newBool(bool b) {
 	return obj;
 }
 
-Object newLambda(int index) {
+Object newLambda(ObjList *objlist) {
 	Object obj;
 	obj.type = TYPE_LAMBDA;
-	obj.data.i = index;
+	obj.data.objlist = objlist;
 	return obj;
 }
 

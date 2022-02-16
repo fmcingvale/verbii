@@ -14,8 +14,9 @@
 #include <string>
 #include <regex>
 #include <map>
-#include "reader.hpp"
 #include "langtypes.hpp"
+#include "reader.hpp"
+#include "syntax.hpp"
 
 const int STACK_SIZE = (1<<10);
 const int LOCALS_SIZE = (1<<10);
@@ -39,7 +40,7 @@ class Interpreter {
 	void run(bool singlestep=false);
 
 	// all are public so builtins can use without a hassle
-	Reader reader;
+	
 	// 3 memory areas: stack, locals, free memory
 	//
 	// the stack and locals are of fixed size, so are allocated in one
@@ -63,14 +64,8 @@ class Interpreter {
 
 	void do_jump(const char *jumpword);
 
-	// to avoid a lot of 'if word==""' checks, these require a non-empty
-	// word or they throw an exception ... for use in cases where there MUST
-	// be a next/previous word, or its a syntax error
-	const Object nextObjOrFail();
-	const Object prevObjOrFail();
+	Syntax *syntax;
 
-	// or to require a symbol
-	const Object nextSymbolOrFail();
 };
 
 

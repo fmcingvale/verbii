@@ -1,6 +1,6 @@
 
-LIB_SRC = reader.cpp interpreter.cpp native.cpp langtypes.cpp xmalloc.cpp
-HEADERS = reader.hpp interpreter.hpp native.hpp langtypes.hpp xmalloc.hpp
+LIB_SRC = reader.cpp interpreter.cpp native.cpp langtypes.cpp xmalloc.cpp syntax.cpp
+HEADERS = reader.hpp interpreter.hpp native.hpp langtypes.hpp xmalloc.hpp syntax.hpp
 
 LIB_OBJS = $(LIB_SRC:.cpp=.o)
 

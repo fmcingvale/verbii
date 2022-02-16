@@ -13,8 +13,6 @@
 #include "xmalloc.hpp"
 #include "langtypes.hpp"
 
-typedef std::vector<Object> ObjList;
-
 class Reader {
 	public:
 	Reader();
