@@ -22,7 +22,6 @@ const int STACK_SIZE = (1<<10);
 const int LOCALS_SIZE = (1<<10);
 
 extern std::map<std::string,ObjList*> WORDS;
-extern std::vector<ObjList*> LAMBDAS;
 
 class Interpreter {
 	public:

@@ -19,7 +19,6 @@
 using namespace std;
 
 map<string,ObjList*> WORDS; // user defined words
-vector<ObjList*> LAMBDAS;   // anonymous words
 map<string,Object> VARS;
 
 Interpreter::Interpreter() {

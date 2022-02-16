@@ -10,6 +10,7 @@
 #include <fstream>
 #include <regex>
 #include "xmalloc.hpp"
+#include "native.hpp"
 using namespace std;
 
 string INITLIB = "../lib/init.txt";
@@ -150,8 +151,8 @@ void print_gc_stats() {
 #else
 	cout << "xmalloc bytes: " << X_BYTES_ALLOCATED << endl;
 #endif
+	cout << "# BUILTINS: " << BUILTINS.size() << endl;
 	cout << "# WORDS: " << WORDS.size() << endl;
-	cout << "# LAMBDAS: " << LAMBDAS.size() << endl;
 }
 
 #include <sys/stat.h>
