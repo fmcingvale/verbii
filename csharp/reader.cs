@@ -118,7 +118,7 @@ public class Reader {
 			if(pos == i) {
 				Console.Write("[POS->] ");
 			}
-			Console.Write(objlist[i] + " ");
+			Console.Write(objlist[i].fmtStackPrint() + " ");
 		}
 		Console.Write("\n");
 	}

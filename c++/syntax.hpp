@@ -17,10 +17,10 @@ class Syntax {
 	void popObjList() { reader.popObjList(); }
 	bool hasPushedObjLists() { return reader.hasPushedObjLists(); }
 
-	const Object nextObj();
-	const Object peekObj();
-	const Object prevObj();
-	const Object peekPrevObj();
+	Object nextObj();
+	Object peekObj();
+	Object prevObj();
+	Object peekPrevObj();
 
 	// to avoid a lot of obj.isNull() checks, these require a non-empty
 	// word or they throw an exception ... for use in cases where there MUST

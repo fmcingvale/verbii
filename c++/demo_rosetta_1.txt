@@ -155,7 +155,7 @@ make-add-10 adder set!
 : L0 LP ;
 : L1 LP 1 + ;
 
-: repeat ( lambda NR -- call lambda NR times }
+: repeat ( lambda NR -- call lambda NR times )
 	( caller might have args to lambda stashed below lambda OR lambda might affect stack,
   	so store my params in locals -- a correctly written lambda won't disturb my locals )
 	>L >L ( L1 = NR, L0 = lambda )

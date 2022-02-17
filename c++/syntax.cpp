@@ -4,7 +4,7 @@
 #include <iostream>
 using namespace std;
 
-const Object Syntax::nextObj() {
+Object Syntax::nextObj() {
 	auto obj = reader.nextObj();
 	// NOTE - i was originally using c++ regexes here to check for
 	// integers and lambdas. after profiling and discovering they
@@ -58,6 +58,7 @@ const Object Syntax::nextObj() {
 		}
 	}
 
+	// no matching syntax, so return as-is
 	return obj;
 }
 
@@ -100,7 +101,7 @@ Object Syntax::parse_comment() {
 			++nesting;
 		}
 		else if(obj.isNull()) {
-			throw LangError("Unexpect end of input in comment");
+			throw LangError("Unexpected end of input in comment");
 		}
 	}
 }
@@ -189,7 +190,7 @@ Object Syntax::parse_quote_printstring() {
 	}
 }
 
-const Object Syntax::peekObj() {
+Object Syntax::peekObj() {
 	// I need the above processing to occur on peeked objects,
 	// so do it this way ....
 	auto obj = nextObj();
@@ -199,10 +200,10 @@ const Object Syntax::peekObj() {
 	return obj;
 }
 
-const Object Syntax::prevObj() {
+Object Syntax::prevObj() {
 	return reader.prevObj();
 }
 
-const Object Syntax::peekPrevObj() {
+Object Syntax::peekPrevObj() {
 	return reader.peekPrevObj();
 }

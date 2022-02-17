@@ -84,11 +84,11 @@ class Builtins {
 	}
 
 	public static void define_word(Interpreter intr) {
-		var name = intr.nextSymbolOrFail();
+		var name = intr.syntax.nextSymbolOrFail();
 		var objlist = new List<LangObject>();
 	
 		while(true) {
-			var o = intr.nextObjOrFail();
+			var o = intr.syntax.nextObjOrFail();
 			var sym = o as LangSymbol;
 			if(sym != null && sym.match(";")) {
 				intr.WORDS[name.value] = objlist;
@@ -106,32 +106,6 @@ class Builtins {
 		Console.Write(ch);
 		if(c == 10 || c == 13) {
 			Console.Out.Flush();
-		}
-	}
-
-	// ." some string here " -- print string
-	public static void print_string(Interpreter intr) {
-		while(true) {
-			var obj = intr.nextObjOrFail();
-			var sym = obj as LangSymbol;
-			if(sym == null) {
-				throw new LangError("Bad value inside .\" : " + obj.fmtStackPrint());
-			}
-			else if(sym.value == "\"") {
-				return; // end of string
-			}
-			else {
-				Console.Write(sym.value + " ");
-			}
-		}
-	}
-
-	public static void comment(Interpreter intr) {
-		while(true) {
-			var sym = intr.nextObjOrFail() as LangSymbol;
-			if(sym != null && sym.value == ")") {
-				return;
-			}
 		}
 	}
 
@@ -223,55 +197,8 @@ class Builtins {
 		}
 	}
 
-	// see C++ version for verbose comments; minimal comments here
-	public static void make_lambda(Interpreter intr) {
-		// turn { ... } into an anonymous wordlist
-		
-		// delete the { that was just read
-		intr.reader.deletePrevObj();
-
-		var objlist = new List<LangObject>();
-		int nesting = 1;
-		while(true) {
-			var obj = intr.nextObjOrFail();
-			var sym = obj as LangSymbol;
-			// delete the { ... } as I read it -- will replace it with a lambda reference
-			intr.reader.deletePrevObj();
-			if(sym != null && sym.match("{")) {
-				// if I find inner lambdas, just copy them for now and later when they are run, 
-				// this same process will happen for them
-				++nesting;
-				objlist.Add(obj);
-			}
-			else if(sym != null && sym.match("}")) {
-				if(--nesting > 0) {
-					objlist.Add(obj);
-					continue;
-				}
-				// new unnamed wordlist will be placed into LAMBDAS, and its index placed
-				// on stack and in source wordlist so a subsequent 'call' can find it
-				intr.LAMBDAS.Add(objlist);
-				int index = intr.LAMBDAS.Count-1;
-
-				// replace { .. } in source wordlist with pseudo opcode "$$LAMBDA index" so 
-				// subsequent 'call' can find it (note it would be impossible for user code 
-				// to insert this word from source since it contains whitespace)
-				//
-				// TODO - get rid of this and insert lambda directly
-				intr.reader.insertPrevObj(new LangSymbol("$$LAMBDA " + index.ToString()));
-				// the first time, I have to push the lambda object as well -- interpreter
-				// will do this on subsequent calls when it sees "lambda<#>"
-				intr.push(new LangLambda(index));
-				return;
-			}
-			else {
-				objlist.Add(obj);
-			}
-		}
-	}
-
 	public static void showdef(Interpreter intr) {
-		var name = intr.nextSymbolOrFail();
+		var name = intr.syntax.nextSymbolOrFail();
 		if(!intr.WORDS.ContainsKey(name.value)) {
 			Console.WriteLine("No such word: " + name);
 			return;
@@ -294,6 +221,7 @@ class Builtins {
 	}
 
 	public static void _puts(Interpreter intr) {
+		//Console.WriteLine("_PUTS");
 		var o = intr.pop();
 		var s = o as LangString;
 		if(s == null) {
@@ -321,7 +249,6 @@ class Builtins {
 		{":", define_word},
 		{"def", define_word}, // synonym for :
 		{".c", printchar},
-		{".\"", print_string},
 		{"repr", intr => intr.push(new LangString(intr.pop().fmtStackPrint()))},
 		{"str", intr => intr.push(new LangString(intr.pop().fmtDisplay()))},
 		{"puts", _puts},
@@ -332,10 +259,8 @@ class Builtins {
 		{"LP!", setlp},
 		{">L", tolocal},
 		{"L>", fromlocal},
-		{"(", comment},
 		{"set!", set},
 		{"ref", _ref},
-		{"{", make_lambda},
 		{".showdef", showdef},
 	};
 }

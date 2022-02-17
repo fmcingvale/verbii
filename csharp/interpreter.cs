@@ -10,7 +10,7 @@
 
 	Ported from the C++ version.
 */
-
+using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
@@ -30,7 +30,7 @@ public class Interpreter {
 
 	protected Regex re_integer;
 
-	public Reader reader;
+	public Syntax syntax;
 
 	// user defined words
 	public Dictionary<string,List<LangObject>> WORDS;
@@ -59,7 +59,7 @@ public class Interpreter {
 			throw new LangError("stacklocals size is wrong!");
 		}
 
-		reader = new Reader();
+		syntax = new Syntax();
 
 		re_integer = new Regex(@"^[\+-]?\d+$");
 		
@@ -69,7 +69,7 @@ public class Interpreter {
 	}
 
 	public void addText(string text) {
-		reader.addText(text);
+		syntax.addText(text);
 	}
 
 	public void push(LangObject obj) {
@@ -94,35 +94,13 @@ public class Interpreter {
 		return s;
 	}
 
-	public LangObject nextObjOrFail() {
-		if(reader.peekObj() == null) {
-			throw new LangError("Unexpected end of input");
-		}
-		return reader.nextObj()!;
-	}
-
-	public LangSymbol nextSymbolOrFail() {
-		var obj = nextObjOrFail();
-		if(!(obj is LangSymbol)) {
-			throw new LangError("Expecting symbol but got " + obj.fmtStackPrint());
-		}
-		return (obj as LangSymbol)!;
-	}
-
-	public LangObject prevObjOrFail() {
-		if(reader.peekPrevObj() == null) {
-			throw new LangError("Unable to find previous word");
-		}
-		return reader.prevObj()!;
-	}
-
 	// take symbol like '>>NAME' or '<<NAME' and jump to '@NAME'
 	public void do_jump(LangSymbol jumpsym) {
 		//cout << "DO_JUMP TO: " << jumpword << endl;
 		if(jumpsym.match(">>",2)) {
 			// forward jump, find word (>>NAME -> @NAME)
 			while(true) {
-				var sym = nextObjOrFail() as LangSymbol;
+				var sym = syntax.nextObjOrFail() as LangSymbol;
 				//cout << "NEXT-WORD: " << word << endl;
 				if(sym != null && (sym.value.Substring(1) == jumpsym.value.Substring(2))) {
 					//cout << "FOUND" << endl;
@@ -133,7 +111,7 @@ public class Interpreter {
 		else if(jumpsym.match("<<",2)) {
 			// backward jump
 			while(true) {
-				var sym = prevObjOrFail() as LangSymbol;
+				var sym = syntax.prevObjOrFail() as LangSymbol;
 				//cout << "PREV-WORD: " << word << endl;
 				if(sym != null && sym.value.Substring(1) == jumpsym.value.Substring(2)) {
 					//cout << "FOUND" << endl;
@@ -149,12 +127,17 @@ public class Interpreter {
 	public void run() {
 		// see C++ version for comments, only brief comments here
 		while(true) {
-			var obj = reader.nextObj();
+			var obj = syntax.nextObj();
+			//if(obj != null) {
+			//	Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
+			//}
 			if(obj == null) {
 				// i could be returning from a word that had no 'return',
 				// so pop words like i would if it were a return
-				if(reader.hasPushedObjLists()) {
-					reader.popObjList();
+				if(syntax.hasPushedObjLists()) {
+					syntax.popObjList();
+					//Console.WriteLine("POPPED OBJLIST [end], back to:");
+					//syntax.debug_print_objlist();
 					continue;
 				}
 				else {
@@ -162,35 +145,22 @@ public class Interpreter {
 				}
 			}
 
+			// check for immediates that get pushed
+			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda) {
+				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
+				push(obj);
+				continue;
+			}
+
 			if (obj is LangSymbol) {
 				var sym = obj as LangSymbol;	
 
-				// push integers to stack
-				if(re_integer.IsMatch(sym!.value)) {
-					int i = int.Parse(sym!.value);
-					push(new LangInt(i));
-					continue;
-				}
-
-				// floats: #NNN.NN
-				if(sym!.match("#",1)) {
-					double d = double.Parse(sym!.value.Substring(1));
-					push(new LangFloat(d));
-					continue;
-				}
-
-				// check for "$$LAMBDA index"
-				// TODO -- remove me and push lambda to wordlist directly
-				if(sym!.value.Length >= 10 && sym!.value.Substring(0,9) == "$$LAMBDA ") {
-					var index = int.Parse(sym!.value.Substring(9));
-					push(new LangLambda(index));
-					continue;
-				}
-
 				if(sym!.match("return")) {
 					// return from word by popping back to previous wordlist (don't call at toplevel)
-					if(reader.hasPushedObjLists()) {	
-						reader.popObjList();
+					if(syntax.hasPushedObjLists()) {	
+						syntax.popObjList();
+						//Console.WriteLine("POPPED OBJLIST [return], back to:");
+						//syntax.debug_print_objlist();
 					}
 					else {
 						return; // top level return exits program
@@ -200,9 +170,9 @@ public class Interpreter {
 
 				if(sym!.match("if")) {
 					// true jump is required
-					var true_jump = nextSymbolOrFail();
+					var true_jump = syntax.nextSymbolOrFail();
 					// false word is optional
-					var false_jump = reader.peekObj() as LangSymbol;
+					var false_jump = syntax.peekObj() as LangSymbol;
 					if(false_jump == null || false_jump.value.Length < 2 ||
 						(false_jump.match("<<",2) == false && false_jump.match(">>",2) == false)) {
 						false_jump = null;
@@ -218,7 +188,7 @@ public class Interpreter {
 						do_jump(true_jump);
 					}
 					else if(false_jump != null) {
-						reader.nextObj(); // only peeked above, so read it now
+						syntax.nextObj(); // only peeked above, so read it now
 						do_jump(false_jump);
 					}
 					continue;
@@ -235,19 +205,22 @@ public class Interpreter {
 				}
 
 				if(sym!.match("var")) {
-					var name = nextSymbolOrFail();
-					var count = int.Parse(nextSymbolOrFail().value);
+					var name = syntax.nextSymbolOrFail();
+					var count = syntax.nextObjOrFail();
+					if(!(count is LangInt)) {
+						throw new LangError("Count must be integer but got: " + count.fmtStackPrint());
+					}
 					// must be unique userword
 					if(VARS.ContainsKey(name.value)) {
 						throw new LangError("Trying to redefine variable " + name.value);
 					}
 					// add to VARS so name lookup works (below)
-					VARS[name.value] = new LangMemoryArray(count);
+					VARS[name.value] = new LangMemoryArray((count as LangInt)!.value);
 					continue;
 				}
 
 				if(sym!.match("del")) {
-					var name = nextSymbolOrFail();
+					var name = syntax.nextSymbolOrFail();
 					if(!VARS.ContainsKey(name.value)) {
 						throw new LangError("Trying to delete non-existent variable " + name.value);
 					}
@@ -264,7 +237,9 @@ public class Interpreter {
 					}
 					// now this is just like calling a userword, below
 					// TODO -- tail call elimination??
-					reader.pushObjList(LAMBDAS[lambda.index]);
+					syntax.pushObjList(lambda.objlist);
+					//Console.WriteLine("CALLING, new objlist:");
+					//syntax.debug_print_objlist();
 					continue;
 				}
 			
@@ -278,16 +253,17 @@ public class Interpreter {
 				if(WORDS.ContainsKey(sym!.value)) {
 					// tail call elimination -- if I'm at the end of this wordlist OR next word is 'return', then
 					// i don't need to come back here, so pop my wordlist first to stop stack from growing
-					var nextObj = reader.peekObj();
-					var nextSym = reader.peekObj() as LangSymbol;
+					var next = syntax.peekObj();
+					var nextSym = next as LangSymbol;
 
-					if(nextObj == null || nextSym == null || nextSym.match("return")) {
-						if(reader.hasPushedObjLists()) { // in case i'm at the toplevel
-							reader.popObjList();
+					if(next == null || (nextSym != null && nextSym.match("return"))) {
+						if(syntax.hasPushedObjLists()) { // in case i'm at the toplevel
+							syntax.popObjList();
 						}
 					}
+
 					// execute word by pushing its wordlist and continuing
-					reader.pushObjList(WORDS[sym!.value]);
+					syntax.pushObjList(WORDS[sym!.value]);
 					continue;
 				}
 

@@ -133,12 +133,11 @@ public class LangMemoryArray : LangObject {
 }
 
 public class LangLambda : LangObject {
-	public LangLambda(int index) {
-		this.index = index;
+	public LangLambda(List<LangObject> objlist) {
+		this.objlist = objlist;
 	}
 
-	public int index; // index into Interpreter.LAMBDAS
-
+	public List<LangObject> objlist;
 	public override string fmtDisplay() { return "<lambda>"; }
 	public override string fmtStackPrint() { return fmtDisplay(); }
 }
