@@ -1,11 +1,23 @@
---- ./expect_unittest_errors.txt	2022-02-17 17:23:20.832491300 -0600
+--- ./expect_unittest_errors.txt	2022-02-17 20:17:29.627290400 -0600
 +++ ./RESULTS/lua/actual_unittest_errors.txt	2022-02-13 22:34:00.749306900 -0600
 @@ -57,7 +57,7 @@
  >> : aaa 123 456
  *** Unexpected end of input ***
  >> ( bad comment
--*** Unexpected end of input in comment ***
+-*** Unexpected end of input inside comment ***
 +*** Unexpected end of input ***
  >> ( interpreter errors )
  => 
  >> foobarbadword
+@@ -94,11 +94,3 @@
+ => 
+ >> del ggg
+ *** Trying to delete non-existent variable ggg ***
+->> ( end of input inside ." )
+-=> 
+->> ." hello world oops ...
+-*** Unexpected end of input inside ." ***
+->> ( end of input inside { .. )
+-=> 
+->> { a lambda here uh oh
+-*** Unexpected end of input inside { .. } ***

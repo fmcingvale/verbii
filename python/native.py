@@ -8,9 +8,7 @@
 from math import floor
 from errors import LangError
 from interpreter import Interpreter
-from langtypes import MemArray, LangString
-
-FLOAT_PRECISION = 17
+from langtypes import LangLambda, MemArray, LangString, FLOAT_PRECISION, fmtDisplay, fmtStackPrint
 
 # see notes in C++ implementation of this function.
 # this returns (quotient,mod) instead of taking mod as a return param.
@@ -34,25 +32,11 @@ def builtin_divmod(I: Interpreter, a, b):
 	I.pushInt(mod)
 	I.pushInt(quot)
 
-def builtin_comment(I: Interpreter):
-	while True:
-		w = I.nextWordOrFail()
-		if w == ")":
-			return
-
-def builtin_print_string(I: Interpreter):
-	while True:
-		word = I.nextWordOrFail()
-		if word == "\"":
-			return
-		else:
-			sys.stdout.write(word + ' ')
-
 def builtin_define_word(I: Interpreter):
-	name = I.nextWordOrFail()
+	name = I.syntax.nextWordOrFail()
 	words = []
 	while True:
-		w = I.nextWordOrFail()
+		w = I.syntax.nextWordOrFail()
 		#print("DEFINE WORD:",w)
 		if w == ';':
 			I.WORDS[name] = words
@@ -74,7 +58,7 @@ def builtin_set(I: Interpreter, obj, addr):
 
 		addr.mem[addr.offset] = obj
 	else:
-		raise LangError("Bad address in set!: " + reprObject(addr))
+		raise LangError("Bad address in set!: " + fmtStackPrint(addr))
 	
 # ( addr -- obj ) load obj from addr and push to stack
 def builtin_ref(I: Interpreter, addr):
@@ -90,7 +74,7 @@ def builtin_ref(I: Interpreter, addr):
 
 		I.push(addr.mem[addr.offset])
 	else:
-		raise LangError("Bad address in ref: " + reprObject(addr))
+		raise LangError("Bad address in ref: " + fmtStackPrint(addr))
 
 # set stack pointer from addr on stack
 def builtin_setsp(I: Interpreter, addr):
@@ -122,57 +106,8 @@ def builtin_fromlocal(I: Interpreter):
 	I.push(I.STACKLOCALS[I.LP])
 	I.LP += 1
 
-def fmtDisplay(obj):
-	"get obj as string for normal program output (like '.')"
-	from interpreter import CallableWordlist
-	if type(obj) is int:
-		return str(obj)
-	elif type(obj) is float:
-		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
-		return fmt.format(obj)
-	elif obj is True:
-		return "true"
-	elif obj is False:
-		return "false"
-	elif isinstance(obj, CallableWordlist):
-		return "<lambda>"
-	elif isinstance(obj, MemArray):
-		return "var:{0}:{1}".format(len(obj.mem), obj.offset)
-	elif isinstance(obj, LangString):
-		return obj.s
-	elif type(obj) is str:
-		# strings are symbols - not normally printed, so they get a ' to differentiate from strings
-		return "'" + obj
-	else:
-		raise LangError("Don't know how to print object: " + str(obj))
-
-def fmtStackPrint(obj):
-	"get obj as verbose string for stack display"
-	from interpreter import CallableWordlist
-	if type(obj) is int:
-		return str(obj)
-	elif type(obj) is float:
-		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
-		return '#' + fmt.format(obj)
-	elif obj is True:
-		return "true"
-	elif obj is False:
-		return "false"
-	elif isinstance(obj, CallableWordlist):
-		return "<lambda>"
-	elif isinstance(obj, MemArray):
-		return "var:{0}:{1}".format(len(obj.mem), obj.offset)
-	elif isinstance(obj, LangString):
-		# in a stack display, strings get " ... "
-		return '"' + obj.s + '"'
-	elif type(obj) is str:
-		# ... and symbols do not get ' here
-		return obj
-	else:
-		raise LangError("Don't know how to print object: " + str(obj))
-
 def builtin_showdef(I):
-	name = I.nextWordOrFail()
+	name = I.syntax.nextWordOrFail()
 	if name not in I.WORDS:
 		print("No such word: " + name)
 		return
@@ -189,49 +124,8 @@ def popIntOrFloat(I):
 	if type(obj) == int or type(obj) == float:
 		return float(obj)
 	else:
-		raise LangError("Expecting float or int but got: " + reprObject(obj))
+		raise LangError("Expecting float or int but got: " + fmtStackPrint(obj))
 		
-def builtin_make_lambda(intr: Interpreter):
-	"This is straight from the C++ version; see comments there. For brevity I omitted most of them here"
-	from interpreter import CallableWordlist
-	# delete the { i just read (see below)
-	intr.reader.deletePrevWord()
-
-	wordlist = []
-	nesting = 1
-	while True:
-		word = intr.nextWordOrFail()
-		# delete the { ... } as I read it -- will replace it with a callable object
-		intr.reader.deletePrevWord()
-		if word == "{":
-			# if I find inner lambdas, just copy them for now and later when they are run, 
-			# this same process will happen for them
-			nesting += 1
-			wordlist.append(word)
-		
-		elif word == "}":
-			nesting -= 1
-			if nesting > 0:
-				wordlist.append(word)
-				continue
-			
-			# create CallableWordlist from wordlist
-			_callable = CallableWordlist(wordlist)
-			intr.LAMBDAS.append(_callable)
-			index = len(intr.LAMBDAS)-1
-
-			# replace { ... } in wordlist with "$<lambda index>" so a subsequent 'call'
-			# will find it (note it would be impossible for user code to insert this word
-			# from source since it contains whitespace)
-			intr.reader.insertPrevWord("$<lambda {0}>".format(index))
-			# the first time I see { ... }, I have to push the CallableWordlist.
-			# every subsequent time, the object will be pushed by the wordlist i just modified
-			intr.push(_callable)
-			return
-		
-		else:
-			wordlist.append(word)
-
 def builtin_fadd(I):
 	b = popIntOrFloat(I)
 	a = popIntOrFloat(I)
@@ -317,8 +211,6 @@ BUILTINS = {
 	'int?': ([object], lambda I,o: I.push(type(o) == int)),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
-	'(': ([], builtin_comment),
-	'."': ([], builtin_print_string),
 	':': ([], builtin_define_word),
 	'def': ([], builtin_define_word),
 	'ref': ([object], builtin_ref),
@@ -330,6 +222,5 @@ BUILTINS = {
 	'>L': ([], builtin_tolocal),
 	'L>': ([], builtin_fromlocal),
 	'.showdef': ([], builtin_showdef),
-	'{': ([], builtin_make_lambda),
 }
 

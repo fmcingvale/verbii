@@ -1,7 +1,5 @@
 from __future__ import annotations
-from ast import Call, Lambda
-
-from langtypes import MemArray
+from langtypes import LangLambda, MemArray, LangString, fmtStackPrint, fmtDisplay, MAX_INT_31, MIN_INT_31
 
 """
 	Interpreter - runs code.
@@ -18,23 +16,14 @@ from langtypes import MemArray
 import re
 from errors import LangError
 from reader import Reader
-
-class CallableWordlist(object):
-	"from { ... } - a lambda/anonymous word"
-	def __init__(self, wordlist):
-		self.wordlist = wordlist
-
-	def __str__(self):
-		return "<lambda>"
+from syntax import Syntax
 
 class Interpreter(object):
 	STACK_SIZE = (1<<16)
 	LOCALS_SIZE = (1<<10)
-	MAX_INT_31 = (1<<30) - 1
-	MIN_INT_31 = -MAX_INT_31
 
 	def __init__(self):
-		self.reader = Reader()
+		self.syntax = Syntax()
 		# stack & locals live here -- integer addresses are indexes into this.
 		# variables live in allocated memory tied to a MemArray.
 		self.SIZE_STACKLOCALS = self.STACK_SIZE + self.LOCALS_SIZE
@@ -60,7 +49,7 @@ class Interpreter(object):
 		self.VARS = {}
 
 	def addText(self, text):
-		self.reader.addText(text)
+		self.syntax.addText(text)
 
 	def push(self, obj):
 		# unlike in the C++ implementation, I can just push regular python objects
@@ -73,7 +62,7 @@ class Interpreter(object):
 
 	def pushInt(self, a):
 		"like push but checks for valid integer range"
-		if a > Interpreter.MAX_INT_31 or a < Interpreter.MIN_INT_31:
+		if a > MAX_INT_31 or a < MIN_INT_31:
 			raise LangError("Integer overflow")
 
 		self.push(a)
@@ -87,7 +76,6 @@ class Interpreter(object):
 		return obj
 
 	def reprStack(self) -> str:
-		from native import fmtStackPrint
 		s = ""
 		i = self.SP_EMPTY-1
 		while i >= self.SP:
@@ -95,39 +83,20 @@ class Interpreter(object):
 			i -= 1
 
 		return s
-
-	"""to avoid a lot of 'if word is NOne' checks, these require a non-empty
-	word or they throw an exception ... for use in cases where there MUST
-	be a next/previous word, or its a syntax error"""
-	def nextWordOrFail(self) -> str:
-		"get next word, which must be non-None, or raise an exception"
-		word = self.reader.nextWord()
-		if word is None:
-			raise LangError("Unexpected end of input")
-	
-		return word
-
-	def prevWordOrFail(self) -> str:
-		"read previous word, which must be non-None, or raise exception"
-		word = self.reader.prevWord()
-		if word is None:
-			raise LangError("Unable to find previous word")
-	
-		return word
 		
 	def do_jump(self, jumpword: str):
 		"take word like '>>NAME' or '<<NAME' and jump to '@NAME'"
 		if jumpword[:2] == ">>":
 			# forward jump, find word (>>NAME -> @NAME)
 			while True:
-				word = self.nextWordOrFail()
-				if word[1:] == jumpword[2:]:
+				word = self.syntax.nextWordOrFail()
+				if type(word) == str and word[1:] == jumpword[2:]:
 					return # found word, stop
 		elif jumpword[:2] == "<<":
 			# backward jump
 			while True:
-				word = self.prevWordOrFail()
-				if word[1:] == jumpword[2:]:
+				word = self.syntax.prevWordOrFail()
+				if type(word) == str and word[1:] == jumpword[2:]:
 					return # found word, stop
 		else:
 			raise LangError("Bad jumpword " + jumpword)
@@ -138,42 +107,30 @@ class Interpreter(object):
 		while True:
 			# see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
 
-			word = self.reader.nextWord()
+			word = self.syntax.nextObj()
 			if stephook is not None:
 				stephook(self, word)
 
 			if word is None:
 				# i could be returning from a word that had no 'return',
 				# so pop words like i would if it were a return
-				if self.reader.hasPushedWords():
-					self.reader.popWords()
+				if self.syntax.hasPushedWords():
+					self.syntax.popWords()
 					continue
 				else:
 					return
 
-			if self.re_integer.match(word):
-				# integers just get pushed to the stack
-				self.pushInt(int(word))
+			# literals that get pushed
+			if type(word) == int or type(word) == float or isinstance(word,LangString) or \
+				isinstance(word, LangLambda):
+				self.push(word)
 				continue
 
-			# check for float '#NNN.NN'
-			if word[0] == '#':
-				self.push(float(word[1:]))
-				continue
-			
-			m = self.re_lambda.match(word)
-			if m:
-				index = int(m.group(1))
-				if index < 0 or index >= len(self.LAMBDAS):
-					raise LangError("Bad lamdba index: " + str(index))
-
-				self.push(self.LAMBDAS[index])
-				continue
-
+			# string are symbols
 			if word == "return":
 				# return from word by popping back to previous wordlist (if not at toplevel)
-				if self.reader.hasPushedWords():
-					self.reader.popWords()
+				if self.syntax.hasPushedWords():
+					self.syntax.popWords()
 				else:
 					return # top level return exits program
 			
@@ -181,10 +138,12 @@ class Interpreter(object):
 		
 			if word == "if":
 				# true jump is required
-				true_jump = self.reader.nextWord()
+				true_jump = self.syntax.nextObj()
 				# false word is optional
-				if self.reader.peekWord()[:2] == "<<" or self.reader.peekWord()[:2] == ">>":
-					false_jump = self.reader.nextWord()
+				peeked = self.syntax.peekObj()
+
+				if type(peeked) == str and (peeked[:2] == "<<" or peeked[:2] == ">>"):
+					false_jump = self.syntax.nextObj()
 				else:
 					false_jump = None
 			
@@ -209,8 +168,10 @@ class Interpreter(object):
 				continue
 
 			if word == "var":
-				name = self.nextWordOrFail()
-				count = int(self.nextWordOrFail())
+				name = self.syntax.nextWordOrFail()
+				count = self.syntax.nextObj()
+				if type(count) != int:
+					raise LangError("Expecting int after var but got: " + fmtStackPrint(count))
 				# must be unique userword
 				if name in self.VARS:
 					raise LangError("Trying to redefine variable " + name)
@@ -220,7 +181,7 @@ class Interpreter(object):
 				continue
 		
 			if word == "del":
-				name = self.nextWordOrFail()
+				name = self.syntax.nextWordOrFail()
 				if name not in self.VARS:
 					raise LangError("Trying to delete non-existent variable " + name)
 				
@@ -228,16 +189,15 @@ class Interpreter(object):
 				continue
 		
 			if word == "call":
-				from native import fmtStackPrint
-
 				# top of stack must be a CallableWordlist
 				obj = self.pop()
-				if not isinstance(obj,CallableWordlist):
+				if not isinstance(obj,LangLambda):
 					raise LangError("call expects a lambda, but got: " + fmtStackPrint(obj))
 
+				#print("CALLING LAMBDA:",obj.wordlist)
 				# now this is just like calling a userword, below
 				# TODO -- tail call elimination??
-				self.reader.pushWords(obj.wordlist)
+				self.syntax.pushWords(obj.wordlist)
 				continue
 		
 			# builtins, then userwords, then vars
@@ -267,7 +227,7 @@ class Interpreter(object):
 				# TODO -- tail call elimination
 			
 				# execute word by pushing its wordlist and continuing
-				self.reader.pushWords(self.WORDS[word])
+				self.syntax.pushWords(self.WORDS[word])
 				continue
 	
 			if word in self.VARS:

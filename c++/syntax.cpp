@@ -101,7 +101,7 @@ Object Syntax::parse_comment() {
 			++nesting;
 		}
 		else if(obj.isNull()) {
-			throw LangError("Unexpected end of input in comment");
+			throw LangError("Unexpected end of input inside comment");
 		}
 	}
 }
@@ -127,7 +127,10 @@ Object Syntax::parse_lambda() {
 	auto objlist = new ObjList();
 	int nesting = 1;
 	while(true) {
-		auto obj = nextObjOrFail();
+		auto obj = nextObj();
+		if(obj.isNull()) {
+			throw LangError("Unexpected end of input inside { .. }");
+		}
 		// delete the { ... } as I read it -- will replace it with a tagged wordlist
 		reader.deletePrevObj();
 		
@@ -163,6 +166,10 @@ Object Syntax::parse_quote_printstring() {
 	while(true) {
 		auto obj = reader.nextObj(); // *NOT* Syntax::nextObj() - don't want any processing, i.e.
 									// don't want numbers in middle of string to be converted to ints
+		if(obj.isNull()) {
+			throw LangError("Unexpected end of input inside .\"");
+		}
+
 		reader.deletePrevObj(); // delete each obj as I read it, will replace at end
 		if(obj.isSymbol("\"")) {
 			// end of string - write new code
@@ -176,9 +183,6 @@ Object Syntax::parse_quote_printstring() {
 				reader.prevObj();
 			}
 			return reader.nextObj();
-		}
-		else if(obj.isNull()) {
-			throw LangError("Unexpected end of input inside .\"");
 		}
 		else if(!obj.isSymbol()) {
 			throw LangError("Got non-symbol from Reader (!!):" + obj.fmtStackPrint());

@@ -57,7 +57,7 @@
 >> : aaa 123 456
 *** Unexpected end of input ***
 >> ( bad comment
-*** Unexpected end of input in comment ***
+*** Unexpected end of input inside comment ***
 >> ( interpreter errors )
 => 
 >> foobarbadword
@@ -94,3 +94,11 @@
 => 
 >> del ggg
 *** Trying to delete non-existent variable ggg ***
+>> ( end of input inside ." )
+=> 
+>> ." hello world oops ...
+*** Unexpected end of input inside ." ***
+>> ( end of input inside { .. )
+=> 
+>> { a lambda here uh oh
+*** Unexpected end of input inside { .. } ***

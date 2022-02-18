@@ -21,7 +21,7 @@ def new_interpreter(noinit: bool):
 		intr.addText(open(INITLIB,'r').read())
 		intr.run()
 		# don't want initlib in the backtrace history, once it has successfully loaded
-		intr.reader.clearAll()
+		intr.syntax.clearAll()
 
 	return intr
 
@@ -68,7 +68,7 @@ def run_test_mode(filename: str, noinit: bool, status: dict):
 			continue
 		
 		sys.stdout.write(">> " + line) # line has \n at end already
-		intr.reader.clearAll() # clear any leftover text from previous line run
+		intr.syntax.clearAll() # clear any leftover text from previous line run
 		intr.addText(line)
 		intr.run()
 		print("=> " + intr.reprStack())

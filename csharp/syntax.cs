@@ -53,7 +53,10 @@ public class Syntax {
 		var objlist = new List<LangObject>();
 		int nesting = 1;
 		while(true) {
-			var obj = nextObjOrFail();
+			var obj = nextObj();
+			if(obj == null) {
+				throw new LangError("Unexpected end of input inside { .. }");
+			}
 			var sym = obj as LangSymbol;
 			// delete the { ... } as I read it -- will replace it with a lambda reference
 			reader.deletePrevObj();
@@ -95,7 +98,7 @@ public class Syntax {
 			//	Console.WriteLine("COMMENT READ:" + sym.fmtStackPrint());
 			//}
 			if(sym == null) {
-				throw new LangError("Unexpected end of input in comment");
+				throw new LangError("Unexpected end of input inside comment");
 			}
 			else if(sym.value == ")") {
 				if(--nesting == 0) {
@@ -117,12 +120,12 @@ public class Syntax {
 		while(true) {
 			var obj = reader.nextObj(); // *NOT* Syntax::nextObj() - don't want any processing, i.e.
 										// don't want numbers in middle of string to be converted to ints
-			var sym = obj as LangSymbol;
-			reader.deletePrevObj(); // delete each obj as I read it, will replace at end
 			if(obj == null) {
 				throw new LangError("Unexpected end of input inside .\"");
 			}
-			else if(sym == null) {
+			var sym = obj as LangSymbol;
+			reader.deletePrevObj(); // delete each obj as I read it, will replace at end
+			if(sym == null) {
 				throw new LangError("Got non-symbol from Reader (!!):" + obj.fmtStackPrint());
 			}
 			else if(sym.match("\"")) {
