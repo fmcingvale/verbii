@@ -28,8 +28,6 @@ public class Interpreter {
 	// same for locals
 	public int LP, LP_EMPTY, LP_MIN;
 
-	protected Regex re_integer;
-
 	public Syntax syntax;
 
 	// user defined words
@@ -61,8 +59,6 @@ public class Interpreter {
 
 		syntax = new Syntax();
 
-		re_integer = new Regex(@"^[\+-]?\d+$");
-		
 		WORDS = new Dictionary<string,List<LangObject>>();
 		VARS = new Dictionary<string,LangMemoryArray>();
 		LAMBDAS = new List<List<LangObject>>();

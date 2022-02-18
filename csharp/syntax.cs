@@ -1,17 +1,14 @@
 
 using System;
-using System.Text.RegularExpressions;
 using System.Collections.Generic;
 #nullable enable
 
 public class Syntax {
 
 	public Reader reader;
-	protected Regex re_integer;
 
 	public Syntax() {
 		reader = new Reader();
-		re_integer = new Regex(@"^[\+-]?\d+$");
 	}
 
 	// mirrored from Reader
@@ -150,13 +147,27 @@ public class Syntax {
 		}
 	}
 
+	// DON'T use regex here -- this is run for potentially every word so has to be fast
+	public bool isInteger(string text) {
+		int i=0;
+		bool hasdigits=false;
+		if(text[i] == '+' || text[i] == '-') {
+			++i;
+		}
+		while(i < text.Length && text[i] >= '0' && text[i] <= '9') {
+			++i;
+			hasdigits=true;
+		}
+		return (i == text.Length && hasdigits);
+	}
+
 	public LangObject? nextObj() {
 		var obj = reader.nextObj();
 		if (obj is LangSymbol) {
 			var sym = obj as LangSymbol;	
 
 			// push integers to stack
-			if(re_integer.IsMatch(sym!.value)) {
+			if(isInteger(sym!.value)) {
 				var intobj = new LangInt(int.Parse(sym!.value));
 				reader.deletePrevObj();
 				reader.insertPrevObj(intobj);
