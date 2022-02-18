@@ -166,14 +166,6 @@ public class Syntax {
 		if (obj is LangSymbol) {
 			var sym = obj as LangSymbol;	
 
-			// push integers to stack
-			if(isInteger(sym!.value)) {
-				var intobj = new LangInt(int.Parse(sym!.value));
-				reader.deletePrevObj();
-				reader.insertPrevObj(intobj);
-				return intobj;
-			}
-
 			// floats: #NNN.NN
 			if(sym!.match("#",1)) {
 				var fobj = new LangFloat(double.Parse(sym!.value.Substring(1)));
@@ -181,15 +173,25 @@ public class Syntax {
 				reader.insertPrevObj(fobj);
 				return fobj;
 			}	
-		
-			if(sym!.match("{")) {
+			else if(sym!.match("{")) {
 				return parse_lambda();
 			}
-			if(sym!.match("(")) {
+			else if(sym!.match("(")) {
 				return parse_comment();
 			}
-			if(sym!.match(".\"")) {
+			else if(sym!.match(".\"")) {
 				return parse_quote_printstring();
+			}
+			// integers (last since test is more expensive than those above)
+			// [in practice this doesn't help too much since MOST words in a real
+			// program won't match any of these rules, so all have to run for nearly every word]
+			// may help more later if/when most words are NOT left as symbols but converted
+			// to some other object
+			else if(isInteger(sym!.value)) {
+				var intobj = new LangInt(int.Parse(sym!.value));
+				reader.deletePrevObj();
+				reader.insertPrevObj(intobj);
+				return intobj;
 			}
 		}
 		return obj;
