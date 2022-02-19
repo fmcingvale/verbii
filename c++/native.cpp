@@ -317,7 +317,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"str", 
 		[](Interpreter *intr) {intr->push(newString(intr->pop().fmtDisplay()));}},
 	{"==", 
-		[](Interpreter *intr) {pushBool(intr, popFloatOrInt(intr) == popFloatOrInt(intr));}},
+		[](Interpreter *intr) {pushBool(intr, intr->pop().opEqual(intr->pop()));}},
 	{">", 
 		[](Interpreter *intr) {pushBool(intr, popFloatOrInt(intr) < popFloatOrInt(intr));}},
 	{"int?",

@@ -56,7 +56,7 @@ class Object {
 	// convenience -- test if symbol AND equal to given string
 	// if n>0 then only require that many chars to match
 	bool isSymbol(const char *s, int n=0) const 
-		{ return type == TYPE_SYMBOL && 
+		{ return type == TYPE_SYMBOL &&
 			((n == 0 && !strcmp(data.str,s)) ||
 			(n > 0 && !strncmp(data.str, s, n))); }
 			
@@ -71,6 +71,9 @@ class Object {
 	
 	// setters to change value of object, i.e. for reusing object
 	void setInt(int i);
+
+	// do '==' builtin operation
+	bool opEqual(const Object &other);
 
 	// get string representation of object for printing to output
 	// (like would be displayed in normal program output)

@@ -105,7 +105,7 @@
 => 1073741823 -1073741823 1073741823 
 >> -1073741800 23 -
 => 1073741823 -1073741823 1073741823 -1073741823 
->> ( booleans )
+>> ( == )
 => 1073741823 -1073741823 1073741823 -1073741823 
 >> clear
 => 
@@ -114,6 +114,46 @@
 >> -34 -34 ==
 => true true 
 >> 20 8 ==
+=> true true false 
+>> clear
+=> 
+>> #123.125 #123.125 ==
+=> true 
+>> #-4.5 #-4.5 ==
+=> true true 
+>> #45.125 #35.125 ==
+=> true true false 
+>> clear
+=> 
+>> 123 #123 ==
+=> true 
+>> -45 #-45 ==
+=> true true 
+>> 123 #1234 ==
+=> true true false 
+>> clear
+=> 
+>> "hello" "hello" ==
+=> true 
+>> "hello5" "hello" ==
+=> true false 
+>> clear
+=> 
+>> 'abc 'abc ==
+=> true 
+>> 'abc 'abcd ==
+=> true false 
+>> 'abc "abc" ==
+=> true false false 
+>> clear
+=> 
+>> 1 1 == 2 2 == ==
+=> true 
+>> 1 2 == 2 3 == ==
+=> true true 
+>> 1 1 == 2 1 == ==
+=> true true false 
+>> ( > )
 => true true false 
 >> -12 8 >
 => true true false false 

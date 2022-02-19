@@ -119,6 +119,22 @@ Object newSymbol(const string& s) {
 	return newSymbol(s.c_str(), s.length());
 }
 
+bool Object::opEqual(const Object &other) {
+	switch(type) {
+		case TYPE_NULL: return other.isNull();
+		case TYPE_INT: return (other.type == TYPE_INT && other.data.i == data.i) ||
+							(other.type == TYPE_FLOAT && other.data.d == data.i);
+		case TYPE_FLOAT: return (other.type == TYPE_FLOAT && other.data.d == data.d) ||
+							(other.type == TYPE_INT && other.data.i == data.d);
+		case TYPE_BOOL: return other.type == TYPE_BOOL && other.data.b == data.b;
+		case TYPE_LAMBDA: throw LangError("Lambdas cannot be compared with ==");
+		case TYPE_MEMARRAY: throw LangError("Memory arrays cannot be compared with ==");
+		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
+		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
+		default: return false;
+	}
+}
+
 int FLOAT_PRECISION = 17;
 
 string Object::fmtDisplay() const {
