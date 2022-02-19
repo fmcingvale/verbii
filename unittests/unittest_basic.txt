@@ -9,7 +9,7 @@ depth
 10 20 30 40 50 60
 SP 3 + SP!
 
-." Hello world! " CR
+"Hello world!" . CR
 clear
 
 10 20 30
@@ -183,18 +183,18 @@ call
 clear
 
 ( -- simple example of passing lambdas to another function -- )
-def saything ( lambda -- ) dup ." The " 1 swap call ." is " 2 swap call CR ;
+def saything ( lambda -- ) dup "The" . 1 swap call "is" . 2 swap call CR ;
 
 ( called with cmd on TOS )
-{ 1 == if >>one ." blue " return @one ." ocean " }
-{ 1 == if >>one ." green " return @one ." grass " }
-{ 1 == if >>one ." red " return @one ." rose " }
+{ 1 == if >>one "blue" . return @one "ocean" . }
+{ 1 == if >>one "green" . return @one "grass" . }
+{ 1 == if >>one "red" . return @one "rose" . }
 saything
 saything
 saything
 
 clear
-: zzz { 10 . 20 . ." Hello lambda! " 30 . 40 . } call CR ;
+: zzz { 10 . 20 . "Hello lambda!" . 30 . 40 . } call CR ;
 ( subtlety here -- have to run zzz at least twice to make sure it's working -- )
 ( the FIRST time, the { .. } will be parsed and directly pushed as a lambda object ... )
 ( ... modifying the source to remove the { .. } and replacing it with the lambda object that )
@@ -216,16 +216,19 @@ clear
 t33 ref call 
 t33 ref call
 
-( make sure ." .. is converted to code and not printed immediately when seen )
-clear
-{ 123 . ." in lambda 1 " 456 . } 
-." calling lambda 1 " call 789 . CR
-
 clear
 123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
 
-
-
+( string parsing )
+clear
+"hello world here"
+. CR
+" hello with leading trailing space "
+. CR
+"oneword"
+. CR
+"""and some embedded"quote"chars << here"""
+. CR
 
 
 

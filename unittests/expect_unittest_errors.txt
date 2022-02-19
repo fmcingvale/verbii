@@ -94,11 +94,15 @@
 => 
 >> del ggg
 *** Trying to delete non-existent variable ggg ***
->> ( end of input inside ." )
+>> ( end of input inside " )
 => 
->> ." hello world oops ...
-*** Unexpected end of input inside ." ***
+>> "hello world oops ...
+*** Unexpected end of input inside string ***
 >> ( end of input inside { .. )
 => 
 >> { a lambda here uh oh
 *** Unexpected end of input inside { .. } ***
+>> ( throw error from script )
+=> 
+>> "Testing errors" error
+*** Testing errors ***

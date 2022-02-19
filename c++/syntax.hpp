@@ -41,5 +41,6 @@ class Syntax {
 	Object parse_comment();
 	Object parse_lambda();
 	Object parse_quote_printstring();
+	Object parse_string(Object startword);
 };
 

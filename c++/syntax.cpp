@@ -61,6 +61,9 @@ Object Syntax::nextObj() {
 			if(obj.isSymbol(".\"")) {
 				return parse_quote_printstring();
 			}
+			if(obj.isSymbol("\"",1)) {
+				return parse_string(obj);
+			}
 		}
 	}
 
@@ -90,13 +93,37 @@ Object Syntax::nextSymbolOrFail() {
 	return obj;
 }
 
+Object Syntax::parse_string(Object startword) {
+	// just read a word starting with " (startword)
+	// read until i find a word ENDING with " then paste them all together
+	string s;
+	if(strlen(startword.asSymbol()) > 1) {
+		s += startword.asSymbol() + 1;	
+	}
+	
+	reader.deletePrevObj();
+	while(s.back() != '"') {
+		s += " ";
+		auto obj = reader.nextObj(); // want raw symbol, no processing
+		if(!obj.isSymbol()) {
+			throw LangError("Unexpected end of input inside string");
+		}
+		reader.deletePrevObj();
+		s += obj.asSymbol();
+	}
+	s.erase(s.size()-1); // remove end quote
+	auto sobj = newString(s);
+	reader.insertPrevObj(sobj);
+	return sobj;	
+}
+
 Object Syntax::parse_comment() {
 	// skip comment and return NEXT word -- assumes ( was just read
 	//
 	// allow nested comments
 	int nesting = 1;
 	while(true) {
-		auto obj = reader.nextObj();
+		auto obj = reader.nextObj(); // want raw word, no processing
 		if(obj.isSymbol(")")) {
 			if(--nesting == 0) {
 				// end of comment - return NEXT object

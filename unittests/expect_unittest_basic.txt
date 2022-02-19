@@ -15,7 +15,7 @@
 => 0 10 20 30 40 50 60 
 >> SP 3 + SP!
 => 0 10 20 30 
->> ." Hello world! " CR
+>> "Hello world!" . CR
 Hello world! 
 => 0 10 20 30 
 >> clear
@@ -300,15 +300,15 @@ foobar: 11 22 33 44 ;
 => 
 >> ( -- simple example of passing lambdas to another function -- )
 => 
->> def saything ( lambda -- ) dup ." The " 1 swap call ." is " 2 swap call CR ;
+>> def saything ( lambda -- ) dup "The" . 1 swap call "is" . 2 swap call CR ;
 => 
 >> ( called with cmd on TOS )
 => 
->> { 1 == if >>one ." blue " return @one ." ocean " }
+>> { 1 == if >>one "blue" . return @one "ocean" . }
 => <lambda> 
->> { 1 == if >>one ." green " return @one ." grass " }
+>> { 1 == if >>one "green" . return @one "grass" . }
 => <lambda> <lambda> 
->> { 1 == if >>one ." red " return @one ." rose " }
+>> { 1 == if >>one "red" . return @one "rose" . }
 => <lambda> <lambda> <lambda> 
 >> saything
 The rose is red 
@@ -321,7 +321,7 @@ The ocean is blue
 => 
 >> clear
 => 
->> : zzz { 10 . 20 . ." Hello lambda! " 30 . 40 . } call CR ;
+>> : zzz { 10 . 20 . "Hello lambda!" . 30 . 40 . } call CR ;
 => 
 >> ( subtlety here -- have to run zzz at least twice to make sure it's working -- )
 => 
@@ -363,16 +363,31 @@ The ocean is blue
 => 133 244 355 
 >> t33 ref call
 => 133 244 355 133 244 355 
->> ( make sure ." .. is converted to code and not printed immediately when seen )
-=> 133 244 355 133 244 355 
->> clear
-=> 
->> { 123 . ." in lambda 1 " 456 . } 
-=> <lambda> 
->> ." calling lambda 1 " call 789 . CR
-calling lambda 1 123 in lambda 1 456 789 
-=> 
 >> clear
 => 
 >> 123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
 => 123 456 
+>> ( string parsing )
+=> 123 456 
+>> clear
+=> 
+>> "hello world here"
+=> "hello world here" 
+>> . CR
+hello world here 
+=> 
+>> " hello with leading trailing space "
+=> " hello with leading trailing space " 
+>> . CR
+ hello with leading trailing space  
+=> 
+>> "oneword"
+=> "oneword" 
+>> . CR
+oneword 
+=> 
+>> """and some embedded"quote"chars << here"""
+=> """and some embedded"quote"chars << here""" 
+>> . CR
+""and some embedded"quote"chars << here"" 
+=> 

@@ -61,10 +61,11 @@ var fff 1
 ( deleting non existant var should fail )
 del ggg
 
-( end of input inside ." )
-." hello world oops ...
+( end of input inside " )
+"hello world oops ...
 
 ( end of input inside { .. )
 { a lambda here uh oh
 
-
+( throw error from script )
+"Testing errors" error

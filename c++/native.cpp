@@ -285,6 +285,13 @@ static void builtin_show_def(Interpreter *intr) {
 	cout << ";\n";
 }
 
+static void builtin_error(Interpreter *intr) {
+	auto msg = intr->pop();
+	if(!msg.isString()) {
+		throw LangError("error expects string but got: " + msg.fmtStackPrint());
+	}
+	throw LangError(msg.asString());
+}
 
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", builtin_add},
@@ -328,4 +335,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
 	{".showdef", builtin_show_def},
+	{"error", builtin_error},
 };

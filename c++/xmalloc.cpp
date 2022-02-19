@@ -1,3 +1,8 @@
+/*
+	xmalloc - wrapper to allow turning GC on/off completely for debugging, etc.
+
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
 
 #include "xmalloc.hpp"
 
