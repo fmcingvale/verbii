@@ -186,8 +186,66 @@ Hello world!
 => true false 
 >> 40 40 <=
 => true false true 
->> ( math )
+>> ( combinations of rich math operations )
 => true false true 
+>> clear
+=> 
+>> 10 20 +
+=> 30 
+>> 10 #21 +
+=> 30 #31 
+>> #11 22 +
+=> 30 #31 #33 
+>> #11 #33 +
+=> 30 #31 #33 #44 
+>> clear
+=> 
+>> 10 20 -
+=> -10 
+>> 10 #21 -
+=> -10 #-11 
+>> #11 20 -
+=> -10 #-11 #-9 
+>> #22 #77 -
+=> -10 #-11 #-9 #-55 
+>> clear
+=> 
+>> 10 20 *
+=> 200 
+>> 10 #21 *
+=> 200 #210 
+>> #12 12 *
+=> 200 #210 #144 
+>> #10 #40 *
+=> 200 #210 #144 #400 
+>> clear
+=> 
+>> 10 20 /
+=> #0.5 
+>> 40 #20 /
+=> #0.5 #2 
+>> #30 2 /
+=> #0.5 #2 #15 
+>> #100 #25 /
+=> #0.5 #2 #15 #4 
+>> clear
+=> 
+>> "hello" " " "world"
+=> "hello" " " "world" 
+>> +
+=> "hello" " world" 
+>> +
+=> "hello world" 
+>> clear
+=> 
+>> 'abc 'def 'ghi
+=> abc def ghi 
+>> +
+=> abc defghi 
+>> +
+=> abcdefghi 
+>> ( more math operations )
+=> abcdefghi 
 >> clear
 => 
 >> 123 

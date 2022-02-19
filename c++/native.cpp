@@ -47,70 +47,6 @@ static double popFloatOrInt(Interpreter *intr) {
 	}
 }
 
-static void pushFloat(Interpreter *intr, double d) {
-	intr->push(newFloat(d));
-}
-
-static void builtin_add_float(Interpreter *intr) {
-	double b = popFloatOrInt(intr);
-	double a = popFloatOrInt(intr);
-	pushFloat(intr, a+b);
-}
-
-static void builtin_sub_float(Interpreter *intr) {
-	double b = popFloatOrInt(intr);
-	double a = popFloatOrInt(intr);
-	pushFloat(intr, a-b);
-}
-
-static void builtin_mul_float(Interpreter *intr) {
-	double b = popFloatOrInt(intr);
-	double a = popFloatOrInt(intr);
-	pushFloat(intr, a*b);
-}
-
-static void builtin_div_float(Interpreter *intr) {
-	double b = popFloatOrInt(intr);
-	if(b == 0) {
-		throw LangError("Floating point divide by zero");
-	}
-	double a = popFloatOrInt(intr);
-	pushFloat(intr, a/b);
-}
-
-static void builtin_add(Interpreter *intr) {
-	Object b = intr->pop();
-	Object a = intr->pop();
-	if(a.isInt() && b.isInt()) {
-		// since a was popped by value, safe to overwrite 
-		// instead of making new object
-		a.setInt(a.asInt() + b.asInt());
-		intr->push(a);
-	}
-	else if(a.isMemArray() && b.isInt()) {
-		// can't directly reuse 'a' since offset and count are part of
-		// the allocated object, but can share underlying array
-		Object r = copyMemArray(a.asMemArray());
-		r.asMemArray()->offset += b.asInt();
-		intr->push(r);
-	}
-	else if(a.isInt() && b.isMemArray()) {
-		// swapped version of above
-		Object r = copyMemArray(b.asMemArray());
-		r.asMemArray()->offset += a.asInt();
-		intr->push(r);
-	}
-	else {
-		throw LangError("Can't add values: " + a.fmtStackPrint() + " + " + b.fmtStackPrint());
-	}
-}
-
-// i think only '+' makes sense for MemoryArray, so not implementing -
-static void builtin_subtract(Interpreter *intr) {
-	int b = popInt(intr);
-	int a = popInt(intr);
-	pushInt(intr, a-b);
-}
 /*
 	can't count on rounding behavior of host language -- i.e. some languages/systems
 	round differently on +/- values.
@@ -293,16 +229,18 @@ static void builtin_error(Interpreter *intr) {
 	throw LangError(msg.asString());
 }
 
+static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &)) {
+	Object b = intr->pop();
+	Object a = intr->pop();
+	intr->push((a.*op)(b));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
-	{"+", builtin_add},
-	{"-", builtin_subtract},
-	{"*", 
-		[](Interpreter *intr) {pushInt(intr, popInt(intr) * popInt(intr));}},
+	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
+	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
+	{"*", [](Interpreter *intr) { do_binop(intr, &Object::opMul); }},
+	{"/", [](Interpreter *intr) { do_binop(intr, &Object::opDivide); }},
 	{"/mod", builtin_divmod},
-	{"f+", builtin_add_float},
-	{"f-", builtin_sub_float},
-	{"f*", builtin_mul_float},
-	{"f/", builtin_div_float},
 	{"f.setprec",
 		[](Interpreter *intr) { FLOAT_PRECISION = popInt(intr); }},
 	{":", builtin_define_word},

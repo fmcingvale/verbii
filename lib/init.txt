@@ -41,7 +41,8 @@ def neg ( a -- -a ) dup int? if >>int 0 swap f- return @int 0 swap - ;
 def max ( a b -- max[a,b] ) 2dup > if >>A nip return @A drop ;
 def min ( a b -- min[a,b] ) 2dup > if >>B drop return @B nip ;
 def abs ( a -- abs[a] ) dup 0 < if >>neg return @neg neg ;
-def / ( a b -- quotient a/b ) /mod swap drop ;
+( 'floor' divide like in Python -- integers only )
+def // ( a b -- quotient a/b ) /mod swap drop ;
 def mod ( a b -- remainder a/b ) /mod drop ;
 
 ( .S - print stack without affecting it - good for debugging )

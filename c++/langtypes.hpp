@@ -36,7 +36,7 @@ struct MemoryArray {
 	int offset; // when code does pointer math, this is adjusted
 };
 
-// this is intended to be a POD type, so no constructors, destructors, base classes,
+// this is intended to be a POD type, so no non-default constructors, destructors, base classes,
 // and small enough to pass as value -- any large parts will be stored in pointers
 class Object {
 	public:
@@ -66,14 +66,25 @@ class Object {
 	ObjList* asLambda() const { return data.objlist; };
 	MemoryArray* asMemArray() const { return data.memarray; }
 	double asFloat() const { return data.d; }
+	 
 	const char *asString() const { return data.str; }
 	const char *asSymbol() const { return data.str; }
 	
 	// setters to change value of object, i.e. for reusing object
 	void setInt(int i);
 
-	// do '==' builtin operation
+	// '==' builtin (exact match except allows for int==float)
 	bool opEqual(const Object &other);
+	// '+' builtin (int, float, memarray, strings, symbols)
+	Object opAdd(const Object &other);
+	// '-' builtin (int, float)
+	Object opSubtract(const Object &other);
+	// '*' builtin (int, float)
+	Object opMul(const Object &other);
+	// '/' builtin (int, float) - *ALWAYS* floating point result - use divmod for floor-divide behavior on ints
+	Object opDivide(const Object &other);
+	// '/mod' (ints)
+	Object opDivMod(const Object &other);
 
 	// get string representation of object for printing to output
 	// (like would be displayed in normal program output)

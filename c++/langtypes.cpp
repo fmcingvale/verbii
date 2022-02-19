@@ -15,10 +15,15 @@ const int MIN_INT_31 = -MAX_INT_31;
 
 Object NULLOBJ; // default constructor creates the null object
 
-Object newInt(int i) {
+// check that int is valid or throw exception
+void checkIntOrFail(int i) {
 	if(i > MAX_INT_31 || i < MIN_INT_31) {
 		throw LangError("Integer overflow");
 	}
+}
+
+Object newInt(int i) {
+	checkIntOrFail(i);
 	Object obj;
 	obj.type = TYPE_INT;
 	obj.data.i = i;
@@ -26,9 +31,7 @@ Object newInt(int i) {
 }
 
 void Object::setInt(int i) { 
-	if(i > MAX_INT_31 || i < MIN_INT_31) {
-		throw LangError("Integer overflow");
-	}
+	checkIntOrFail(i);
 	type = TYPE_INT; 
 	data.i = i; 
 }
@@ -133,6 +136,138 @@ bool Object::opEqual(const Object &other) {
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
 		default: return false;
 	}
+}
+
+bool isNumber(const Object &a) {
+	return a.type == TYPE_INT || a.type == TYPE_FLOAT;
+}
+
+// get int or float as double
+double castFloat(const Object &a) { 
+	if(a.type == TYPE_INT) { 
+		return (double)(a.data.i); 
+	}
+	else if(a.type == TYPE_FLOAT) {
+		return a.data.d;
+	}
+	else {
+		throw LangError("Cannot cast to float: " + a.fmtStackPrint());
+	}
+}
+
+Object Object::opAdd(const Object &other) {
+	Object out; // for non-allocating ops
+	switch(type) {
+		case TYPE_NULL: break;
+		case TYPE_INT:
+			if(other.type == TYPE_INT) {
+				out.type = TYPE_INT;
+				out.data.i = data.i + other.data.i;
+				checkIntOrFail(out.data.i);
+				return out;
+			}
+			else if(other.type == TYPE_FLOAT) {
+				out.type = TYPE_FLOAT;
+				out.data.d = data.i + other.data.d;
+				return out;
+			}
+			else if(other.type == TYPE_MEMARRAY) {
+				// can't directly reuse 'other' since offset and count are part of
+				// the allocated object, but can share underlying array
+				Object r = copyMemArray(other.asMemArray());
+				r.asMemArray()->offset += data.i;
+				return r;
+			}
+			break;
+		case TYPE_FLOAT:
+			if(other.type == TYPE_INT) {
+				out.type = TYPE_FLOAT;
+				out.data.d = data.d + other.data.i;
+				return out;
+			}
+			else if(other.type == TYPE_FLOAT) {
+				out.type = TYPE_FLOAT;
+				out.data.d = data.d + other.data.d;
+				return out;
+			}
+			break;
+		case TYPE_BOOL: break;
+		case TYPE_LAMBDA: break;
+		case TYPE_MEMARRAY:
+			if(other.type == TYPE_INT) {
+				// can't directly reuse 'this' since offset and count are part of
+				// the allocated object, but can share underlying array
+				Object r = copyMemArray(asMemArray());
+				r.asMemArray()->offset += other.data.i;
+				return r;
+			}
+			break;
+		// strings & symbols defined as immutable, so no changing this
+		case TYPE_STRING:
+			if(other.type == TYPE_STRING) {
+				string s = this->data.str;
+				s += other.data.str;
+				return newString(s);
+			}
+			break;
+		case TYPE_SYMBOL:
+			if(other.type == TYPE_SYMBOL) {
+				string s = this->data.str;
+				s += other.data.str;
+				return newSymbol(s);
+			}
+			break;
+
+		default: break; // just to be explicit
+	}
+			
+	throw LangError("Bad operands for +: " + this->fmtDisplay() + " & " + other.fmtDisplay());
+}
+
+Object Object::opSubtract(const Object &other) {
+	Object out; // for non-allocating ops
+	if(type == TYPE_INT && other.type == TYPE_INT) {
+		out.type = TYPE_INT;
+		out.data.i = data.i - other.data.i;
+		checkIntOrFail(out.data.i);
+		return out;
+	}
+	else if(isNumber(*this) && isNumber(other)) {
+		out.type = TYPE_FLOAT;
+		out.data.d = castFloat(*this) - castFloat(other);
+		return out;
+	}
+	throw LangError("Bad operands for -: " + this->fmtDisplay() + " & " + other.fmtDisplay());
+}
+
+Object Object::opMul(const Object &other) {
+	Object out; // for non-allocating ops
+	if(type == TYPE_INT && other.type == TYPE_INT) {
+		out.type = TYPE_INT;
+		out.data.i = data.i * other.data.i;
+		checkIntOrFail(out.data.i);
+		return out;
+	}
+	else if(isNumber(*this) && isNumber(other)) {
+		out.type = TYPE_FLOAT;
+		out.data.d = castFloat(*this) * castFloat(other);
+		return out;
+	}
+	throw LangError("Bad operands for -: " + this->fmtDisplay() + " & " + other.fmtDisplay());
+}
+
+Object Object::opDivide(const Object &other) {
+	Object out; // for non-allocating ops
+	if(isNumber(*this) && isNumber(other)) {
+		out.type = TYPE_FLOAT;
+		double denom = castFloat(other);
+		if(denom == 0) {
+			throw LangError("Divide by zero");
+		}
+		out.data.d = castFloat(*this) / denom;
+		return out;
+	}
+	throw LangError("Bad operands for /: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
 int FLOAT_PRECISION = 17;
