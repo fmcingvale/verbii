@@ -55,23 +55,11 @@ function builtin_puts(intr)
 	io.write(obj.value)
 end
 
-
-function builtin_print_string(intr)
-	while true do
-		word = intr:nextWordOrFail()
-		if word == "\"" then
-			return
-		else
-			io.write(word .. " ")
-		end
-	end
-end
-
 function builtin_define_word(intr)
-	name = intr:nextWordOrFail()
+	name = intr.syntax:nextObjOrFail()
 	words = {}
 	while true do
-		w = intr:nextWordOrFail()
+		w = intr.syntax:nextObjOrFail()
 		--print("DEFINE WORD:" .. w)
 		if w == ';' then
 			intr.WORDS[name] = words
@@ -153,17 +141,8 @@ function builtin_fromlocal(intr)
 	intr.LP = intr.LP + 1
 end
 
-function builtin_comment(intr)
-	while true do
-		w = intr:nextWordOrFail()
-		if w == ")" then
-			return
-		end
-	end
-end
-
 function builtin_showdef(intr)
-	name = intr:nextWordOrFail()
+	name = intr.syntax:nextObjOrFail()
 	if intr.WORDS[name] == nil then
 		print("No such word: " .. name)
 		return
@@ -178,47 +157,6 @@ function builtin_showdef(intr)
 	print(";")
 end
 
-function builtin_make_lambda(intr)
-	 -- Ported from the Python version -- see C++ version for full comments
-
-	 -- delete { that was just read
-	 intr.reader:deletePrevWord()
-
-	wordlist = {}
-	nesting = 1
-	while true do
-		::LOOP::
-		word = intr:nextWordOrFail()
-		-- delete the { ... } as I read it -- will replace it with a CallableWordlist
-		intr.reader:deletePrevWord()
-		if word == "{" then
-			-- if I find inner lambdas, just copy them for now and later when they are run, 
-			-- this same process will happen for them
-			nesting = nesting + 1
-			table.insert(wordlist, word)
-		elseif word == "}" then
-			nesting = nesting - 1
-			if nesting > 0 then
-				table.insert(wordlist, word) -- part of inner lambda, so push it to wordlist
-				goto LOOP
-			end
-			
-			-- create CallableWordlist from wordlist
-			callable = new_CallableWordlist(wordlist)
-			table.insert(intr.LAMBDAS, callable)
-			local index = #intr.LAMBDAS
-			-- replace { ... } in wordlist with $<lambda index> so a subsequent 'call'
-			-- will find it
-			intr.reader:insertPrevWord('$<lambda ' .. tostring(index) .. ">")
-			-- the first time I see { ... }, I have to push the CallableWordlist.
-			-- every subsequent time, the object will be pushed by the wordlist i just modified
-			intr:push(callable)
-			return
-		else
-			table.insert(wordlist,word)
-		end
-	end
-end
 
 function builtin_printchar(intr,a) 
 	io.write(string.char(a))
@@ -332,7 +270,5 @@ BUILTINS = {
 	[">L"] = { {}, builtin_tolocal},
 	["L>"] = { {}, builtin_fromlocal},
 	["depth"] = { {}, function(intr) intr:push(intr.SP_EMPTY - intr.SP) end },
-	["("] = { {}, builtin_comment },
 	[".showdef"] = { {}, builtin_showdef},
-	["{"] = { {}, builtin_make_lambda},
 }

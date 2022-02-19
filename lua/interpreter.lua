@@ -11,13 +11,14 @@
 	Ported from the Python implementation.
 ]]
 
-require("reader")
 require("native")
+require("syntax")
+require("langtypes")
 
 Interpreter = {}
 
 function Interpreter:addText(text)
-	self.reader:addText(text)
+	self.syntax:addText(text)
 end
 
 function Interpreter:push(obj)
@@ -31,7 +32,7 @@ end
 
 function Interpreter:pushInt(val)
 	-- like push but checks for valid integer range
-	if val > self.MAX_INT_31 or val < self.MIN_INT_31 then
+	if val > MAX_INT_31 or val < MIN_INT_31 then
 		error(">>>Integer overflow")
 	end
 
@@ -59,44 +60,24 @@ function Interpreter:reprStack()
 	return s
 end
 
-function Interpreter:nextWordOrFail()
-	-- get next word, which must be non-None, or error
-	word = self.reader:nextWord()
-	if word == "" then
-		error(">>>Unexpected end of input")
-	end
-	
-	return word
-end
-
-function Interpreter:prevWordOrFail()
-	-- get previous word, which must be non-None, or error
-	word = self.reader:prevWord()
-	if word == "" then
-		error(">>>Unable to find previous word")
-	end
-	
-	return word
-end
-
 function Interpreter:do_jump(jumpword)
 	--print("DO JUMP " .. jumpword)
 	-- take word like '>>NAME' or '<<NAME' and jump to '@NAME'
 	if string.sub(jumpword,1,2) == ">>" then
 		-- forward jump, find word (>>NAME -> @NAME)
 		while true do
-			word = self:nextWordOrFail()
-			--print("WORD " .. word)
-			if string.sub(word,2) == string.sub(jumpword,3) then
+			local word = self.syntax:nextObjOrFail()
+			--print("WORD " .. fmtStackPrint(word))
+			if isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
 			end
 		end
 	elseif string.sub(jumpword,1,2) == "<<" then
 		-- backward jump
 		while true do
-			word = self:prevWordOrFail()
+			local word = self.syntax:prevObjOrFail()
 			--print("FIND BACKWARD: " .. jumpword .. ", " .. word)
-			if string.sub(word,2) == string.sub(jumpword,3) then
+			if isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
 			end
 		end
@@ -118,150 +99,151 @@ function Interpreter:run(stephook)
 		::MAINLOOP::
 		-- see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
 
-		word = self.reader:nextWord()
+		local obj = self.syntax:nextObj()
+		--print("RUN OBJ: " .. fmtStackPrint(obj))
+
 		if stephook ~= nil then
 			stephook(self,word)
 		end
 		
-		if word == "" then
+		if obj == "" then
+			--print("RETURNING FROM WORD")
 			-- i could be returning from a word that had no 'return',
 			-- so pop words like i would if it were a return
-			if self.reader:hasPushedWords() then
-				self.reader:popWords()
+			if self.syntax:hasPushedObjLists() then
+				self.syntax:popObjList()
 					goto MAINLOOP
 			else
 				return
 			end
 		end
-			
-		if string.match(word, "^[%-]?[%d]+$") then
-			-- integers just get pushed to the stack
-			self:pushInt(tonumber(word))
+
+		-- see if its a literal to push
+		if type(obj) == "number" or isFloat(obj) or isString(obj) or isCallableWordlist(obj) then
+			self:push(obj)
 			goto MAINLOOP
 		end
 
-		if string.sub(word,1,1) == "#" then
-			self:push(new_Float(tonumber(string.sub(word, 2))))
-			goto MAINLOOP
-		end
-
-		local matches = string.match(word, "^%$<lambda ([%d]+)>$")
-		if matches then
-			index = tonumber(matches)
-			if index < 0 or index > #self.LAMBDAS then
-				error(">>>Bad lambda index " .. tostring(index))
-			end
-			self:push(self.LAMBDAS[index])
-			goto MAINLOOP
-		end
-
-		if word == "return" then
-			-- return from word by popping back to previous wordlist (if not at toplevel)
-			if self.reader:hasPushedWords() then
-				self.reader:popWords()
-			else
-				return -- return from top level exits program
-			end
-			goto MAINLOOP
-		end
-
-		if word == "if" then
-			-- true jump is required
-			true_jump = self.reader:nextWord()
-			-- false word is optional
-			if string.sub(self.reader:peekWord(),1,2) == "<<" or string.sub(self.reader:peekWord(),1,2) == ">>" then
-				false_jump = self.reader:nextWord()
-			else
-				false_jump = nil
-			end
-			-- get true|false condition
-			cond = self:pop()
-			if cond ~= true and cond ~= false then
-				error(">>>'if' expects true or false but got: " .. fmtStackPrint(cond))
-			end
-			-- these don't run the jump, they just reposition the reader
-			if cond == true then
-				self:do_jump(true_jump)
-			elseif false_jump ~= nil then
-				self:do_jump(false_jump)
-			end
-			goto MAINLOOP
-		end
-
-		if string.sub(word, 1, 2) == ">>" or string.sub(word, 1, 2) == "<<" then
-			self:do_jump(word)
-			goto MAINLOOP
-		end
-
-		if string.sub(word, 1, 1) == "@" then
-			-- jump target -- ignore
-			goto MAINLOOP
-		end
-
-		if word == "var" then
-			name = self:nextWordOrFail()
-			count = tonumber(self:nextWordOrFail())
-			-- must be unique nmw
-			if self.VARS[name] ~= nil then
-				error(">>>Trying to redefine variable "  .. name)
-			end
-		
-			self.VARS[name] = new_MemArray(count)
-			goto MAINLOOP
-		end
-			
-		if word == "del" then
-			name = self:nextWordOrFail()
-			if self.VARS[name] == nil then
-				error(">>>Trying to delete non-existent variable " .. name)
-			end
-			
-			self.VARS[name] = nil
-			goto MAINLOOP
-		end
-			
-		if word == "call" then
-			-- top of stack must be a CallableWordlist
-			obj = self:pop()
-			if not isCallableWordlist(obj) then
-				error(">>>call expects a lambda, but got: " .. fmtStackPrint(obj))
-			end
-
-			-- now this is just like calling a userword, below
-			-- TODO -- tail call elimination??
-			self.reader:pushWords(obj.wordlist)
-			goto MAINLOOP
-		end
-
-		-- builtins then userwords then vars
-
-		if BUILTINS[word] ~= nil then
-			argtypes = BUILTINS[word][1]
-			args = {}
-			--print("POP " .. tostring(#argtypes) .. " args")
-			for i=#argtypes,1,-1 do
-				val = self:pop()
-				if (type(val) ~= argtypes[i]) and (argtypes[i] ~= "any") then
-					error(">>>Expecting type " .. argtypes[i] .. " but got " .. type(val))
+		if isSymbol(obj) then
+			if obj == "return" then
+				-- return from word by popping back to previous wordlist (if not at toplevel)
+				if self.syntax:hasPushedObjLists() then
+					self.syntax:popObjList()
+				else
+					return -- return from top level exits program
 				end
-				table.insert(args, 1, val)
+				goto MAINLOOP
 			end
-			table.insert(args, 1, self)
-			BUILTINS[word][2](table.unpack(args))
-			goto MAINLOOP
+
+			if obj == "if" then
+				-- true jump is required
+				local true_jump = self.syntax:nextObj()
+				-- false word is optional
+				local peeked = self.syntax:peekObj()
+				--print("PEEKED:" .. fmtStackPrint(peeked))
+				local false_jump = nil
+				if isSymbol(peeked) then
+					if string.sub(peeked,1,2) == "<<" or string.sub(peeked,1,2) == ">>" then
+						false_jump = self.syntax:nextObj()
+					end
+				end
+				--print("TRUE JUMP: " .. fmtStackPrint(true_jump))
+				--print("FALSE JUMP: " .. fmtStackPrint(false_jump))
+				-- get true|false condition
+				local cond = self:pop()
+				if cond ~= true and cond ~= false then
+					error(">>>'if' expects true or false but got: " .. fmtStackPrint(cond))
+				end
+				-- these don't run the jump, they just reposition the reader
+				if cond == true then
+					self:do_jump(true_jump)
+				elseif false_jump ~= nil then
+					self:do_jump(false_jump)
+				end
+				goto MAINLOOP
+			end
+
+			if string.sub(obj, 1, 2) == ">>" or string.sub(obj, 1, 2) == "<<" then
+				self:do_jump(obj)
+				goto MAINLOOP
+			end
+
+			if string.sub(obj, 1, 1) == "@" then
+				-- jump target -- ignore
+				goto MAINLOOP
+			end
+
+			if obj == "var" then
+				name = self.syntax:nextObjOrFail()
+				count = self.syntax:nextObjOrFail()
+				if not type(count) == "number" then
+					error(">>>Expected int after var name but got " .. fmtStackPrint(count))
+				end
+				-- must be unique nmw
+				if self.VARS[name] ~= nil then
+					error(">>>Trying to redefine variable "  .. name)
+				end
+			
+				self.VARS[name] = new_MemArray(count)
+				goto MAINLOOP
+			end
+				
+			if obj == "del" then
+				name = self.syntax:nextObjOrFail()
+				if self.VARS[name] == nil then
+					error(">>>Trying to delete non-existent variable " .. name)
+				end
+				
+				self.VARS[name] = nil
+				goto MAINLOOP
+			end
+				
+			if obj == "call" then
+				-- top of stack must be a CallableWordlist
+				obj = self:pop()
+				if not isCallableWordlist(obj) then
+					error(">>>call expects a lambda, but got: " .. fmtStackPrint(obj))
+				end
+
+				-- now this is just like calling a userword, below
+				-- TODO -- tail call elimination??
+				self.syntax:pushObjList(obj.wordlist)
+				goto MAINLOOP
+			end
+
+			-- builtins then userwords then vars
+
+			if BUILTINS[obj] ~= nil then
+				argtypes = BUILTINS[obj][1]
+				args = {}
+				--print("POP " .. tostring(#argtypes) .. " args")
+				for i=#argtypes,1,-1 do
+					val = self:pop()
+					if (type(val) ~= argtypes[i]) and (argtypes[i] ~= "any") then
+						error(">>>Expecting type " .. argtypes[i] .. " but got " .. type(val))
+					end
+					table.insert(args, 1, val)
+				end
+				table.insert(args, 1, self)
+				BUILTINS[obj][2](table.unpack(args))
+				goto MAINLOOP
+			end
+
+			if self.WORDS[obj] ~= nil then
+				self.syntax:pushObjList(self.WORDS[obj])
+				--print("CALL USERWORD:" .. fmtStackPrint(obj))
+				--print("NOW WORDLIST: " .. tostring(self.syntax.reader.wordlist))
+				--self.syntax.reader:debug_print_wordlist()
+				goto MAINLOOP
+			end
+
+			if self.VARS[obj] ~= nil then
+				self:push(self.VARS[obj])
+				goto MAINLOOP
+			end
 		end
 
-		if self.WORDS[word] ~= nil then
-			self.reader:pushWords(self.WORDS[word])
-			goto MAINLOOP
-		end
-
-		if self.VARS[word] ~= nil then
-			self:push(self.VARS[word])
-			goto MAINLOOP
-		end
-
-		error(">>>Unknown word " .. word)
+		error(">>>Unknown word " .. fmtStackPrint(obj))
 	end
 end
 
@@ -272,9 +254,7 @@ function Interpreter:new(obj)
 	
 	obj.STACK_SIZE = (1<<16)
 	obj.LOCALS_SIZE = (1<<10)
-	obj.MAX_INT_31 = (1<<30) - 1
-	obj.MIN_INT_31 = -obj.MAX_INT_31
-	
+
 	obj.SIZE_STACKLOCALS = obj.STACK_SIZE + obj.LOCALS_SIZE
 	obj.STACKLOCALS = {}
 	-- prefill stack+locals
@@ -299,7 +279,7 @@ function Interpreter:new(obj)
 	-- vars
 	obj.VARS = {}
 
-	obj.reader = new_Reader()
+	obj.syntax = new_Syntax()
 
 	return obj
 end

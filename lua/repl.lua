@@ -22,15 +22,15 @@ function make_interpreter(noinit)
 		io.close(f)
 		intr:run()
 		-- don't want initlib in the backtrace history, once it has successfully loaded
-		intr.reader:clearAll()
+		intr.syntax:clearAll()
 	end
 
 	return intr
 end
 
-function repl()
+function repl(noinit)
 	-- Run interactively
-	intr = make_interpreter(false)
+	intr = make_interpreter(noinit)
 
 	while true do
 		io.write(">> ")
@@ -78,7 +78,7 @@ function run_test_mode(filename, noinit, status)
 		end
 		
 		io.write(">> " .. line) -- line has \n at end already
-		intr.reader:clearAll() -- remove any leftover text from previous line run
+		intr.syntax:clearAll() -- remove any leftover text from previous line run
 		intr:addText(line)
 		intr:run()
 		print("=> " .. intr:reprStack())
@@ -162,17 +162,24 @@ for i=1,#arg do
 end
 
 if filename == nil then
-	repl()
+	repl(noinit)
 elseif test_mode then
 	status = {}
 	while not status["done"] do
+		--run_test_mode(filename, noinit, status)
 		local result,error = pcall(run_test_mode, filename, noinit, status)
 		--print("RESULT:",result)
 		if result == false then
 			-- match sequence >>> to strip out filename from error message that lua added
 			match = string.match(error, "^.+>>>")
-			print("*** " .. string.sub(error, #match+1) .. " ***")
-			--print("MAX COUNT " .. tostring(status["max-count"]))
+			if match == nil then
+				-- didn't get expected error format, so print raw error to show something at least
+				print("*** " .. error .. " ***")
+				os.exit() -- just exit since something is extra wrong here ...
+			else
+				print("*** " .. string.sub(error, #match+1) .. " ***")
+				--print("MAX COUNT " .. tostring(status["max-count"]))
+			end
 			status["max-count"] = status["max-count"] + 1
 		elseif result==true then
 			break
@@ -184,8 +191,14 @@ else
 	if result == false then
 		-- match sequence >>> to strip out filename from error message that lua added
 		match = string.match(error, "^.+>>>")
-		print("*** " .. string.sub(error, #match+1) .. " ***")
-		print_backtrace(intr)
+		-- like above, if that didn't match, print raw error and exit
+		if match == nil then
+			print("*** " .. error .. " ***")
+			os.exit()
+		else
+			print("*** " .. string.sub(error, #match+1) .. " ***")
+			print_backtrace(intr)
+		end
 	end
 end
 

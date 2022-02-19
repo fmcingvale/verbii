@@ -47,8 +47,13 @@ function Reader:prevWord()
 end
 
 function Reader:pushWords(words)
+	--print("READER PUSH WORDS:")
+	--for i=1,#words do
+	--	print(fmtStackPrint(words[i]))
+	--end
 	table.insert(self.stack, {self.wordlist,self.pos})
 	self.wordlist = words
+	--self:debug_print_wordlist()
 	self.pos = 1
 end
 
@@ -78,11 +83,18 @@ function Reader:insertPrevWord(word)
 	self.pos = self.pos + 1
 end
 
+function Reader:debug_print_wordlist()
+	print("CURRENT WORDLIST:")
+	for i=1,#self.wordlist do
+		print(fmtStackPrint(self.wordlist[i]))
+	end
+end
+
 function Reader:new(obj)
 	setmetatable(obj, self)
 	self.__index = self
 	obj.__class__ = "Reader"
-	obj:clearAll()
+	obj:clearAll() -- set other fields
 	return obj
 end
 

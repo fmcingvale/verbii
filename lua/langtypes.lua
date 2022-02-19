@@ -7,6 +7,8 @@
 -- lua doesn't differentiate between int and float, so need a class ...
 Float = {}
 FLOAT_PRECISION = 17
+MAX_INT_31 = (1<<30) - 1
+MIN_INT_31 = -MAX_INT_31
 
 function Float:new(obj, value)
 	setmetatable(obj, self)
@@ -91,6 +93,10 @@ function new_CallableWordlist(wordlist)
 	return CallableWordlist:new({},wordlist)
 end
 
+function isSymbol(obj)
+	return type(obj) == "string"
+end
+
 -- format obj for normal program output, like '.'
 function fmtDisplay(obj)
 	if type(obj) == "number" then
@@ -110,7 +116,7 @@ function fmtDisplay(obj)
 		return "<lambda>"
 	elseif isString(obj) then
 		return obj.value
-	elseif type(obj) == "string" then
+	elseif isSymbol(obj) then
 		-- strings are symbols, they get ' here to differentiate from strings
 		return "\"" .. obj
 	else
@@ -138,7 +144,7 @@ function fmtStackPrint(obj)
 	elseif isString(obj) then
 		-- in stack display, strings get " .. "
 		return '"' .. obj.value .. '"'
-	elseif type(obj) == "string" then
+	elseif isSymbol(obj) then
 		-- strings are symbols, in stack display they don't get '
 		return obj
 	else
