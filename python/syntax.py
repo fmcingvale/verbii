@@ -1,3 +1,13 @@
+"""
+	Syntax - takes words from Reader, recognizes any syntax forms, and returns
+	objects to Interpreter.
+	
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+"""
+
+# still a lot of "words" vs "objects" here, for historical reasons ... just a naming thing,
+# will clean up eventually ...
+
 from reader import Reader
 from errors import LangError
 from langtypes import LangLambda, LangString, MAX_INT_31, MIN_INT_31

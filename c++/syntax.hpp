@@ -1,4 +1,9 @@
-
+/*
+	Syntax - takes words from Reader, recognizes any syntax forms, and returns
+	objects to Interpreter.
+	
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
 #pragma once
 
 #include "langtypes.hpp"
@@ -17,6 +22,7 @@ class Syntax {
 	void popObjList() { reader.popObjList(); }
 	bool hasPushedObjLists() { return reader.hasPushedObjLists(); }
 
+	// these do the actual syntax processing
 	Object nextObj();
 	Object peekObj();
 	Object prevObj();

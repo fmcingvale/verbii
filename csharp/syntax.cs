@@ -1,4 +1,9 @@
-
+/*
+	Syntax - takes words from Reader, recognizes any syntax forms, and returns
+	objects to Interpreter.
+	
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
 using System;
 using System.Collections.Generic;
 #nullable enable

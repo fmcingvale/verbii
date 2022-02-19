@@ -1,3 +1,9 @@
+/*
+	Syntax - takes words from Reader, recognizes any syntax forms, and returns
+	objects to Interpreter.
+	
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+*/
 #include "syntax.hpp"
 #include "errors.hpp"
 #include <string>
@@ -159,7 +165,7 @@ Object Syntax::parse_lambda() {
 }
 
 Object Syntax::parse_quote_printstring() {
-	// ." some string here " -- rewrite to '"some string here" .'
+	// ." some string here " -- rewrite to '"some string here" puts'
 	string s;
 	// delete ."
 	reader.deletePrevObj();
