@@ -138,6 +138,12 @@ void Interpreter::run(bool singlestep) {
 			continue;
 		}
 
+		if(obj.isSymbol("'",1)) {
+			// quoted symbol - remove one level of quoting and push
+			push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));
+			continue;
+		}
+
 		if(obj.isSymbol("return")) {
 			// return from word by popping back to previous wordlist (if not at toplevel)
 			if(syntax->hasPushedObjLists()) {	
