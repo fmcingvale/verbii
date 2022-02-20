@@ -449,3 +449,19 @@ oneword
 >> . CR
 ""and some embedded"quote"chars << here"" 
 => 
+>> ( length operator )
+=> 
+>> clear
+=> 
+>> "hello"
+=> "hello" 
+>> length
+=> 5 
+>> 'bigsymbol
+=> 5 bigsymbol 
+>> length
+=> 5 9 
+>> var x 123
+=> 5 9 
+>> x length
+=> 5 9 123 

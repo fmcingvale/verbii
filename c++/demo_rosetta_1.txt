@@ -17,7 +17,7 @@ rot 1 - dup 0 == if >>end ( b a+b N-1 )
 -rot <<loop 
 @end drop drop drop ;
 
-." First 20 fibonacci numbers: "
+"First 20 fibonacci numbers:" .
 20 fibonacci CR
 
 ( https://rosettacode.org/wiki/Sum_digits_of_an_integer )
@@ -29,9 +29,9 @@ dup 10 /mod >L rot + swap drop L> ( rem+sum quot )
 dup? 0 == if >>end <<loop
 @end ;
 
-." Sum digits: 6982 (25) -- " 6982 sumDigits . CR
-." Sum digits: 48395019 (39) -- " 48395019 sumDigits . CR
-." Sum digits: 1073741823 (36) -- " 1073741823 sumDigits . CR
+"Sum digits: 6982 (25) --" . 6982 sumDigits . CR
+"Sum digits: 48395019 (39) --" . 48395019 sumDigits . CR
+"Sum digits: 1073741823 (36) --" . 1073741823 sumDigits . CR
 
 ( https://rosettacode.org/wiki/Proper_divisors )
 
@@ -49,8 +49,8 @@ if >>done <<loop
 @done drop drop
 @eq1 ;
 
-." Proper divisors of 100: " 100 printProperDivisors CR
-." Proper divisors of 256: " 256 printProperDivisors CR
+"Proper divisors of 100:" . 100 printProperDivisors CR
+"Proper divisors of 256:" . 256 printProperDivisors CR
 
 ( https://rosettacode.org/wiki/Pi )
 
@@ -84,13 +84,13 @@ if >>true >>false
 	1 - dup? 0 == if >>done
 	R ref
 	N ref T ref * - 10 * NR set! ( nr = 10*(r-n*t) )
-	3 Q ref * R ref + 10 * T ref / N ref 10 * - N set! ( n = ((10*(3*q+r))//t)-10*n )
+	3 Q ref * R ref + 10 * T ref // N ref 10 * - N set! ( n = ((10*(3*q+r))//t)-10*n )
 	Q ref 10 * Q set! ( q *= 10 )
 	NR ref R set! ( r = nr )
 	<<loop
 @false
 	Q ref 2 * R ref + L ref * NR set! ( nr = (2*q+r)*l )
-	K ref 7 * Q ref * 2 + R ref L ref * + T ref L ref * / NN set! ( nn = (q*(7*k)+2+(r*l))//(t*l) )
+	K ref 7 * Q ref * 2 + R ref L ref * + T ref L ref * // NN set! ( nn = (q*(7*k)+2+(r*l))//(t*l) )
 	Q ref K ref * Q set! ( q *= k )
 	T ref L ref * T set! ( t *= l )
 	L ref 2 + L set! ( l += 2 )
@@ -100,7 +100,7 @@ if >>true >>false
 	<<loop
 @done ;
 ( -- this above method can only reach 3 digits of PI without bignum support -- )
-." 3 digits of PI ... " 3 calcPI CR
+"3 digits of PI ..." . 3 calcPI CR
 
 del Q del R del T del K del N del L del NR del NN
 
@@ -111,10 +111,10 @@ del Q del R del T del K del N del L del NR del NN
 		did that above, i'm doing a countdown instead -- )
 
 ( -- this is true anonymous recursion, no names are defined ... 
-		done in Y-combinator-ish fashion where the lambdam passes itself as 
+		done in Y-combinator-ish fashion where the lambda passes itself as 
 		an argument to itself -- )
 		
-." Print 20 .. 1, with anonymous recursion: "
+"Print 20 .. 1, with anonymous recursion:" .
 { ( lambda N -- ) dup? 0 == if >>done dup . 1 - over call @done }
 20 over call CR
 
@@ -146,10 +146,10 @@ del Q del R del T del K del N del L del NR del NN
 var adder 1 ( can save to a variable and call )
 make-add-10 adder set!
 
-." Expect 110: " 100 adder ref call . CR
+"Expect 110:" . 100 adder ref call . CR
 
 { 20 + } adder set! ( or just create it directly without make-add-10 )
-." Expect 120: " 100 adder ref call . CR
+"Expect 120:" . 100 adder ref call . CR
 
 ( shortcut local names )
 : L0 LP ;
@@ -168,7 +168,7 @@ make-add-10 adder set!
 : nmax ( xn ... x1 NR -- max of NR numbers )
 	{ max } swap 1 - repeat ; ( call 'max' NR-1 times )
 
-." Expect 50: "
+"Expect 50:" .
 5 10 50 30 -20 8 19 41 0 12 10 nmax . CR
 
 ( calculate all factors of an integer )
@@ -187,9 +187,9 @@ make-add-10 adder set!
 
 	@done ;
 
-." Factors of 200: " 200 factors CR
-." Factors of 1000: " 1000 factors CR
-." Factors of 41*107: " 41 107 * factors CR
+"Factors of 200:" . 200 factors CR
+"Factors of 1000:" . 1000 factors CR
+"Factors of 41*107:" . 41 107 * factors CR
 
 ( -- mutually recursive functions -- )
 : even? ( n -- is even? )
@@ -200,8 +200,8 @@ make-add-10 adder set!
 : odd? ( n -- is odd? )
 	dup? 0 == if >>even 1 - even? return @even false ;
 
-." Expect true true false false: " 100 even? . 64 even? . 31 even? . 151 even? . CR
-." Expect false false true true: " 200 odd? . 44 odd? . 181 odd? . 211 odd? . CR
+"Expect true true false false:" . 100 even? . 64 even? . 31 even? . 151 even? . CR
+"Expect false false true true:" . 200 odd? . 44 odd? . 181 odd? . 211 odd? . CR
 
 ( -- countdown that only prints numbers that pass a test -- )
 : countdown-test ( N test -- print countdown of N where test is true )
@@ -213,10 +213,10 @@ make-add-10 adder set!
 		@recur
 			swap 1 - swap <<loop @done ;
 
-." Count by 1: " 20 { drop true } countdown-test CR
-." Count by evens: " 40 { even? } countdown-test CR
-." Count by odds: " 40 { odd? } countdown-test CR
-." Count by 5s: " 100 { 5 mod 0 == } countdown-test CR
+"Count by 1:" . 20 { drop true } countdown-test CR
+"Count by evens:" . 40 { even? } countdown-test CR
+"Count by odds:" . 40 { odd? } countdown-test CR
+"Count by 5s:" . 100 { 5 mod 0 == } countdown-test CR
 
 ( -- non-rosetta tasks -- )
 
@@ -251,20 +251,42 @@ L0 ref L1 ref + L0 set! ( current += increment )
 LP 4 + LP! ( clean up locals )
 ;
 
-." Count 1 .. 10: " 1 1 { 10 <= } { . } for-while CR
-." Count 20 .. 0, by 4's: " 20 -4 { 0 >= } { . } for-while CR
+"Count 1 .. 10:" . 1 1 { 10 <= } { . } for-while CR
+"Count 20 .. 0, by 4's:" . 20 -4 { 0 >= } { . } for-while CR
 
 ( -- https://rosettacode.org/wiki/Multiplication_tables -- )
-( -- needs some work -- supposed to only print top half and other formatting details -- )
 
-." Multiplication table ... " CR
+: .cn ( c n -- print char n times )
+	@loop
+	dup? 0 == if >>done
+	swap dup .c swap 1 - <<loop
+	@done drop ;
+
+: spaces ( n -- print n spaces ) 32 swap .cn ;
+
+: .w ( obj width -- print obj with minimum width, left padded )
+	swap str dup length rot swap - ( str width-len )
+	dup 0 > if >>dopad
+	drop >>done
+	@dopad spaces
+	@done . ;
+
+"Upper triangle of stars ..." . CR 
+15 -1 { 0 > } { { 42 .c 32 .c } swap repeat CR } for-while 
+
+"Multiplication table ..." . CR
 clear
 1 1 { 10 < } { 
+	dup . ( print row label )
 	1 1 { 10 < } {
 		( stack is: outer-counter inner-counter -- i can't destroy outer counter
 		  because it is only refreshed after all inner loops are finished, so copy
 		  it over to multiply ) 
-		over * . 32 .c } for-while CR
+		over ( outer inner outer )
+		2dup <  if >>skip ( only print upper triangle )
+		* 4 .w >>done ( print width=4 ) 
+		@skip drop drop 5 spaces @done
+		} for-while CR
 } for-while
 
 ( -- https://rosettacode.org/wiki/100_doors -- )
@@ -295,4 +317,3 @@ var DOORS 101 ( numbering these 1..100 since 0 as increment would infinite loop 
 	. @skip } for-while CR
 	
 del DOORS 
-

@@ -156,20 +156,14 @@ double castFloat(const Object &a) {
 }
 
 Object Object::opAdd(const Object &other) {
-	Object out; // for non-allocating ops
 	switch(type) {
 		case TYPE_NULL: break;
 		case TYPE_INT:
 			if(other.type == TYPE_INT) {
-				out.type = TYPE_INT;
-				out.data.i = data.i + other.data.i;
-				checkIntOrFail(out.data.i);
-				return out;
+				return newInt(data.i + other.data.i);
 			}
 			else if(other.type == TYPE_FLOAT) {
-				out.type = TYPE_FLOAT;
-				out.data.d = data.i + other.data.d;
-				return out;
+				return newFloat(data.i + other.data.d);
 			}
 			else if(other.type == TYPE_MEMARRAY) {
 				// can't directly reuse 'other' since offset and count are part of
@@ -181,14 +175,10 @@ Object Object::opAdd(const Object &other) {
 			break;
 		case TYPE_FLOAT:
 			if(other.type == TYPE_INT) {
-				out.type = TYPE_FLOAT;
-				out.data.d = data.d + other.data.i;
-				return out;
+				return newFloat(data.d + other.data.i);
 			}
 			else if(other.type == TYPE_FLOAT) {
-				out.type = TYPE_FLOAT;
-				out.data.d = data.d + other.data.d;
-				return out;
+				return newFloat(data.d + other.data.d);
 			}
 			break;
 		case TYPE_BOOL: break;
@@ -225,49 +215,45 @@ Object Object::opAdd(const Object &other) {
 }
 
 Object Object::opSubtract(const Object &other) {
-	Object out; // for non-allocating ops
 	if(type == TYPE_INT && other.type == TYPE_INT) {
-		out.type = TYPE_INT;
-		out.data.i = data.i - other.data.i;
-		checkIntOrFail(out.data.i);
-		return out;
+		return newInt(data.i - other.data.i);
 	}
 	else if(isNumber(*this) && isNumber(other)) {
-		out.type = TYPE_FLOAT;
-		out.data.d = castFloat(*this) - castFloat(other);
-		return out;
+		return newFloat(castFloat(*this) - castFloat(other));
 	}
 	throw LangError("Bad operands for -: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
 Object Object::opMul(const Object &other) {
-	Object out; // for non-allocating ops
 	if(type == TYPE_INT && other.type == TYPE_INT) {
-		out.type = TYPE_INT;
-		out.data.i = data.i * other.data.i;
-		checkIntOrFail(out.data.i);
-		return out;
+		return newInt(data.i * other.data.i);
 	}
 	else if(isNumber(*this) && isNumber(other)) {
-		out.type = TYPE_FLOAT;
-		out.data.d = castFloat(*this) * castFloat(other);
-		return out;
+		return newFloat(castFloat(*this) * castFloat(other));
 	}
 	throw LangError("Bad operands for -: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
 Object Object::opDivide(const Object &other) {
-	Object out; // for non-allocating ops
 	if(isNumber(*this) && isNumber(other)) {
-		out.type = TYPE_FLOAT;
 		double denom = castFloat(other);
 		if(denom == 0) {
 			throw LangError("Divide by zero");
 		}
-		out.data.d = castFloat(*this) / denom;
-		return out;
+		return newFloat(castFloat(*this) / denom);
 	}
 	throw LangError("Bad operands for /: " + this->fmtDisplay() + " & " + other.fmtDisplay());
+}
+
+Object Object::opLength() {
+	switch(type) {
+		case TYPE_STRING:
+		case TYPE_SYMBOL:
+			return newInt(strlen(data.str));
+		case TYPE_MEMARRAY:
+			return newInt(data.memarray->count);
+	}
+	throw LangError("'length' not supported for object: " + fmtStackPrint());
 }
 
 int FLOAT_PRECISION = 17;

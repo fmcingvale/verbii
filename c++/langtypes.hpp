@@ -85,6 +85,8 @@ class Object {
 	Object opDivide(const Object &other);
 	// '/mod' (ints)
 	Object opDivMod(const Object &other);
+	// 'length' word (string, symbol, memory)
+	Object opLength();
 
 	// get string representation of object for printing to output
 	// (like would be displayed in normal program output)

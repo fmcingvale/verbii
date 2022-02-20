@@ -265,5 +265,12 @@ clear
 """and some embedded"quote"chars << here"""
 . CR
 
-
+( length operator )
+clear
+"hello"
+length
+'bigsymbol
+length
+var x 123
+x length
 

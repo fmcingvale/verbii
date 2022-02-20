@@ -260,6 +260,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 		[](Interpreter *intr) {pushBool(intr, popFloatOrInt(intr) < popFloatOrInt(intr));}},
 	{"int?",
 		[](Interpreter *intr) {intr->push(newBool(intr->pop().isInt()));}},
+	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
 	{"depth", 
 		[](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
 	{"SP",
