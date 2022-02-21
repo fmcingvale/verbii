@@ -21,6 +21,7 @@ const unsigned char TYPE_MEMARRAY = 4;
 const unsigned char TYPE_FLOAT = 5;
 const unsigned char TYPE_STRING = 6;
 const unsigned char TYPE_SYMBOL = 7;
+const unsigned char TYPE_LIST = 8;
 
 class Object;
 
@@ -59,6 +60,7 @@ class Object {
 		{ return type == TYPE_SYMBOL &&
 			((n == 0 && !strcmp(data.str,s)) ||
 			(n > 0 && !strncmp(data.str, s, n))); }
+	bool isList() const { return type == TYPE_LIST; }
 			
 	// get value (make sure to check first)
 	unsigned int asInt() const { return data.i; }
@@ -66,6 +68,7 @@ class Object {
 	ObjList* asLambda() const { return data.objlist; };
 	MemoryArray* asMemArray() const { return data.memarray; }
 	double asFloat() const { return data.d; }
+	ObjList *asList() const { return data.objlist; }
 	 
 	const char *asString() const { return data.str; }
 	const char *asSymbol() const { return data.str; }
@@ -75,7 +78,9 @@ class Object {
 
 	// '==' builtin (exact match except allows for int==float)
 	bool opEqual(const Object &other);
-	// '+' builtin (int, float, memarray, strings, symbols)
+	// '>' builtin (int, float, string, symbol)
+	bool opGreater(const Object &other);
+	// '+' builtin (int, float, memarray, strings, symbols, lists)
 	Object opAdd(const Object &other);
 	// '-' builtin (int, float)
 	Object opSubtract(const Object &other);
@@ -85,8 +90,16 @@ class Object {
 	Object opDivide(const Object &other);
 	// '/mod' (ints)
 	Object opDivMod(const Object &other);
-	// 'length' word (string, symbol, memory)
+	// 'length' word (string, symbol, memory, list)
 	Object opLength();
+	// 'slice' operation - start at index, get nr items, or -1 for rest
+	// index/length out of bounds is never an error - returns empty object in worst case
+	// negative indexes count from end (where -1 is last item)
+	// for: strings, symbols, lists
+	//
+	// NOTE: slice are the same type as the original object -- so a 1-length slice of a list is still a list.
+	// use unmake when you need the contents in the original type.
+	Object opSlice(int index, int nr);
 
 	// get string representation of object for printing to output
 	// (like would be displayed in normal program output)
@@ -101,7 +114,7 @@ class Object {
 		int i; // ints and lamda (index into LAMBDAS)
 		bool b;
 		MemoryArray *memarray;
-		ObjList *objlist; // for lambdas
+		ObjList *objlist; // for lambdas & lists
 		double d;
 		const char *str; // strings & symbols, immutable
 	} data;
@@ -127,4 +140,6 @@ Object newString(const std::string& );
 // like above
 Object newSymbol(const char *s, size_t len, bool keepPointer=false);
 Object newSymbol(const std::string& );
+
+Object newList(); // always makes empty list
 

@@ -1,0 +1,197 @@
+(
+	Work in progress -- seeing if entire language can be parsed by itself and
+	then serialized into syntax-free form.
+
+	If this works, eventually this can be used to bootstrap the language to get
+	this working as the runtime syntax module.
+	
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+)
+
+( -- watch for locals not being cleaned up -- )
+var LP_START 1
+LP LP_START set!
+
+: get ( sequence i -- obj = i'th object from sequence )
+	over list? if >>islist
+	( for string & symbol, slice of 1 item is desired value )
+	1 slice return
+	@islist ( here i want first element of sliced list )
+	1 slice unmake drop
+	;
+
+: +get ( same as get but leaves obj on stack )
+	over swap get ;
+
+: syntax-next ( convert next word from input to runnable object )
+	reader-next
+	dup null? if >>null
+	dup '( == if >>comment
+	dup '{ == if >>lambda
+	dup 0 get '" == if >>string ( "... )
+	dup symbol-to-integer dup null? if >>not-integer >>integer
+	@not-integer drop
+	dup 0 get '# == if >>float
+	( leave unprocessed word on stack )
+	return
+	@null
+	return ( leave null on stack )
+	@comment
+	drop syntax-comment return ( skip comment and return NEXT object )
+	@lambda
+	drop syntax-lambda return
+	@string
+	syntax-string return
+	@integer
+	swap drop return
+	@float
+	1 -1 slice parse-float return
+	;
+
+: syntax-string ( first string part on stack )
+	(
+		"syntax-string:" . CR
+	)
+	>L ( L0 = string in progress )
+	L0 ref -1 get '" == if >>endstring ( " see if its all one word )
+	@loop
+	(
+		"string NOW:" . L0 ref . CR
+		"stack now:" . .S CR
+	)
+	L0 ref 32 1 make-symbol + L0 set! ( add space before next piece )
+	reader-next 
+	(
+		"piece:" . dup . CR
+		"stack now:" . .S CR
+	)
+	dup null? if >>eof
+	dup L0 ref swap + L0 set! ( string += piece )
+	-1 get '" == if >>endstring ( " )
+	<<loop
+	@eof "Unexpected end of input in string" error
+	@endstring
+	(
+		"POSTPROCESS STRING:" . L0 ref . CR
+		"STACK NOW:" . .S CR
+	)
+	L0 ref dup length 2 - 1 swap slice ( remove quotes )
+	unmake make-string ( symbol -> string )
+	LP 1 + LP! ( remove locals )
+	;
+
+: char-to-ascii ( takes 1-length string or symbol and returns ascii code for char )
+	unmake 1 == if >>ok "char-to-ascii got multichar string!" error @ok
+	;
+
+: char-to-digit ( takes "0" .. "9" -- as symbol or string -- and returns integer 0..9 )
+	char-to-ascii "0" char-to-ascii -
+	;
+
+: symbol-to-integer ( symbol -- integer or null if cannot parse as integer )
+	( "symbol-to-integer: " . dup . CR )
+	0 >L dup length >L 0 >L  ( L0 = index, L1 = length, L2 = value )
+	L0 ref +get dup '+ == swap '- == or if >>skipsign >>digitloop 
+	@skipsign L0 ref 1 + L0 set!
+	@digitloop
+	( " value " . L2 ref . " index " . L0 ref . " length " . L1 ref . CR )
+	L0 ref L1 ref >= if >>done ( index >= length, done )
+	L0 ref +get dup '0 >= swap '9 <= and if >>gotdigit >>notdigit
+	@gotdigit
+	( "got digit" . CR )
+	L0 ref +get char-to-digit L2 ref 10 * + L2 set!
+	L0 ref 1 + L0 set! <<digitloop
+	@notdigit LP 3 + LP! drop null return
+	@done 
+	( adjust sign )
+	0 get '- == not if >>donedone L2 ref neg L2 set!
+	@donedone
+	L2 ref LP 3 + LP!
+	;
+
+: syntax-lambda ( assumes { was just read & dropped )
+	0 make-list 
+	@loop
+		reader-next
+		dup null? if >>eof
+		dup '} == if >>closebrace
+		dup '{ == if >>innerlambda
+		append ( else append to list and continue ) <<loop
+	@eof
+		"Unexpected end of input inside { .. }" error
+	@closebrace
+		drop make-lambda return
+	@innerlambda
+		( read inner lambda then append )
+		drop syntax-lambda 
+		( append inner lambda to my list )
+		append <<loop 
+		;
+
+: syntax-comment ( assumes open paren just read )
+	1 >L ( L0 = nesting )
+	@loop
+		reader-next ( puts symbol on stack )
+		dup null? if >>eof
+		dup ') == if >>closeparen
+		dup '( == if >>openparen
+		drop <<loop ( discard and continue )
+	@closeparen
+		LP ref 1 - LP set!
+		LP ref 0 == if >>end
+		drop <<loop
+	@openparen
+		LP ref 1 + LP set!
+		drop <<loop
+	@end
+		LP 1 + LP!
+		drop
+		syntax-next return
+	@eof
+		"End of input inside comment!" error
+	;
+
+: process-file
+	"bbb.txt" reader-open
+	SP >L ( L0=SP at start )
+	@loop
+	syntax-next
+	.S CR
+	dup null? if >>done <<loop
+	@done
+	drop
+	"END STACK:" . .S CR 
+	L> SP - 1 - make-list "PARSED TO:" . . CR
+	;
+
+process-file
+
+(
+'1234 symbol-to-integer .S CR
+'9 symbol-to-integer .S CR
+'-55 symbol-to-integer .S CR
+'-7 symbol-to-integer .S CR
+'123a symbol-to-integer .S CR
+)
+
+: for-each ( object lambda -- call lambda on each object in string,symbol,list )
+	( "for-each:" . CR )
+	>L dup length >L 0 >L ( L0=index, L1=length, L2=lambda )
+	@loop
+	( "index " . L0 ref . " length " . L1 ref . CR )
+	L0 ref L1 ref >= if >>done
+	L0 ref +get L2 ref call ( call lambda with element on stack )
+	L0 ref 1 + L0 set! <<loop
+	@done drop LP 3 + LP!
+	;
+
+"A" "B" "C" "D" "E" 5 make-list "LIST:" . dup . CR
+{ "Element:" . . CR } for-each
+
+"abcdef" "STRING:" . dup . CR 
+{ "Element:" . . CR } for-each
+
+( - check that locals were deleted - )
+LP LP_START ref != if >>badLP >>okLP
+"*** LOCALS NOT CLEANED UP ***" error
+@okLP "Locals OK!" . CR

@@ -1,6 +1,11 @@
 ( -- default library, loaded at startup -- )
 ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
 
+var SP_EMPTY 1
+SP SP_EMPTY set!
+
+def depth SP_EMPTY ref SP - 1 - ;
+
 def . str puts 32 .c ;
 def CR ( -- , prints CR LF ) 10 .c 13 .c ;
 def clear ( xn ... x1 -- ) SP depth + 1 - SP! ;

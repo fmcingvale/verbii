@@ -34,19 +34,6 @@ static void pushBool(Interpreter *intr, bool b) {
 	intr->push(newBool(b));
 }
 
-static double popFloatOrInt(Interpreter *intr) {
-	Object obj = intr->pop();
-	if(obj.isFloat()) {
-		return obj.data.d;
-	}
-	else if(obj.isInt()) {
-		return obj.data.i;
-	}
-	else {
-		throw LangError("Expecting int or float but got: " + obj.fmtStackPrint());
-	}
-}
-
 /*
 	can't count on rounding behavior of host language -- i.e. some languages/systems
 	round differently on +/- values.
@@ -235,39 +222,160 @@ static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &)) {
 	intr->push((a.*op)(b));
 }
 
+// =============== experimental syntax scripting ===============================
+#include <iostream>
+#include <fstream>
+static string readfile(string filename) {
+	ifstream fileIn(filename);
+	string line, buf;
+	while(getline(fileIn, line)) {
+		buf += "\n" + line;
+	}
+	return buf;
+}
+
+Reader syntax_reader;
+static void builtin_reader_open(Interpreter *intr) {
+	Object filename = intr->pop();
+	if(!filename.isString()) {
+		throw LangError("reader-open requires filename as string");
+	}
+	string buf = readfile(filename.asString());
+	syntax_reader.addText(buf);
+}
+
+static void builtin_reader_next(Interpreter *intr) {
+	Object sym = syntax_reader.nextObj();
+	if(!sym.isNull() && !sym.isSymbol()) {
+		throw LangError("reader-next expecting null or symbol but got: " + sym.fmtStackPrint());
+	}
+	intr->push(sym);
+}
+
+// ( sn .. s1 N -- list of N items; N can be zero for an empty list )
+static void builtin_make_list(Interpreter *intr) {
+	Object list = newList();
+	int nr = popInt(intr);
+	for(int i=0; i<nr; ++i) {
+		list.data.objlist->insert(list.data.objlist->begin(), intr->pop());
+	}
+	intr->push(list);
+}
+
+static void builtin_slice(Interpreter *intr) {
+	int nr = popInt(intr);
+	int index = popInt(intr);
+	Object obj = intr->pop();
+	intr->push(obj.opSlice(index, nr));
+}
+
+static void builtin_append(Interpreter *intr) {
+	Object add = intr->pop();
+	Object list = intr->pop();
+	if(!list.isList()) {
+		throw LangError("append expecting list but got: " + list.fmtStackPrint());
+	}
+	list.data.objlist->push_back(add);
+	intr->push(list);
+}
+
+static void builtin_make_lambda(Interpreter *intr) {
+	Object list = intr->pop();
+	if(!list.asList()) {
+		throw LangError("make-lambda expects list but got: " + list.fmtStackPrint());
+	}
+	intr->push(newLambda(list.data.objlist));
+}
+
+static void builtin_greater(Interpreter *intr) {
+	Object b = intr->pop();
+	Object a = intr->pop();
+	pushBool(intr, a.opGreater(b));
+}
+
+static const char *popStringOrSymbol(Interpreter *intr) {
+	Object o = intr->pop();
+	if(o.isString()) {
+		return o.asString();
+	}
+	else if(o.isSymbol()) {
+		return o.asSymbol();
+	}
+	else {
+		throw LangError("Expecting string or symbol but got: " + o.fmtStackPrint());
+	}
+}
+
+static void builtin_unmake(Interpreter *intr) {
+	Object obj = intr->pop();
+	if(obj.isString() || obj.isSymbol()) {
+		int len = strlen(obj.data.str);
+		for(int i=0; i<len; ++i) {
+			intr->push(newInt((int)(obj.data.str[i])));
+		}
+		intr->push(newInt(len));
+	}
+	else if(obj.isList()) {
+		for(auto obj : *obj.data.objlist) {
+			intr->push(obj);
+		}
+		intr->push(newInt((int)(obj.data.objlist->size())));
+	}
+	else
+		throw LangError("Object cannot be unmade: " + obj.fmtStackPrint());
+}
+
+/* ( cn .. c1 N -- string of N chars ) */
+static void builtin_make_string(Interpreter *intr) {
+	int nr = popInt(intr);
+	string s = "";
+	for(int i=0; i<nr; ++i) {
+		s.insert(s.begin(),(char)popInt(intr));
+	}
+	intr->push(newString(s));
+}
+
+/* ( cn .. c1 N -- symbol of N chars ) */
+static void builtin_make_symbol(Interpreter *intr) {
+	int nr = popInt(intr);
+	string s = "";
+	for(int i=0; i<nr; ++i) {
+		s.insert(s.begin(),(char)popInt(intr));
+	}
+	intr->push(newSymbol(s));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
 	{"*", [](Interpreter *intr) { do_binop(intr, &Object::opMul); }},
 	{"/", [](Interpreter *intr) { do_binop(intr, &Object::opDivide); }},
 	{"/mod", builtin_divmod},
-	{"f.setprec",
-		[](Interpreter *intr) { FLOAT_PRECISION = popInt(intr); }},
+	{"f.setprec", [](Interpreter *intr) { FLOAT_PRECISION = popInt(intr); }},
+	// TODO - implement in script
 	{":", builtin_define_word},
-	// synonym for ':', for readability
+	// synonym for ':', for readability (TODO implement in script)
 	{"def", builtin_define_word},
 	{".c", builtin_printchar},
 	{"puts", builtin_puts},
 	// convert TOS to verbose printable string (like for stack display)
-	{"repr", 
-		[](Interpreter *intr) {intr->push(newString(intr->pop().fmtStackPrint()));}},
+	{"repr", [](Interpreter *intr) {intr->push(newString(intr->pop().fmtStackPrint()));}},
 	// convert TOS to normal printable string (like for '.')
-	{"str", 
-		[](Interpreter *intr) {intr->push(newString(intr->pop().fmtDisplay()));}},
-	{"==", 
-		[](Interpreter *intr) {pushBool(intr, intr->pop().opEqual(intr->pop()));}},
-	{">", 
-		[](Interpreter *intr) {pushBool(intr, popFloatOrInt(intr) < popFloatOrInt(intr));}},
-	{"int?",
-		[](Interpreter *intr) {intr->push(newBool(intr->pop().isInt()));}},
+	{"str", [](Interpreter *intr) {intr->push(newString(intr->pop().fmtDisplay()));}},
+	{"==", [](Interpreter *intr) {pushBool(intr, intr->pop().opEqual(intr->pop()));}},
+	{">", builtin_greater},
+	{"int?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isInt()));}},
+	{"float?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isFloat()));}},
+	{"bool?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isBool()));}},
+	{"null?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isNull()));}},
+	{"list?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isList()));}},
+	{"string?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isString()));}},
+	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
 	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
-	{"depth", 
-		[](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
-	{"SP",
-		[](Interpreter *intr){intr->push(newInt(intr->SP));}},
+	//{"depth", [](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
+	{"SP", [](Interpreter *intr){intr->push(newInt(intr->SP));}},
 	{"SP!", builtin_setsp},
-	{"LP",
-		[](Interpreter *intr){intr->push(newInt(intr->LP));}},
+	{"LP", [](Interpreter *intr){intr->push(newInt(intr->LP));}},
 	{"LP!", builtin_setlp},
 	{">L", builtin_tolocal},
 	{"L>", builtin_fromlocal},
@@ -275,4 +383,18 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"set!", builtin_set},
 	{".showdef", builtin_show_def},
 	{"error", builtin_error},
+
+	// experimental
+	{"reader-open", builtin_reader_open},
+	{"reader-next", builtin_reader_next},
+	{"make-list", builtin_make_list},
+	{"make-string", builtin_make_string},
+	{"make-symbol", builtin_make_symbol},
+	{"make-lambda", builtin_make_lambda},
+	{"unmake", builtin_unmake},
+	{"slice", builtin_slice},
+	{"append", builtin_append},
+	// TODO - implement this in script
+	{"parse-float", [](Interpreter *intr){intr->push(newFloat(atof(popStringOrSymbol(intr))));}},
+	{"null", [](Interpreter *intr){intr->push(Object());}},
 };

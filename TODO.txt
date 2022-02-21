@@ -1,5 +1,8 @@
 Global TODO
 
+* ALL PORTS: Syntax "if >>true >>false" -- don't need to parse false_jump since program will always continue there 
+  on false without doing anything
+
 * Add string type
 
 	* I'm thinking ." should be deprecated in favor of "string" . since that is 

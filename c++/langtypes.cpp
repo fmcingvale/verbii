@@ -50,6 +50,13 @@ Object newLambda(ObjList *objlist) {
 	return obj;
 }
 
+Object newList() {
+	Object obj;
+	obj.type = TYPE_LIST;
+	obj.data.objlist = new ObjList();
+	return obj;
+}
+
 Object newMemArray(int count, int offset) {
 	Object *array = (Object*)x_malloc(count*sizeof(Object));
 	MemoryArray *memarray = (MemoryArray*)x_malloc(sizeof(MemoryArray));
@@ -134,8 +141,30 @@ bool Object::opEqual(const Object &other) {
 		case TYPE_MEMARRAY: throw LangError("Memory arrays cannot be compared with ==");
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
-		default: return false;
+		default: 
+			// i WANT to crash when I forget to add a new type ...
+			throw LangError("Unsupported type in == : " + fmtStackPrint());
 	}
+}
+
+bool Object::opGreater(const Object &other) {
+	switch(type) {
+		case TYPE_INT:
+			if (other.type == TYPE_INT) return data.i > other.data.i;
+			if (other.type == TYPE_FLOAT) return data.i > other.data.d;
+			break;
+		case TYPE_FLOAT: 
+			if (other.type == TYPE_INT) return data.d > other.data.i;
+			if (other.type == TYPE_FLOAT) return data.d > other.data.d;
+			break;
+		case TYPE_STRING:
+			if (other.type == TYPE_STRING) return strcmp(data.str, other.data.str) > 0;
+			break;
+		case TYPE_SYMBOL:
+			if (other.type == TYPE_SYMBOL) return strcmp(data.str, other.data.str) > 0;
+			break;
+	}
+	throw LangError("Cannot compare objects in >: " + fmtStackPrint() + " and " + other.fmtStackPrint());
 }
 
 bool isNumber(const Object &a) {
@@ -156,6 +185,7 @@ double castFloat(const Object &a) {
 }
 
 Object Object::opAdd(const Object &other) {
+	// any cases that aren't handled fall through to single throw at end
 	switch(type) {
 		case TYPE_NULL: break;
 		case TYPE_INT:
@@ -198,7 +228,7 @@ Object Object::opAdd(const Object &other) {
 				string s = this->data.str;
 				s += other.data.str;
 				return newString(s);
-			}
+			}	
 			break;
 		case TYPE_SYMBOL:
 			if(other.type == TYPE_SYMBOL) {
@@ -207,8 +237,21 @@ Object Object::opAdd(const Object &other) {
 				return newSymbol(s);
 			}
 			break;
+		case TYPE_LIST:
+			if(other.type == TYPE_LIST) {
+				Object newlist = newList();
+				for(auto obj : *data.objlist) {
+					newlist.data.objlist->push_back(obj);
+				}
+				for(auto obj : *other.data.objlist) {
+					newlist.data.objlist->push_back(obj);
+				}
+				return newlist;
+			}
+			break;
 
-		default: break; // just to be explicit
+		default: 
+			break; // just to be explicit that I mean to fall through
 	}
 			
 	throw LangError("Bad operands for +: " + this->fmtDisplay() + " & " + other.fmtDisplay());
@@ -252,8 +295,62 @@ Object Object::opLength() {
 			return newInt(strlen(data.str));
 		case TYPE_MEMARRAY:
 			return newInt(data.memarray->count);
+		case TYPE_LIST:
+			return newInt((int)(data.objlist->size()));
 	}
 	throw LangError("'length' not supported for object: " + fmtStackPrint());
+}
+
+#include <string.h>
+
+Object Object::opSlice(int index, int nr) {
+	int objsize;
+
+	switch(type) {
+		case TYPE_STRING:
+		case TYPE_SYMBOL:
+			objsize = strlen(data.str);
+			break;
+
+		case TYPE_LIST:
+			objsize = (int)(data.objlist->size());
+			break;
+
+		default:
+			throw LangError("Object doesn't support slicing: " + fmtStackPrint());
+	}
+
+	if(index < 0) {
+ 		index = objsize + index;
+	}
+	if(index < 0 || index >= objsize) {
+		if(type == TYPE_STRING || type == TYPE_SYMBOL)
+			return newString("");
+		else 
+			return newList();
+	}
+	if(nr < 0) {
+		nr = objsize - index;
+	}
+	if((index+nr) > objsize) {
+		nr = objsize - index;
+	}
+
+	switch(type) {
+		case TYPE_STRING: return newString(strndup(data.str+index,nr), 0, true); // give away pointer
+		case TYPE_SYMBOL: return newSymbol(strndup(data.str+index,nr), 0, true); // give away pointer
+		case TYPE_LIST:
+			{
+				Object r = newList();
+				for(auto it=data.objlist->begin() + index;
+						it < (data.objlist->begin() + index + nr);
+						++it) 
+					r.data.objlist->push_back(*it);
+
+				return r;
+			}
+	}	
+	throw LangError("Unreachable code");	
 }
 
 int FLOAT_PRECISION = 17;
@@ -276,6 +373,8 @@ string Object::fmtDisplay() const {
 		// symbols should not normally be printed by programs, so they get
 		// a ' to differentiate them from strings
 		case TYPE_SYMBOL: return "'" + string(data.str);
+		case TYPE_LIST: return fmtStackPrint(); // use stack format for inner objects for both types of printing
+
 		default: throw LangError("repr not implemented for this object");
 	}
 }
@@ -298,6 +397,15 @@ string Object::fmtStackPrint() const {
 		case TYPE_STRING: return "\"" + string(data.str) + "\"";
 		// opposite of above -- since strings get " .. " then i don't get a ' here
 		case TYPE_SYMBOL: return data.str;
+		case TYPE_LIST:
+			{
+				string s = "[ ";
+				for(auto obj : *data.objlist) {
+					s += obj.fmtStackPrint() + " ";
+				}
+				s += "]";
+				return s;
+			}
 		default: throw LangError("repr not implemented for this object");
 	}
 }
