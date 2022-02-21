@@ -21,8 +21,6 @@
 const int STACK_SIZE = (1<<10);
 const int LOCALS_SIZE = (1<<10);
 
-extern std::map<std::string,ObjList*> WORDS;
-
 class Interpreter {
 	public:
 	Interpreter();
@@ -39,7 +37,9 @@ class Interpreter {
 	void run(bool singlestep=false);
 
 	// all are public so builtins can use without a hassle
-	
+	std::map<std::string,ObjList*> WORDS; // user-defined words
+	std::map<std::string,Object> VARS; // user-defined variables
+
 	// 3 memory areas: stack, locals, free memory
 	//
 	// the stack and locals are of fixed size, so are allocated in one

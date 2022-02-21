@@ -18,9 +18,6 @@
 #include "langtypes.hpp"
 using namespace std;
 
-map<string,ObjList*> WORDS; // user defined words
-map<string,Object> VARS;
-
 Interpreter::Interpreter() {
 
 	syntax = new Syntax();

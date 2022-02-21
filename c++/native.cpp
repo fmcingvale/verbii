@@ -93,7 +93,7 @@ static void builtin_define_word(Interpreter *intr) {
 	while(1) {
 		auto o = intr->syntax->nextObjOrFail();
 		if(o.isSymbol(";")) {
-			WORDS[name.asSymbol()] = objs;
+			intr->WORDS[name.asSymbol()] = objs;
 			return;
 		}
 		else {
@@ -208,8 +208,8 @@ static void builtin_fromlocal(Interpreter *intr) {
 
 static void builtin_show_def(Interpreter *intr) {
 	auto name = intr->syntax->nextSymbolOrFail();
-	auto word = WORDS.find(name.asSymbol());
-	if(word == WORDS.end()) {
+	auto word = intr->WORDS.find(name.asSymbol());
+	if(word == intr->WORDS.end()) {
 		cout << "No such word: " << name.fmtStackPrint() << endl;
 		return;
 	}

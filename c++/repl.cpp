@@ -152,7 +152,6 @@ void print_gc_stats() {
 	cout << "xmalloc bytes: " << X_BYTES_ALLOCATED << endl;
 #endif
 	cout << "# BUILTINS: " << BUILTINS.size() << endl;
-	cout << "# WORDS: " << WORDS.size() << endl;
 }
 
 #include <sys/stat.h>
