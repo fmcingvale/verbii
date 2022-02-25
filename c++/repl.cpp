@@ -13,7 +13,7 @@
 #include "native.hpp"
 using namespace std;
 
-string INITLIB = "../lib/init.txt";
+string INITLIB = "../lib/init.verb";
 
 string readfile(string filename) {
 	ifstream fileIn(filename);

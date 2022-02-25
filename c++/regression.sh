@@ -13,13 +13,10 @@ else
 	UTEST="./test"
 fi
 
-$REPL -test ../unittests/unittest_core.txt > ../unittests/RESULTS/c++/actual_unittest_core.txt
-$REPL -test ../unittests/unittest_basic.txt > ../unittests/RESULTS/c++/actual_unittest_basic.txt
-$REPL -test ../unittests/unittest_errors.txt > ../unittests/RESULTS/c++/actual_unittest_errors.txt
+$REPL -test ../unittests/unittest_core.verb > ../unittests/RESULTS/c++/actual_unittest_core.txt
+$REPL -test ../unittests/unittest_basic.verb > ../unittests/RESULTS/c++/actual_unittest_basic.txt
+$REPL -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/c++/actual_unittest_errors.txt
 
 # demos are complete programs, so no -test
-$REPL ../unittests/demo_math.txt > ../unittests/RESULTS/c++/actual_demo_math.txt
-
-# run c++ unittests too (** currently broken **)
-#$UTEST
+$REPL ../unittests/demo_math.verb > ../unittests/RESULTS/c++/actual_demo_math.txt
 

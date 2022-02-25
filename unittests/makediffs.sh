@@ -14,7 +14,7 @@ do
 	do
 		expectdir="."
 		actualdir="./RESULTS/$lang"
-		expect="expect_unittest_$testname.txt"
+		expect="expect_unittest_$testname.verb"
 		actual="actual_unittest_$testname.txt"
 		diffname="diff_$testname.txt"
 		cmd="diff -u -b -B $expectdir/$expect $actualdir/$actual > $actualdir/$diffname"
