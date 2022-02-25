@@ -161,6 +161,8 @@ bool file_exists(char* filename) {
 	return stat(filename, &st) == 0;
 }
 
+#include "native.hpp"
+
 int main(int argc, char *argv[]) {
 	x_mem_init();
 
@@ -169,6 +171,9 @@ int main(int argc, char *argv[]) {
 	bool noinit = false;
 	bool gcstats = false;
 	bool singlestep = false;
+
+	native_cmdline_args = newList();
+
 	for(int i=1; i<argc; ++i) {
 		if(!strcmp(argv[i], "-test")) {
 			testMode = true;
@@ -181,6 +186,13 @@ int main(int argc, char *argv[]) {
 		}
 		else if(!strcmp(argv[i], "-step")) {
 			singlestep = true;
+		}
+		else if(!strcmp(argv[i], "--")) {
+			// pass rest of args to script
+			while(++i < argc) {
+				native_cmdline_args.data.objlist->push_back(newString(argv[i]));
+			}
+			break;
 		}
 		else if(filename == "" && file_exists(argv[i])) {
 			filename = argv[i];

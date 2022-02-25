@@ -315,9 +315,8 @@ Hello world!
 => 10 20 30 40 
 >> : foobar 11 22 33 44 ;
 => 10 20 30 40 
->> .showdef foobar
-foobar: 11 22 33 44 ;
-=> 10 20 30 40 
+>> 'foobar .dumpword
+=> 10 20 30 40 [ 11 22 33 44 ] 
 >> clear
 => 
 >> ( -- lambdas -- )
@@ -465,3 +464,189 @@ oneword
 => 5 9 
 >> x length
 => 5 9 123 
+>> ( lists )
+=> 5 9 123 
+>> clear
+=> 
+>> 10 20 30 40 
+=> 10 20 30 40 
+>> 4 make-list
+=> [ 10 20 30 40 ] 
+>> dup length
+=> [ 10 20 30 40 ] 4 
+>> clear
+=> 
+>> 0 make-list
+=> [ ] 
+>> length
+=> 0 
+>> clear
+=> 
+>> 11 22 33 3 make-list
+=> [ 11 22 33 ] 
+>> 44 55 66 77 4 make-list
+=> [ 11 22 33 ] [ 44 55 66 77 ] 
+>> +
+=> [ 11 22 33 44 55 66 77 ] 
+>> length
+=> 7 
+>> clear
+=> 
+>> 11 22 2 make-list 33 44 55 3 make-list 66 1 make-list 0 make-list 77 88 99 3 make-list
+=> [ 11 22 ] [ 33 44 55 ] [ 66 ] [ ] [ 77 88 99 ] 
+>> 5 make-list
+=> [ [ 11 22 ] [ 33 44 55 ] [ 66 ] [ ] [ 77 88 99 ] ] 
+>> length
+=> 5 
+>> clear
+=> 
+>> "Hello" "world" 123 2 make-list "the end" 3 make-list
+=> [ "Hello" [ "world" 123 ] "the end" ] 
+>> ( slicing )
+=> [ "Hello" [ "world" 123 ] "the end" ] 
+>> clear
+=> 
+>> "abcdefghijklmnop" 4 5 slice
+=> "efghi" 
+>> "abcdefghijklmnop" -5 3 slice
+=> "efghi" "lmn" 
+>> "zooming" 3 100 slice
+=> "efghi" "lmn" "ming" 
+>> "hello world" 4 -1 slice
+=> "efghi" "lmn" "ming" "o world" 
+>> "questionable" 4 0 slice
+=> "efghi" "lmn" "ming" "o world" "" 
+>> "________X__________" 8 1 slice
+=> "efghi" "lmn" "ming" "o world" "" "X" 
+>> clear
+=> 
+>> 'hello-a-long-symbol 4 3 slice
+=> o-a 
+>> 'short 3 100 slice
+=> o-a rt 
+>> 'simple -4 2 slice
+=> o-a rt mp 
+>> clear
+=> 
+>> 10 20 30 40 50 60 70 80 90 100 10 make-list
+=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+>> dup 4 3 slice
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 50 60 70 ] 
+>> drop
+=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+>> dup -5 4 slice
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 60 70 80 90 ] 
+>> drop
+=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+>> dup 3 100 slice
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 40 50 60 70 80 90 100 ] 
+>> drop
+=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+>> dup 6 -1 slice
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 70 80 90 100 ] 
+>> drop
+=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+>> dup 7 0 slice
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ ] 
+>> drop
+=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+>> dup 7 1 slice
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 80 ] 
+>> ( string / symbol make/unmake )
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 80 ] 
+>> clear
+=> 
+>> 65 66 67 68 4 make-string
+=> "ABCD" 
+>> 66 67 68 69 70 5 make-symbol
+=> "ABCD" BCDEF 
+>> clear
+=> 
+>> "Hello world!" unmake
+=> 72 101 108 108 111 32 119 111 114 108 100 33 12 
+>> make-symbol
+=> Hello world! 
+>> unmake
+=> 72 101 108 108 111 32 119 111 114 108 100 33 12 
+>> make-string
+=> "Hello world!" 
+>> clear
+=> 
+>> { 10 20 30 40 }
+=> <lambda> 
+>> unmake
+=> [ 10 20 30 40 ] 
+>> unmake
+=> 10 20 30 40 4 
+>> ( type testing )
+=> 10 20 30 40 4 
+>> clear
+=> 
+>> 123 int?
+=> true 
+>> #123 int?
+=> true false 
+>> #446 float?
+=> true false true 
+>> 123 float?
+=> true false true false 
+>> "hello" string?
+=> true false true false true 
+>> "there" symbol?
+=> true false true false true false 
+>> 'world symbol?
+=> true false true false true false true 
+>> 'foobar string?
+=> true false true false true false true false 
+>> true bool?
+=> true false true false true false true false true 
+>> 1 bool?
+=> true false true false true false true false true false 
+>> null null?
+=> true false true false true false true false true false true 
+>> 0 null?
+=> true false true false true false true false true false true false 
+>> clear
+=> 
+>> 10 'word #13.425 3 4 5 3 make-list "end" 5 make-list
+=> [ 10 word #13.425000000000001 [ 3 4 5 ] "end" ] 
+>> make-lambda
+=> <lambda> 
+>> unmake
+=> [ 10 word #13.425000000000001 [ 3 4 5 ] "end" ] 
+>> unmake
+=> 10 word #13.425000000000001 [ 3 4 5 ] "end" 5 
+>> ( lists should share same object )
+=> 10 word #13.425000000000001 [ 3 4 5 ] "end" 5 
+>> clear
+=> 
+>> 10 20 30 3 make-list
+=> [ 10 20 30 ] 
+>> dup dup 
+=> [ 10 20 30 ] [ 10 20 30 ] [ 10 20 30 ] 
+>> 40 append ( all should change )
+=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 10 20 30 40 ] 
+>> ( array slices )
+=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 10 20 30 40 ] 
+>> clear
+=> 
+>> var Y 4
+=> 
+>> 10 Y set!
+=> 
+>> 20 Y 1 + set!
+=> 
+>> 30 Y 2 + set!
+=> 
+>> 40 Y 3 + set!
+=> 
+>> 'Y .dumpvar
+=> [ 10 20 30 40 ] 
+>> Y 0 -1 slice
+=> [ 10 20 30 40 ] [ 10 20 30 40 ] 
+>> Y 2 1 slice
+=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 30 ] 
+>> Y -3 2 slice
+=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 30 ] [ 20 30 ] 
+>> Y unmake
+=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 30 ] [ 20 30 ] 10 20 30 40 4 

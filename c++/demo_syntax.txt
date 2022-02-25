@@ -13,11 +13,16 @@ var LP_START 1
 LP LP_START set!
 
 : get ( sequence i -- obj = i'th object from sequence )
-	over list? if >>islist
-	( for string & symbol, slice of 1 item is desired value )
-	1 slice return
-	@islist ( here i want first element of sliced list )
-	1 slice unmake drop
+	over list? if >>list
+	over array? if >>list
+	over string? if >>string
+	over symbol? if >>string
+	repr "Bad object in get: " swap + error
+	@string
+		( for string & symbol, slice of 1 item is desired value )
+		1 slice return
+	@list ( here i want first element of sliced list )
+		1 slice unmake drop
 	;
 
 : +get ( same as get but leaves obj on stack )
@@ -28,14 +33,18 @@ LP LP_START set!
 	dup null? if >>null
 	dup '( == if >>comment
 	dup '{ == if >>lambda
+	dup ': == if >>worddef
 	dup 0 get '" == if >>string ( "... )
-	dup symbol-to-integer dup null? if >>not-integer >>integer
+	dup parse-int dup null? if >>not-integer >>integer
 	@not-integer drop
 	dup 0 get '# == if >>float
 	( leave unprocessed word on stack )
 	return
 	@null
 	return ( leave null on stack )
+	@worddef
+	"@worddef:" . .S CR
+	drop syntax-define-word return
 	@comment
 	drop syntax-comment return ( skip comment and return NEXT object )
 	@lambda
@@ -48,7 +57,44 @@ LP LP_START set!
 	1 -1 slice parse-float return
 	;
 
-: syntax-string ( first string part on stack )
+: .L ( M -- print first N locals .. a debug tool like .S )
+	0 ( N index )
+	"Locals:" .
+	@loop
+		( N index )
+		2dup == if >>done
+		dup str "L" swap + ":" + . dup LP + ref repr puts 32 .c
+		1 + <<loop
+	@done 2drop
+	;
+
+: syntax-define-word
+		( "define-word" . CR )
+	syntax-next ( name should be next )
+		( "read name" . dup . CR )
+	dup symbol? not if >>badname
+	>L SP >L   ( L0=starting SP, L1=name )
+		( 2 .L CR )
+	@loop
+	syntax-next ( get next processed object - assume it can be more than 1 object )
+		( "NEXT" . dup . CR )
+	dup '; == if >>endword
+	<<loop
+	@badname repr "Invalid name for word: " swap + error
+	@endword
+		( "ENDWORD, stack: " . .S CR )
+	drop ( drop ; )
+	L> SP - 1 - ( calc number of items )
+	( "NR ITEMS:" . dup . " STACK NOW" . .S CR )  
+	make-list
+	( "MADE LIST:" . .S CR )
+	L> 
+	( "NOW MAKE WORD: " . .S CR )
+	make-word
+	syntax-next ( make-word has no return value, so return NEXT object )
+	;
+
+: syntax-string ( first string part already on stack )
 	(
 		"syntax-string:" . CR
 	)
@@ -78,35 +124,6 @@ LP LP_START set!
 	L0 ref dup length 2 - 1 swap slice ( remove quotes )
 	unmake make-string ( symbol -> string )
 	LP 1 + LP! ( remove locals )
-	;
-
-: char-to-ascii ( takes 1-length string or symbol and returns ascii code for char )
-	unmake 1 == if >>ok "char-to-ascii got multichar string!" error @ok
-	;
-
-: char-to-digit ( takes "0" .. "9" -- as symbol or string -- and returns integer 0..9 )
-	char-to-ascii "0" char-to-ascii -
-	;
-
-: symbol-to-integer ( symbol -- integer or null if cannot parse as integer )
-	( "symbol-to-integer: " . dup . CR )
-	0 >L dup length >L 0 >L  ( L0 = index, L1 = length, L2 = value )
-	L0 ref +get dup '+ == swap '- == or if >>skipsign >>digitloop 
-	@skipsign L0 ref 1 + L0 set!
-	@digitloop
-	( " value " . L2 ref . " index " . L0 ref . " length " . L1 ref . CR )
-	L0 ref L1 ref >= if >>done ( index >= length, done )
-	L0 ref +get dup '0 >= swap '9 <= and if >>gotdigit >>notdigit
-	@gotdigit
-	( "got digit" . CR )
-	L0 ref +get char-to-digit L2 ref 10 * + L2 set!
-	L0 ref 1 + L0 set! <<digitloop
-	@notdigit LP 3 + LP! drop null return
-	@done 
-	( adjust sign )
-	0 get '- == not if >>donedone L2 ref neg L2 set!
-	@donedone
-	L2 ref LP 3 + LP!
 	;
 
 : syntax-lambda ( assumes { was just read & dropped )
@@ -151,47 +168,132 @@ LP LP_START set!
 		"End of input inside comment!" error
 	;
 
-: process-file
-	"bbb.txt" reader-open
-	SP >L ( L0=SP at start )
-	@loop
-	syntax-next
-	.S CR
-	dup null? if >>done <<loop
-	@done
-	drop
-	"END STACK:" . .S CR 
-	L> SP - 1 - make-list "PARSED TO:" . . CR
-	;
+( 
+	for-each -- call a lambda on each element of a sequence [any object that supports
+   	'length' and 'slice' methods]
 
-process-file
-
-(
-'1234 symbol-to-integer .S CR
-'9 symbol-to-integer .S CR
-'-55 symbol-to-integer .S CR
-'-7 symbol-to-integer .S CR
-'123a symbol-to-integer .S CR
+	lambda is called with current item of sequence on top of stack. for-each does not
+	touch the stack otherwise.
 )
-
 : for-each ( object lambda -- call lambda on each object in string,symbol,list )
-	( "for-each:" . CR )
+	(  "for-each:" . CR )
 	>L dup length >L 0 >L ( L0=index, L1=length, L2=lambda )
 	@loop
-	( "index " . L0 ref . " length " . L1 ref . CR )
+	( "index " . L0 ref . " length " . L1 ref . CR ) 
 	L0 ref L1 ref >= if >>done
-	L0 ref +get L2 ref call ( call lambda with element on stack )
+	L0 ref +get L2 ref 
+	call ( call lambda with element on stack )
 	L0 ref 1 + L0 set! <<loop
 	@done drop LP 3 + LP!
 	;
 
-"A" "B" "C" "D" "E" 5 make-list "LIST:" . dup . CR
-{ "Element:" . . CR } for-each
+: serialize-escape-string ( string -- string with whitespace escaped )
+	( "ESCAPE STRING:" .  CR )
+	"" swap  ( escaped string )
+	( .S CR )
+	{ 
+		( escaped string char )
+		( "CHAR:" . dup . )
+		unmake drop  ( escaped string charcode )
+		dup 32 == if >>space
+		dup 37 == if >>percent
+		dup 10 == if >>lf 
+		dup 13 == if >>cr 
+		( "NORMAL CHAR:" . .S CR )
+		1 make-string ( escaped string char )
+		( "MADE STRING:" . .S CR )
+		rot swap ( string escaped char )
+		( "BEFORE ADD:" . .S CR )
+		+ swap ( escaped+char string )
+		( "AFTER ADD:" . .S CR )
+		return
+		@space ( escaped string charcode )
+		drop swap "%32" + swap ( escaped+%32 string )
+		return
+		@percent ( escape % as %% )
+		drop swap "%%" + swap ( escaped+%% string )
+		return
+		@lf drop swap "%10" + swap return ( \n -- %10 )
+		@cr drop swap "%13" + swap return ( \r -- %13 )
+	} for-each
+	( "SERIALIZE FINISHED:" . .S CR )
+	;
 
-"abcdef" "STRING:" . dup . CR 
-{ "Element:" . . CR } for-each
+: serialize-object ( obj -- ; serialize obj to stdout )
+	dup null? if >>null
+	dup int? if >>int
+	dup float? if >>float
+	dup bool? if >>bool
+	dup string? if >>string
+	dup symbol? if >>symbol
+	dup list? if >>list
+	dup lambda? if >>lambda
+	dup array? if >>array
+	repr "Unknown obj in serialize-object:" swap + error
+	@null ( n )
+		"n" . CR return
+	@int ( i NNN )
+		"i" . . CR return
+	@float ( f NN.NNN )
+		"f" . . CR return
+	@bool ( b true|false )
+		"b" . . CR return
+	@string ( s SSS )
+		"s" . serialize-escape-string . CR return
+	@symbol ( y SSS - symbols cannot contains spaces, \n, etc. so no escaping needed )
+		"y" . repr . CR return
+	@list ( "L length" then serialized items )
+		"L" . dup length . CR
+		{ serialize-object } for-each ( items )
+		return
+	@lambda ( "F" then list serialized )
+		"F" . CR
+		unmake serialize-object ( serialize list )
+		return
+	@array ( "a" then length serialized then items serialized )
+		"a" . CR
+		dup length serialize-object ( length )
+		{ serialize-object } for-each ( items )
+		return
+		;
+
+: byte-compile-file ( filename -- writes byte-compilation to stdout )
+	reader-open
+	SP >L ( L0=SP at start )
+	@loop
+	syntax-next
+	( .S CR )
+	dup null? if >>done <<loop
+	@done
+	drop
+	( "END STACK:" . .S CR )
+	L> SP - 1 - make-list 
+	;
+
+: serialize-all-words
+	( serialize words as "W name" followed by serialized list )
+	.wordlist { "W" . dup repr . CR .dumpword serialize-object } for-each
+	;
+
+: serialize-all-vars 
+	( serialize vars as "V name" following serialized list from array )
+	.varlist { "V" . dup repr . CR .dumpvar serialize-object } for-each
+	;
+
+(
+serialize-all-words 
+serialize-all-vars
+)
+
+cmdline-args 0 get
+byte-compile-file
+( "PROCESSED TO:" . . CR )
+
+serialize-object
 
 ( - check that locals were deleted - )
 LP LP_START ref != if >>badLP >>okLP
 "*** LOCALS NOT CLEANED UP ***" error
 @okLP "Locals OK!" . CR
+
+"End stack" . .S CR

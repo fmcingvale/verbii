@@ -8,10 +8,14 @@
 #include <map>
 #include <string>
 #include "interpreter.hpp"
+#include "langtypes.hpp"
 
 typedef void (*BUILTIN_FUNC)(Interpreter *);
 
 extern std::map<std::string,BUILTIN_FUNC> BUILTINS;
+
+// set from main()
+extern Object native_cmdline_args;
 
 
 

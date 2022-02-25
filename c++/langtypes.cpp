@@ -22,6 +22,24 @@ void checkIntOrFail(int i) {
 	}
 }
 
+Object parseInt(const std::string &text) {
+	try {
+		return newInt(stoi(text));
+	}
+	catch (const invalid_argument&) {
+		return NULLOBJ;
+	}
+}
+
+Object parseFloat(const std::string &text) {
+	try {
+		return newFloat(stod(text));
+	}
+	catch (const invalid_argument&) {
+		return NULLOBJ;
+	}
+}
+
 Object newInt(int i) {
 	checkIntOrFail(i);
 	Object obj;
@@ -34,6 +52,10 @@ void Object::setInt(int i) {
 	checkIntOrFail(i);
 	type = TYPE_INT; 
 	data.i = i; 
+}
+
+Object newNull() {
+	return Object();
 }
 
 Object newBool(bool b) {
@@ -57,18 +79,22 @@ Object newList() {
 	return obj;
 }
 
+Object newList(ObjList *list) {
+	Object obj;
+	obj.type = TYPE_LIST;
+	obj.data.objlist = list;
+	return obj;
+}
+
 Object newMemArray(int count, int offset) {
-	Object *array = (Object*)x_malloc(count*sizeof(Object));
+	ObjList *list = new ObjList();
 	MemoryArray *memarray = (MemoryArray*)x_malloc(sizeof(MemoryArray));
 
 	// set all to int=0 as default value
-	for(int i=0; i<count; ++i) {
-		array[i].type = TYPE_INT;
-		array[i].data.i = 0;
-	}
+	for(int i=0; i<count; ++i)
+		list->push_back(newInt(0));
 
-	memarray->array = array;
-	memarray->count = count;
+	memarray->list = list;
 	memarray->offset = offset;
 
 	Object obj;
@@ -79,8 +105,7 @@ Object newMemArray(int count, int offset) {
 
 Object copyMemArray(MemoryArray *memarray) {
 	MemoryArray *arraycopy = (MemoryArray*)x_malloc(sizeof(MemoryArray));
-	arraycopy->array = memarray->array;
-	arraycopy->count = memarray->count;
+	arraycopy->list = memarray->list;
 	arraycopy->offset = memarray->offset;
 
 	Object obj;
@@ -294,18 +319,15 @@ Object Object::opLength() {
 		case TYPE_SYMBOL:
 			return newInt(strlen(data.str));
 		case TYPE_MEMARRAY:
-			return newInt(data.memarray->count);
+			return newInt((int)(data.memarray->list->size()));
 		case TYPE_LIST:
 			return newInt((int)(data.objlist->size()));
 	}
 	throw LangError("'length' not supported for object: " + fmtStackPrint());
 }
 
-#include <string.h>
-
 Object Object::opSlice(int index, int nr) {
 	int objsize;
-
 	switch(type) {
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
@@ -314,6 +336,10 @@ Object Object::opSlice(int index, int nr) {
 
 		case TYPE_LIST:
 			objsize = (int)(data.objlist->size());
+			break;
+
+		case TYPE_MEMARRAY:
+			objsize = (int)(data.memarray->list->size());
 			break;
 
 		default:
@@ -326,8 +352,11 @@ Object Object::opSlice(int index, int nr) {
 	if(index < 0 || index >= objsize) {
 		if(type == TYPE_STRING || type == TYPE_SYMBOL)
 			return newString("");
-		else 
+		else if(type == TYPE_LIST || type == TYPE_MEMARRAY)
 			return newList();
+		else {
+			throw LangError("Should never happen");
+		}
 	}
 	if(nr < 0) {
 		nr = objsize - index;
@@ -337,8 +366,8 @@ Object Object::opSlice(int index, int nr) {
 	}
 
 	switch(type) {
-		case TYPE_STRING: return newString(strndup(data.str+index,nr), 0, true); // give away pointer
-		case TYPE_SYMBOL: return newSymbol(strndup(data.str+index,nr), 0, true); // give away pointer
+		case TYPE_STRING: return newString(x_strndup(data.str+index,nr), 0, true); // give away pointer
+		case TYPE_SYMBOL: return newSymbol(x_strndup(data.str+index,nr), 0, true); // give away pointer
 		case TYPE_LIST:
 			{
 				Object r = newList();
@@ -347,6 +376,17 @@ Object Object::opSlice(int index, int nr) {
 						++it) 
 					r.data.objlist->push_back(*it);
 
+				return r;
+			}
+		case TYPE_MEMARRAY:
+			{
+				// return as list as well
+				Object r = newList();
+				for(auto it=data.memarray->list->begin() + index;
+						it < (data.memarray->list->begin() + index + nr);
+						++it)
+					r.data.objlist->push_back(*it);
+				
 				return r;
 			}
 	}	
@@ -392,7 +432,7 @@ string Object::fmtStackPrint() const {
 		}
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		case TYPE_LAMBDA: return "<lambda>";
-		case TYPE_MEMARRAY: return "var:" + to_string(data.memarray->count) + ":" + to_string(data.memarray->offset);
+		case TYPE_MEMARRAY: return "var:" + to_string(data.memarray->list->size()) + ":" + to_string(data.memarray->offset);
 		// add " .. " so its clear on stack that it is a string
 		case TYPE_STRING: return "\"" + string(data.str) + "\"";
 		// opposite of above -- since strings get " .. " then i don't get a ' here

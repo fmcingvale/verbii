@@ -98,6 +98,22 @@ void Interpreter::do_jump(const char *jumpword) {
 	}
 }
 
+ObjList* Interpreter::lookup_word(const char *name) {
+	auto userword = WORDS.find(name);
+	if(userword != WORDS.end())
+		return userword->second;
+	else
+		return NULL;
+}
+
+Object Interpreter::lookup_var(const char *name) {
+	auto uservar = VARS.find(name);
+	if(uservar != VARS.end())
+		return uservar->second;
+	else
+		return newNull();
+}
+
 void Interpreter::run(bool singlestep) {
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
@@ -118,9 +134,8 @@ void Interpreter::run(bool singlestep) {
 				syntax->popObjList();
 				continue;
 			}
-			else {
+			else
 				return;
-			}
 		}
 		if(singlestep) {
 			cout << "Run word: " << obj.fmtStackPrint() << endl;
@@ -234,8 +249,8 @@ void Interpreter::run(bool singlestep) {
 				continue;
 			}
 			
-			auto userword = WORDS.find(obj.asSymbol());
-			if(userword != WORDS.end()) {
+			ObjList *wordlist = lookup_word(obj.asSymbol());
+			if(wordlist) {
 				// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 				// i don't need to come back here, so pop my wordlist first to stop stack from growing
 				if(syntax->peekObj().isNull() || syntax->peekObj().isSymbol("return")) {
@@ -244,13 +259,13 @@ void Interpreter::run(bool singlestep) {
 					}
 				}
 				// execute word by pushing its wordlist and continuing
-				syntax->pushObjList(userword->second);
+				syntax->pushObjList(wordlist);
 				continue;
 			}
 
-			auto var = VARS.find(obj.asSymbol());
-			if(var != VARS.end()) {
-				push(var->second);
+			Object memArray = lookup_var(obj.asSymbol());
+			if(!memArray.isNull()) {
+				push(memArray);
 				continue;
 			}
 		}

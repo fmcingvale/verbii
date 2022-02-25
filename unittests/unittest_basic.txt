@@ -193,7 +193,7 @@ clear
 .S 
 
 : foobar 11 22 33 44 ;
-.showdef foobar
+'foobar .dumpword
 
 clear
 ( -- lambdas -- )
@@ -274,3 +274,110 @@ length
 var x 123
 x length
 
+( lists )
+clear
+10 20 30 40 
+4 make-list
+dup length
+
+clear
+0 make-list
+length
+
+clear
+11 22 33 3 make-list
+44 55 66 77 4 make-list
++
+length
+
+clear
+11 22 2 make-list 33 44 55 3 make-list 66 1 make-list 0 make-list 77 88 99 3 make-list
+5 make-list
+length
+
+clear
+"Hello" "world" 123 2 make-list "the end" 3 make-list
+
+( slicing )
+clear
+"abcdefghijklmnop" 4 5 slice
+"abcdefghijklmnop" -5 3 slice
+"zooming" 3 100 slice
+"hello world" 4 -1 slice
+"questionable" 4 0 slice
+"________X__________" 8 1 slice
+
+clear
+'hello-a-long-symbol 4 3 slice
+'short 3 100 slice
+'simple -4 2 slice
+
+clear
+10 20 30 40 50 60 70 80 90 100 10 make-list
+dup 4 3 slice
+drop
+dup -5 4 slice
+drop
+dup 3 100 slice
+drop
+dup 6 -1 slice
+drop
+dup 7 0 slice
+drop
+dup 7 1 slice
+
+( string / symbol make/unmake )
+clear
+65 66 67 68 4 make-string
+66 67 68 69 70 5 make-symbol
+
+clear
+"Hello world!" unmake
+make-symbol
+unmake
+make-string
+
+clear
+{ 10 20 30 40 }
+unmake
+unmake
+
+( type testing )
+clear
+123 int?
+#123 int?
+#446 float?
+123 float?
+"hello" string?
+"there" symbol?
+'world symbol?
+'foobar string?
+true bool?
+1 bool?
+null null?
+0 null?
+
+clear
+10 'word #13.425 3 4 5 3 make-list "end" 5 make-list
+make-lambda
+unmake
+unmake
+
+( lists should share same object )
+clear
+10 20 30 3 make-list
+dup dup 
+40 append ( all should change )
+
+( array slices )
+clear
+var Y 4
+10 Y set!
+20 Y 1 + set!
+30 Y 2 + set!
+40 Y 3 + set!
+'Y .dumpvar
+Y 0 -1 slice
+Y 2 1 slice
+Y -3 2 slice
+Y unmake

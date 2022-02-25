@@ -18,12 +18,38 @@
 #include <iostream>
 using namespace std;
 
-static int popInt(Interpreter *intr) {
+Object native_cmdline_args;
+
+static int popInt(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isInt()) {
-		throw LangError("Expecting int but got: " + obj.fmtStackPrint());
+		throw LangError(string(errmsg) + " (requires integer, got: " + obj.fmtStackPrint() + ")");
 	}
 	return obj.asInt();
+}
+
+static const char *popString(Interpreter *intr, const char *errmsg) {
+	Object obj = intr->pop();
+	if(!obj.isString()) {
+		throw LangError(string(errmsg) + " (requires string, got: " + obj.fmtStackPrint() + ")");
+	}
+	return obj.asString();
+}
+
+static const char *popSymbol(Interpreter *intr, const char *errmsg) {
+	Object obj = intr->pop();
+	if(!obj.isSymbol()) {
+		throw LangError(string(errmsg) + " (requires symbol, got: " + obj.fmtStackPrint() + ")");
+	}
+	return obj.asSymbol();
+}
+
+static Object popList(Interpreter *intr, const char *errmsg) {
+	Object obj = intr->pop();
+	if(!obj.isList()) {
+		throw LangError(string(errmsg) + " (requires list, got: " + obj.fmtStackPrint() + ")");
+	}
+	return obj;
 }
 
 static void pushInt(Interpreter *intr, int i) {
@@ -46,8 +72,8 @@ static void pushBool(Interpreter *intr, bool b) {
 	consistent behavior regardless of signs
 */
 static void builtin_divmod(Interpreter *intr) {
-	int b = popInt(intr);
-	int a = popInt(intr);
+	int b = popInt(intr, "Bad divmod denominator");
+	int a = popInt(intr, "Bad divmod numerator");
 	int mod;
 
 	if(b == 0) {
@@ -89,20 +115,20 @@ static void builtin_define_word(Interpreter *intr) {
 	}
 }
 
+/* ( list name -- adds word ) */
+static void builtin_make_word(Interpreter *intr) {
+	//cout << "MAKE-WORD ENTRY:" << intr->reprStack() << endl;
+	const char *name = popSymbol(intr, "make-word bad name");
+	Object list = popList(intr, "make-word bad list");
+	intr->WORDS[name] = list.data.objlist;
+}
+
 static void builtin_printchar(Interpreter *intr) {
-	int c = popInt(intr);
+	int c = popInt(intr, "Bad printchar arg");
 	putc(c, stdout);
 	if(c == 10 || c == 13) {
 		fflush(stdout);
 	}
-}
-
-static void builtin_puts(Interpreter *intr) {
-	auto obj = intr->pop();
-	if(!obj.isString()) {
-		throw LangError("puts requires string but got: " + obj.fmtStackPrint());
-	}
-	printf("%s", obj.asString());
 }
 
 // ( obj addr -- ) - save obj to addr
@@ -123,10 +149,10 @@ static void builtin_set(Interpreter *intr) {
 	}
 	else if(addr.isMemArray()) {
 		auto arr = addr.asMemArray();
-		if(arr->offset < 0 || arr->offset >= arr->count) {
+		if(arr->offset < 0 || arr->offset >= (int)arr->list->size()) {
 			throw LangError("Offset out of bounds in set!");
 		}
-		arr->array[arr->offset] = obj;
+		(*arr->list)[arr->offset] = obj;
 	}
 	else {
 		throw LangError("NOT IMPLEMENTED IN set!");
@@ -147,10 +173,10 @@ static void builtin_ref(Interpreter *intr) {
 	}
 	else if(addr.isMemArray()) {
 		auto arr = addr.asMemArray();
-		if(arr->offset < 0 || arr->offset >= arr->count) {
+		if(arr->offset < 0 || arr->offset >=(int) arr->list->size()) {
 			throw LangError("Offset out of bounds in ref");
 		}
-		intr->push(arr->array[arr->offset]);
+		intr->push((*arr->list)[arr->offset]);
 	}
 	else {
 		throw LangError("NOT IMPLEMENTED IN ref");
@@ -160,7 +186,7 @@ static void builtin_ref(Interpreter *intr) {
 // set stack pointer from addr on stack
 // (SP values must be integers)
 static void builtin_setsp(Interpreter *intr) {
-	int addr = popInt(intr);
+	int addr = popInt(intr, "Bad SP! arg");
 	if(addr < intr->SP_MIN || addr > intr->SP_EMPTY) {
 		throw LangError("Bad address in SP!: " + to_string(addr));
 	}
@@ -170,7 +196,7 @@ static void builtin_setsp(Interpreter *intr) {
 // set locals pointer from addr on stack
 // (LP values must be integers)
 static void builtin_setlp(Interpreter *intr) {
-	int addr = popInt(intr);
+	int addr = popInt(intr, "Bad LP! arg");
 	if(addr < intr->LP_MIN || addr > intr->LP_EMPTY) {
 		throw LangError("Bad address in LP!: " + to_string(addr));
 	}
@@ -193,27 +219,9 @@ static void builtin_fromlocal(Interpreter *intr) {
 	intr->push(intr->STACKLOCALS[intr->LP++]);
 }
 
-static void builtin_show_def(Interpreter *intr) {
-	auto name = intr->syntax->nextSymbolOrFail();
-	auto word = intr->WORDS.find(name.asSymbol());
-	if(word == intr->WORDS.end()) {
-		cout << "No such word: " << name.fmtStackPrint() << endl;
-		return;
-	}
-	auto objlist = word->second;
-	cout << name.fmtStackPrint() << ": ";
-	for(auto o : *objlist) {
-		cout << o.fmtStackPrint() << " ";
-	}
-	cout << ";\n";
-}
-
 static void builtin_error(Interpreter *intr) {
-	auto msg = intr->pop();
-	if(!msg.isString()) {
-		throw LangError("error expects string but got: " + msg.fmtStackPrint());
-	}
-	throw LangError(msg.asString());
+	const char *msg = popString(intr, "error requires message"); // do as 2 steps to avoid double-exception
+	throw LangError(msg);
 }
 
 static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &)) {
@@ -227,6 +235,9 @@ static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &)) {
 #include <fstream>
 static string readfile(string filename) {
 	ifstream fileIn(filename);
+	if(fileIn.rdstate() != ios_base::goodbit) {
+		throw LangError("No such file in readfile():" + filename);
+	}
 	string line, buf;
 	while(getline(fileIn, line)) {
 		buf += "\n" + line;
@@ -236,11 +247,8 @@ static string readfile(string filename) {
 
 Reader syntax_reader;
 static void builtin_reader_open(Interpreter *intr) {
-	Object filename = intr->pop();
-	if(!filename.isString()) {
-		throw LangError("reader-open requires filename as string");
-	}
-	string buf = readfile(filename.asString());
+	const char *filename = popString(intr, "reader-open missing filename");
+	string buf = readfile(filename);
 	syntax_reader.addText(buf);
 }
 
@@ -255,7 +263,7 @@ static void builtin_reader_next(Interpreter *intr) {
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
 static void builtin_make_list(Interpreter *intr) {
 	Object list = newList();
-	int nr = popInt(intr);
+	int nr = popInt(intr, "Bad make-list number of items");
 	for(int i=0; i<nr; ++i) {
 		list.data.objlist->insert(list.data.objlist->begin(), intr->pop());
 	}
@@ -263,27 +271,21 @@ static void builtin_make_list(Interpreter *intr) {
 }
 
 static void builtin_slice(Interpreter *intr) {
-	int nr = popInt(intr);
-	int index = popInt(intr);
+	int nr = popInt(intr, "Bad slice count");
+	int index = popInt(intr, "Bad slice index" );
 	Object obj = intr->pop();
 	intr->push(obj.opSlice(index, nr));
 }
 
 static void builtin_append(Interpreter *intr) {
 	Object add = intr->pop();
-	Object list = intr->pop();
-	if(!list.isList()) {
-		throw LangError("append expecting list but got: " + list.fmtStackPrint());
-	}
+	Object list = popList(intr, "Bad arg to append");
 	list.data.objlist->push_back(add);
 	intr->push(list);
 }
 
 static void builtin_make_lambda(Interpreter *intr) {
-	Object list = intr->pop();
-	if(!list.asList()) {
-		throw LangError("make-lambda expects list but got: " + list.fmtStackPrint());
-	}
+	Object list = popList(intr, "Bad arg to make-lambda");
 	intr->push(newLambda(list.data.objlist));
 }
 
@@ -321,28 +323,93 @@ static void builtin_unmake(Interpreter *intr) {
 		}
 		intr->push(newInt((int)(obj.data.objlist->size())));
 	}
+	else if(obj.isMemArray()) {
+		// dump as unmade list
+		for(auto obj : *obj.data.memarray->list)
+			intr->push(obj);
+			
+		intr->push(newInt(obj.data.memarray->list->size()));
+	}
+	else if(obj.isLambda()) {
+		// turn lambda back into a list so make-lambda would work.
+		//
+		// would be nice to just change type to TYPE_LIST, but probably best
+		// to create new list to avoid side effects ...
+		Object outlist = newList();
+		for(auto obj : *obj.data.objlist) {
+			outlist.data.objlist->push_back(obj);
+		}
+		intr->push(outlist);
+	}
 	else
 		throw LangError("Object cannot be unmade: " + obj.fmtStackPrint());
 }
 
 /* ( cn .. c1 N -- string of N chars ) */
 static void builtin_make_string(Interpreter *intr) {
-	int nr = popInt(intr);
+	int nr = popInt(intr, "Bad count in make-string");
 	string s = "";
 	for(int i=0; i<nr; ++i) {
-		s.insert(s.begin(),(char)popInt(intr));
+		s.insert(s.begin(),(char)popInt(intr, "Bad char in make-string"));
 	}
 	intr->push(newString(s));
 }
 
 /* ( cn .. c1 N -- symbol of N chars ) */
 static void builtin_make_symbol(Interpreter *intr) {
-	int nr = popInt(intr);
+	int nr = popInt(intr, "Bad count in make-symbol");
 	string s = "";
 	for(int i=0; i<nr; ++i) {
-		s.insert(s.begin(),(char)popInt(intr));
+		s.insert(s.begin(),(char)popInt(intr, "Bad char in make-symbol"));
 	}
 	intr->push(newSymbol(s));
+}
+
+static void builtin_wordlist(Interpreter *intr) {
+	Object list = newList();
+	for(const auto& pair : intr->WORDS) {
+		list.data.objlist->push_back(newSymbol(pair.first));
+	}
+	intr->push(list);
+}
+
+static void builtin_varlist(Interpreter *intr) {
+	Object list = newList();
+	for(const auto& pair : intr->VARS) {
+		list.data.objlist->push_back(newSymbol(pair.first));
+	}
+	intr->push(list);
+}
+
+static void builtin_dumpword(Interpreter *intr) {
+	const char* symbol = popSymbol(intr,"Bad name in .dumpword");
+	ObjList *wordlist = intr->lookup_word(symbol);
+	if(!wordlist) {
+		throw LangError("No such word in .dumpword: " + string(symbol));
+	}
+	intr->push(newList(wordlist));
+}
+
+static void builtin_dumpvar(Interpreter *intr) {
+	const char* symbol = popSymbol(intr,"Bad name in .dumpvar");
+	Object varlist = intr->lookup_var(symbol);
+	if(!varlist.isMemArray()) {
+		throw LangError("No such name in .dumpvar: " + string(symbol));
+	}
+	intr->push(newList(varlist.asMemArray()->list));
+}
+
+#include "deserialize.hpp"
+
+static void builtin_loadc(Interpreter *intr) {
+	const char *filename = popString(intr, "Bad filename for .loadc");
+	ifstream fileIn(filename);
+	Object o = deserialize_stream(fileIn);
+	intr->push(o);
+}
+
+static void builtin_cmdline_args(Interpreter *intr) {
+	intr->push(native_cmdline_args);
 }
 
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
@@ -351,19 +418,25 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"*", [](Interpreter *intr) { do_binop(intr, &Object::opMul); }},
 	{"/", [](Interpreter *intr) { do_binop(intr, &Object::opDivide); }},
 	{"/mod", builtin_divmod},
-	{"f.setprec", [](Interpreter *intr) { FLOAT_PRECISION = popInt(intr); }},
+	{"f.setprec", [](Interpreter *intr) { FLOAT_PRECISION = popInt(intr, "Bad arg to f.setprec");}},
 	// TODO - implement in script
 	{":", builtin_define_word},
 	// synonym for ':', for readability (TODO implement in script)
 	{"def", builtin_define_word},
 	{".c", builtin_printchar},
-	{"puts", builtin_puts},
+	{"puts", [](Interpreter *intr) {printf("%s", popString(intr, "bad puts arg"));}},
+	
+	// - NOTE - repr & str COULD be implemented in script, however, they have to be
+	//          implemented natively anyways for internal error printing, so
+	//          no purpose in implementing twice
+
 	// convert TOS to verbose printable string (like for stack display)
 	{"repr", [](Interpreter *intr) {intr->push(newString(intr->pop().fmtStackPrint()));}},
 	// convert TOS to normal printable string (like for '.')
 	{"str", [](Interpreter *intr) {intr->push(newString(intr->pop().fmtDisplay()));}},
 	{"==", [](Interpreter *intr) {pushBool(intr, intr->pop().opEqual(intr->pop()));}},
 	{">", builtin_greater},
+	
 	{"int?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isInt()));}},
 	{"float?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isFloat()));}},
 	{"bool?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isBool()));}},
@@ -371,8 +444,10 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"list?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isList()));}},
 	{"string?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isString()));}},
 	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
+	{"lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isLambda()));}},
+	{"array?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isMemArray()));}},
+
 	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
-	//{"depth", [](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
 	{"SP", [](Interpreter *intr){intr->push(newInt(intr->SP));}},
 	{"SP!", builtin_setsp},
 	{"LP", [](Interpreter *intr){intr->push(newInt(intr->LP));}},
@@ -381,7 +456,10 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"L>", builtin_fromlocal},
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
-	{".showdef", builtin_show_def},
+	{".wordlist", builtin_wordlist},
+	{".varlist", builtin_varlist},
+	{".dumpword", builtin_dumpword},
+	{".dumpvar", builtin_dumpvar},
 	{"error", builtin_error},
 
 	// experimental
@@ -391,10 +469,15 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"make-string", builtin_make_string},
 	{"make-symbol", builtin_make_symbol},
 	{"make-lambda", builtin_make_lambda},
+	{"make-word", builtin_make_word},
 	{"unmake", builtin_unmake},
 	{"slice", builtin_slice},
 	{"append", builtin_append},
-	// TODO - implement this in script
-	{"parse-float", [](Interpreter *intr){intr->push(newFloat(atof(popStringOrSymbol(intr))));}},
+	// could implement next two in script, however, host language has to have this
+	// function anyways to deserialize programs, so just use that
+	{"parse-int", [](Interpreter *intr){intr->push(parseInt(popStringOrSymbol(intr)));}},
+	{"parse-float", [](Interpreter *intr){intr->push(parseFloat(popStringOrSymbol(intr)));}},
 	{"null", [](Interpreter *intr){intr->push(Object());}},
+	{".loadc", builtin_loadc},
+	{"cmdline-args", builtin_cmdline_args},
 };

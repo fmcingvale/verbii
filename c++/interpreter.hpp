@@ -61,6 +61,11 @@ class Interpreter {
 	// in a large array are still valid, etc. use newMemoryArray() or copyMemoryArray()
 	// to get program-allocated memory
 
+	// lookup user-defined word or NULL if not found
+	ObjList* lookup_word(const char *name);
+	// get memory array or return null object
+	Object lookup_var(const char *name);
+
 	void do_jump(const char *jumpword);
 
 	Syntax *syntax;

@@ -32,8 +32,9 @@ typedef std::vector<Object> ObjList;
 extern int FLOAT_PRECISION;
 
 struct MemoryArray {
-	Object *array;
-	int count;
+	//Object *array;
+	//int count;
+	ObjList *list;
 	int offset; // when code does pointer math, this is adjusted
 };
 
@@ -90,12 +91,12 @@ class Object {
 	Object opDivide(const Object &other);
 	// '/mod' (ints)
 	Object opDivMod(const Object &other);
-	// 'length' word (string, symbol, memory, list)
+	// 'length' word (string, symbol, array, list)
 	Object opLength();
 	// 'slice' operation - start at index, get nr items, or -1 for rest
 	// index/length out of bounds is never an error - returns empty object in worst case
 	// negative indexes count from end (where -1 is last item)
-	// for: strings, symbols, lists
+	// for: strings, symbols, lists, arrays
 	//
 	// NOTE: slice are the same type as the original object -- so a 1-length slice of a list is still a list.
 	// use unmake when you need the contents in the original type.
@@ -123,6 +124,11 @@ class Object {
 // single NULL object
 extern Object NULLOBJ;
 
+// these return Null objects on parsing error
+Object parseInt(const std::string &);
+Object parseFloat(const std::string &);
+
+Object newNull();
 Object newInt(int i);
 Object newBool(bool b);
 Object newLambda(ObjList *objlist);
@@ -142,4 +148,5 @@ Object newSymbol(const char *s, size_t len, bool keepPointer=false);
 Object newSymbol(const std::string& );
 
 Object newList(); // always makes empty list
+Object newList(ObjList *); // wraps existing list, does NOT copy
 
