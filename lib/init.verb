@@ -4,54 +4,54 @@
 var SP_EMPTY 1
 SP SP_EMPTY set!
 
-def depth SP_EMPTY ref SP - 1 - ;
+: depth SP_EMPTY ref SP - 1 - ;
 
-def . str puts 32 .c ;
-def CR ( -- , prints CR LF ) 10 .c ;
-def clear ( xn ... x1 -- ) SP depth + 1 - SP! ;
+: . str puts 32 .c ;
+: CR ( -- , prints CR LF ) 10 .c ;
+: clear ( xn ... x1 -- ) SP depth + 1 - SP! ;
 
-def drop ( a -- ) SP 1 + SP! ; 
-def dup ( a -- a a ) SP ref ; 
-def dup? ( a -- a a, only if a != 0 ) dup 0 == if >>ZERO dup @ZERO ; 
-def swap ( a b -- b a ) over >L >L drop L> L> ;
-def pick ( Sn .. S1 i -- Sn .. S1 Si ) SP + ref ; 
+: drop ( a -- ) SP 1 + SP! ; 
+: dup ( a -- a a ) SP ref ; 
+: dup? ( a -- a a, only if a != 0 ) dup 0 == if >>ZERO dup @ZERO ; 
+: swap ( a b -- b a ) over >L >L drop L> L> ;
+: pick ( Sn .. S1 i -- Sn .. S1 Si ) SP + ref ; 
 
-def over ( a b -- a b a ) SP 1 + ref ; 
-def 2dup ( a b -- a b a b ) over over ; 
-def 2drop ( a b -- ) SP 2 + SP! ; 
-def 2over ( a b c d -- a b c d a b ) 4 pick 4 pick ; 
-def 2swap ( a b c d -- c d a b ) 
+: over ( a b -- a b a ) SP 1 + ref ; 
+: 2dup ( a b -- a b a b ) over over ; 
+: 2drop ( a b -- ) SP 2 + SP! ; 
+: 2over ( a b c d -- a b c d a b ) 4 pick 4 pick ; 
+: 2swap ( a b c d -- c d a b ) 
     >L >L >L >L  
     LP 2 + ref LP 3 + ref LP ref LP 1 + ref LP 4 + LP! ; 
 
-def ndrop ( xn .. x1 N -- ) SP + 1 + SP! ;
-def nip ( a b -- b ) >L drop L> ;
-def tuck ( a b -- b a b ) swap 2 pick ;
-def rot ( a b c -- b c a ) 3 pick >L >L >L drop L> L> L> ;
-def -rot ( b c a -- a b c ) 2 pick >L 3 pick >L >L drop drop L> L> L> ;
+: ndrop ( xn .. x1 N -- ) SP + 1 + SP! ;
+: nip ( a b -- b ) >L drop L> ;
+: tuck ( a b -- b a b ) swap 2 pick ;
+: rot ( a b c -- b c a ) 3 pick >L >L >L drop L> L> L> ;
+: -rot ( b c a -- a b c ) 2 pick >L 3 pick >L >L drop drop L> L> L> ;
 
-def true ( -- true ) 1 1 == ;
-def false ( -- false ) 1 0 == ;
+: true ( -- true ) 1 1 == ;
+: false ( -- false ) 1 0 == ;
 
-def not ( a -- not[a] ) if >>true true return @true false ;
-def or ( a b -- a|b ) if >>true1 if >>true2 false return @true1 drop @true2 true ;
-def and ( a b -- a&b ) if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
+: not ( a -- not[a] ) if >>true true return @true false ;
+: or ( a b -- a|b ) if >>true1 if >>true2 false return @true1 drop @true2 true ;
+: and ( a b -- a&b ) if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
 
-def != ( a b -- a!=b ) == not ;
-def >= ( a b -- a>=b ) 2dup > -rot == or ;
-def < ( a b -- a<b ) swap > ;
-def <= ( a b -- a<=b ) > not ;
+: != ( a b -- a!=b ) == not ;
+: >= ( a b -- a>=b ) 2dup > -rot == or ;
+: < ( a b -- a<b ) swap > ;
+: <= ( a b -- a<=b ) > not ;
 
-def neg ( a -- -a ) dup int? if >>int 0 swap - return @int 0 swap - ;
-def max ( a b -- max[a,b] ) 2dup > if >>A nip return @A drop ;
-def min ( a b -- min[a,b] ) 2dup > if >>B drop return @B nip ;
-def abs ( a -- abs[a] ) dup 0 < if >>neg return @neg neg ;
+: neg ( a -- -a ) dup int? if >>int 0 swap - return @int 0 swap - ;
+: max ( a b -- max[a,b] ) 2dup > if >>A nip return @A drop ;
+: min ( a b -- min[a,b] ) 2dup > if >>B drop return @B nip ;
+: abs ( a -- abs[a] ) dup 0 < if >>neg return @neg neg ;
 ( 'floor' divide like in Python -- integers only )
-def // ( a b -- quotient a/b ) /mod swap drop ;
-def mod ( a b -- remainder a/b ) /mod drop ;
+: // ( a b -- quotient a/b ) /mod swap drop ;
+: mod ( a b -- remainder a/b ) /mod drop ;
 
 ( .S - print stack without affecting it - good for debugging )
-def .S "=>" . depth 
+: .S "=>" . depth 
 @LOOP 
 	dup 0 > if >>true >>done @true dup SP + 1 + ref repr puts 32 .c 1 - <<LOOP @done drop CR ;
 

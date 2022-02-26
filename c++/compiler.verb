@@ -184,20 +184,16 @@ LP LP_START set!
 : syntax-lambda ( assumes { was just read & dropped )
 	0 make-list 
 	@loop
-		reader-next
+		( note - any inner lambdas will be handled automatically by syntax-next,
+			so don't have to check for "{" here )
+		syntax-next
 		dup null? if >>eof
 		dup '} == if >>closebrace
-		dup '{ == if >>innerlambda
 		append ( else append to list and continue ) <<loop
 	@eof
 		"Unexpected end of input inside { .. }" error
 	@closebrace
 		drop make-lambda return
-	@innerlambda
-		( read inner lambda then append )
-		drop syntax-lambda 
-		( append inner lambda to my list )
-		append <<loop 
 		;
 
 : syntax-comment ( assumes open paren just read )
@@ -336,27 +332,18 @@ var DEFINED_WORDS 1
 	DEFINED_WORDS ref { "W" . dup repr puts CR .dumpword serialize-object } for-each 
 	;
 
-: serialize-all-vars 
-	( serialize vars as "V name" following serialized list from array )
-	.varlist { "V" . dup repr . CR .dumpvar serialize-object } for-each
+: compile-and-serialize ( filename )
+	byte-compile-file ( this will be all code other than word definitions )
+		( "BYTE COMPILE RESULTS:" . .S CR )
+	'__main__ make-word ( put loose code into word __main__ )
+	DEFINED_WORDS ref '__main__ append DEFINED_WORDS set!
+
+	( this will all be written to a list -- will be length of DEFINED_WORDS )
+	"L" . DEFINED_WORDS ref length str puts CR
+
+	( write word defs first, assuming rest of code depends on them )
+	serialize-all-words 
 	;
-
-
-cmdline-args 0 get
-byte-compile-file >L ( save compiled list so i can serialize words first )
-( "PROCESSED TO:" . . CR )
-
-( this will all be written to a list -- will be length of DEFINED_WORDS + 1 (__main__) )
-"L" . DEFINED_WORDS ref length 1 + str puts CR
-
-( write word defs first, assuming rest of code depends on them )
-serialize-all-words 
-(
-serialize-all-vars
-)
-
-( all code, other than word definitions, is put into final word __main__ )
-L> "W __main__" puts CR serialize-object
 
 ( - check that locals were deleted - )
 : sanity-check-locals
@@ -371,6 +358,9 @@ L> "W __main__" puts CR serialize-object
 	"*** Stack not empty at exit ***" error
 	@okStack 
 	;
+
+cmdline-args 0 get ( get filename to compile )
+compile-and-serialize
 
 sanity-check-locals
 sanity-check-stack

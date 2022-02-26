@@ -1,0 +1,30 @@
+( only things that the bootstrap compiler is required to recognize )
+
+( hello )
+
+1234
+
+( another with ( nesting ) there )
+
+a-symbol "hey there long string" z-symbol
+
+( and
+	( some
+		( more
+			( comments )
+		)
+	)
+)
+
+
+12 13 14 . . . CR
+
+"one-word-string"
+
+{ a lambda }
+
+{ 123 lambda { inner lambda } 456 end }
+
+: zzz 11 22 33 ;
+
+
