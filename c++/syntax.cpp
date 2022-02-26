@@ -12,6 +12,7 @@ using namespace std;
 
 Object Syntax::nextObj() {
 	auto obj = reader.nextObj();
+	//cout << "READER NEXT OBJ:" << obj.fmtStackPrint() << endl;
 	// NOTE - i was originally using c++ regexes here to check for
 	// integers and lambdas. after profiling and discovering they
 	// were the using most of the program runtime, i changed to parsing
@@ -96,6 +97,7 @@ Object Syntax::nextSymbolOrFail() {
 Object Syntax::parse_string(Object startword) {
 	// just read a word starting with " (startword)
 	// read until i find a word ENDING with " then paste them all together
+	//cout << "PARSE STRING, startword:" << startword.fmtStackPrint() << endl;
 	string s;
 	if(strlen(startword.asSymbol()) > 1) {
 		s += startword.asSymbol() + 1;	

@@ -8,5 +8,7 @@
 #include <fstream>
 #include <string>
 #include "langtypes.hpp"
+#include "interpreter.hpp"
 
-Object deserialize_stream(std::ifstream &fileIn);
+// deserialize byte-compiled stream into interpreter
+Object deserialize_stream(Interpreter *intr, std::ifstream &fileIn);

@@ -22,6 +22,11 @@ const unsigned char TYPE_FLOAT = 5;
 const unsigned char TYPE_STRING = 6;
 const unsigned char TYPE_SYMBOL = 7;
 const unsigned char TYPE_LIST = 8;
+// unlike TYPE_NULL, which gets pushed as an immediate when encountered,
+// type VOID is never pushed and it is an error in most cases to pass
+// it as a value. it is only used internally for a return type meaning
+// "nothing, not even null"
+const unsigned char TYPE_VOID = 9;
 
 class Object;
 
@@ -48,6 +53,7 @@ class Object {
 
 	// type checking
 	bool isNull() const { return type == TYPE_NULL; }
+	bool isVoid() const { return type == TYPE_VOID; }
 	bool isInt() const { return type == TYPE_INT; }
 	bool isBool() const { return type == TYPE_BOOL; }
 	bool isLambda() const { return type == TYPE_LAMBDA; }
@@ -73,7 +79,8 @@ class Object {
 	 
 	const char *asString() const { return data.str; }
 	const char *asSymbol() const { return data.str; }
-	
+	// no as* function for Void since it is never supposed to be used
+
 	// setters to change value of object, i.e. for reusing object
 	void setInt(int i);
 
@@ -129,6 +136,7 @@ Object parseInt(const std::string &);
 Object parseFloat(const std::string &);
 
 Object newNull();
+Object newVoid();
 Object newInt(int i);
 Object newBool(bool b);
 Object newLambda(ObjList *objlist);

@@ -7,7 +7,7 @@ SP SP_EMPTY set!
 def depth SP_EMPTY ref SP - 1 - ;
 
 def . str puts 32 .c ;
-def CR ( -- , prints CR LF ) 10 .c 13 .c ;
+def CR ( -- , prints CR LF ) 10 .c ;
 def clear ( xn ... x1 -- ) SP depth + 1 - SP! ;
 
 def drop ( a -- ) SP 1 + SP! ; 
@@ -51,9 +51,20 @@ def // ( a b -- quotient a/b ) /mod swap drop ;
 def mod ( a b -- remainder a/b ) /mod drop ;
 
 ( .S - print stack without affecting it - good for debugging )
-def .S  ." => " depth 
+def .S "=>" . depth 
 @LOOP 
-	dup 0 > if >>true >>done @true dup SP + 1 + ref repr puts 32 .c 1 - <<LOOP @done drop 13 .c 10 .c ;
+	dup 0 > if >>true >>done @true dup SP + 1 + ref repr puts 32 .c 1 - <<LOOP @done drop CR ;
+
+: .L ( N -- print first N locals .. meant for debugging, like .S )
+	0 ( N index )
+	"Locals:" .
+	@loop
+		( N index )
+		2dup == if >>done
+		dup str "L" swap + ":" + . dup LP + ref repr puts 32 .c
+		1 + <<loop
+	@done 2drop
+	;
 
 ( shortcuts for addresses of first 10 locals )
 : L0 LP ;
@@ -66,4 +77,49 @@ def .S  ." => " depth
 : L7 LP 7 + ;
 : L8 LP 8 + ;
 : L9 LP 9 + ;
+
+: get ( sequence i -- obj = i'th object from sequence )
+	over list? if >>list
+	over array? if >>list
+	over string? if >>string
+	over symbol? if >>string
+	repr "Bad object in get: " swap + error
+	@string
+		( for string & symbol, slice of 1 item is desired value )
+		1 slice return
+	@list ( here i want first element of sliced list )
+		1 slice unmake drop
+	;
+
+: +get ( same as get but leaves obj on stack )
+	over swap get ;
+
+: any ( sequence predicate -- true|false if ANY member of sequence satisfies predicate (lambda) )
+	>L dup length >L 0 >L ( L0=index, L1=length, L2=predicate )
+	@loop ( sequence )
+			( 3 .L CR )
+		L0 ref L1 ref == if >>noneFound
+		L0 ref +get L2 ref call ( get i'th item in sequence and pass to predicate )
+		if >>gotTrue ( found a true item, done )
+		L0 ref 1 + L0 set! <<loop
+	@gotTrue
+		drop LP 3 + LP! true return
+	@noneFound
+		drop LP 3 + LP! false return
+	;
+
+: all ( sequence predicate -- true|false if ALL members of sequence satisfy predicate (lambda) )
+	>L dup length >L 0 >L ( L0=index, L1=length, L2=predicate )
+	@loop ( sequence )
+			( 3 .L CR )
+		L0 ref L1 ref == if >>allTrue
+		L0 ref +get L2 ref call ( get i'th item in sequence and pass to predicate )
+		if >>gotTrue 
+		( got false item, so result is false )
+		drop LP 3 + LP! false return
+	@gotTrue
+		L0 ref 1 + L0 set! <<loop
+	@allTrue
+		drop LP 3 + LP! true return
+	;
 

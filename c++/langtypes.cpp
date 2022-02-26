@@ -55,7 +55,15 @@ void Object::setInt(int i) {
 }
 
 Object newNull() {
-	return Object();
+	Object obj;
+	obj.type = TYPE_NULL;
+	return obj;
+}
+
+Object newVoid() {
+	Object obj;
+	obj.type = TYPE_VOID;
+	return obj;
 }
 
 Object newBool(bool b) {
@@ -398,6 +406,7 @@ int FLOAT_PRECISION = 17;
 string Object::fmtDisplay() const {
 	switch(type) {
 		case TYPE_NULL: return "<null>";
+		case TYPE_VOID: return "<*VOID*>";
 		case TYPE_INT: return to_string(data.i);
 		case TYPE_FLOAT: 
 		{
@@ -422,6 +431,7 @@ string Object::fmtDisplay() const {
 string Object::fmtStackPrint() const {
 	switch(type) {
 		case TYPE_NULL: return "<null>";
+		case TYPE_VOID: return "<*VOID*>";
 		case TYPE_INT: return to_string(data.i);
 		case TYPE_FLOAT: 
 		{

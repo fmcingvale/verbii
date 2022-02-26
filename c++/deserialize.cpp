@@ -14,7 +14,9 @@ static void string_replace(string &s, const char *from, const char *to) {
 		s.replace(i, strlen(from), to);
 }
 
-Object deserialize_stream(ifstream &fileIn) {
+// stream from compiler will be a single list containing word definitions
+
+Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 	string line;
 	if(getline(fileIn, line)) {
 		switch(line[0]) {
@@ -34,21 +36,35 @@ Object deserialize_stream(ifstream &fileIn) {
 					int nr = parseInt(line.substr(2)).asInt();
 					Object list = newList();
 					for(int i=0; i<nr; ++i)
-						list.data.objlist->push_back(deserialize_stream(fileIn));
+						list.data.objlist->push_back(deserialize_stream(intr,fileIn));
 					return list;
 				}
 			case 'F':
 				{
-					Object list = deserialize_stream(fileIn);
+					Object list = deserialize_stream(intr,fileIn);
 					if(!list.isList())
 						throw LangError("Expecting list but got:" + list.fmtStackPrint());
 					return newLambda(list.data.objlist);
 				}
+			case 'W':
+				{
+					string name = line.substr(2);
+					Object list = deserialize_stream(intr,fileIn);
+					if(!list.isList())
+						throw LangError("Expecting list after W but got:" + list.fmtStackPrint());
+
+					// insert into interpreter
+					cout << "Inserting word:>>>" << name << "<<<" << endl;
+					intr->WORDS[name.c_str()] = list.data.objlist;
+					// this produces nothing extra
+					return newVoid();
+				}
+
 			default:
 				throw LangError("Unrecogized line in deserialize:" + line);
 		}
 	}
-	return newNull(); // something wrong in stream
+	return newVoid();
 }
  
 

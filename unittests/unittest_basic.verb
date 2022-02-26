@@ -381,3 +381,14 @@ Y 0 -1 slice
 Y 2 1 slice
 Y -3 2 slice
 Y unmake
+
+
+"abcde" { "e" == } any .S CR
+"01234" { "9" == } any .S CR
+10 20 30 40 4 make-list { 30 > } any .S CR
+10 20 30 40 4 make-list { 0 <  } any .S CR
+
+clear
+"mnopqr" dup { "m" >= } all swap { "r" <= } all and .S CR
+"1234.567" dup { "0" >= } all swap { "9" <= } all and .S CR
+"1234567" dup { "0" >= } all swap { "9" <= } all and .S CR

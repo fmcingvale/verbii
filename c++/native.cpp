@@ -8,6 +8,10 @@
 // TODO -- the functions that call intr->syntax-> should probably really be in Syntax
 //
 
+// TODO -- might want 'dup' as builtin so it can optimize things like shallow copying strings
+//         since they are immutable??
+//
+
 #include "native.hpp"
 #include "errors.hpp"
 #include "xmalloc.hpp"
@@ -254,6 +258,7 @@ static void builtin_reader_open(Interpreter *intr) {
 
 static void builtin_reader_next(Interpreter *intr) {
 	Object sym = syntax_reader.nextObj();
+	//cout << "builtin-reader-next:" << sym.fmtStackPrint() << endl;
 	if(!sym.isNull() && !sym.isSymbol()) {
 		throw LangError("reader-next expecting null or symbol but got: " + sym.fmtStackPrint());
 	}
@@ -404,8 +409,8 @@ static void builtin_dumpvar(Interpreter *intr) {
 static void builtin_loadc(Interpreter *intr) {
 	const char *filename = popString(intr, "Bad filename for .loadc");
 	ifstream fileIn(filename);
-	Object o = deserialize_stream(fileIn);
-	intr->push(o);
+	Object o = deserialize_stream(intr, fileIn);
+	//intr->push(o);
 }
 
 static void builtin_cmdline_args(Interpreter *intr) {

@@ -12,38 +12,101 @@
 var LP_START 1
 LP LP_START set!
 
-: get ( sequence i -- obj = i'th object from sequence )
-	over list? if >>list
-	over array? if >>list
-	over string? if >>string
-	over symbol? if >>string
-	repr "Bad object in get: " swap + error
+: digit? ( string|symbol -- true|false; is single char a digit? )
+	dup string? if >>string
+		dup '0 < if >>notdigit
+		dup '9 > if >>notdigit
+		drop true return  ( symbol match )
 	@string
-		( for string & symbol, slice of 1 item is desired value )
-		1 slice return
-	@list ( here i want first element of sliced list )
-		1 slice unmake drop
+		dup "0" < if >>notdigit
+		dup "9" > if >>notdigit
+		drop true return
+	@notdigit drop false
 	;
 
-: +get ( same as get but leaves obj on stack )
-	over swap get ;
+: any-digits? ( string|symbol -- true|false; does string/symbol contain ANY digits? )
+	{ digit? } any
+	;
+
+: ltrim-char ( string char -- if char (single-char string) is at front of string, remove it )
+	>L 0 +get L> == if >>trim
+	return
+	@trim 1 -1 slice
+	;
+
+: ltrim-sign ( string -- string with leading "+" or "-" removed [max 1] )
+	0 +get "+" == if >>trim
+	0 +get "-" == if >>trim
+	return
+	@trim 1 -1 slice
+	;
+
+: ltrim-digits ( string -- string with leftmost digits removed )
+	@loop
+		dup length 0 == if >>done
+		0 +get digit? not if >>done
+		1 -1 slice <<loop
+	@done
+	;
+
+: int-string? ( string -- true|false if string can be parsed as integer )
+		( "INT-STRING?:" . .S CR )
+	dup any-digits? not if >>nodigits ( must have digits, not just +/- )
+	ltrim-sign
+	ltrim-digits
+	length 0 == return
+	@nodigits 
+		( "@nodigits:" . .S CR )
+		drop false
+	;
+
+: int-symbol? ( like above but for symbols )
+		( "INT-SYMBOL?" . .S CR )
+	unmake make-string 
+		( "BEFORE CALL:" . .S CR )
+	int-string?
+	;
+
+: float-string? ( string -- true|false if string can be parsed as float )
+	( NOTE - this will ALSO match integers, so use int-string? first to rule those out )
+	dup any-digits? not >>nodigits ( must have digits, not just +/-/./e )
+	ltrim-sign
+	ltrim-digits
+	"." ltrim-char
+	ltrim-digits
+	"e" ltrim-char
+	ltrim-sign
+	ltrim-digits
+	length 0 == return
+	@nodigits drop false
+	;
+
+: float-symbol? ( as above but for symbols )
+	unmake make-string float-string?
+	;
 
 : syntax-next ( convert next word from input to runnable object )
+		( "syntax-next" . CR )
 	reader-next
+		( "reader-next" . .S CR )
 	dup null? if >>null
 	dup '( == if >>comment
 	dup '{ == if >>lambda
 	dup ': == if >>worddef
+	dup 'def == if >>worddef ( synonym for ':' )
 	dup 0 get '" == if >>string ( "... )
-	dup parse-int dup null? if >>not-integer >>integer
-	@not-integer drop
-	dup 0 get '# == if >>float
+	( test for correct format before passing to parse-int or parse-float since those functions
+	  will happily parse something like "123abc" as 123 )
+	dup int-symbol? 
+		( "AFTER INT-SYMBOL:" . .S CR )
+	if >>integer
+	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float
+	@nomatch
 	( leave unprocessed word on stack )
 	return
 	@null
 	return ( leave null on stack )
 	@worddef
-	"@worddef:" . .S CR
 	drop syntax-define-word return
 	@comment
 	drop syntax-comment return ( skip comment and return NEXT object )
@@ -52,20 +115,9 @@ LP LP_START set!
 	@string
 	syntax-string return
 	@integer
-	swap drop return
+	parse-int return
 	@float
 	1 -1 slice parse-float return
-	;
-
-: .L ( M -- print first N locals .. a debug tool like .S )
-	0 ( N index )
-	"Locals:" .
-	@loop
-		( N index )
-		2dup == if >>done
-		dup str "L" swap + ":" + . dup LP + ref repr puts 32 .c
-		1 + <<loop
-	@done 2drop
 	;
 
 : syntax-define-word
@@ -85,11 +137,14 @@ LP LP_START set!
 		( "ENDWORD, stack: " . .S CR )
 	drop ( drop ; )
 	L> SP - 1 - ( calc number of items )
-	( "NR ITEMS:" . dup . " STACK NOW" . .S CR )  
+		( "NR ITEMS:" . dup . " STACK NOW" . .S CR )  
 	make-list
-	( "MADE LIST:" . .S CR )
+		( "MADE LIST:" . .S CR )
 	L> 
-	( "NOW MAKE WORD: " . .S CR )
+	( save names of words as I parse them so I can serialize them later )
+		( "ADD WORD NAME:" . dup . CR )
+	dup DEFINED_WORDS ref swap append DEFINED_WORDS set!
+		( "NOW MAKE WORD: " . .S CR )
 	make-word
 	syntax-next ( make-word has no return value, so return NEXT object )
 	;
@@ -231,23 +286,23 @@ LP LP_START set!
 	dup array? if >>array
 	repr "Unknown obj in serialize-object:" swap + error
 	@null ( n )
-		"n" . CR return
+		"n" puts CR return
 	@int ( i NNN )
-		"i" . . CR return
+		"i" . str puts CR return
 	@float ( f NN.NNN )
-		"f" . . CR return
+		"f" . str puts CR return
 	@bool ( b true|false )
-		"b" . . CR return
+		"b" . str puts CR return
 	@string ( s SSS )
-		"s" . serialize-escape-string . CR return
+		"s" . serialize-escape-string puts CR return
 	@symbol ( y SSS - symbols cannot contains spaces, \n, etc. so no escaping needed )
-		"y" . repr . CR return
+		"y" . repr puts CR return
 	@list ( "L length" then serialized items )
-		"L" . dup length . CR
+		"L" . dup length str puts CR
 		{ serialize-object } for-each ( items )
 		return
 	@lambda ( "F" then list serialized )
-		"F" . CR
+		"F" puts CR
 		unmake serialize-object ( serialize list )
 		return
 	@array ( "a" then length serialized then items serialized )
@@ -257,7 +312,13 @@ LP LP_START set!
 		return
 		;
 
+var DEFINED_WORDS 1
+
 : byte-compile-file ( filename -- writes byte-compilation to stdout )
+	( keep a list of all word definitions that I parse; I only want to serialize
+	those, not EVERY word that is defined )
+	0 make-list DEFINED_WORDS set!
+		( "DEFINED WORDS INIT:" . DEFINED_WORDS ref . CR )
 	reader-open
 	SP >L ( L0=SP at start )
 	@loop
@@ -272,7 +333,7 @@ LP LP_START set!
 
 : serialize-all-words
 	( serialize words as "W name" followed by serialized list )
-	.wordlist { "W" . dup repr . CR .dumpword serialize-object } for-each
+	DEFINED_WORDS ref { "W" . dup repr puts CR .dumpword serialize-object } for-each 
 	;
 
 : serialize-all-vars 
@@ -280,20 +341,36 @@ LP LP_START set!
 	.varlist { "V" . dup repr . CR .dumpvar serialize-object } for-each
 	;
 
-(
+
+cmdline-args 0 get
+byte-compile-file >L ( save compiled list so i can serialize words first )
+( "PROCESSED TO:" . . CR )
+
+( this will all be written to a list -- will be length of DEFINED_WORDS + 1 (__main__) )
+"L" . DEFINED_WORDS ref length 1 + str puts CR
+
+( write word defs first, assuming rest of code depends on them )
 serialize-all-words 
+(
 serialize-all-vars
 )
 
-cmdline-args 0 get
-byte-compile-file
-( "PROCESSED TO:" . . CR )
-
-serialize-object
+( all code, other than word definitions, is put into final word __main__ )
+L> "W __main__" puts CR serialize-object
 
 ( - check that locals were deleted - )
-LP LP_START ref != if >>badLP >>okLP
-"*** LOCALS NOT CLEANED UP ***" error
-@okLP "Locals OK!" . CR
+: sanity-check-locals
+	LP LP_START ref != if >>badLP >>okLP
+	@badLP
+	"*** LOCALS NOT CLEANED UP ***" error
+	@okLP
+	;
 
-"End stack" . .S CR
+: sanity-check-stack
+	depth 0 == if >>okStack	
+	"*** Stack not empty at exit ***" error
+	@okStack 
+	;
+
+sanity-check-locals
+sanity-check-stack

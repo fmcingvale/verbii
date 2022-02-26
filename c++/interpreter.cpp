@@ -20,6 +20,8 @@ using namespace std;
 
 Interpreter::Interpreter() {
 
+	//cout << "Interpreter starting\n";
+
 	syntax = new Syntax();
 
 	SIZE_STACKLOCALS = STACK_SIZE+LOCALS_SIZE;
