@@ -2,16 +2,28 @@ from __future__ import annotations
 """
 	Bootstrap compiler. Only needed to get the Verbii compiler working.
 	
+	This is standalone, no dependenciens (other than Python libs).
+
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 	Adapted from the Verbii compiler implementation.
 
 	Here, I only need to be able to compile the syntax used in init.verb or 
 	compiler.verb. The Verbii compiler will handle anything more advanced.
+
+	Other things are minimal here, like error reporting, since this is
+	only ever meant to compile a small number of files.
 """
-from errors import LangError
-from langtypes import LangLambda, LangString, fmtStackPrint
 import sys, re
+
+# minimal replacements for langtypes so this can be standalone
+class LangLambda(object):
+	def __init__(self, objlist):
+		self.objlist = objlist
+
+class LangString(object):
+	def __init__(self, s):
+		self.s = s
 
 WORDS = [] # (name,objlist) -- keep in order in case it ever matters
 
@@ -48,7 +60,7 @@ def syntaxComment():
 	while True:
 		w = readerNext() # NOT syntaxNext, don't want to interpret contents of comment
 		if w is None:
-			raise LangError("End of input inside comment")
+			raise Exception("End of input inside comment")
 		elif w == ')':
 			nesting -= 1
 			if nesting == 0:
@@ -61,7 +73,7 @@ def syntaxLambda():
 	while True:
 		o = syntaxNext()
 		if o is None:
-			raise LangError("End of input inside { .. }")
+			raise Exception("End of input inside { .. }")
 		elif o == '}':
 			return LangLambda(objlist)
 		else:
@@ -71,12 +83,12 @@ def syntaxWordDef():
 	objlist = []
 	name = syntaxNext()
 	if name is None:
-		raise LangError("Missing name in word definition")
+		raise Exception("Missing name in word definition")
 
 	while True:
 		o = syntaxNext()
 		if o is None:
-			raise LangError("End of input inside : .. ;")
+			raise Exception("End of input inside : .. ;")
 		elif o == ';':
 			WORDS.append((name,objlist))
 			return # no return value for worddef
@@ -93,7 +105,7 @@ def syntaxString(first):
 
 		o = readerNext() # NOT syntaxNext() - don't want to try and intepret objs inside string
 		if o is None:
-			raise LangError("End of input inside \" .. \"")
+			raise Exception("End of input inside \" .. \"")
 		else:
 			s += ' ' + o
 		
@@ -119,9 +131,9 @@ def serialize(obj):
 			serialize(o)
 	elif isinstance(obj,LangLambda):
 		print("F")
-		serialize(obj.wordlist)
+		serialize(obj.objlist)
 	else:
-		raise LangError("Cannot serialize: " + fmtStackPrint(obj))
+		raise Exception("Cannot serialize: " + str(obj))
 
 if len(sys.argv) < 2:
 	print("Usage: compiler sourcefile")
