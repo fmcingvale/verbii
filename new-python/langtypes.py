@@ -5,9 +5,14 @@ from __future__ import annotations
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 """
 
+from errors import LangError
+
 FLOAT_PRECISION = 17
 MAX_INT_31 = (1<<30) - 1
 MIN_INT_31 = -MAX_INT_31
+
+def isNumeric(obj):
+	return type(obj) == int or type(obj) == float
 
 class MemArray(object):
 	def __init__(self, count, offset):
@@ -38,7 +43,9 @@ class LangLambda(object):
 
 def fmtDisplay(obj):
 	"get obj as string for normal program output (like '.')"
-	if type(obj) is int:
+	if obj is None:
+		return "<null>"
+	elif type(obj) is int:
 		return str(obj)
 	elif type(obj) is float:
 		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
@@ -56,12 +63,16 @@ def fmtDisplay(obj):
 	elif type(obj) is str:
 		# strings are symbols - not normally printed, so they get a ' to differentiate from strings
 		return "'" + obj
+	elif type(obj) == list:
+		return fmtStackPrint(obj) # use stack format for both
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))
 
 def fmtStackPrint(obj):
 	"get obj as verbose string for stack display"
-	if type(obj) is int:
+	if obj is None:
+		return "<null>"
+	elif type(obj) is int:
 		return str(obj)
 	elif type(obj) is float:
 		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
@@ -80,5 +91,12 @@ def fmtStackPrint(obj):
 	elif type(obj) is str:
 		# ... and symbols do not get ' here
 		return obj
+	elif type(obj) == list:
+		rlist = ['[']
+		for o in obj:
+			rlist.append(fmtStackPrint(o))
+
+		rlist.append(']')
+		return ' '.join(rlist)
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))

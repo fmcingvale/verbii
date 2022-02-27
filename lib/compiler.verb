@@ -8,10 +8,6 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 )
 
-( -- watch for locals not being cleaned up -- )
-var LP_START 1
-LP LP_START set!
-
 : digit? ( string|symbol -- true|false; is single char a digit? )
 	dup string? if >>string
 		dup '0 < if >>notdigit
@@ -308,38 +304,48 @@ LP LP_START set!
 		return
 		;
 
-var DEFINED_WORDS 1
-
-: byte-compile-file ( filename -- writes byte-compilation to stdout )
+: byte-compile ( byte-compile source from current reader stream )
 	( keep a list of all word definitions that I parse; I only want to serialize
 	those, not EVERY word that is defined )
+	var DEFINED_WORDS 1
 	0 make-list DEFINED_WORDS set!
-		( "DEFINED WORDS INIT:" . DEFINED_WORDS ref . CR )
-	reader-open
 	SP >L ( L0=SP at start )
 	@loop
+	( read all parsed objects then make into a list )
 	syntax-next
-	( .S CR )
 	dup null? if >>done <<loop
 	@done
 	drop
-	( "END STACK:" . .S CR )
-	L> SP - 1 - make-list 
+	( count # items added to stack and make list )
+	L> SP - 1 - make-list
+	( add this list as word __main__ )
+	'__main__ make-word
+	DEFINED_WORDS ref '__main__ append
+	del DEFINED_WORDS
+	( leave list of added words on stack )
+	;
+
+: byte-compile-file ( filename -- byte-compile filename and write output to stdout )
+	reader-open-file byte-compile
+	;
+
+: byte-compile-string ( text -- byte-compile text and write output to stdout )
+	reader-open-string byte-compile
 	;
 
 : serialize-all-words
-	( serialize words as "W name" followed by serialized list )
-	DEFINED_WORDS ref { "W" . dup repr puts CR .dumpword serialize-object } for-each 
+	( takes list of words on top of stack and serializes them to stdout )
+	{ "W" . dup repr puts CR .dumpword serialize-object } for-each 
 	;
 
 : compile-and-serialize ( filename )
 	byte-compile-file ( this will be all code other than word definitions )
 		( "BYTE COMPILE RESULTS:" . .S CR )
-	'__main__ make-word ( put loose code into word __main__ )
-	DEFINED_WORDS ref '__main__ append DEFINED_WORDS set!
+
+	( that left list of compiled words on stack )
 
 	( this will all be written to a list -- will be length of DEFINED_WORDS )
-	"L" . DEFINED_WORDS ref length str puts CR
+	"L" . dup length str puts CR
 
 	( write word defs first, assuming rest of code depends on them )
 	serialize-all-words 
@@ -358,6 +364,10 @@ var DEFINED_WORDS 1
 	"*** Stack not empty at exit ***" error
 	@okStack 
 	;
+
+( -- watch for locals not being cleaned up -- )
+var LP_START 1
+LP LP_START set!
 
 cmdline-args 0 get ( get filename to compile )
 compile-and-serialize

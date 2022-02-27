@@ -1,5 +1,6 @@
 from __future__ import annotations
 from errors import LangError
+from langtypes import LangString
 """
 	repl - run code interactively, run unittests, or run programs.
 
@@ -10,7 +11,8 @@ from errors import LangError
 from interpreter import Interpreter
 import sys, re, os
 
-INITLIB = "../lib/init.txt"
+INITLIB = "../lib/init.verb.b"
+COMPILERLIB = "../lib/compiler.verb.b"
 
 def new_interpreter(noinit: bool):
 	"convenience to start interpreter and optionally load init lib"
@@ -27,7 +29,13 @@ def new_interpreter(noinit: bool):
 
 def repl(noinit: bool):
 	"Run interactively"
-	intr = new_interpreter(noinit)
+	from deserialize import deserialize_stream
+	#intr = new_interpreter(noinit)
+	intr = new_interpreter(True)
+	fileIn = open(INITLIB,"r")
+	deserialize_stream(intr, fileIn)
+	fileIn = open(COMPILERLIB,"r")
+	deserialize_stream(intr, fileIn)
 	
 	while(True):
 		sys.stdout.write(">> ")
@@ -38,10 +46,24 @@ def repl(noinit: bool):
 		if line == "quit":
 			return
 		
-		intr.addText(line)
-
+		#intr.addText(line)
+		intr.push(LangString(line))
+		code = intr.WORDS['byte-compile-string']
+		#intr.run(code)
 		try:
-			intr.run()
+			intr.run(code)
+		except LangError as exc:
+			print("*** " + exc.msg + " ***")
+			continue
+
+		print("COMPILED OK")
+		# byte-compile leaves list of words on stack -- used by serializer -- but i
+		# don't need them here
+		intr.pop()
+		
+		code = intr.WORDS['__main__']
+		try:
+			intr.run(code)
 			print("=> " + intr.reprStack())
 		except LangError as exc:
 			print("*** " + exc.msg + " ***")

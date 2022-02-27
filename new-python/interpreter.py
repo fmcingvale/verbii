@@ -1,13 +1,8 @@
 from __future__ import annotations
+from codecs import replace_errors
 from langtypes import LangLambda, MemArray, LangString, fmtStackPrint, fmtDisplay, MAX_INT_31, MIN_INT_31
-
 """
-	Interpreter - runs code.
-
-	There is no compilation step, not really even a parsing step -- the interpreter
-	runs directly from the wordlists from the Reader. This makes the code smaller and
-	makes e.g. forward declarations really easy since nothing is evaluated until it
-	runs.
+	Interpreter - runs code deserialized from bytecode.
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 
@@ -15,15 +10,12 @@ from langtypes import LangLambda, MemArray, LangString, fmtStackPrint, fmtDispla
 """
 import re
 from errors import LangError
-from reader import Reader
-from syntax import Syntax
 
 class Interpreter(object):
 	STACK_SIZE = (1<<16)
 	LOCALS_SIZE = (1<<10)
 
 	def __init__(self):
-		self.syntax = Syntax()
 		# stack & locals live here -- integer addresses are indexes into this.
 		# variables live in allocated memory tied to a MemArray.
 		self.SIZE_STACKLOCALS = self.STACK_SIZE + self.LOCALS_SIZE
@@ -48,8 +40,19 @@ class Interpreter(object):
 		# variables
 		self.VARS = {}
 
-	def addText(self, text):
-		self.syntax.addText(text)
+		self.code = []
+		self.codepos = 0
+		self.callstack = []
+
+	def code_call(self, code):
+		print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
+		self.callstack.append((self.code,self.codepos))
+		self.code = code
+		self.codepos = 0
+
+	def code_return(self):
+		self.code,self.codepos = self.callstack.pop()
+		print("CODE RETURN (POS={0}): {1}".format(self.codepos, fmtStackPrint(self.code)))
 
 	def push(self, obj):
 		# unlike in the C++ implementation, I can just push regular python objects
@@ -89,48 +92,96 @@ class Interpreter(object):
 		if jumpword[:2] == ">>":
 			# forward jump, find word (>>NAME -> @NAME)
 			while True:
-				word = self.syntax.nextWordOrFail()
+				word = self.nextCodeObjOrFail()
 				if type(word) == str and word[1:] == jumpword[2:]:
 					return # found word, stop
 		elif jumpword[:2] == "<<":
 			# backward jump
 			while True:
-				word = self.syntax.prevWordOrFail()
+				word = self.prevCodeObjectOrFail()
 				if type(word) == str and word[1:] == jumpword[2:]:
 					return # found word, stop
 		else:
 			raise LangError("Bad jumpword " + jumpword)
 
-	def run(self, stephook=None) -> None:
+	def nextCodeObj(self):
+		if self.codepos >= len(self.code):
+			return None
+
+		obj = self.code[self.codepos]
+		self.codepos += 1
+		return obj
+
+	def nextCodeObjOrFail(self):
+		obj = self.nextCodeObj()
+		if obj is None:
+			raise LangError("Unexpected end of input")
+
+		return obj
+
+	def peekNextCodeObj(self):
+		if self.codepos >= len(self.code):
+			return None
+
+		return self.code[self.codepos]
+
+	def prevCodeObject(self):
+		if self.codepos == 0:
+			return None
+		else:
+			self.codepos -= 1
+			return self.code[self.codepos]
+
+	def prevCodeObjectOrFail(self):
+		obj = self.prevCodeObject()
+		if obj is None:
+			raise LangError("Unexpected end of input")
+
+		return obj
+		
+	def run(self, objlist, stephook=None) -> None:
+		if len(self.callstack):
+			raise LangError("Attempting to call Interpreter.run() recursively")
+
+		self.code_call(objlist)
+
 		from native import BUILTINS
-		# run one word at a time in a loop, with the reader position as the continuation		
+		# run one object at a time in a loop	
 		while True:
 			# see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
 
-			word = self.syntax.nextObj()
+			word = self.nextCodeObj()
 			if stephook is not None:
 				stephook(self, word)
 
 			if word is None:
 				# i could be returning from a word that had no 'return',
-				# so pop words like i would if it were a return
-				if self.syntax.hasPushedWords():
-					self.syntax.popWords()
+				# so do return, if possible
+				if len(self.callstack):
+					self.code_return()
 					continue
 				else:
 					return
 
+			print("RUN OBJ:",word)
+			print(" => " + self.reprStack())
+								
 			# literals that get pushed
 			if type(word) == int or type(word) == float or isinstance(word,LangString) or \
 				isinstance(word, LangLambda):
 				self.push(word)
 				continue
 
+			# quoted symbols - remove one level of quoting and push symbol
+			if word[0] == "'":
+				self.push(word[1:])
+				continue
+
 			# string are symbols
 			if word == "return":
 				# return from word by popping back to previous wordlist (if not at toplevel)
-				if self.syntax.hasPushedWords():
-					self.syntax.popWords()
+				if len(self.callstack):
+					self.code_return()
 				else:
 					return # top level return exits program
 			
@@ -138,12 +189,12 @@ class Interpreter(object):
 		
 			if word == "if":
 				# true jump is required
-				true_jump = self.syntax.nextObj()
+				true_jump = self.nextCodeObj()
 				# false word is optional
-				peeked = self.syntax.peekObj()
+				peeked = self.peekNextCodeObj()
 
 				if type(peeked) == str and (peeked[:2] == "<<" or peeked[:2] == ">>"):
-					false_jump = self.syntax.nextObj()
+					false_jump = self.nextCodeObj()
 				else:
 					false_jump = None
 			
@@ -168,8 +219,8 @@ class Interpreter(object):
 				continue
 
 			if word == "var":
-				name = self.syntax.nextWordOrFail()
-				count = self.syntax.nextObj()
+				name = self.nextCodeObjOrFail()
+				count = self.nextCodeObjOrFail()
 				if type(count) != int:
 					raise LangError("Expecting int after var but got: " + fmtStackPrint(count))
 				# must be unique userword
@@ -181,7 +232,7 @@ class Interpreter(object):
 				continue
 		
 			if word == "del":
-				name = self.syntax.nextWordOrFail()
+				name = self.nextCodeObjOrFail()
 				if name not in self.VARS:
 					raise LangError("Trying to delete non-existent variable " + name)
 				
@@ -197,7 +248,7 @@ class Interpreter(object):
 				#print("CALLING LAMBDA:",obj.wordlist)
 				# now this is just like calling a userword, below
 				# TODO -- tail call elimination??
-				self.syntax.pushWords(obj.wordlist)
+				self.code_call(obj.wordlist)
 				continue
 		
 			# builtins, then userwords, then vars
@@ -208,7 +259,7 @@ class Interpreter(object):
 					raise LangError("Stack underflow")
 
 				args = []
-				#print("WORD:",word)
+				#print("CALL WORD:",word)
 				#print("ARGTYPES:",argtypes)
 				for t in reversed(argtypes):
 					v = self.pop()
@@ -227,7 +278,7 @@ class Interpreter(object):
 				# TODO -- tail call elimination
 			
 				# execute word by pushing its wordlist and continuing
-				self.syntax.pushWords(self.WORDS[word])
+				self.code_call(self.WORDS[word])
 				continue
 	
 			if word in self.VARS:

@@ -13,3 +13,4 @@ csharp/repl.pdb
 unittests/RESULTS/
 new-python/__pycache__/
 new-python/test-output/
+bootstrap/test-output/
