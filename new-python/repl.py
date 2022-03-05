@@ -56,11 +56,12 @@ def repl(noinit: bool):
 			print("*** " + exc.msg + " ***")
 			continue
 
-		print("COMPILED OK")
+		#print("COMPILED OK")
 		# byte-compile leaves list of words on stack -- used by serializer -- but i
 		# don't need them here
 		intr.pop()
 		
+		# run __main__
 		code = intr.WORDS['__main__']
 		try:
 			intr.run(code)
@@ -148,13 +149,18 @@ if __name__ == '__main__':
 	testmode = False
 	filename = None
 	singlestep = False
-	for arg in sys.argv[1:]:
+	for i,arg in enumerate(sys.argv[1:]):
 		if arg == '-noinit':
 			noinit = True
 		elif arg == '-test':
 			testmode = True
 		elif arg == '-step':
 			singlestep = True
+		elif arg == '--':
+			# pass rest of args to script
+			import native
+			native.NATIVE_CMDLINE_ARGS = sys.argv[i+1:]
+			break
 		elif filename is None and os.path.exists(arg):
 			filename = arg
 		else:

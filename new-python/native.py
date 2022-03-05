@@ -12,6 +12,9 @@ from interpreter import Interpreter
 from langtypes import LangLambda, MemArray, LangString, FLOAT_PRECISION, fmtDisplay, fmtStackPrint, \
 				isNumeric
 
+# has to be set externally
+NATIVE_CMDLINE_ARGS = []
+
 # see notes in C++ implementation of this function.
 # this returns (quotient,mod) instead of taking mod as a return param.
 def int_divmod(a, b):
@@ -33,18 +36,6 @@ def builtin_divmod(I: Interpreter, a, b):
 	quot,mod = int_divmod(a,b)
 	I.pushInt(mod)
 	I.pushInt(quot)
-
-def builtin_define_word(I: Interpreter):
-	name = I.syntax.nextWordOrFail()
-	words = []
-	while True:
-		w = I.syntax.nextWordOrFail()
-		#print("DEFINE WORD:",w)
-		if w == ';':
-			I.WORDS[name] = words
-			return
-		else:
-			words.append(w)
 
 # ( obj addr -- ) - save obj to addr
 def builtin_set(I: Interpreter, obj, addr):
@@ -155,43 +146,20 @@ def popStringOrSymbol(I):
 	elif isinstance(obj, LangString): return obj.s
 	else: raise LangError("Expecting string or symbol but got: " + fmtStackPrint(obj))
 
-def builtin_fadd(I):
-	b = popIntOrFloat(I)
-	a = popIntOrFloat(I)
-	I.push(a+b)
-
-def builtin_fsub(I):
-	b = popIntOrFloat(I)
-	a = popIntOrFloat(I)
-	I.push(a-b)
-
-def builtin_fmul(I):
-	b = popIntOrFloat(I)
-	a = popIntOrFloat(I)
-	I.push(a*b)
-
-def builtin_fdiv(I):
-	b = popIntOrFloat(I)
-	if b == 0:
-		raise LangError("Floating point overflow")
-
-	a = popIntOrFloat(I)
-	I.push(a/b)
-
 def builtin_add(I):
 	b = I.pop()
 	a = I.pop()
 
-	print("ADD: {0} + {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
+	#print("ADD: {0} + {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
 	if isNumeric(a) and isNumeric(b):
-		print("IS NUMERIC")
+		#print("IS NUMERIC")
 		I.push(a+b)
 	elif type(a) == str and type(b) == str:
-		print("ADD STRINGS")
+		#print("ADD STRINGS")
 		I.push(a+b)
 	elif isinstance(a,LangString) and isinstance(b,LangString):
-		print("IS LANG STRING")
+		#print("IS LANG STRING")
 		print(a.s+b.s)
 	
 		I.push(LangString(a.s+b.s))
@@ -210,6 +178,37 @@ def builtin_add(I):
 		I.push(b_)
 	else:
 		raise LangError("Don't know how to add '{0}' and '{1}'".format(a,b))
+
+def builtin_subtract(I):
+	b = I.pop()
+	a = I.pop()
+
+	if isNumeric(a) and isNumeric(b):
+		#print("IS NUMERIC")
+		I.push(a-b)
+	else:
+		raise LangError("Unable to subtract '{0}' and '{1}'".format(a,b))
+
+def builtin_mul(I):
+	b = I.pop()
+	a = I.pop()
+
+	if isNumeric(a) and isNumeric(b):
+		I.push(a*b)
+	else:
+		raise LangError("Unable to multiply '{0}' and '{1}'".format(a,b))
+
+def builtin_div(I):
+	b = I.pop()
+	a = I.pop()
+
+	if isNumeric(a) and isNumeric(b):
+		if b == 0:
+			raise LangError("Divide by zero")
+
+		I.push(a/b)
+	else:
+		raise LangError("Unable to multiply '{0}' and '{1}'".format(a,b))
 
 def builtin_fsetprec(I, a):
 	global FLOAT_PRECISION 
@@ -244,19 +243,19 @@ def builtin_reader_open_string(I):
 	global READER_WORDLIST
 	global READER_POS
 	READER_WORDLIST = popString(I).split()
-	print("READER OPEN STRING, WORDS:",READER_WORDLIST)
+	#print("READER OPEN STRING, WORDS:",READER_WORDLIST)
 	READER_POS = 0
 
 def builtin_reader_next(I):
 	global READER_WORDLIST
 	global READER_POS
 	if READER_POS >= len(READER_WORDLIST):
-		print("READER NEXT DONE")
+		#print("READER NEXT DONE")
 		I.push(None)
 	else:
 		w = READER_WORDLIST[READER_POS]
 		READER_POS += 1
-		print("READER NEXT RETURNING:",w)
+		#print("READER NEXT RETURNING:",w)
 		I.push(w)
 
 def builtin_make_list(I):
@@ -322,7 +321,7 @@ def builtin_slice(I, obj, index, nr):
 	raise LangError("Unreachable code!!")
 
 def builtin_unmake(I, obj):
-	print("UNMAKE:", fmtStackPrint(obj))
+	#print("UNMAKE:", fmtStackPrint(obj))
 	fn = lambda x: x
 	if type(obj) == str: 
 		seq = obj
@@ -374,13 +373,10 @@ import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
 	'+': ([], builtin_add),
-	'-': ([int,int], lambda I,a,b: I.pushInt(a-b)),
-	'*': ([int,int], lambda I,a,b: I.pushInt(a*b)),
+	'-': ([], builtin_subtract),
+	'*': ([], builtin_mul),
+	'/': ([], builtin_div),
 	'/mod': ([int,int], builtin_divmod),
-	'f+': ([], builtin_fadd),
-	'f-': ([], builtin_fsub),
-	'f*': ([], builtin_fmul),
-	'f/': ([], builtin_fdiv),
 	'f.setprec': ([int], builtin_fsetprec),
 	'==': ([], lambda I: I.push(builtin_equals(I))),
 	'>': ([], lambda I: I.push(builtin_greater(I))),
@@ -393,15 +389,16 @@ BUILTINS = {
 	# print string from TOS
 	'puts': ([object], builtin_puts),
 	'int?': ([object], lambda I,o: I.push(type(o) == int)),
+	'float?': ([object], lambda I,i: I.push(type(o) == float)),
+	'bool?': ([object], lambda I,i: I.push(type(o) == bool)),
 	'list?': ([object], lambda I,o: I.push(type(o) == list)),
 	'string?': ([object], lambda I,o: I.push(isinstance(o,LangString))),
 	'symbol?': ([object], lambda I,o: I.push(type(o) == str)),
 	'null?': ([], lambda I: I.push(I.pop() is None)),
+	'lambda?': ([object], lambda I,o: I.push(isinstance(LangLambda,o))),
 	'array?': ([object], lambda I,o: I.push(isinstance(o,MemArray))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
-	':': ([], builtin_define_word),
-	'def': ([], builtin_define_word),
 	'ref': ([object], builtin_ref),
 	'set!': ([object,object], builtin_set),
 	'SP': ([], lambda I: I.push(I.SP)),
@@ -425,7 +422,10 @@ BUILTINS = {
 	'make-string': ([int], lambda I,nr: builtin_make_string(I,nr)),
 	'length': ([object], lambda I,obj: builtin_length(I,obj)),
 	'parse-int': ([], lambda I: I.pushInt(int(popStringOrSymbol(I)))),
+	'parse-float': ([], lambda I: I.pushInt(float(popStringOrSymbol(I)))),
 	'make-word': ([], builtin_make_word),
 	'append': ([], builtin_append),
+	'null': ([], lambda I: I.push(None)),
+	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 }
 

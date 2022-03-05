@@ -45,14 +45,14 @@ class Interpreter(object):
 		self.callstack = []
 
 	def code_call(self, code):
-		print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
+		#print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
 		self.callstack.append((self.code,self.codepos))
 		self.code = code
 		self.codepos = 0
 
 	def code_return(self):
 		self.code,self.codepos = self.callstack.pop()
-		print("CODE RETURN (POS={0}): {1}".format(self.codepos, fmtStackPrint(self.code)))
+		#print("CODE RETURN (POS={0}): {1}".format(self.codepos, fmtStackPrint(self.code)))
 
 	def push(self, obj):
 		# unlike in the C++ implementation, I can just push regular python objects
@@ -163,8 +163,8 @@ class Interpreter(object):
 				else:
 					return
 
-			print("RUN OBJ:",word)
-			print(" => " + self.reprStack())
+			#print("RUN OBJ:",word)
+			#print(" => " + self.reprStack())
 								
 			# literals that get pushed
 			if type(word) == int or type(word) == float or isinstance(word,LangString) or \
