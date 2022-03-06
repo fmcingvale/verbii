@@ -19,24 +19,22 @@ def new_interpreter(noinit: bool):
 	intr = Interpreter()
 	
 	if not noinit:
-		# run initlib to load its words first
-		intr.addText(open(INITLIB,'r').read())
-		intr.run()
-		# don't want initlib in the backtrace history, once it has successfully loaded
-		intr.syntax.clearAll()
+		# load serialized versions of init.verb and compiler.verb (required
+		# to bootstrap interpreter)
+		from deserialize import deserialize_stream
+		intr = new_interpreter(True)
+		fileIn = open(INITLIB,"r")
+		deserialize_stream(intr, fileIn)
+		fileIn = open(COMPILERLIB,"r")
+		deserialize_stream(intr, fileIn)
 
 	return intr
 
 def repl(noinit: bool):
 	"Run interactively"
-	from deserialize import deserialize_stream
-	#intr = new_interpreter(noinit)
-	intr = new_interpreter(True)
-	fileIn = open(INITLIB,"r")
-	deserialize_stream(intr, fileIn)
-	fileIn = open(COMPILERLIB,"r")
-	deserialize_stream(intr, fileIn)
 	
+	intr = new_interpreter(noinit)
+
 	while(True):
 		sys.stdout.write(">> ")
 		sys.stdout.flush()
@@ -130,7 +128,7 @@ def print_backtrace(intr: Interpreter):
 
 def debug_hook(intr: Interpreter, word: str):
 	print("=> " + intr.reprStack())
-	print("Run: " + word)
+	print("Run: " + str(word))
 	sys.stdout.write("press ENTER to continue ...")
 	sys.stdout.flush()
 	sys.stdin.readline()
@@ -138,11 +136,30 @@ def debug_hook(intr: Interpreter, word: str):
 def run_file(intr: Interpreter, filename: str, singlestep: bool):
 	# run file
 	buf = open(filename,'r').read()
-	intr.addText(buf)
-	if singlestep:
-		intr.run(debug_hook)
-	else:
-		intr.run()
+
+	intr.push(LangString(buf))
+	code = intr.WORDS['byte-compile-string']
+	#intr.run(code)
+	try:
+		intr.run(code)
+	except LangError as exc:
+		print("*** " + exc.msg + " ***")
+		return
+
+	# byte-compile leaves list of words on stack -- used by serializer -- but i
+	# don't need them here
+	intr.pop()
+	
+	print("PRESS ENTER TO RUN ...")
+	sys.stdin.readline()
+
+	# run __main__
+	code = intr.WORDS['__main__']
+	try:
+		intr.run(code) #, debug_hook)
+		print("=> " + intr.reprStack())
+	except LangError as exc:
+		print("*** " + exc.msg + " ***")
 
 if __name__ == '__main__':
 	noinit = False

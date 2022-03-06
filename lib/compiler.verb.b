@@ -116,10 +116,11 @@ y unmake
 y make-string
 y int-string?
 W float-string?
-L 20
+L 21
 y dup
 y any-digits?
 y not
+y if
 y >>nodigits
 y ltrim-sign
 y ltrim-digits
@@ -266,7 +267,7 @@ y set!
 y make-word
 y syntax-next
 W syntax-string
-L 56
+L 65
 y >L
 y L0
 y ref
@@ -274,6 +275,12 @@ i -1
 y get
 y '"
 y ==
+y L0
+y ref
+y length
+i 1
+y >
+y and
 y if
 y >>endstring
 y @loop
@@ -305,7 +312,10 @@ y if
 y >>endstring
 y <<loop
 y @eof
-s Unexpected%32end%32of%32input%32in%32string
+s Unexpected%32end%32of%32input%32in%32string%32--%32
+y L0
+y ref
+y +
 y error
 y @endstring
 y L0

@@ -309,7 +309,7 @@ var DOORS 101 ( numbering these 1..100 since 0 as increment would infinite loop 
 	} for-while
 } for-while
 
-." Opened doors ... "
+" Opened doors ... " .
 1 1 { 100 <= } { 
 	( outer )
 	dup DOORS + ref ( outer DOORS[outer] )

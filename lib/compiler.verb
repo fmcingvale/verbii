@@ -65,7 +65,7 @@
 
 : float-string? ( string -- true|false if string can be parsed as float )
 	( NOTE - this will ALSO match integers, so use int-string? first to rule those out )
-	dup any-digits? not >>nodigits ( must have digits, not just +/-/./e )
+	dup any-digits? not if >>nodigits ( must have digits, not just +/-/./e )
 	ltrim-sign
 	ltrim-digits
 	"." ltrim-char
@@ -74,7 +74,8 @@
 	ltrim-sign
 	ltrim-digits
 	length 0 == return
-	@nodigits drop false
+	@nodigits 
+	drop false
 	;
 
 : float-symbol? ( as above but for symbols )
@@ -147,10 +148,12 @@
 
 : syntax-string ( first string part already on stack )
 	(
-		"syntax-string:" . CR
+		"syntax-string:" . .S CR
 	)
 	>L ( L0 = string in progress )
-	L0 ref -1 get '" == if >>endstring ( " see if its all one word )
+	L0 ref -1 get '" == 
+	L0 ref length 1 > and
+		if >>endstring ( " see if its all one word )
 	@loop
 	(
 		"string NOW:" . L0 ref . CR
@@ -166,7 +169,7 @@
 	dup L0 ref swap + L0 set! ( string += piece )
 	-1 get '" == if >>endstring ( " )
 	<<loop
-	@eof "Unexpected end of input in string" error
+	@eof "Unexpected end of input in string -- " L0 ref + error
 	@endstring
 	(
 		"POSTPROCESS STRING:" . L0 ref . CR

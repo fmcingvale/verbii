@@ -248,7 +248,7 @@ class Interpreter(object):
 				#print("CALLING LAMBDA:",obj.wordlist)
 				# now this is just like calling a userword, below
 				# TODO -- tail call elimination??
-				self.code_call(obj.wordlist)
+				self.code_call(obj.objlist)
 				continue
 		
 			# builtins, then userwords, then vars

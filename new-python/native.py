@@ -156,7 +156,7 @@ def builtin_add(I):
 		#print("IS NUMERIC")
 		I.push(a+b)
 	elif type(a) == str and type(b) == str:
-		#print("ADD STRINGS")
+		#print("ADD SYMBOLS")
 		I.push(a+b)
 	elif isinstance(a,LangString) and isinstance(b,LangString):
 		#print("IS LANG STRING")
@@ -176,6 +176,8 @@ def builtin_add(I):
 		b_ = b.clone()
 		b_.offset += a
 		I.push(b_)
+	elif type(a) == list and type(b) == list:
+		I.push(a+b)
 	else:
 		raise LangError("Don't know how to add '{0}' and '{1}'".format(a,b))
 
@@ -275,6 +277,7 @@ def builtin_equals(I):
 	elif type(a) == bool: return type(b) == bool and a==b
 	elif type(a) == str: return type(b) == str and a==b
 	elif isinstance(a,LangString): return isinstance(b,LangString) and a.s == b.s
+	elif isinstance(a,LangLambda): return False # lambdas are never equal, even if its the same object
 	else:
 		raise LangError("Unable to compare objects (==) {0} and {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
@@ -330,8 +333,17 @@ def builtin_unmake(I, obj):
 		seq = obj.s
 		fn = lambda x: ord(x)
 	elif type(obj) == list: seq = obj
-	elif isinstance(obj, LangLambda): seq = obj.objlist
+	elif isinstance(obj, LangLambda): 
+		# like C++ version, make into a new list
+		out = []
+		for o in obj.objlist:
+			out.append(o)
+
+		I.push(out)
+		return out
 	elif isinstance(obj, MemArray): seq = obj.mem
+	else:
+		raise LangError("Don't know how to unmake object: " + fmtStackPrint(obj))
 
 	for o in seq:
 		I.push(fn(o))
@@ -344,6 +356,20 @@ def builtin_make_string(I, nr):
 		s = chr(popInt(I)) + s
 
 	I.push(LangString(s))
+
+def builtin_make_symbol(I, nr):
+	s = ''
+	for i in range(nr):
+		s = chr(popInt(I)) + s
+
+	I.push(s)
+
+def builtin_make_lambda(I):
+	_list = I.pop()
+	if type(_list) != list:
+		raise LangError("make-lambda expecting list but got: {0}".format(fmtStackPrint(_list)))
+
+	I.push(LangLambda(_list))
 
 def builtin_length(I, obj):
 	if type(obj) == str: I.pushInt(len(obj))
@@ -361,6 +387,9 @@ def builtin_make_word(I):
 	I.WORDS[name] = objlist
 
 def builtin_append(I):
+	#print("APPEND:")
+	#print(I.reprStack())
+
 	obj = I.pop()
 	_list = I.pop()
 	if type(_list) != list:
@@ -369,6 +398,20 @@ def builtin_append(I):
 	_list.append(obj)
 	I.push(_list)
 
+def builtin_dumpword(I):
+	name = popSymbol(I)
+	if name not in I.WORDS:
+		raise LangError("No such word in .dumpword: " + fmtStackPrint(name))
+
+	I.push(I.WORDS[name])
+
+def builtin_dumpvar(I):
+	name = popSymbol(I)
+	if name not in I.VARS:
+		raise LangError("No such var in .dumpvar: " + fmtStackPrint(name))
+
+	I.push(I.VARS[name].mem)
+	
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -389,8 +432,8 @@ BUILTINS = {
 	# print string from TOS
 	'puts': ([object], builtin_puts),
 	'int?': ([object], lambda I,o: I.push(type(o) == int)),
-	'float?': ([object], lambda I,i: I.push(type(o) == float)),
-	'bool?': ([object], lambda I,i: I.push(type(o) == bool)),
+	'float?': ([object], lambda I,o: I.push(type(o) == float)),
+	'bool?': ([object], lambda I,o: I.push(type(o) == bool)),
 	'list?': ([object], lambda I,o: I.push(type(o) == list)),
 	'string?': ([object], lambda I,o: I.push(isinstance(o,LangString))),
 	'symbol?': ([object], lambda I,o: I.push(type(o) == str)),
@@ -420,12 +463,16 @@ BUILTINS = {
 	'slice': ([object,int,int], lambda I,obj,index,nr: I.push(builtin_slice(I,obj,index,nr))),
 	'unmake': ([object], lambda I,obj: builtin_unmake(I,obj)),
 	'make-string': ([int], lambda I,nr: builtin_make_string(I,nr)),
+	'make-symbol': ([int], lambda I,nr: builtin_make_symbol(I,nr)),
 	'length': ([object], lambda I,obj: builtin_length(I,obj)),
 	'parse-int': ([], lambda I: I.pushInt(int(popStringOrSymbol(I)))),
-	'parse-float': ([], lambda I: I.pushInt(float(popStringOrSymbol(I)))),
+	'parse-float': ([], lambda I: I.push(float(popStringOrSymbol(I)))),
 	'make-word': ([], builtin_make_word),
+	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),
 	'null': ([], lambda I: I.push(None)),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
+	'.dumpword': ([], builtin_dumpword),
+	'.dumpvar': ([], builtin_dumpvar),
 }
 

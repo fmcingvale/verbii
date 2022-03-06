@@ -35,8 +35,8 @@ class LangString(object):
 
 class LangLambda(object):
 	"from { ... } - a lambda/anonymous word"
-	def __init__(self, wordlist):
-		self.wordlist = wordlist
+	def __init__(self, objlist):
+		self.objlist = objlist
 
 	def __str__(self):
 		return "<lambda>"
