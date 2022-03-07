@@ -14,28 +14,26 @@ import sys, re, os
 INITLIB = "../lib/init.verb.b"
 COMPILERLIB = "../lib/compiler.verb.b"
 
-def new_interpreter(noinit: bool):
+def new_interpreter():
 	"convenience to start interpreter and optionally load init lib"
 	intr = Interpreter()
-	
-	if not noinit:
-		# load serialized versions of init.verb and compiler.verb (required
-		# to bootstrap interpreter)
-		from deserialize import deserialize_stream
-		intr = new_interpreter(True)
-		fileIn = open(INITLIB,"r")
-		deserialize_stream(intr, fileIn)
-		code = intr.WORDS['__main__']
-		intr.run(code)
-		fileIn = open(COMPILERLIB,"r")
-		deserialize_stream(intr, fileIn)
+
+	# load serialized versions of init.verb and compiler.verb (required
+	# to bootstrap interpreter)
+	from deserialize import deserialize_stream
+	fileIn = open(INITLIB,"r")
+	deserialize_stream(intr, fileIn)
+	code = intr.WORDS['__main__']
+	intr.run(code)
+	fileIn = open(COMPILERLIB,"r")
+	deserialize_stream(intr, fileIn)
 
 	return intr
 
-def repl(noinit: bool):
+def repl():
 	"Run interactively"
 	
-	intr = new_interpreter(noinit)
+	intr = new_interpreter()
 
 	while(True):
 		sys.stdout.write(">> ")
@@ -69,10 +67,10 @@ def repl(noinit: bool):
 		except LangError as exc:
 			print("*** " + exc.msg + " ***")
 
-def run_test_mode(filename: str, noinit: bool, status: dict):
+def run_test_mode(filename: str, status: dict):
 	"""read one line at a time from file and run, printing results and stack. 
 	used for unit testing"""
-	intr = new_interpreter(noinit)
+	intr = new_interpreter()
 
 	re_blankline = re.compile(r"""(^[ \t\r\n]*$)""")
 	fileIn = open(filename,'r')
@@ -91,9 +89,16 @@ def run_test_mode(filename: str, noinit: bool, status: dict):
 			continue
 		
 		sys.stdout.write(">> " + line) # line has \n at end already
-		intr.syntax.clearAll() # clear any leftover text from previous line run
-		intr.addText(line)
-		intr.run()
+
+		# compile and run line, like above
+		intr.push(LangString(line))
+		code = intr.WORDS['byte-compile-string']
+		intr.run(code)
+		intr.pop() # don't need wordlist
+		
+		code = intr.WORDS['__main__']
+		intr.run(code)
+
 		print("=> " + intr.reprStack())
 		# update count AFTER above suceeds
 		status['max-count'] = runnable_lines
@@ -152,8 +157,8 @@ def run_file(intr: Interpreter, filename: str, singlestep: bool):
 	# don't need them here
 	intr.pop()
 	
-	print("PRESS ENTER TO RUN ...")
-	sys.stdin.readline()
+	#print("PRESS ENTER TO RUN ...")
+	#sys.stdin.readline()
 
 	# run __main__
 	code = intr.WORDS['__main__']
@@ -164,14 +169,11 @@ def run_file(intr: Interpreter, filename: str, singlestep: bool):
 		print("*** " + exc.msg + " ***")
 
 if __name__ == '__main__':
-	noinit = False
 	testmode = False
 	filename = None
 	singlestep = False
 	for i,arg in enumerate(sys.argv[1:]):
-		if arg == '-noinit':
-			noinit = True
-		elif arg == '-test':
+		if arg == '-test':
 			testmode = True
 		elif arg == '-step':
 			singlestep = True
@@ -187,18 +189,18 @@ if __name__ == '__main__':
 			sys.exit(1)
 
 	if filename is None:
-		repl(noinit)
+		repl()
 	elif testmode is True:
 		status = {'done': False, 'max-count': 0}
 		while not status['done']:
 			try:
-				run_test_mode(filename, noinit, status)
+				run_test_mode(filename, status)
 			except LangError as exc:
 				print("*** " + exc.msg + " ***")
 				#print("MAX LINE:",status)
 				status['max-count'] += 1
 	else:
-		intr = new_interpreter(noinit)
+		intr = new_interpreter()
 
 		try:
 			run_file(intr, filename, singlestep)

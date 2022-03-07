@@ -152,7 +152,10 @@ def builtin_add(I):
 
 	#print("ADD: {0} + {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
-	if isNumeric(a) and isNumeric(b):
+	if type(a) == int and type(b) == int:
+		# keep as integer and check limits
+		I.pushInt(a+b)
+	elif isNumeric(a) and isNumeric(b): # result is float
 		#print("IS NUMERIC")
 		I.push(a+b)
 	elif type(a) == str and type(b) == str:
@@ -160,7 +163,7 @@ def builtin_add(I):
 		I.push(a+b)
 	elif isinstance(a,LangString) and isinstance(b,LangString):
 		#print("IS LANG STRING")
-		print(a.s+b.s)
+		#print(a.s+b.s)
 	
 		I.push(LangString(a.s+b.s))
 	elif isinstance(a,MemArray) and type(b) == int:
@@ -185,7 +188,10 @@ def builtin_subtract(I):
 	b = I.pop()
 	a = I.pop()
 
-	if isNumeric(a) and isNumeric(b):
+	# like addition, keep int+int as special case
+	if type(a) == int and type(b) == int:
+		I.pushInt(a-b)
+	elif isNumeric(a) and isNumeric(b):
 		#print("IS NUMERIC")
 		I.push(a-b)
 	else:
@@ -195,7 +201,10 @@ def builtin_mul(I):
 	b = I.pop()
 	a = I.pop()
 
-	if isNumeric(a) and isNumeric(b):
+	# like above, int+int is special case
+	if type(a) == int and type(b) == int:
+		I.pushInt(a*b)
+	elif isNumeric(a) and isNumeric(b):
 		I.push(a*b)
 	else:
 		raise LangError("Unable to multiply '{0}' and '{1}'".format(a,b))
@@ -204,13 +213,14 @@ def builtin_div(I):
 	b = I.pop()
 	a = I.pop()
 
+	# *UNLIKE* above, result here is ALWAYS float
 	if isNumeric(a) and isNumeric(b):
 		if b == 0:
 			raise LangError("Divide by zero")
 
-		I.push(a/b)
+		I.push(float(a)/float(b))
 	else:
-		raise LangError("Unable to multiply '{0}' and '{1}'".format(a,b))
+		raise LangError("Unable to divide '{0}' and '{1}'".format(a,b))
 
 def builtin_fsetprec(I, a):
 	global FLOAT_PRECISION 
@@ -308,7 +318,7 @@ def builtin_slice(I, obj, index, nr):
 		if type(obj) == str: return ""
 		elif isinstance(obj, LangString): return LangString("")
 		elif type(obj) == list: return []
-		elif isinstance(obj,MemArray): return MemArray(0, 0)
+		elif isinstance(obj,MemArray): return []
 
 	if nr < 0: nr = objsize - index
 	if (index+nr) > objsize: nr = objsize - index
@@ -316,10 +326,7 @@ def builtin_slice(I, obj, index, nr):
 	if type(obj) == str: return obj[index:index+nr]
 	elif isinstance(obj, LangString): return LangString(obj.s[index:index+nr])
 	elif type(obj) == list: return obj[index:index+nr]
-	elif isinstance(obj,MemArray):
-		mem = MemArray(nr, 0)
-		mem.mem = obj.mem[index:index+nr]
-		return mem
+	elif isinstance(obj,MemArray): return obj.mem[index:index+nr]
 		
 	raise LangError("Unreachable code!!")
 

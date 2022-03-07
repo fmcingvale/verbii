@@ -41,7 +41,7 @@ def deserialize_stream(intr, fileIn):
 		if type(objs) != list:
 			raise LangError("Expecting list after 'W' but got: " + objs.fmtStackPrint())
 		intr.WORDS[name] = objs
-		print("LOADED WORD: " + name)
+		#print("LOADED WORD: " + name)
 		return None
 	else:
 		raise LangError("Unrecognized line while deserializing: " + line)
