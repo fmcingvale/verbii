@@ -8,7 +8,7 @@
 => 10 20 30 3 
 >> . . . . CR
 3 30 20 10 
-=> 
+=> 
 >> depth
 => 0 
 >> 10 20 30 40 50 60
@@ -17,7 +17,7 @@
 => 0 10 20 30 
 >> "Hello world!" . CR
 Hello world! 
-=> 0 10 20 30 
+=> 0 10 20 30 
 >> clear
 => 
 >> 10 20 30
@@ -308,9 +308,9 @@ Hello world!
 => 123 99 0 
 >> clear
 => 
->> 10 20 30 40
+>> 10 20 30 40 
 => 10 20 30 40 
->> .S 
+>> .S
 => 10 20 30 40 
 => 10 20 30 40 
 >> : foobar 11 22 33 44 ;
@@ -369,13 +369,13 @@ Hello world!
 => <lambda> <lambda> <lambda> 
 >> saything
 The rose is red 
-=> <lambda> <lambda> 
+=> <lambda> <lambda> 
 >> saything
 The grass is green 
-=> <lambda> 
+=> <lambda> 
 >> saything
 The ocean is blue 
-=> 
+=> 
 >> clear
 => 
 >> : zzz { 10 . 20 . "Hello lambda!" . 30 . 40 . } call CR ;
@@ -392,13 +392,13 @@ The ocean is blue
 => 
 >> zzz
 10 20 Hello lambda! 30 40 
-=> 
+=> 
 >> zzz
 10 20 Hello lambda! 30 40 
-=> 
+=> 
 >> zzz ( once more for good measure )
 10 20 Hello lambda! 30 40 
-=> 
+=> 
 >> ( this will fail if comments aren't removed in the syntax layer since the )
 => 
 >> ( interpreter expects the name immediately after 'var' )
@@ -409,7 +409,7 @@ The ocean is blue
 => 
 >> t33 ref . CR
 1445 
-=> 
+=> 
 >> ( make sure saving lambdas to vars works )
 => 
 >> clear
@@ -432,22 +432,22 @@ The ocean is blue
 => "hello world here" 
 >> . CR
 hello world here 
-=> 
+=> 
 >> " hello with leading trailing space "
 => " hello with leading trailing space " 
 >> . CR
  hello with leading trailing space  
-=> 
+=> 
 >> "oneword"
 => "oneword" 
 >> . CR
 oneword 
-=> 
+=> 
 >> """and some embedded"quote"chars << here"""
 => """and some embedded"quote"chars << here""" 
 >> . CR
 ""and some embedded"quote"chars << here"" 
-=> 
+=> 
 >> ( length operator )
 => 
 >> clear
@@ -572,6 +572,26 @@ oneword
 => "Hello world!" 
 >> clear
 => 
+>> ( test that repr makes expected strings )
+=> 
+>> 1234 repr
+=> "1234" 
+>> #3.75 repr
+=> "1234" "#3.75" 
+>> true repr
+=> "1234" "#3.75" "true" 
+>> false repr
+=> "1234" "#3.75" "true" "false" 
+>> 10 20 30 40 4 make-list repr
+=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" 
+>> { 1 2 3 } repr
+=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" "<lambda>" 
+>> 'a-long-symbol repr
+=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" 
+>> "hello there world" repr
+=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" ""hello there world"" 
+>> clear
+=> 
 >> { 10 20 30 40 }
 => <lambda> 
 >> unmake
@@ -650,3 +670,17 @@ oneword
 => [ 10 20 30 40 ] [ 10 20 30 40 ] [ 30 ] [ 20 30 ] 
 >> Y unmake
 => [ 10 20 30 40 ] [ 10 20 30 40 ] [ 30 ] [ 20 30 ] 10 20 30 40 4 
+>> clear "abcde" { "e" == } any
+=> true 
+>> clear "01234" { "9" == } any
+=> false 
+>> clear 10 20 30 40 4 make-list { 30 > } any
+=> true 
+>> clear 10 20 30 40 4 make-list { 0 <  } any
+=> false 
+>> clear "mnopqr" dup { "m" >= } all swap { "r" <= } all and
+=> true 
+>> clear "1234.567" dup { "0" >= } all swap { "9" <= } all and
+=> false 
+>> clear "1234567" dup { "0" >= } all swap { "9" <= } all and
+=> true 

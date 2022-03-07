@@ -55,7 +55,7 @@
 >> ( parsing errors )
 => 
 >> : aaa 123 456
-*** Unexpected end of input ***
+*** Unexpected end of input looking for ';' ***
 >> ( bad comment
 *** Unexpected end of input inside comment ***
 >> ( interpreter errors )
@@ -97,7 +97,7 @@
 >> ( end of input inside " )
 => 
 >> "hello world oops ...
-*** Unexpected end of input inside string ***
+*** Unexpected end of input in string near: "hello world oops ...  ***
 >> ( end of input inside { .. )
 => 
 >> { a lambda here uh oh

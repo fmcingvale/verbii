@@ -22,7 +22,7 @@ Interpreter::Interpreter() {
 
 	//cout << "Interpreter starting\n";
 
-	syntax = new Syntax();
+	//syntax = new Syntax();
 
 	SIZE_STACKLOCALS = STACK_SIZE+LOCALS_SIZE;
 	STACKLOCALS = (Object*)x_malloc(SIZE_STACKLOCALS*sizeof(Object));
@@ -44,9 +44,9 @@ Interpreter::Interpreter() {
 	}
 }
 
-void Interpreter::addText(const string &text) {
-	syntax->addText(text);
-}
+//void Interpreter::addText(const string &text) {
+//	syntax->addText(text);
+//}
 
 void Interpreter::push(Object obj) {
 	if(SP <= SP_MIN) {
@@ -70,13 +70,60 @@ string Interpreter::reprStack() const {
 	return s;
 }
 
+Object Interpreter::nextCodeObj() {
+	if(!code || codepos >= code->size()) {
+		return newNull();
+	}
+
+	return code->at(codepos++);
+}
+
+Object Interpreter::nextCodeObjOrFail(const char *failmsg) {
+	Object o = nextCodeObj();
+	if(o.isNull()) {
+		throw LangError("End of input: " + string(failmsg));
+	}
+	return o;
+}
+
+Object Interpreter::nextSymbolOrFail(const char *failmsg) {
+	Object o = nextCodeObj();
+	if(!o.isSymbol()) {
+		throw LangError("Expecting symbol: " + string(failmsg));
+	}
+	return o;
+}
+
+Object Interpreter::peekNextCodeObj() {
+	if(!code || codepos >= code->size()) {
+		return newNull();
+	}
+
+	return code->at(codepos);
+}
+
+Object Interpreter::prevCodeObj() {
+	if(!code || codepos == 0) {
+		return newNull();
+	}
+	return code->at(--codepos);
+}
+
+Object Interpreter::prevCodeObjOrFail(const char *failmsg) {
+	Object o = prevCodeObj();
+	if(o.isNull()) {
+		throw LangError("No previous object: " + string(failmsg));
+	}
+	return o;
+}
+
 // take symbol like '>>NAME' or '<<NAME' and jump to '@NAME'
 void Interpreter::do_jump(const char *jumpword) {
 	//cout << "DO_JUMP TO: " << jumpword << endl;
 	if(!strncmp(jumpword, ">>", 2)) {
 		// forward jump, find word (>>NAME -> @NAME)
 		while(true) {
-			auto obj = syntax->nextObjOrFail();
+			auto obj = nextCodeObj();
 			//cout << "NEXT-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
 				//cout << "FOUND" << endl;
@@ -87,7 +134,7 @@ void Interpreter::do_jump(const char *jumpword) {
 	else if(!strncmp(jumpword, "<<", 2)) {
 		// backward jump
 		while(true) {
-			auto obj = syntax->prevObjOrFail();
+			auto obj = prevCodeObj();
 			//cout << "PREV-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
 				//cout << "FOUND" << endl;
@@ -116,10 +163,42 @@ Object Interpreter::lookup_var(const char *name) {
 		return newNull();
 }
 
-void Interpreter::run(bool singlestep) {
+void Interpreter::code_call(ObjList *new_code) {
+	if(!code) {
+		throw LangError("code_call but no code is running");
+	}
+	callstack_code.push_back(code);
+	callstack_pos.push_back(codepos);
+	code = new_code;
+	codepos = 0;
+}
+
+void Interpreter::code_return() {
+	if(!code) {
+		throw LangError("code_return but no code is running");
+	}
+
+	// don't allow return from toplevel -- interpreter main loop needs to handle that case
+	if(callstack_code.size() == 0) {
+		throw LangError("code_return with empty callstack");
+	}
+	code = callstack_code.back();
+	callstack_code.pop_back();
+	codepos = callstack_pos.back();
+	callstack_pos.pop_back();
+}
+
+void Interpreter::run(ObjList *to_run, bool singlestep) {
+	if(code) {
+		throw LangError("Interpreter run() called recursively");
+	}
+
+	code = to_run;
+	codepos = 0;
+
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
-		auto obj = syntax->nextObj();
+		auto obj = nextCodeObj();
 		// general note: there is kind of an artificial separation between words that are
 		// recognized here, and words implemented in native.cpp. In priciple, all these words
 		// could be implemented in native.cpp. However, I tend to put words here that directly
@@ -132,12 +211,18 @@ void Interpreter::run(bool singlestep) {
 		if(obj.isNull()) {
 			// i could be returning from a word that had no 'return',
 			// so pop words like i would if it were a return
-			if(syntax->hasPushedObjLists()) {
-				syntax->popObjList();
+			//if(syntax->hasPushedObjLists()) {
+			//	syntax->popObjList();
+			//	continue;
+			//}
+			if(callstack_code.size() > 0) {
+				code_return();
 				continue;
 			}
-			else
+			else {
+				code = NULL; // mark self as not running
 				return;
+			}
 		}
 		if(singlestep) {
 			cout << "Run word: " << obj.fmtStackPrint() << endl;
@@ -160,39 +245,34 @@ void Interpreter::run(bool singlestep) {
 
 		if(obj.isSymbol("return")) {
 			// return from word by popping back to previous wordlist (if not at toplevel)
-			if(syntax->hasPushedObjLists()) {	
-				syntax->popObjList();
+			//if(syntax->hasPushedObjLists()) {	
+			//	syntax->popObjList();
+			//}
+			if(callstack_code.size() > 0) {
+				code_return();
 			}
 			else {
+				code = NULL;
 				return; // return from top level exits program
 			}
 			continue;
 		}
 
 		if(obj.isSymbol("if")) {
-			// true jump is required
-			auto true_jump = syntax->nextSymbolOrFail();
+			// true jump is next
+			auto true_jump = nextSymbolOrFail("expecting jump after 'if'");
 			//cout << "TRUE_JUMP: " << true_jump << endl;
-			// false word is optional
-			auto false_jump = syntax->peekObj();
-			if(!false_jump.isSymbol("<<",2) && !false_jump.isSymbol(">>",2)) {
-				false_jump = NULLOBJ;
-			}
-			//cout << "FALSE_JUMP: " << false_jump << endl;
 			Object cond = pop();
 			//cout << "POPPED COND: " << cond.repr() << endl;
 			if(!cond.isBool()) {
 				throw LangError("'if' requires true|false but got: " + cond.fmtStackPrint());
 			}
-			// these don't run the jump, they just reposition the reader
+			// this doesn't run the jump, it just repositions the stream
 			if(cond.asBool()) {
 				// no need to actually skip false jump since i'll be looking for '@'
 				do_jump(true_jump.asSymbol());
 			}
-			else if(!false_jump.isNull()) {
-				syntax->nextObj(); // only peeked it above
-				do_jump(false_jump.asSymbol());
-			}
+			// if false, just continue with next instruction
 			continue;
 		}
 
@@ -207,8 +287,8 @@ void Interpreter::run(bool singlestep) {
 		}
 
 		if(obj.isSymbol("var")) {
-			auto name = syntax->nextSymbolOrFail();
-			auto count = syntax->nextObjOrFail();
+			auto name = nextSymbolOrFail("expecting symbol after 'var'");
+			auto count = nextCodeObjOrFail("expecting count after 'var'");
 			if(!count.isInt()) {
 				throw LangError("Count must be int, got: " + count.fmtStackPrint());
 			}
@@ -222,7 +302,7 @@ void Interpreter::run(bool singlestep) {
 		}
 
 		if(obj.isSymbol("del")) {
-			auto name = syntax->nextSymbolOrFail();
+			auto name = nextSymbolOrFail("expecting symbol after 'del'");
 			auto userword = VARS.find(name.asSymbol());
 			if(userword == VARS.end()) {
 				throw LangError("Trying to delete non-existent variable " + name.fmtStackPrint());
@@ -239,7 +319,8 @@ void Interpreter::run(bool singlestep) {
 			}
 			// now this is just like calling a userword, below
 			// TODO -- tail call elimination??
-			syntax->pushObjList(val.asLambda());
+			//syntax->pushObjList(val.asLambda());
+			code_call(val.asLambda());
 			continue;
 		}
 
@@ -255,13 +336,14 @@ void Interpreter::run(bool singlestep) {
 			if(wordlist) {
 				// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 				// i don't need to come back here, so pop my wordlist first to stop stack from growing
-				if(syntax->peekObj().isNull() || syntax->peekObj().isSymbol("return")) {
-					if(syntax->hasPushedObjLists()) { // in case i'm at the toplevel
-						syntax->popObjList();
+				if(peekNextCodeObj().isNull() || peekNextCodeObj().isSymbol("return")) {
+					if(callstack_code.size() > 0) { // in case i'm at the toplevel
+						code_return();
 					}
 				}
-				// execute word by pushing its wordlist and continuing
-				syntax->pushObjList(wordlist);
+				// execute word by pushing its objlist and continuing
+				code_call(wordlist);
+				//syntax->pushObjList(wordlist);
 				continue;
 			}
 

@@ -1,4 +1,4 @@
-L 51
+L 52
 W depth
 L 6
 y SP_EMPTY
@@ -500,6 +500,14 @@ y +
 y LP!
 y true
 y return
+W tostring
+L 6
+y dup
+y string?
+y if
+y >>string
+y repr
+y @string
 W __main__
 L 6
 y var

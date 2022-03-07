@@ -14,7 +14,7 @@
 => 1 2 3 4 5 6 7 
 >> . . . . CR 
 7 6 5 4 
-=> 1 2 3 
+=> 1 2 3 
 >> 7 6 5 4
 => 1 2 3 7 6 5 4 
 >> ( math +, -, * )
@@ -331,7 +331,7 @@
 => var:4:3 var:4:2 var:4:1 var:4:0 
 >> ref . ref . ref . ref . CR
 910 789 456 123 
-=> 
+=> 
 >> ( show redefining after del works )
 => 
 >> clear

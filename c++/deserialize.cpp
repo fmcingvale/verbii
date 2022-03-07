@@ -54,7 +54,7 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 						throw LangError("Expecting list after W but got:" + list.fmtStackPrint());
 
 					// insert into interpreter
-					cout << "Inserting word:>>>" << name << "<<<" << endl;
+					//cout << "Inserting word:>>>" << name << "<<<" << endl;
 					intr->WORDS[name.c_str()] = list.data.objlist;
 					// this produces nothing extra
 					return newVoid();

@@ -11,9 +11,11 @@
 #include <regex>
 #include "xmalloc.hpp"
 #include "native.hpp"
+#include "deserialize.hpp"
 using namespace std;
 
-string INITLIB = "../lib/init.verb";
+string INITLIB = "../lib/init.verb.b";
+string COMPILERLIB = "../lib/compiler.verb.b";
 
 string readfile(string filename) {
 	ifstream fileIn(filename);
@@ -24,24 +26,29 @@ string readfile(string filename) {
 	return buf;
 }
 
-Interpreter* newInterpreter(bool noinit) {
+Interpreter* newInterpreter() {
 	auto intr = new Interpreter();
 	
-	// run initlib to load its words first, unless -noinit was given
-	if(!noinit) {
-		auto buf = readfile(INITLIB);
-		intr->addText(buf);
-		intr->run();
-		// don't want initlib in the backtrace history, once it has successfully loaded
-		intr->syntax->clearAll();
-		// also GC after loading large file
-		x_mem_gcollect();
-	}
+	//cout << "Starting interpreter ..." << endl;
+
+	// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
+	ifstream fileIn(INITLIB);
+	deserialize_stream(intr, fileIn);
+	// run __main__ in initlib to setup SP_EMPTY
+	auto code = intr->lookup_word("__main__");
+	intr->run(code);
+	fileIn = ifstream(COMPILERLIB);
+	deserialize_stream(intr, fileIn);
+	// do NOT run compiler __main__ since that is used for compiling from the cmdline
+
+	// GC after loading large file
+	x_mem_gcollect();
+
 	return intr;
 }
 
-void repl(bool noinit) {
-	auto intr = newInterpreter(noinit);
+void repl() {
+	auto intr = newInterpreter();
 	
 	while(1) {
 		printf(">> ");
@@ -54,9 +61,21 @@ void repl(bool noinit) {
 			return;
 		}
 		//cout << "LINE: " << line << endl;
-		intr->addText(line);
+		//intr->addText(line);
 
-		intr->run();
+		// push string, then call byte-compile-string
+		intr->push(newString(line));
+		auto code = intr->lookup_word("byte-compile-string");
+		intr->run(code);
+
+		// byte-compile-string leaves list of words on stack -- used by serializer -- but i
+		// don't need them here
+		intr->pop();
+
+		// run __main__
+		code = intr->lookup_word("__main__");
+
+		intr->run(code);
 		cout << "=> " << intr->reprStack() << endl;
 	}
 }
@@ -64,14 +83,14 @@ void repl(bool noinit) {
 // like a non-interactive repl, reads a line at a time, prints it,
 // runs it, then prints the stack. this is intented for unittesting.
 // maxline is maximum line that ran OK last time so i ca restart.
-void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
+void run_test_mode(string filename, int &maxrunline, bool &done) {
 
 	//cout << "Test mode starting ... " << endl;
 	done = false;
 
 	regex blankline(R"""(^[ \t\r\n]*$)""");
 
-	auto intr = newInterpreter(noinit);
+	auto intr = newInterpreter();
 
 	string line;
 	ifstream fileIn(filename);
@@ -92,9 +111,17 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 			continue;
 		}
 		cout << ">> " << line << endl;
-		intr->syntax->clearAll(); // ensure no leftover text from previous line
-		intr->addText(line);
-		intr->run();
+		//intr->syntax->clearAll(); // ensure no leftover text from previous line
+		//intr->addText(line);
+		// like above, compile and run line
+		intr->push(newString(line));
+		auto code = intr->lookup_word("byte-compile-string");
+		intr->run(code);
+		intr->pop(); // like above, pop list of compiled words
+
+		code = intr->lookup_word("__main__");
+		intr->run(code);
+
 		cout << "=> " << intr->reprStack() << endl;
 		// update maxline only after the above runs ok
 		maxrunline = runnable_lines;
@@ -105,15 +132,21 @@ void run_test_mode(string filename, bool noinit, int &maxrunline, bool &done) {
 void run_file(Interpreter *intr, string filename, bool singlestep) {
 	// run file
 	auto buf = readfile(filename);
-	intr->addText(buf);
-	intr->run(singlestep);
+	// as above, compile then run
+	intr->push(newString(buf));
+	auto code = intr->lookup_word("byte-compile-string");
+	intr->run(code);
+	intr->pop(); // like above, pop list of compiled words
+
+	code = intr->lookup_word("__main__");
+	intr->run(code, singlestep);
 }
 
 void backtrace_curframe(Interpreter *intr) {
 	string trace = "";
 	int nr = 7; // number of words to print in each frame
 	while(nr--) {
-		auto o = intr->syntax->prevObj();
+		auto o = intr->prevCodeObj();
 		if(o.isNull()) {
 			cout << trace << endl;
 			return;
@@ -130,8 +163,8 @@ void print_backtrace(Interpreter *intr) {
 	while(1) {
 		cout << "FRAME " << i++ << ": ";
 		backtrace_curframe(intr);
-		if(intr->syntax->hasPushedObjLists()) {
-			intr->syntax->popObjList();
+		if(intr->callstack_code.size() > 0) {
+			intr->code_return();
 		}
 		else {
 			return;
@@ -168,7 +201,6 @@ int main(int argc, char *argv[]) {
 
 	bool testMode = false;
 	string filename = "";
-	bool noinit = false;
 	bool gcstats = false;
 	bool singlestep = false;
 
@@ -177,9 +209,6 @@ int main(int argc, char *argv[]) {
 	for(int i=1; i<argc; ++i) {
 		if(!strcmp(argv[i], "-test")) {
 			testMode = true;
-		}
-		else if(!strcmp(argv[i], "-noinit")) {
-			noinit = true;
 		}
 		else if(!strcmp(argv[i], "-showgc")) {
 			gcstats = true;
@@ -210,7 +239,7 @@ int main(int argc, char *argv[]) {
 			// (continuing after the exception gives weird errors so something
 			// is getting corrupted in the interpreter)
 			try {
-				repl(noinit);
+				repl();
 				exited = true;
 			}
 			catch (LangError &err) {
@@ -226,7 +255,7 @@ int main(int argc, char *argv[]) {
 			// weird errors happen. track max line that i ran before so
 			// it restarts on next line
 			try {
-				run_test_mode(filename, noinit, maxrunline, done);
+				run_test_mode(filename, maxrunline, done);
 			}
 			catch (LangError &err) {
 				cout << "*** " << err.what() << " ***\n";
@@ -235,7 +264,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	else {		
-		auto intr = newInterpreter(noinit);
+		auto intr = newInterpreter();
 
 		try {
 			run_file(intr, filename, singlestep);

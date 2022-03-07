@@ -104,6 +104,7 @@ static void builtin_divmod(Interpreter *intr) {
 // actually, could push as a lambda (or maybe a new class, since lambdas need an
 // explicit call, and words don't) then interpreter doesn't need to know
 // what WORDS is
+#if 0
 static void builtin_define_word(Interpreter *intr) {
 	auto name = intr->syntax->nextSymbolOrFail();
 	ObjList *objs = new ObjList();
@@ -118,6 +119,7 @@ static void builtin_define_word(Interpreter *intr) {
 		}
 	}
 }
+#endif
 
 /* ( list name -- adds word ) */
 static void builtin_make_word(Interpreter *intr) {
@@ -249,20 +251,41 @@ static string readfile(string filename) {
 	return buf;
 }
 
-Reader syntax_reader;
-static void builtin_reader_open(Interpreter *intr) {
-	const char *filename = popString(intr, "reader-open missing filename");
+#include <sstream>
+istringstream reader_input;
+//Reader syntax_reader;
+// read words from filename on top of stack, discarding any previous input
+static void builtin_reader_open_file(Interpreter *intr) {
+	const char *filename = popString(intr, "reader-open-file missing filename");
 	string buf = readfile(filename);
-	syntax_reader.addText(buf);
+	reader_input = istringstream(buf);
+	//syntax_reader.clearAll();
+	//syntax_reader.addText(buf);
+}
+
+// read words from string on top of stack, discarding any previous input
+static void builtin_reader_open_string(Interpreter *intr) {
+	const char *text = popString(intr, "reader-open-string missing text");
+	//syntax_reader.clearAll();
+	//syntax_reader.addText(text);
+	reader_input = istringstream(text);
 }
 
 static void builtin_reader_next(Interpreter *intr) {
-	Object sym = syntax_reader.nextObj();
-	//cout << "builtin-reader-next:" << sym.fmtStackPrint() << endl;
-	if(!sym.isNull() && !sym.isSymbol()) {
-		throw LangError("reader-next expecting null or symbol but got: " + sym.fmtStackPrint());
+	string word;
+	reader_input >> word;
+	if(reader_input.fail()) {
+		intr->push(newNull());
 	}
-	intr->push(sym);
+	else {
+		intr->push(newSymbol(word));
+	}
+	//Object sym = syntax_reader.nextObj();
+	//cout << "builtin-reader-next:" << sym.fmtStackPrint() << endl;
+	//if(!sym.isNull() && !sym.isSymbol()) {
+	//	throw LangError("reader-next expecting null or symbol but got: " + sym.fmtStackPrint());
+	//}
+	//intr->push(sym);
 }
 
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
@@ -425,9 +448,9 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"/mod", builtin_divmod},
 	{"f.setprec", [](Interpreter *intr) { FLOAT_PRECISION = popInt(intr, "Bad arg to f.setprec");}},
 	// TODO - implement in script
-	{":", builtin_define_word},
+	//{":", builtin_define_word},
 	// synonym for ':', for readability (TODO implement in script)
-	{"def", builtin_define_word},
+	//{"def", builtin_define_word},
 	{".c", builtin_printchar},
 	{"puts", [](Interpreter *intr) {printf("%s", popString(intr, "bad puts arg"));}},
 	
@@ -468,7 +491,8 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"error", builtin_error},
 
 	// experimental
-	{"reader-open", builtin_reader_open},
+	{"reader-open-file", builtin_reader_open_file},
+	{"reader-open-string", builtin_reader_open_string},
 	{"reader-next", builtin_reader_next},
 	{"make-list", builtin_make_list},
 	{"make-string", builtin_make_string},

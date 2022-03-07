@@ -15,8 +15,8 @@
 #include <regex>
 #include <map>
 #include "langtypes.hpp"
-#include "reader.hpp"
-#include "syntax.hpp"
+//#include "reader.hpp"
+//#include "syntax.hpp"
 
 const int STACK_SIZE = (1<<10);
 const int LOCALS_SIZE = (1<<10);
@@ -25,7 +25,7 @@ class Interpreter {
 	public:
 	Interpreter();
 
-	void addText(const std::string &text);
+	//void addText(const std::string &text);
 
 	// see notes in langtypes.hpp -- Object is meant to be passed by value
 	void push(Object obj);
@@ -34,7 +34,7 @@ class Interpreter {
 	// get representation of stack for printing
 	std::string reprStack() const;
 
-	void run(bool singlestep=false);
+	void run(ObjList *to_run, bool singlestep=false);
 
 	// all are public so builtins can use without a hassle
 	std::map<std::string,ObjList*> WORDS; // user-defined words
@@ -68,8 +68,24 @@ class Interpreter {
 
 	void do_jump(const char *jumpword);
 
-	Syntax *syntax;
+	//Syntax *syntax;
 
+	Object nextCodeObj();
+	Object nextCodeObjOrFail(const char *failmsg);
+	Object peekNextCodeObj();
+	Object prevCodeObj();
+	Object prevCodeObjOrFail(const char *failmsg);
+
+	Object nextSymbolOrFail(const char *failmsg);
+
+	void code_call(ObjList *new_code);
+	void code_return();
+	
+	// current running code & callstack of previous frames
+	ObjList *code; // NULL if not code loaded
+	size_t codepos;
+	std::vector<ObjList*> callstack_code;
+	std::vector<size_t> callstack_pos;
 };
 
 

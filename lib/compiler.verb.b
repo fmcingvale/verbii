@@ -224,7 +224,7 @@ y slice
 y parse-float
 y return
 W syntax-define-word
-L 41
+L 48
 y syntax-next
 y dup
 y symbol?
@@ -237,6 +237,10 @@ y >L
 y @loop
 y syntax-next
 y dup
+y null?
+y if
+y >>eof
+y dup
 y ';
 y ==
 y if
@@ -244,9 +248,12 @@ y >>endword
 y <<loop
 y @badname
 y repr
-s Invalid%32name%32for%32word:%32
+s Invalid%32name%32after%32':'%32:%32
 y swap
 y +
+y error
+y @eof
+s Unexpected%32end%32of%32input%32looking%32for%32';'
 y error
 y @endword
 y drop
@@ -267,7 +274,7 @@ y set!
 y make-word
 y syntax-next
 W syntax-string
-L 65
+L 66
 y >L
 y L0
 y ref
@@ -312,9 +319,10 @@ y if
 y >>endstring
 y <<loop
 y @eof
-s Unexpected%32end%32of%32input%32in%32string%32--%32
+s Unexpected%32end%32of%32input%32in%32string%32near:%32
 y L0
 y ref
+y tostring
 y +
 y error
 y @endstring
@@ -412,7 +420,7 @@ y drop
 y syntax-next
 y return
 y @eof
-s End%32of%32input%32inside%32comment!
+s Unexpected%32end%32of%32input%32inside%32comment
 y error
 W for-each
 L 33

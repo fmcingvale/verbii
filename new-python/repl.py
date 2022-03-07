@@ -25,6 +25,8 @@ def new_interpreter(noinit: bool):
 		intr = new_interpreter(True)
 		fileIn = open(INITLIB,"r")
 		deserialize_stream(intr, fileIn)
+		code = intr.WORDS['__main__']
+		intr.run(code)
 		fileIn = open(COMPILERLIB,"r")
 		deserialize_stream(intr, fileIn)
 
@@ -157,7 +159,7 @@ def run_file(intr: Interpreter, filename: str, singlestep: bool):
 	code = intr.WORDS['__main__']
 	try:
 		intr.run(code) #, debug_hook)
-		print("=> " + intr.reprStack())
+		#print("=> " + intr.reprStack())
 	except LangError as exc:
 		print("*** " + exc.msg + " ***")
 

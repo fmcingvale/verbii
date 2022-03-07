@@ -187,10 +187,9 @@ abs
 0
 abs
 
-
 clear
-10 20 30 40
-.S 
+10 20 30 40 
+.S
 
 : foobar 11 22 33 44 ;
 'foobar .dumpword
@@ -338,6 +337,17 @@ unmake
 make-string
 
 clear
+( test that repr makes expected strings )
+1234 repr
+#3.75 repr
+true repr
+false repr
+10 20 30 40 4 make-list repr
+{ 1 2 3 } repr
+'a-long-symbol repr
+"hello there world" repr
+
+clear
 { 10 20 30 40 }
 unmake
 unmake
@@ -383,12 +393,11 @@ Y -3 2 slice
 Y unmake
 
 
-"abcde" { "e" == } any .S CR
-"01234" { "9" == } any .S CR
-10 20 30 40 4 make-list { 30 > } any .S CR
-10 20 30 40 4 make-list { 0 <  } any .S CR
+clear "abcde" { "e" == } any
+clear "01234" { "9" == } any
+clear 10 20 30 40 4 make-list { 30 > } any
+clear 10 20 30 40 4 make-list { 0 <  } any
 
-clear
-"mnopqr" dup { "m" >= } all swap { "r" <= } all and .S CR
-"1234.567" dup { "0" >= } all swap { "9" <= } all and .S CR
-"1234567" dup { "0" >= } all swap { "9" <= } all and .S CR
+clear "mnopqr" dup { "m" >= } all swap { "r" <= } all and
+clear "1234.567" dup { "0" >= } all swap { "9" <= } all and
+clear "1234567" dup { "0" >= } all swap { "9" <= } all and

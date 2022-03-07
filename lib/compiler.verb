@@ -127,9 +127,11 @@
 	@loop
 	syntax-next ( get next processed object - assume it can be more than 1 object )
 		( "NEXT" . dup . CR )
+	dup null? if >>eof
 	dup '; == if >>endword
 	<<loop
-	@badname repr "Invalid name for word: " swap + error
+	@badname repr "Invalid name after ':' : " swap + error
+	@eof "Unexpected end of input looking for ';'" error
 	@endword
 		( "ENDWORD, stack: " . .S CR )
 	drop ( drop ; )
@@ -169,7 +171,7 @@
 	dup L0 ref swap + L0 set! ( string += piece )
 	-1 get '" == if >>endstring ( " )
 	<<loop
-	@eof "Unexpected end of input in string -- " L0 ref + error
+	@eof "Unexpected end of input in string near: " L0 ref tostring + error
 	@endstring
 	(
 		"POSTPROCESS STRING:" . L0 ref . CR
@@ -215,7 +217,7 @@
 		drop
 		syntax-next return
 	@eof
-		"End of input inside comment!" error
+		"Unexpected end of input inside comment" error
 	;
 
 ( 

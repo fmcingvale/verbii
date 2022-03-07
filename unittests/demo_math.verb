@@ -19,7 +19,7 @@
 	#1e-6 > if >>toolarge return
 	@toolarge "Error too large! Exiting test" error ;
 
-" -- pct-diff" . CR
+"-- pct-diff" . CR
 { 231 115 pct-diff } #67.05202312138728 expect-f
 { #17.838 #47.639 pct-diff } #91.02738366143838 expect-f
 { #-2.876 #12.341 pct-diff } #321.5425250924458 expect-f
@@ -70,6 +70,7 @@
 	@begin
 	1 swap ( P n )
 	@loop
+		( "FACT LOOP" . .S CR )
 	dup? 0 == if >>done
 	2dup * rot drop swap 1 - <<loop ( P*n n-1 )
 	@done
