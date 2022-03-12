@@ -12,14 +12,9 @@
 ]]
 
 require("native")
-require("syntax")
 require("langtypes")
 
 Interpreter = {}
-
-function Interpreter:addText(text)
-	self.syntax:addText(text)
-end
 
 function Interpreter:push(obj)
 	-- like Python (and unlike C++), I can just push Lua objects here
@@ -66,7 +61,7 @@ function Interpreter:do_jump(jumpword)
 	if string.sub(jumpword,1,2) == ">>" then
 		-- forward jump, find word (>>NAME -> @NAME)
 		while true do
-			local word = self.syntax:nextObjOrFail()
+			local word = self:nextObjOrFail()
 			--print("WORD " .. fmtStackPrint(word))
 			if isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
@@ -75,7 +70,7 @@ function Interpreter:do_jump(jumpword)
 	elseif string.sub(jumpword,1,2) == "<<" then
 		-- backward jump
 		while true do
-			local word = self.syntax:prevObjOrFail()
+			local word = self:prevObjOrFail()
 			--print("FIND BACKWARD: " .. jumpword .. ", " .. word)
 			if isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
@@ -93,27 +88,107 @@ function Interpreter:allocate(count)
 	return addr
 end
 
-function Interpreter:run(stephook)
+function Interpreter:nextObj()
+	if self.codepos > #self.code then
+		return nil
+	else
+		local obj = self.code[self.codepos]
+		self.codepos = self.codepos + 1
+		return obj
+	end
+end
+
+function Interpreter:nextObjOrFail(why)
+	local obj = self:nextObj()
+	if obj == nil then
+		error(">>>" .. why)
+	else
+		return obj
+	end
+end
+
+function Interpreter:peekObj()
+	if self.codepos >= #self.code then
+		return nil
+	else
+		return self.code[self.codepos]
+	end
+end
+
+function Interpreter:prevObj()
+	if self.codepos == 1 then
+		return nil
+	else
+		self.codepos = self.codepos - 1
+		return self.code[self.codepos]
+	end
+end
+
+function Interpreter:prevObjOrFail(why)
+	local obj = self:prevObj()
+	if obj == nil then
+		error(">>>" .. why)
+	else
+		return obj
+	end
+end
+
+function Interpreter:havePrevFrames()
+	return #self.callstack > 0
+end
+
+function Interpreter:code_call(objlist)
+	table.insert(self.callstack, {self.code,self.codepos})
+	--print("CALL - DEPTH NOW: " .. tostring(#self.callstack))
+	self.code = objlist
+	self.codepos = 1
+end
+
+function Interpreter:code_return()
+	if self:havePrevFrames() then
+		local entry = table.remove(self.callstack)
+		--print("RETURN - DEPTH NOW: " .. tostring(#self.callstack))
+		self.code = entry[1]
+		self.codepos = entry[2]
+	else
+		error(">>>Trying to return without call")
+	end
+end
+
+function Interpreter:run(objlist, stephook)
+	--print("** RUN: " .. fmtStackPrint(objlist))
+	
+	if self.code ~= nil or #self.callstack > 0 then
+		error(">>>Interpreter called recursively")
+	end
+
+	self.code = objlist
+	self.codepos = 1
+
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
 		::MAINLOOP::
 		-- see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
 
-		local obj = self.syntax:nextObj()
-		--print("RUN OBJ: " .. fmtStackPrint(obj))
+		local obj = self:nextObj()
+		
+		if #self.callstack < 2 then
+			--print("RUN OBJ:" .. fmtStackPrint(obj) .. " " .. type(obj))
+		end
 
 		if stephook ~= nil then
 			stephook(self,word)
 		end
 		
-		if obj == "" then
+		if obj == nil then
 			--print("RETURNING FROM WORD")
 			-- i could be returning from a word that had no 'return',
 			-- so pop words like i would if it were a return
-			if self.syntax:hasPushedObjLists() then
-				self.syntax:popObjList()
-					goto MAINLOOP
+			if self:havePrevFrames() then
+				self:code_return()
+				goto MAINLOOP
 			else
+				self.code = nil -- mark self as no longer running
 				return
 			end
 		end
@@ -125,11 +200,18 @@ function Interpreter:run(stephook)
 		end
 
 		if isSymbol(obj) then
+			if string.sub(obj, 1, 1) == "'" then
+				-- quoted symbol, remove one level of quoting
+				self:push(string.sub(obj, 2))
+				goto MAINLOOP
+			end
+
 			if obj == "return" then
 				-- return from word by popping back to previous wordlist (if not at toplevel)
-				if self.syntax:hasPushedObjLists() then
-					self.syntax:popObjList()
+				if self:havePrevFrames() then
+					self:code_return()
 				else
+					self.code = nil -- mark self as stopped
 					return -- return from top level exits program
 				end
 				goto MAINLOOP
@@ -137,29 +219,17 @@ function Interpreter:run(stephook)
 
 			if obj == "if" then
 				-- true jump is required
-				local true_jump = self.syntax:nextObj()
-				-- false word is optional
-				local peeked = self.syntax:peekObj()
-				--print("PEEKED:" .. fmtStackPrint(peeked))
-				local false_jump = nil
-				if isSymbol(peeked) then
-					if string.sub(peeked,1,2) == "<<" or string.sub(peeked,1,2) == ">>" then
-						false_jump = self.syntax:nextObj()
-					end
-				end
-				--print("TRUE JUMP: " .. fmtStackPrint(true_jump))
-				--print("FALSE JUMP: " .. fmtStackPrint(false_jump))
+				local true_jump = self:nextObj()
+
 				-- get true|false condition
 				local cond = self:pop()
 				if cond ~= true and cond ~= false then
 					error(">>>'if' expects true or false but got: " .. fmtStackPrint(cond))
 				end
-				-- these don't run the jump, they just reposition the reader
+				-- this doesn't run the jump, it just repositions self.codepos
 				if cond == true then
 					self:do_jump(true_jump)
-				elseif false_jump ~= nil then
-					self:do_jump(false_jump)
-				end
+				end -- else, continue with next instruction after true_jump
 				goto MAINLOOP
 			end
 
@@ -174,12 +244,12 @@ function Interpreter:run(stephook)
 			end
 
 			if obj == "var" then
-				name = self.syntax:nextObjOrFail()
-				count = self.syntax:nextObjOrFail()
+				name = self:nextObjOrFail()
+				count = self:nextObjOrFail()
 				if not type(count) == "number" then
 					error(">>>Expected int after var name but got " .. fmtStackPrint(count))
 				end
-				-- must be unique nmw
+				-- must be unique name
 				if self.VARS[name] ~= nil then
 					error(">>>Trying to redefine variable "  .. name)
 				end
@@ -189,7 +259,7 @@ function Interpreter:run(stephook)
 			end
 				
 			if obj == "del" then
-				name = self.syntax:nextObjOrFail()
+				name = self:nextObjOrFail()
 				if self.VARS[name] == nil then
 					error(">>>Trying to delete non-existent variable " .. name)
 				end
@@ -207,20 +277,21 @@ function Interpreter:run(stephook)
 
 				-- now this is just like calling a userword, below
 				-- TODO -- tail call elimination??
-				self.syntax:pushObjList(obj.wordlist)
+				self:code_call(obj.wordlist)
 				goto MAINLOOP
 			end
 
 			-- builtins then userwords then vars
 
 			if BUILTINS[obj] ~= nil then
+				--print("BUILTIN: " .. obj)
 				argtypes = BUILTINS[obj][1]
 				args = {}
 				--print("POP " .. tostring(#argtypes) .. " args")
 				for i=#argtypes,1,-1 do
 					val = self:pop()
 					if (type(val) ~= argtypes[i]) and (argtypes[i] ~= "any") then
-						error(">>>Expecting type " .. argtypes[i] .. " but got " .. type(val))
+						error(">>>builtin '" .. obj .. "' expecting type " .. argtypes[i] .. " but got " .. type(val))
 					end
 					table.insert(args, 1, val)
 				end
@@ -230,10 +301,9 @@ function Interpreter:run(stephook)
 			end
 
 			if self.WORDS[obj] ~= nil then
-				self.syntax:pushObjList(self.WORDS[obj])
+				--print("WORD: " .. obj)
+				self:code_call(self.WORDS[obj])
 				--print("CALL USERWORD:" .. fmtStackPrint(obj))
-				--print("NOW WORDLIST: " .. tostring(self.syntax.reader.wordlist))
-				--self.syntax.reader:debug_print_wordlist()
 				goto MAINLOOP
 			end
 
@@ -272,14 +342,19 @@ function Interpreter:new(obj)
 	obj.LP = obj.LP_EMPTY
 	obj.LP_MIN = obj.LP_EMPTY - obj.LOCALS_SIZE
 	
+	-- code currently being run or nil for not running
+	obj.code = nil
+	obj.codepos = 1 -- index into code list
+
+	-- stack of previous frames to return to
+	obj.callstack = {}
+
 	-- user-defined words
 	obj.WORDS = {}
 	-- anonymous words (referenced by index with $<lambda index> in modified wordlists)
 	obj.LAMBDAS = {}
 	-- vars
 	obj.VARS = {}
-
-	obj.syntax = new_Syntax()
 
 	return obj
 end

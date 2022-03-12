@@ -373,14 +373,23 @@ make-lambda
 unmake
 unmake
 
-( lists should share same object )
 clear
+( append should modify original object )
 10 20 30 3 make-list
 dup dup 
 40 append ( all should change )
 
-( array slices )
 clear
+( '+' must create new lists )
+40 50 60 3 make-list >L 
+10 20 30 3 make-list >L 
+L0 ref L1 ref +
+L0 ref
+L1 ref
+
+clear
+( array slices )
+
 var Y 4
 10 Y set!
 20 Y 1 + set!
@@ -391,7 +400,6 @@ Y 0 -1 slice
 Y 2 1 slice
 Y -3 2 slice
 Y unmake
-
 
 clear "abcde" { "e" == } any
 clear "01234" { "9" == } any

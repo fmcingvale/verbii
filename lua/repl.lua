@@ -6,31 +6,36 @@
 	Ported from Python implementation
 ]]
 
+require("deserialize")
 require("interpreter")
 
-INITLIB = "../lib/init.txt"
+INITLIB = "../lib/init.verb.b"
+COMPILERLIB = "../lib/compiler.verb.b"
 
-function make_interpreter(noinit)
-	-- convenience to start interpreter and optionally load init lib
-	intr = new_Interpreter()
+function make_interpreter()
+	local intr = new_Interpreter()
 	
-	if not noinit then
-		-- run initlib to load its words first
-		f = io.open(INITLIB, "r")
-		buf = f:read("a")
-		intr:addText(buf)
-		io.close(f)
-		intr:run()
-		-- don't want initlib in the backtrace history, once it has successfully loaded
-		intr.syntax:clearAll()
-	end
+	-- load bootstrap libraries so compiler works
+	local f = io.open(INITLIB, "r")
+	deserialize_stream(intr, f)
+	io.close(f)
+	local code = intr.WORDS['__main__']
+	intr:run(code)
 
+	f = io.open(COMPILERLIB, "r")
+	deserialize_stream(intr, f)
+	io.close(f)
+	-- do NOT run __main__ since that would run the cmdline compiler
+
+	-- remove __main__ so i don't try to run it again later
+	intr.WORDS['__main__'] = nil
+	
 	return intr
 end
 
-function repl(noinit)
+function repl()
 	-- Run interactively
-	intr = make_interpreter(noinit)
+	intr = make_interpreter()
 
 	while true do
 		io.write(">> ")
@@ -42,8 +47,18 @@ function repl(noinit)
 			return
 		end
 		
-		intr:addText(line)
-		intr:run()
+		-- push line and byte-compile it
+		intr:push(new_String(line))
+		code = intr.WORDS['byte-compile-string']
+		intr:run(code)
+
+		-- remove list of words produced by byte compiler
+		intr:pop()
+
+		-- now run the __main__ that was compiled
+		code = intr.WORDS['__main__']
+		intr:run(code)
+		
 		print("=> " .. intr:reprStack())
 	end
 end
@@ -78,9 +93,20 @@ function run_test_mode(filename, noinit, status)
 		end
 		
 		io.write(">> " .. line) -- line has \n at end already
-		intr.syntax:clearAll() -- remove any leftover text from previous line run
-		intr:addText(line)
-		intr:run()
+		--intr.syntax:clearAll() -- remove any leftover text from previous line run
+
+		-- push line and byte-compile it
+		intr:push(new_String(line))
+		local code = intr.WORDS['byte-compile-string']
+		intr:run(code)
+
+		-- remove list of words produced by byte compiler
+		intr:pop()
+
+		-- now run the __main__ that was compiled
+		code = intr.WORDS['__main__']
+		intr:run(code)
+		
 		print("=> " .. intr:reprStack())
 		-- update count AFTER above suceeds
 		status["max-count"] = runnable_lines
@@ -131,14 +157,28 @@ end
 
 function run_file(intr, filename, singlestep)
 	-- run file
-	f = io.open(filename, "r")
-	buf = f:read("a")
+	local f = io.open(filename, "r")
+	if f == nil then
+		error(">>>No such file: " .. filename)
+	end
+	local buf = f:read("a")
 	io.close(f)
-	intr:addText(buf)
+
+	-- push buf and byte-compile it
+	intr:push(new_String(buf))
+	local code = intr.WORDS['byte-compile-string']
+	intr:run(code)
+
+	-- remove list of words produced by byte compiler
+	intr:pop()
+
+	-- now run the __main__ that was compiled
+	code = intr.WORDS['__main__']
+
 	if singlestep then
-		intr:run(debug_hook)
+		intr:run(code,debug_hook)
 	else
-		intr:run()
+		intr:run(code)
 	end
 end
 

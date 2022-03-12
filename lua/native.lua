@@ -83,9 +83,9 @@ function builtin_set(intr, obj, addr)
 		if addr.offset < 0 or addr.offset >= #addr.mem then
 			error(">>>Offset out of bounds in set!")
 		end
-		addr.mem[addr.offset] = obj
+		addr.mem[addr.offset+1] = obj
 	else
-		error(">>>Bad address in set!: " .. reprObject(addr))
+		error(">>>Bad address in set!: " .. fmtStackPrint(addr))
 	end
 end
 
@@ -101,9 +101,9 @@ function builtin_ref(intr, addr)
 		if addr.offset < 0 or addr.offset >= #addr.mem then
 			error(">>>Offset out of bounds in ref")
 		end
-		intr:push(addr.mem[addr.offset])
+		intr:push(addr.mem[addr.offset+1])
 	else
-		error(">>>Bad address in ref: " .. reprObject(addr))
+		error(">>>Bad address in ref: " .. fmtStackPrint(addr))
 	end
 end
 
@@ -165,6 +165,15 @@ function builtin_printchar(intr,a)
 	end
 end
 
+function popInt(intr)
+	local obj = intr:pop()
+	if type(obj) == "number" then
+		return obj
+	else
+		error(">>>Expecting integer but got: " .. fmtStackPrint(obj))
+	end
+end
+
 -- always returns a Float
 function popFloatOrInt(intr)
 	obj = intr:pop()
@@ -173,7 +182,36 @@ function popFloatOrInt(intr)
 	elseif isFloat(obj) then
 		return obj.value 
 	else
-		error(">>>Expecting int or float but got: " .. reprObject(obj))
+		error(">>>Expecting int or float but got: " .. fmtStackPrint(obj))
+	end
+end
+
+function popString(intr)
+	obj = intr:pop()
+	if isString(obj) then
+		return obj.value
+	else
+		error(">>>Expecting string but got: " .. fmtStackPrint(obj))
+	end
+end
+
+function popSymbol(intr)
+	obj = intr:pop()
+	if type(obj) == "string" then
+		return obj
+	else
+		error(">>>Expecting symbol but got: " .. fmtStackPrint(obj))
+	end
+end
+
+function popStringOrSymbol(intr)
+	obj = intr:pop()
+	if isString(obj) then
+		return obj.value
+	elseif type(obj) == "string" then
+		return obj
+	else
+		error(">>>Expecting string or symbol but got: " .. fmtStackPrint(obj))
 	end
 end
 
@@ -210,22 +248,65 @@ function builtin_fdiv(intr)
 	intr:push(new_Float(a/b))
 end
 
-function builtin_add(intr)
-	local b = intr:pop()
-	local a = intr:pop();
-	if type(a) == "number" and type(b) == "number" then
+function builtin_add(intr, a, b)
+	if isInt(a) and isInt(b) then
 		intr:pushInt(a+b)
-	elseif isMemArray(a) and type(b) == "number" then
+	elseif isNumeric(a) and isNumeric(b) then
+		intr:push(new_Float(asNumeric(a) + asNumeric(b)))
+	elseif isMemArray(a) and isInt(b) then
 		local arr = clone_MemArray(a)
 		arr.offset = arr.offset + b
 		intr:push(arr)
 	-- now with swapped args
-	elseif isMemArray(b) and type(a) == "number" then
+	elseif isMemArray(b) and isInt(a) then
 		local arr = clone_MemArray(b)
 		arr.offset = arr.offset + a
 		intr:push(arr)
+	elseif isSymbol(a) and isSymbol(b) then
+		intr:push(a .. b)
+	elseif isString(a) and isString(b) then
+		intr:push(new_String(a.value .. b.value))
+	elseif isList(a) and isList(b) then
+		-- not allowed to modify original lists
+		local rlist = {}
+		table.move(a, 1, #a, 1, rlist)
+		table.move(b, 1, #b, #a+1, rlist)
+		intr:push(rlist)
 	else
-		error(">>>Don't know how to add " .. reprObject(a) .. " and " .. reprObject(b))
+		error(">>>Don't know how to add " .. fmtStackPrint(a) .. " (" .. type(a) .. ") and " .. fmtStackPrint(b) .. ") " .. type(b) .. ")")
+	end
+end
+
+function builtin_sub(intr, a, b)
+	if isInt(a) and isInt(b) then
+		intr:pushInt(a-b)
+	elseif isNumeric(a) and isNumeric(b) then
+		intr:push(new_Float(asNumeric(a) - asNumeric(b)))
+	else
+		error(">>>Don't know how to subtract " .. fmtStackPrint(a) .. " (" .. type(a) .. ") and " .. fmtStackPrint(b) .. " " .. type(b) .. ")")
+	end
+end
+
+function builtin_mul(intr, a, b)
+	if isInt(a) and isInt(b) then
+		intr:pushInt(a*b)
+	elseif isNumeric(a) and isNumeric(b) then
+		intr:push(new_Float(asNumeric(a) * asNumeric(b)))
+	else
+		error(">>>Don't know how to multiply " .. fmtStackPrint(a) .. " (" .. type(a) .. ") and " .. fmtStackPrint(b) .. " " .. type(b) .. ")")
+	end
+end
+
+function builtin_div(intr, a, b)
+	-- unlike above ops which preserve ints when possible, the result here is ALWAYS a float
+	if isNumeric(a) and isNumeric(b) then
+		if asNumeric(b) == 0 then
+			error(">>>Divide by zero")
+		else
+			intr:push(new_Float(asNumeric(a)/asNumeric(b)))
+		end
+	else
+		error(">>>Don't know how to divide " .. fmtStackPrint(a) .. " (" .. type(a) .. ") and " .. fmtStackPrint(b) .. " (" .. type(b) .. ")")
 	end
 end
 
@@ -236,23 +317,247 @@ function popFloatOrInt(intr)
 	elseif isFloat(o) then
 		return o.value
 	else
-		error(">>>Expecting int or float but got: " .. reprObject(o))
+		error(">>>Expecting int or float but got: " .. fmtStackPrint(o))
+	end
+end
+
+-- reader interface
+local READER_WORDLIST = {}
+local READER_POS = 1
+function builtin_reader_open_string(intr)
+	local text = popString(intr)
+	--print("READER OPEN STRING: " .. text)
+	READER_WORDLIST = {} -- call always clears existing list
+	for word in string.gmatch(text, "[^%s]+") do
+		table.insert(READER_WORDLIST, word)
+	end
+	READER_POS = 1
+end
+
+function builtin_reader_next(intr)
+	if READER_POS > #READER_WORDLIST then
+		--print("READER EOF")
+		intr:push(new_None())
+	else
+		local s = READER_WORDLIST[READER_POS]
+		READER_POS = READER_POS + 1
+		--print("READER NEXT WORD: " .. s)
+		intr:push(s) -- symbol
+	end
+end
+
+function builtin_make_list(intr, nr)
+	local list = {}
+	for i=1,nr do
+		table.insert(list, 1, intr:pop())
+	end
+	intr:push(list)
+end
+
+function builtin_equal(intr, a, b)
+	if isNumeric(a) then
+		intr:push(isNumeric(b) and asNumeric(a) == asNumeric(b))
+	elseif isString(a) then
+		intr:push(isString(b) and b.value==a.value)
+	elseif isSymbol(a) then
+		intr:push(isSymbol(b) and a==b)
+	elseif isNone(a) then
+		intr:push(isNone(b))
+	elseif isBool(a) then
+		intr:push(isBool(b) and a==b)
+	elseif isCallableWordlist(a) then
+		intr:push(false) -- lambdas never compare equal, even if same object
+	else
+		error(">>>Don't know how to compare (==) objects: " .. fmtStackPrint(a) .. " and " .. fmtStackPrint(b))
+	end
+end
+
+function builtin_greater(intr, a, b)
+	-- unlike _equal(), here i can test both types intially since using > on non-comparable types is an error
+	if isNumeric(a) and isNumeric(b) then intr:push(asNumeric(a) > asNumeric(b))
+	elseif isString(a) and isString(b) then intr:push(a.value > b.value)
+	elseif isSymbol(a) and isSymbol(b) then intr:push(a > b)
+	else
+		error(">>>Don't know how to compare (>) objects: " .. fmtStackPrint(a) .. " and " .. fmtStackPrint(b))
+	end
+end
+
+function builtin_slice(intr, obj, index, nr)
+	--print("SLICE: " .. fmtStackPrint(obj) .. " " .. tostring(index) .. " " .. tostring(nr) .. " " .. type(obj))
+	local objsize = -1
+	if isString(obj) then objsize = #obj.value
+	elseif isSymbol(obj) or isList(obj) then
+		objsize = #obj
+	elseif isMemArray(obj) then objsize = #obj.mem
+	else
+		error(">>>Object doesn't support slicing: " .. fmtStackPrint(obj))
+	end
+
+	if index < 0 then index = objsize + index end
+	if index < 0 or index >= objsize then
+		if isString(obj) then
+			intr:push(new_String(""))
+			return
+		elseif isSymbol(obj) then
+			intr:push("")
+			return
+		elseif isList(obj) then
+			intr:push({})
+			return
+		elseif isMemArray(obj) then 
+			intr:push({})
+			return
+		end
+	end
+
+	if nr<0 then nr = objsize - index end
+
+	--print("READY TO SLICE: INDEX=" .. tostring(index) .. " NR:" .. tostring(nr))
+
+	if isString(obj) then
+		local res = new_String(string.sub(obj.value,index+1,index+nr))
+		--print("SLICED <string>: " .. res.value)
+		intr:push(res)
+	elseif isSymbol(obj) then
+		local res = string.sub(obj,index+1,index+nr)
+		--print("SLICED <symbol>: " .. res)
+		intr:push(res)
+	elseif isList(obj) then
+		local newlist = {}
+		for i=1,nr do
+			table.insert(newlist, obj[index+i])
+		end
+		intr:push(newlist)
+	elseif isMemArray(obj) then 
+		local newlist = {}
+		for i=1,nr do
+			table.insert(newlist, obj.mem[index+i])
+		end
+		intr:push(newlist)
+	end
+end
+	
+function builtin_unmake(intr, obj)
+	if isSymbol(obj) then
+		for i=1,#obj do
+			intr:pushInt(string.byte(obj, i))
+		end
+		intr:pushInt(#obj)
+	elseif isString(obj) then
+		for i=1,#obj.value do
+			intr:pushInt(string.byte(obj.value, i))
+		end
+		intr:pushInt(#obj.value)
+	elseif isList(obj) then
+		for i=1,#obj do
+			intr:push(obj[i])
+		end
+		intr:pushInt(#obj)
+	elseif isCallableWordlist(obj) then
+		-- as in c++, make a new list so caller can modify
+		local newlist = {}
+		for i=1,#obj.wordlist do
+			table.insert(newlist, obj.wordlist[i])
+		end
+		intr:push(newlist)
+	elseif isMemArray(obj) then
+		for i=1,#obj.mem do
+			intr:push(obj.mem[i])
+		end
+		intr:pushInt(#obj.mem)
+	end
+end
+
+function builtin_make_string(intr, nr)
+	local s = ""
+	for i=1,nr do
+		s = string.char(popInt(intr)) .. s
+	end
+
+	intr:push(new_String(s))
+end
+
+function builtin_make_symbol(intr, nr)
+	local s = ""
+	for i=1,nr do
+		s = string.char(popInt(intr)) .. s
+	end
+
+	intr:push(s)
+end
+
+function builtin_make_word(intr)
+	local name = popSymbol(intr)
+	local list = intr:pop()
+	if isList(list) then
+		intr.WORDS[name] = list
+	else
+		error(">>>make-word expecting list but got: " .. fmtStackPrint(list))
+	end
+end
+
+function builtin_append(intr, list, obj)
+	if isList(list) then
+		table.insert(list, obj)
+		intr:push(list)
+	else
+		error(">>>append expects list but got: " .. fmtStackPrint(list))
+	end
+end
+
+function builtin_length(intr, obj)
+	if isString(obj) then intr:pushInt(#obj.value)
+	elseif isSymbol(obj) then intr:pushInt(#obj)
+	elseif isList(obj) then intr:pushInt(#obj)
+	elseif isMemArray(obj) then intr:pushInt(#obj.mem)
+	else error(">>>Object does not support 'length': " .. fmtStackPrint(obj))
+	end
+end
+
+function builtin_make_lambda(intr)
+	local list = intr:pop()
+	if isList(list) then
+		intr:push(new_CallableWordlist(list))
+	else
+		error(">>>make-lambda expecting list but got: " .. fmtStackPrint(list))
+	end
+end
+
+function builtin_dumpword(intr)
+	local name = popSymbol(intr)
+	if intr.WORDS[name] == nil then
+		error(">>>Unknown word: " .. name)
+	else
+		intr:push(intr.WORDS[name])
+	end
+end
+
+function builtin_dumpvar(intr)
+	local name = popSymbol(intr)
+	if intr.VARS[name] == nil then
+		error(">>>Unknown variable: " .. name)
+	else
+		intr:push(intr.VARS[name].mem)
 	end
 end
 
 BUILTINS = {
-	["+"] = { {}, builtin_add },
-	["-"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a-b) end },
-	["*"] = { {"number","number"}, function(intr,a,b) intr:pushInt(a*b) end },
+	["+"] = { {"any","any"}, builtin_add },
+	["-"] = { {"any","any" }, builtin_sub },
+	["*"] = { {"any","any" }, builtin_mul },
+	["/"] = { {"any","any" }, builtin_div },
 	["/mod"] = { {"number","number"}, builtin_divmod },
-	["f+"] = { {}, builtin_fadd},
-	["f-"] = { {}, builtin_fsub},
-	["f*"] = { {}, builtin_fmul},
-	["f/"] = { {}, builtin_fdiv},
 	["f.setprec"] = { {"number"}, function(intr,a) FLOAT_PRECISION = a end },
-	["=="] = { {}, function(intr) intr:push(popFloatOrInt(intr)==popFloatOrInt(intr)) end },
-	[">"] = { {}, function(intr,a,b) intr:push(popFloatOrInt(intr)<popFloatOrInt(intr)) end },
-	["int?"] = { {"any"}, function(intr,o) intr:push(type(o) == "number") end},
+	["=="] = { {"any","any"}, builtin_equal },
+	[">"] = { {"any","any"}, builtin_greater },
+	["int?"] = { {"any"}, function(intr,o) intr:push(isInt(o)) end},
+	["float?"] = { {"any"}, function(intr,o) intr:push(isFloat(o)) end},
+	["bool?"] = { {"any"}, function(intr,o) intr:push(isBool(o)) end},
+	["null?"] = { {"any"}, function(intr,o) intr:push(isNone(o)) end},
+	["list?"] = { {"any"}, function(intr,o) intr:push(isList(o)) end},
+	["array?"] = { {"any"}, function(intr,o) intr:push(isMemArray(o)) end},
+	["string?"] = { {"any"}, function(intr,o) intr:push(isString(o)) end},
+	["symbol?"] = { {"any"}, function(intr,o) intr:push(isSymbol(o)) end},
 	["repr"] = { {}, builtin_repr },
 	["str"] = { {}, builtin_str },
 	["puts"] = { {}, builtin_puts },
@@ -271,4 +576,22 @@ BUILTINS = {
 	["L>"] = { {}, builtin_fromlocal},
 	["depth"] = { {}, function(intr) intr:push(intr.SP_EMPTY - intr.SP) end },
 	[".showdef"] = { {}, builtin_showdef},
+
+	["reader-open-string"] = { {}, builtin_reader_open_string},
+	["reader-next"] = { {}, builtin_reader_next},
+	["make-list"] = { {"number"}, builtin_make_list},
+	["slice"] = { {"any","number","number"}, builtin_slice},
+	["unmake"] = { {"any"}, builtin_unmake},
+	["make-string"] = { {"number"}, builtin_make_string},
+	["length"] = { {"any"}, builtin_length},
+	["make-word"] = { {}, builtin_make_word},
+	["append"] = { {"any","any"}, builtin_append},
+	["parse-int"] = { {}, function(intr) intr:pushInt(tonumber(popStringOrSymbol(intr))) end},
+	["parse-float"] = { {}, function(intr) intr:push(new_Float(tonumber(popStringOrSymbol(intr)))) end},
+	["make-symbol"] = { {"number"}, builtin_make_symbol},
+	["make-lambda"] = { {}, builtin_make_lambda},
+	[".dumpword"] = { {}, builtin_dumpword},
+	[".dumpvar"] = { {}, builtin_dumpvar},
+	["null"] = { {}, function(intr) intr:push(new_None()) end},
+	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 }

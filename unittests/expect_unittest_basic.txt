@@ -636,9 +636,9 @@ oneword
 => [ 10 word #13.425000000000001 [ 3 4 5 ] "end" ] 
 >> unmake
 => 10 word #13.425000000000001 [ 3 4 5 ] "end" 5 
->> ( lists should share same object )
-=> 10 word #13.425000000000001 [ 3 4 5 ] "end" 5 
 >> clear
+=> 
+>> ( append should modify original object )
 => 
 >> 10 20 30 3 make-list
 => [ 10 20 30 ] 
@@ -646,9 +646,23 @@ oneword
 => [ 10 20 30 ] [ 10 20 30 ] [ 10 20 30 ] 
 >> 40 append ( all should change )
 => [ 10 20 30 40 ] [ 10 20 30 40 ] [ 10 20 30 40 ] 
->> ( array slices )
-=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 10 20 30 40 ] 
 >> clear
+=> 
+>> ( '+' must create new lists )
+=> 
+>> 40 50 60 3 make-list >L 
+=> 
+>> 10 20 30 3 make-list >L 
+=> 
+>> L0 ref L1 ref +
+=> [ 10 20 30 40 50 60 ] 
+>> L0 ref
+=> [ 10 20 30 40 50 60 ] [ 10 20 30 ] 
+>> L1 ref
+=> [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ] 
+>> clear
+=> 
+>> ( array slices )
 => 
 >> var Y 4
 => 
