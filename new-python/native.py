@@ -126,12 +126,12 @@ def popIntOrFloat(I):
 	else:
 		raise LangError("Expecting float or int but got: " + fmtStackPrint(obj))
 
-def popString(I):
+def popString(I,where):
 	obj = I.pop()
 	if isinstance(obj, LangString):
 		return obj.s
 	else:
-		raise LangError("Expecting string but got: " + fmtStackPrint(obj))
+		raise LangError("Expecting string (in {0}) but got: {1} ".format(where, fmtStackPrint(obj)))
 
 def popSymbol(I):
 	obj = I.pop()
@@ -140,11 +140,11 @@ def popSymbol(I):
 	else:
 		raise LangError("Expecting symbol but got: " + fmtStackPrint(obj))
 
-def popStringOrSymbol(I):
+def popStringOrSymbol(I,where):
 	obj = I.pop()
 	if type(obj) == str: return obj
 	elif isinstance(obj, LangString): return obj.s
-	else: raise LangError("Expecting string or symbol but got: " + fmtStackPrint(obj))
+	else: raise LangError("Expecting string or symbol (in {0}) but got: {1}".format(where,fmtStackPrint(obj)))
 
 def builtin_add(I):
 	b = I.pop()
@@ -247,14 +247,14 @@ READER_POS = 0
 def builtin_reader_open_file(I):
 	global READER_WORDLIST
 	global READER_POS
-	filename = popString(I)
+	filename = popString(I,'reader-open-file')
 	READER_WORDLIST = open(filename, 'r').read().split()
 	READER_POS = 0
 
 def builtin_reader_open_string(I):
 	global READER_WORDLIST
 	global READER_POS
-	READER_WORDLIST = popString(I).split()
+	READER_WORDLIST = popString(I,'reader-open-string').split()
 	#print("READER OPEN STRING, WORDS:",READER_WORDLIST)
 	READER_POS = 0
 
@@ -302,7 +302,7 @@ def builtin_greater(I):
 		raise LangError("Unable to compare objects (>) {0} and {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
 def builtin_error(I):
-	msg = popString(I)
+	msg = popString(I,'error')
 	raise LangError(msg)
 
 def builtin_slice(I, obj, index, nr):
@@ -445,7 +445,7 @@ BUILTINS = {
 	'string?': ([object], lambda I,o: I.push(isinstance(o,LangString))),
 	'symbol?': ([object], lambda I,o: I.push(type(o) == str)),
 	'null?': ([], lambda I: I.push(I.pop() is None)),
-	'lambda?': ([object], lambda I,o: I.push(isinstance(LangLambda,o))),
+	'lambda?': ([object], lambda I,o: I.push(isinstance(o,LangLambda))),
 	'array?': ([object], lambda I,o: I.push(isinstance(o,MemArray))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
@@ -472,8 +472,8 @@ BUILTINS = {
 	'make-string': ([int], lambda I,nr: builtin_make_string(I,nr)),
 	'make-symbol': ([int], lambda I,nr: builtin_make_symbol(I,nr)),
 	'length': ([object], lambda I,obj: builtin_length(I,obj)),
-	'parse-int': ([], lambda I: I.pushInt(int(popStringOrSymbol(I)))),
-	'parse-float': ([], lambda I: I.push(float(popStringOrSymbol(I)))),
+	'parse-int': ([], lambda I: I.pushInt(int(popStringOrSymbol(I,'parse-int')))),
+	'parse-float': ([], lambda I: I.push(float(popStringOrSymbol(I,'parse-int')))),
 	'make-word': ([], builtin_make_word),
 	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),

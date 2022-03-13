@@ -173,6 +173,7 @@ if __name__ == '__main__':
 	filename = None
 	singlestep = False
 	for i,arg in enumerate(sys.argv[1:]):
+		#print("ARG:",arg)
 		if arg == '-test':
 			testmode = True
 		elif arg == '-step':
@@ -180,7 +181,12 @@ if __name__ == '__main__':
 		elif arg == '--':
 			# pass rest of args to script
 			import native
-			native.NATIVE_CMDLINE_ARGS = sys.argv[i+1:]
+			# this will be pushed directly, so make into list of string objects
+			native.NATIVE_CMDLINE_ARGS = []
+			for narg in sys.argv[i+2:]:
+				native.NATIVE_CMDLINE_ARGS.append(LangString(narg))
+
+			#print("CMDLINE ARGS TO SCRIPT:",sys.argv[i+2:])
 			break
 		elif filename is None and os.path.exists(arg):
 			filename = arg
