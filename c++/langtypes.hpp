@@ -17,16 +17,15 @@ const unsigned char TYPE_NULL = 0;
 const unsigned char TYPE_INT = 1;
 const unsigned char TYPE_BOOL = 2;
 const unsigned char TYPE_LAMBDA = 3;
-const unsigned char TYPE_MEMARRAY = 4;
-const unsigned char TYPE_FLOAT = 5;
-const unsigned char TYPE_STRING = 6;
-const unsigned char TYPE_SYMBOL = 7;
-const unsigned char TYPE_LIST = 8;
+const unsigned char TYPE_FLOAT = 4;
+const unsigned char TYPE_STRING = 5;
+const unsigned char TYPE_SYMBOL = 6;
+const unsigned char TYPE_LIST = 7;
 // unlike TYPE_NULL, which gets pushed as an immediate when encountered,
 // type VOID is never pushed and it is an error in most cases to pass
 // it as a value. it is only used internally for a return type meaning
 // "nothing, not even null"
-const unsigned char TYPE_VOID = 9;
+const unsigned char TYPE_VOID = 8;
 
 class Object;
 
@@ -35,13 +34,6 @@ typedef std::vector<Object> ObjList;
 // set this to control how many digits are printed (max is 17)
 // (this is TOTAL digits, not digits after the decimal ... so 'g' format for printf)
 extern int FLOAT_PRECISION;
-
-struct MemoryArray {
-	//Object *array;
-	//int count;
-	ObjList *list;
-	int offset; // when code does pointer math, this is adjusted
-};
 
 // this is intended to be a POD type, so no non-default constructors, destructors, base classes,
 // and small enough to pass as value -- any large parts will be stored in pointers
@@ -57,7 +49,6 @@ class Object {
 	bool isInt() const { return type == TYPE_INT; }
 	bool isBool() const { return type == TYPE_BOOL; }
 	bool isLambda() const { return type == TYPE_LAMBDA; }
-	bool isMemArray() const { return type == TYPE_MEMARRAY; }
 	bool isFloat() const { return type == TYPE_FLOAT; }
 	bool isString() const { return type == TYPE_STRING; }
 	bool isSymbol() const { return type == TYPE_SYMBOL; }
@@ -73,7 +64,6 @@ class Object {
 	unsigned int asInt() const { return data.i; }
 	bool asBool() const { return data.b; }
 	ObjList* asLambda() const { return data.objlist; };
-	MemoryArray* asMemArray() const { return data.memarray; }
 	double asFloat() const { return data.d; }
 	ObjList *asList() const { return data.objlist; }
 	 
@@ -88,7 +78,7 @@ class Object {
 	bool opEqual(const Object &other);
 	// '>' builtin (int, float, string, symbol)
 	bool opGreater(const Object &other);
-	// '+' builtin (int, float, memarray, strings, symbols, lists)
+	// '+' builtin (int, float, strings, symbols, lists)
 	Object opAdd(const Object &other);
 	// '-' builtin (int, float)
 	Object opSubtract(const Object &other);
@@ -98,12 +88,12 @@ class Object {
 	Object opDivide(const Object &other);
 	// '/mod' (ints)
 	Object opDivMod(const Object &other);
-	// 'length' word (string, symbol, array, list)
+	// 'length' word (string, symbol, list)
 	Object opLength();
 	// 'slice' operation - start at index, get nr items, or -1 for rest
 	// index/length out of bounds is never an error - returns empty object in worst case
 	// negative indexes count from end (where -1 is last item)
-	// for: strings, symbols, lists, arrays
+	// for: strings, symbols, lists
 	//
 	// NOTE: slice are the same type as the original object -- so a 1-length slice of a list is still a list.
 	// use unmake when you need the contents in the original type.
@@ -121,7 +111,6 @@ class Object {
 	union {
 		int i; // ints and lamda (index into LAMBDAS)
 		bool b;
-		MemoryArray *memarray;
 		ObjList *objlist; // for lambdas & lists
 		double d;
 		const char *str; // strings & symbols, immutable
@@ -140,12 +129,6 @@ Object newVoid();
 Object newInt(int i);
 Object newBool(bool b);
 Object newLambda(ObjList *objlist);
-// allocates array and sets all objects to int with value 0
-Object newMemArray(int count, int offset);
-// make a copy of the given array, sharing its array, so it
-// can have its own offset without affecting original. 
-// offset is set the same as memarray.
-Object copyMemArray(MemoryArray *memarray);
 Object newFloat(double d);
 // copies s, unless keepPointer is true, in which case it 
 // takes ownership of s (and len is ignored)
@@ -157,4 +140,3 @@ Object newSymbol(const std::string& );
 
 Object newList(); // always makes empty list
 Object newList(ObjList *); // wraps existing list, does NOT copy
-

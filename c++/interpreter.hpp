@@ -1,11 +1,6 @@
 /*
 	Interpreter - runs code.
 
-	There is no compilation step, not really even a parsing step -- the interpreter
-	runs directly from the wordlists from the Reader. This makes the code smaller and
-	makes e.g. forward declarations really easy since nothing is evaluated until it
-	runs.
-
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 #pragma once
@@ -20,6 +15,7 @@
 
 const int STACK_SIZE = (1<<10);
 const int LOCALS_SIZE = (1<<10);
+const int HEAP_STARTSIZE = (1<<16);
 
 class Interpreter {
 	public:
@@ -38,33 +34,35 @@ class Interpreter {
 
 	// all are public so builtins can use without a hassle
 	std::map<std::string,ObjList*> WORDS; // user-defined words
-	std::map<std::string,Object> VARS; // user-defined variables
+	std::map<std::string,int> VARS; // user-defined variables, name -> index into OBJMEM
 
 	// 3 memory areas: stack, locals, free memory
 	//
-	// the stack and locals are of fixed size, so are allocated in one
-	// block. normal integer values are used to address them.
-	Object *STACKLOCALS;
-	int SIZE_STACKLOCALS;
+	// the stack & locals are both of fixed size, so live at the bottom of memory.
+	// program-allocated memory (vars) lives above them in a space that will be
+	// reallocated as needed
+	//
+	// plain integers are used to address all 3 areas
+	Object *OBJMEM;
 	
-	// within STACKLOCAKS, the stack & locals are defined by these indices:
-
 	// current stack pointer (points to item on top of stack), empty value and lowest usable index
 	int SP, SP_EMPTY, SP_MIN;
 	// same for locals
 	int LP, LP_EMPTY, LP_MIN;
+	// starting index for program-allocatable memory
+	int HEAP_START;
+	// last valid index
+	int HEAP_END;
+	// next available index to allocate
+	int HEAP_NEXTFREE;
 
-	// program-allocated memory is stored as a MemoryArray instead of being
-	// part of a large block allocated here. having separately allocated
-	// objects for each memory array is bad for cache but very good in the
-	// sense that the GC takes care of it and i don't have to track which entries
-	// in a large array are still valid, etc. use newMemoryArray() or copyMemoryArray()
-	// to get program-allocated memory
+	// allocate heap memory to store nr Objects - returns starting index
+	int heap_alloc(int nr);
 
 	// lookup user-defined word or NULL if not found
 	ObjList* lookup_word(const char *name);
-	// get memory array or return null object
-	Object lookup_var(const char *name);
+	// get memory address (index into OBJMEM) or return -1
+	int lookup_var(const char *name);
 
 	void do_jump(const char *jumpword);
 

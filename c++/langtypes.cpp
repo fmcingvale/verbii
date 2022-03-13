@@ -94,34 +94,6 @@ Object newList(ObjList *list) {
 	return obj;
 }
 
-Object newMemArray(int count, int offset) {
-	ObjList *list = new ObjList();
-	MemoryArray *memarray = (MemoryArray*)x_malloc(sizeof(MemoryArray));
-
-	// set all to int=0 as default value
-	for(int i=0; i<count; ++i)
-		list->push_back(newInt(0));
-
-	memarray->list = list;
-	memarray->offset = offset;
-
-	Object obj;
-	obj.type = TYPE_MEMARRAY;
-	obj.data.memarray = memarray;
-	return obj;
-}
-
-Object copyMemArray(MemoryArray *memarray) {
-	MemoryArray *arraycopy = (MemoryArray*)x_malloc(sizeof(MemoryArray));
-	arraycopy->list = memarray->list;
-	arraycopy->offset = memarray->offset;
-
-	Object obj;
-	obj.type = TYPE_MEMARRAY;
-	obj.data.memarray = arraycopy;
-	return obj;
-}
-
 Object newFloat(double d) {
 	Object obj;
 	obj.type = TYPE_FLOAT;
@@ -171,7 +143,6 @@ bool Object::opEqual(const Object &other) {
 							(other.type == TYPE_INT && other.data.i == data.d);
 		case TYPE_BOOL: return other.type == TYPE_BOOL && other.data.b == data.b;
 		case TYPE_LAMBDA: throw LangError("Lambdas cannot be compared with ==");
-		case TYPE_MEMARRAY: throw LangError("Memory arrays cannot be compared with ==");
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
 		default: 
@@ -228,13 +199,6 @@ Object Object::opAdd(const Object &other) {
 			else if(other.type == TYPE_FLOAT) {
 				return newFloat(data.i + other.data.d);
 			}
-			else if(other.type == TYPE_MEMARRAY) {
-				// can't directly reuse 'other' since offset and count are part of
-				// the allocated object, but can share underlying array
-				Object r = copyMemArray(other.asMemArray());
-				r.asMemArray()->offset += data.i;
-				return r;
-			}
 			break;
 		case TYPE_FLOAT:
 			if(other.type == TYPE_INT) {
@@ -246,15 +210,6 @@ Object Object::opAdd(const Object &other) {
 			break;
 		case TYPE_BOOL: break;
 		case TYPE_LAMBDA: break;
-		case TYPE_MEMARRAY:
-			if(other.type == TYPE_INT) {
-				// can't directly reuse 'this' since offset and count are part of
-				// the allocated object, but can share underlying array
-				Object r = copyMemArray(asMemArray());
-				r.asMemArray()->offset += other.data.i;
-				return r;
-			}
-			break;
 		// strings & symbols defined as immutable, so no changing this
 		case TYPE_STRING:
 			if(other.type == TYPE_STRING) {
@@ -326,8 +281,6 @@ Object Object::opLength() {
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
 			return newInt(strlen(data.str));
-		case TYPE_MEMARRAY:
-			return newInt((int)(data.memarray->list->size()));
 		case TYPE_LIST:
 			return newInt((int)(data.objlist->size()));
 	}
@@ -346,10 +299,6 @@ Object Object::opSlice(int index, int nr) {
 			objsize = (int)(data.objlist->size());
 			break;
 
-		case TYPE_MEMARRAY:
-			objsize = (int)(data.memarray->list->size());
-			break;
-
 		default:
 			throw LangError("Object doesn't support slicing: " + fmtStackPrint());
 	}
@@ -360,7 +309,7 @@ Object Object::opSlice(int index, int nr) {
 	if(index < 0 || index >= objsize) {
 		if(type == TYPE_STRING || type == TYPE_SYMBOL)
 			return newString("");
-		else if(type == TYPE_LIST || type == TYPE_MEMARRAY)
+		else if(type == TYPE_LIST)
 			return newList();
 		else {
 			throw LangError("Should never happen");
@@ -386,17 +335,6 @@ Object Object::opSlice(int index, int nr) {
 
 				return r;
 			}
-		case TYPE_MEMARRAY:
-			{
-				// return as list as well
-				Object r = newList();
-				for(auto it=data.memarray->list->begin() + index;
-						it < (data.memarray->list->begin() + index + nr);
-						++it)
-					r.data.objlist->push_back(*it);
-				
-				return r;
-			}
 	}	
 	throw LangError("Unreachable code");	
 }
@@ -417,7 +355,6 @@ string Object::fmtDisplay() const {
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		// these two are not meant to be printed, but can be shown in stack
 		case TYPE_LAMBDA: throw LangError("Lambdas are not printable");
-		case TYPE_MEMARRAY: throw LangError("MemArray is not printable");
 		case TYPE_STRING: return string(data.str);
 		// symbols should not normally be printed by programs, so they get
 		// a ' to differentiate them from strings
@@ -442,7 +379,6 @@ string Object::fmtStackPrint() const {
 		}
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		case TYPE_LAMBDA: return "<lambda>";
-		case TYPE_MEMARRAY: return "var:" + to_string(data.memarray->list->size()) + ":" + to_string(data.memarray->offset);
 		// add " .. " so its clear on stack that it is a string
 		case TYPE_STRING: return "\"" + string(data.str) + "\"";
 		// opposite of above -- since strings get " .. " then i don't get a ' here

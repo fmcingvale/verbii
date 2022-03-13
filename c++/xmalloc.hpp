@@ -14,5 +14,6 @@ extern unsigned long long X_BYTES_ALLOCATED;
 
 void x_mem_init();
 void* x_malloc(size_t size);
+void* x_realloc(void *ptr, size_t new_size);
 void x_mem_gcollect();
 char *x_strndup(const char *s, size_t n);

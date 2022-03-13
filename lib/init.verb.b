@@ -370,13 +370,9 @@ y LP
 i 9
 y +
 W get
-L 30
+L 26
 y over
 y list?
-y if
-y >>list
-y over
-y array?
 y if
 y >>list
 y over

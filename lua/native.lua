@@ -72,39 +72,20 @@ end
 
 -- ( obj addr -- ) - save obj to addr
 function builtin_set(intr, obj, addr)
-	-- see if its an integer or MemArray
-	if type(addr) == "number" then
-		if addr < 0 or addr >= intr.SIZE_STACKLOCALS then
-			error(">>>Bad address in set!: " .. tostring(addr))
-		end
-
-		intr.STACKLOCALS[addr] = obj -- like Python, can just store obj directly
-	elseif isMemArray(addr) then
-		if addr.offset < 0 or addr.offset >= #addr.mem then
-			error(">>>Offset out of bounds in set!")
-		end
-		addr.mem[addr.offset+1] = obj
-	else
-		error(">>>Bad address in set!: " .. fmtStackPrint(addr))
+	if addr < 0 or addr >= #intr.OBJMEM then
+		error(">>>Bad address in set!: " .. tostring(addr))
 	end
+
+	intr.OBJMEM[addr] = obj -- like Python, can just store obj directly
 end
 
 -- ( addr -- obj ) load obj from addr and push to stack
 function builtin_ref(intr, addr)
-	-- see if its an integer or MemArray
-	if type(addr) == "number" then
-		if addr < 0 or addr >= intr.SIZE_STACKLOCALS then
-			error(">>>Bad address in ref: " .. tostring(addr))
-		end
-		intr:push(intr.STACKLOCALS[addr])
-	elseif isMemArray(addr) then
-		if addr.offset < 0 or addr.offset >= #addr.mem then
-			error(">>>Offset out of bounds in ref")
-		end
-		intr:push(addr.mem[addr.offset+1])
-	else
-		error(">>>Bad address in ref: " .. fmtStackPrint(addr))
+	if addr < 0 or addr >= #intr.OBJMEM then
+		error(">>>Bad address in ref: " .. tostring(addr))
 	end
+
+	intr:push(intr.OBJMEM[addr])
 end
 
 -- set stack pointer from addr on stack
@@ -129,7 +110,7 @@ function builtin_tolocal(intr)
 		error(">>>Locals overflow")
 	end	
 	intr.LP = intr.LP - 1
-	intr.STACKLOCALS[intr.LP] = intr:pop()
+	intr.OBJMEM[intr.LP] = intr:pop()
 end
 
 -- pop top locals and push to stack
@@ -137,7 +118,7 @@ function builtin_fromlocal(intr)
 	if intr.LP >= intr.LP_EMPTY then
 		error(">>>Locals underflow")
 	end
-	intr:push(intr.STACKLOCALS[intr.LP])
+	intr:push(intr.OBJMEM[intr.LP])
 	intr.LP = intr.LP + 1
 end
 
@@ -253,15 +234,6 @@ function builtin_add(intr, a, b)
 		intr:pushInt(a+b)
 	elseif isNumeric(a) and isNumeric(b) then
 		intr:push(new_Float(asNumeric(a) + asNumeric(b)))
-	elseif isMemArray(a) and isInt(b) then
-		local arr = clone_MemArray(a)
-		arr.offset = arr.offset + b
-		intr:push(arr)
-	-- now with swapped args
-	elseif isMemArray(b) and isInt(a) then
-		local arr = clone_MemArray(b)
-		arr.offset = arr.offset + a
-		intr:push(arr)
 	elseif isSymbol(a) and isSymbol(b) then
 		intr:push(a .. b)
 	elseif isString(a) and isString(b) then
@@ -388,7 +360,6 @@ function builtin_slice(intr, obj, index, nr)
 	if isString(obj) then objsize = #obj.value
 	elseif isSymbol(obj) or isList(obj) then
 		objsize = #obj
-	elseif isMemArray(obj) then objsize = #obj.mem
 	else
 		error(">>>Object doesn't support slicing: " .. fmtStackPrint(obj))
 	end
@@ -402,9 +373,6 @@ function builtin_slice(intr, obj, index, nr)
 			intr:push("")
 			return
 		elseif isList(obj) then
-			intr:push({})
-			return
-		elseif isMemArray(obj) then 
 			intr:push({})
 			return
 		end
@@ -426,12 +394,6 @@ function builtin_slice(intr, obj, index, nr)
 		local newlist = {}
 		for i=1,nr do
 			table.insert(newlist, obj[index+i])
-		end
-		intr:push(newlist)
-	elseif isMemArray(obj) then 
-		local newlist = {}
-		for i=1,nr do
-			table.insert(newlist, obj.mem[index+i])
 		end
 		intr:push(newlist)
 	end
@@ -460,11 +422,6 @@ function builtin_unmake(intr, obj)
 			table.insert(newlist, obj.wordlist[i])
 		end
 		intr:push(newlist)
-	elseif isMemArray(obj) then
-		for i=1,#obj.mem do
-			intr:push(obj.mem[i])
-		end
-		intr:pushInt(#obj.mem)
 	end
 end
 
@@ -509,7 +466,6 @@ function builtin_length(intr, obj)
 	if isString(obj) then intr:pushInt(#obj.value)
 	elseif isSymbol(obj) then intr:pushInt(#obj)
 	elseif isList(obj) then intr:pushInt(#obj)
-	elseif isMemArray(obj) then intr:pushInt(#obj.mem)
 	else error(">>>Object does not support 'length': " .. fmtStackPrint(obj))
 	end
 end
@@ -555,7 +511,6 @@ BUILTINS = {
 	["bool?"] = { {"any"}, function(intr,o) intr:push(isBool(o)) end},
 	["null?"] = { {"any"}, function(intr,o) intr:push(isNone(o)) end},
 	["list?"] = { {"any"}, function(intr,o) intr:push(isList(o)) end},
-	["array?"] = { {"any"}, function(intr,o) intr:push(isMemArray(o)) end},
 	["string?"] = { {"any"}, function(intr,o) intr:push(isString(o)) end},
 	["symbol?"] = { {"any"}, function(intr,o) intr:push(isSymbol(o)) end},
 	["repr"] = { {}, builtin_repr },
@@ -570,8 +525,8 @@ BUILTINS = {
 	[":"] = { {}, builtin_define_word },
 	-- alias for ':'
 	["def"] = { {}, builtin_define_word },
-	["set!"] = { {"any","any"}, builtin_set},
-	["ref"] = { {"any"}, builtin_ref },
+	["set!"] = { {"any","number"}, builtin_set},
+	["ref"] = { {"number"}, builtin_ref },
 	[">L"] = { {}, builtin_tolocal},
 	["L>"] = { {}, builtin_fromlocal},
 	["depth"] = { {}, function(intr) intr:push(intr.SP_EMPTY - intr.SP) end },

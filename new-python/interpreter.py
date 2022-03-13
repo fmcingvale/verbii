@@ -1,6 +1,5 @@
 from __future__ import annotations
-from codecs import replace_errors
-from langtypes import LangLambda, MemArray, LangString, fmtStackPrint, fmtDisplay, MAX_INT_31, MIN_INT_31
+from langtypes import LangLambda, LangString, fmtStackPrint, MAX_INT_31, MIN_INT_31
 """
 	Interpreter - runs code deserialized from bytecode.
 
@@ -12,24 +11,28 @@ import re
 from errors import LangError
 
 class Interpreter(object):
-	STACK_SIZE = (1<<16)
+	STACK_SIZE = (1<<10)
 	LOCALS_SIZE = (1<<10)
+	HEAP_STARTSIZE = (1<<16) # grows as needed
 
 	def __init__(self):
-		# stack & locals live here -- integer addresses are indexes into this.
-		# variables live in allocated memory tied to a MemArray.
-		self.SIZE_STACKLOCALS = self.STACK_SIZE + self.LOCALS_SIZE
-		self.STACKLOCALS = [0] * self.SIZE_STACKLOCALS
+		# 3 memory areas here: stack, locals and heap (program allocatable memory)
+		# these are object slots - can each hold any size object
+		self.OBJMEM = [0] * (self.STACK_SIZE + self.LOCALS_SIZE + self.HEAP_STARTSIZE)
 		# indexes: stack pointer, empty value and lowest usable index
-		# stack starts at top of memory and grows downward
-		self.SP_EMPTY = self.SIZE_STACKLOCALS - 1
+		# stack is first:
+		self.SP_MIN = 0
+		self.SP_EMPTY = self.SP_MIN + self.STACK_SIZE
 		self.SP = self.SP_EMPTY
-		self.SP_MIN = self.SP_EMPTY - self.STACK_SIZE
-		# same for locals
-		self.LP_EMPTY = self.SP_MIN
+		# locals are next:
+		self.LP_MIN = self.SP_EMPTY
+		self.LP_EMPTY = self.LP_MIN + self.LOCALS_SIZE
 		self.LP = self.LP_EMPTY
-		self.LP_MIN = self.LP_EMPTY - self.LOCALS_SIZE
-	
+		# next free heap index to allocate
+		# note -- heap never shrinks even when vars are deleted. however, vars are intended to
+		# be toplevel only, so this is not really a practical problem
+		self.HEAP_NEXTFREE = self.LP_EMPTY
+
 		self.re_integer = re.compile(r"""(^[+\-]?[0-9]+$)""")
 		self.re_lambda = re.compile(r"""\$<lambda ([0-9]+)>""")
 		
@@ -43,6 +46,16 @@ class Interpreter(object):
 		self.code = []
 		self.codepos = 0
 		self.callstack = []
+
+	def heap_alloc(self, nr):
+		"alloc space for nr objects, returning starting index"
+		addr = self.HEAP_NEXTFREE
+		if (self.HEAP_NEXTFREE + nr) >= len(self.OBJMEM):
+			# double heapsize when i run out of memory
+			self.OBJMEM = self.OBJMEM + [0]*len(self.OBJMEM)
+
+		self.HEAP_NEXTFREE += nr
+		return addr
 
 	def code_call(self, code):
 		#print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
@@ -61,7 +74,7 @@ class Interpreter(object):
 			raise LangError("Stack overflow")
 
 		self.SP -= 1
-		self.STACKLOCALS[self.SP] = obj
+		self.OBJMEM[self.SP] = obj
 
 	def pushInt(self, a):
 		"like push but checks for valid integer range"
@@ -74,7 +87,7 @@ class Interpreter(object):
 		if self.SP >= self.SP_EMPTY:
 			raise LangError("Stack underflow")
 
-		obj = self.STACKLOCALS[self.SP]
+		obj = self.OBJMEM[self.SP]
 		self.SP += 1
 		return obj
 
@@ -82,7 +95,7 @@ class Interpreter(object):
 		s = ""
 		i = self.SP_EMPTY-1
 		while i >= self.SP:
-			s += fmtStackPrint(self.STACKLOCALS[i]) + ' '
+			s += fmtStackPrint(self.OBJMEM[i]) + ' '
 			i -= 1
 
 		return s
@@ -227,8 +240,8 @@ class Interpreter(object):
 				if name in self.VARS:
 					raise LangError("Trying to redefine variable " + name)
 			
-				# create MemArray and store in VARS
-				self.VARS[name] = MemArray(count, 0)
+				# alloc memory for var
+				self.VARS[name] = self.heap_alloc(count)
 				continue
 		
 			if word == "del":
@@ -282,7 +295,7 @@ class Interpreter(object):
 				continue
 	
 			if word in self.VARS:
-				self.push(self.VARS[word])
+				self.pushInt(self.VARS[word])
 				continue
 
 			raise LangError("Unknown word " + word)

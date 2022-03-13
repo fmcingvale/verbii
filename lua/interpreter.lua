@@ -1,10 +1,5 @@
 --[[
-	Interpreter - runs code.
-
-	There is no compilation step, not really even a parsing step -- the interpreter
-	runs directly from the wordlists from the Reader. This makes the code smaller and
-	makes e.g. forward declarations really easy since nothing is evaluated until it
-	runs.
+	Interpreter - runs byte-compiled code
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 
@@ -16,13 +11,28 @@ require("langtypes")
 
 Interpreter = {}
 
+-- allocate nr object slots and returning starting index
+function Interpreter:heap_alloc(nr)
+	local addr = self.HEAP_NEXTFREE
+	if (self.HEAP_NEXTFREE+nr) >= #self.OBJMEM then
+		-- double heap when out of space
+		local newsize = #self.OBJMEM * 2
+		for i=self.HEAP_NEXTFREE,newsize-1 do
+			self.OBJMEM[i] = 0
+		end
+	end
+
+	self.HEAP_NEXTFREE = self.HEAP_NEXTFREE + nr
+	return addr
+end
+
 function Interpreter:push(obj)
 	-- like Python (and unlike C++), I can just push Lua objects here
 	if self.SP <= self.SP_MIN then
 		error(">>>Stack overflow")
 	end
 	self.SP = self.SP - 1
-	self.STACKLOCALS[self.SP] = obj
+	self.OBJMEM[self.SP] = obj
 end
 
 function Interpreter:pushInt(val)
@@ -39,7 +49,7 @@ function Interpreter:pop()
 		error(">>>Stack underflow")
 	end
 
-	obj = self.STACKLOCALS[self.SP]
+	obj = self.OBJMEM[self.SP]
 	self.SP = self.SP + 1
 	return obj
 end
@@ -48,7 +58,7 @@ function Interpreter:reprStack()
 	s = ""
 	i = self.SP_EMPTY-1
 	while i >= self.SP do
-		s = s .. fmtStackPrint(self.STACKLOCALS[i]) .. " "
+		s = s .. fmtStackPrint(self.OBJMEM[i]) .. " "
 		i = i - 1
 	end
 
@@ -79,13 +89,6 @@ function Interpreter:do_jump(jumpword)
 	else
 		error(">>>Bad jumpword " .. jumpword)
 	end
-end
-
--- allocate count memory slots and return start address
-function Interpreter:allocate(count)
-	addr = self.MEM_NEXT
-	self.MEM_NEXT = self.MEM_NEXT + count
-	return addr
 end
 
 function Interpreter:nextObj()
@@ -254,7 +257,7 @@ function Interpreter:run(objlist, stephook)
 					error(">>>Trying to redefine variable "  .. name)
 				end
 			
-				self.VARS[name] = new_MemArray(count)
+				self.VARS[name] = self:heap_alloc(count)
 				goto MAINLOOP
 			end
 				
@@ -308,7 +311,7 @@ function Interpreter:run(objlist, stephook)
 			end
 
 			if self.VARS[obj] ~= nil then
-				self:push(self.VARS[obj])
+				self:pushInt(self.VARS[obj])
 				goto MAINLOOP
 			end
 		end
@@ -322,26 +325,30 @@ function Interpreter:new(obj)
 	self.__index = self
 	obj.__class__ = "Interpreter"
 	
-	obj.STACK_SIZE = (1<<16)
+	-- 3 memory areas: stack, locals, heap (program-allocated memory)
+	obj.STACK_SIZE = (1<<10)
 	obj.LOCALS_SIZE = (1<<10)
-
-	obj.SIZE_STACKLOCALS = obj.STACK_SIZE + obj.LOCALS_SIZE
-	obj.STACKLOCALS = {}
-	-- prefill stack+locals
-	for i=1,obj.SIZE_STACKLOCALS do
-		obj.STACKLOCALS[i] = 0
+	obj.HEAP_STARTSIZE = (1<<16)
+	
+	obj.OBJMEM = {}
+	-- prefill to create as correct size
+	for i=1,(obj.STACK_SIZE+obj.LOCALS_SIZE+obj.HEAP_STARTSIZE) do
+		obj.OBJMEM[i] = 0
 	end
 
-	obj.SP_MAX = obj.SIZE_STACKLOCALS - 1
-	obj.SP_EMPTY = obj.SP_MAX + 1
+	-- stack first:
+	obj.SP_MIN = 1	
+	obj.SP_EMPTY = obj.SP_MIN + obj.STACK_SIZE
 	obj.SP = obj.SP_EMPTY
-	obj.SP_MIN = obj.SP_EMPTY - obj.STACK_SIZE
 	
-	obj.LP_MAX = obj.SP_MIN - 1
-	obj.LP_EMPTY = obj.LP_MAX + 1
+	-- locals next:
+	obj.LP_MIN = obj.SP_EMPTY
+	obj.LP_EMPTY = obj.LP_MIN + obj.LOCALS_SIZE
 	obj.LP = obj.LP_EMPTY
-	obj.LP_MIN = obj.LP_EMPTY - obj.LOCALS_SIZE
 	
+	-- next free heap index to allocate
+	obj.HEAP_NEXTFREE = obj.LP_EMPTY
+
 	-- code currently being run or nil for not running
 	obj.code = nil
 	obj.codepos = 1 -- index into code list

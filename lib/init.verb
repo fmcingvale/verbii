@@ -80,7 +80,6 @@ SP SP_EMPTY set!
 
 : get ( sequence i -- obj = i'th object from sequence )
 	over list? if >>list
-	over array? if >>list
 	over string? if >>string
 	over symbol? if >>string
 	repr "Bad object in get: " swap + error

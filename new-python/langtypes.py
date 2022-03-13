@@ -14,18 +14,6 @@ MIN_INT_31 = -MAX_INT_31
 def isNumeric(obj):
 	return type(obj) == int or type(obj) == float
 
-class MemArray(object):
-	def __init__(self, count, offset):
-		self.mem = [0]*count
-		self.offset = 0
-
-	def clone(self):
-		"return copy that shares .mem but has own offset"
-		c = MemArray(0,0)
-		c.mem = self.mem
-		c.offset = self.offset
-		return c
-
 # since symbols are far more common than strings,
 # Python strings are used for symbols and this class is used
 # for strings
@@ -56,8 +44,6 @@ def fmtDisplay(obj):
 		return "false"
 	elif isinstance(obj, LangLambda):
 		return "<lambda>"
-	elif isinstance(obj, MemArray):
-		return "var:{0}:{1}".format(len(obj.mem), obj.offset)
 	elif isinstance(obj, LangString):
 		return obj.s
 	elif type(obj) is str:
@@ -83,8 +69,6 @@ def fmtStackPrint(obj):
 		return "false"
 	elif isinstance(obj, LangLambda):
 		return "<lambda>"
-	elif isinstance(obj, MemArray):
-		return "var:{0}:{1}".format(len(obj.mem), obj.offset)
 	elif isinstance(obj, LangString):
 		# in a stack display, strings get " ... "
 		return '"' + obj.s + '"'

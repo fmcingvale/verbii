@@ -34,5 +34,7 @@ Global TODO
   
 * should delete comments from source as read so they don't have to be reparsed on every pass
 
+* add cmdline params: -stack -locals -heap to give values for memory sizes
 
+* Lua: remove obsolete code
 

@@ -280,7 +280,6 @@
 	dup symbol? if >>symbol
 	dup list? if >>list
 	dup lambda? if >>lambda
-	dup array? if >>array
 	repr "Unknown obj in serialize-object:" swap + error
 	@null ( n )
 		"n" puts CR return
@@ -301,11 +300,6 @@
 	@lambda ( "F" then list serialized )
 		"F" puts CR
 		unmake serialize-object ( serialize list )
-		return
-	@array ( "a" then length serialized then items serialized )
-		"a" . CR
-		dup length serialize-object ( length )
-		{ serialize-object } for-each ( items )
 		return
 		;
 

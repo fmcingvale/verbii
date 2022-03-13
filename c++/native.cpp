@@ -137,28 +137,17 @@ static void builtin_printchar(Interpreter *intr) {
 	}
 }
 
-// ( obj addr -- ) - save obj to addr
-//
-// two cases:
-//	* addr is integer == index into STACKLOCALS
-//	* addr is MemoryArray
+// ( obj addr -- ) - save obj to addr (index into OBJMEM)
 static void builtin_set(Interpreter *intr) {
 	Object addr = intr->pop();
 	Object obj = intr->pop();
 	if(addr.isInt()) {
 		// SP or LP index
 		int index = addr.asInt();
-		if(index < 0 || index > intr->SIZE_STACKLOCALS) {
+		if(index < 0 || index > intr->HEAP_END) {
 			throw LangError("Bad address in set!: " + to_string(index));
 		}
-		intr->STACKLOCALS[index] = obj;
-	}
-	else if(addr.isMemArray()) {
-		auto arr = addr.asMemArray();
-		if(arr->offset < 0 || arr->offset >= (int)arr->list->size()) {
-			throw LangError("Offset out of bounds in set!");
-		}
-		(*arr->list)[arr->offset] = obj;
+		intr->OBJMEM[index] = obj;
 	}
 	else {
 		throw LangError("NOT IMPLEMENTED IN set!");
@@ -166,23 +155,14 @@ static void builtin_set(Interpreter *intr) {
 }
 
 // ( addr -- obj ) load obj from addr and push to stack
-//
-// as above, addr can be int or MemoryArray
 static void builtin_ref(Interpreter *intr) {
 	Object addr = intr->pop();
 	if(addr.isInt()) {
 		int index = addr.asInt();
-		if(index < 0 || index >= intr->SIZE_STACKLOCALS) {
+		if(index < 0 || index > intr->HEAP_END) {
 			throw LangError("Bad address in ref: " + to_string(index));
 		}
-		intr->push(intr->STACKLOCALS[index]);
-	}
-	else if(addr.isMemArray()) {
-		auto arr = addr.asMemArray();
-		if(arr->offset < 0 || arr->offset >=(int) arr->list->size()) {
-			throw LangError("Offset out of bounds in ref");
-		}
-		intr->push((*arr->list)[arr->offset]);
+		intr->push(intr->OBJMEM[index]);
 	}
 	else {
 		throw LangError("NOT IMPLEMENTED IN ref");
@@ -214,7 +194,7 @@ static void builtin_tolocal(Interpreter *intr) {
 	if(intr->LP <= intr->LP_MIN) {
 		throw LangError("Locals overflow");
 	}
-	intr->STACKLOCALS[--intr->LP] = intr->pop();
+	intr->OBJMEM[--intr->LP] = intr->pop();
 }
 
 // pop top locals and push to stack
@@ -222,7 +202,7 @@ static void builtin_fromlocal(Interpreter *intr) {
 	if(intr->LP >= intr->LP_EMPTY) {
 		throw LangError("Locals underflow");
 	}
-	intr->push(intr->STACKLOCALS[intr->LP++]);
+	intr->push(intr->OBJMEM[intr->LP++]);
 }
 
 static void builtin_error(Interpreter *intr) {
@@ -351,13 +331,6 @@ static void builtin_unmake(Interpreter *intr) {
 		}
 		intr->push(newInt((int)(obj.data.objlist->size())));
 	}
-	else if(obj.isMemArray()) {
-		// dump as unmade list
-		for(auto obj : *obj.data.memarray->list)
-			intr->push(obj);
-			
-		intr->push(newInt(obj.data.memarray->list->size()));
-	}
 	else if(obj.isLambda()) {
 		// turn lambda back into a list so make-lambda would work.
 		//
@@ -418,15 +391,6 @@ static void builtin_dumpword(Interpreter *intr) {
 	intr->push(newList(wordlist));
 }
 
-static void builtin_dumpvar(Interpreter *intr) {
-	const char* symbol = popSymbol(intr,"Bad name in .dumpvar");
-	Object varlist = intr->lookup_var(symbol);
-	if(!varlist.isMemArray()) {
-		throw LangError("No such name in .dumpvar: " + string(symbol));
-	}
-	intr->push(newList(varlist.asMemArray()->list));
-}
-
 #include "deserialize.hpp"
 
 static void builtin_loadc(Interpreter *intr) {
@@ -473,7 +437,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"string?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isString()));}},
 	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
 	{"lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isLambda()));}},
-	{"array?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isMemArray()));}},
 
 	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
 	{"SP", [](Interpreter *intr){intr->push(newInt(intr->SP));}},
@@ -487,7 +450,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{".wordlist", builtin_wordlist},
 	{".varlist", builtin_varlist},
 	{".dumpword", builtin_dumpword},
-	{".dumpvar", builtin_dumpvar},
 	{"error", builtin_error},
 
 	// experimental

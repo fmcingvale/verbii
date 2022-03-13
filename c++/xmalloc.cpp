@@ -16,6 +16,10 @@ void* x_malloc(size_t size) {
 	return GC_malloc(size);
 }
 
+void* x_realloc(void *ptr, size_t new_size) {
+	return GC_realloc(ptr, new_size);
+}
+
 void x_mem_gcollect() {
 	GC_gcollect();
 }
@@ -35,6 +39,10 @@ void x_mem_init() {
 void* x_malloc(size_t size) {
 	X_BYTES_ALLOCATED += size;
 	return malloc(size);
+}
+
+void* x_realloc(void *ptr, size_t new_size) {
+	return realloc(ptr, new_size);
 }
 
 void x_mem_gcollect() {

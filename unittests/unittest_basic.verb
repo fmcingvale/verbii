@@ -270,8 +270,6 @@ clear
 length
 'bigsymbol
 length
-var x 123
-x length
 
 ( lists )
 clear
@@ -387,20 +385,7 @@ L0 ref L1 ref +
 L0 ref
 L1 ref
 
-clear
-( array slices )
-
-var Y 4
-10 Y set!
-20 Y 1 + set!
-30 Y 2 + set!
-40 Y 3 + set!
-'Y .dumpvar
-Y 0 -1 slice
-Y 2 1 slice
-Y -3 2 slice
-Y unmake
-
+( tests of 'any' )
 clear "abcde" { "e" == } any
 clear "01234" { "9" == } any
 clear 10 20 30 40 4 make-list { 30 > } any

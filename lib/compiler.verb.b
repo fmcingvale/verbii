@@ -522,7 +522,7 @@ y swap
 y return
 y for-each
 W serialize-object
-L 109
+L 95
 y dup
 y null?
 y if
@@ -555,10 +555,6 @@ y dup
 y lambda?
 y if
 y >>lambda
-y dup
-y array?
-y if
-y >>array
 y repr
 s Unknown%32obj%32in%32serialize-object:
 y swap
@@ -623,18 +619,6 @@ y puts
 y CR
 y unmake
 y serialize-object
-y return
-y @array
-s a
-y .
-y CR
-y dup
-y length
-y serialize-object
-F
-L 1
-y serialize-object
-y for-each
 y return
 W byte-compile
 L 32

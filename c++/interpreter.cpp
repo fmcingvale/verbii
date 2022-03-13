@@ -19,55 +19,64 @@
 using namespace std;
 
 Interpreter::Interpreter() {
-
-	//cout << "Interpreter starting\n";
-
-	//syntax = new Syntax();
-
-	SIZE_STACKLOCALS = STACK_SIZE+LOCALS_SIZE;
-	STACKLOCALS = (Object*)x_malloc(SIZE_STACKLOCALS*sizeof(Object));
-
-	// stack starts at top grows downward
-
-	// the _EMPTY indexes are not valid storage locations, they indicated the
-	// respective stacks are emtpy
-	SP_EMPTY = SIZE_STACKLOCALS;
+	// stack at bottom, grows downward from SP_EMPTY
+	// (the _EMPTY indexes are not valid storage locations, they indicate that the
+	// respective stacks are empty)
+	SP_MIN = 0;
+	SP_EMPTY = SP_MIN + STACK_SIZE;
 	SP = SP_EMPTY;
-	SP_MIN = SP_EMPTY - STACK_SIZE;
 
-	LP_EMPTY = SP_MIN;
+	// locals are next, grows downward from LP_EMPTY
+	LP_MIN = SP_EMPTY;
+	LP_EMPTY = LP_MIN + LOCALS_SIZE;
 	LP = LP_EMPTY;
-	LP_MIN = LP_EMPTY - LOCALS_SIZE;
-	// sanity that I did that math correctly ...
-	if(LP_MIN != 0) {
-		throw LangError("stacklocals size is wrong!");
-	}
-}
 
-//void Interpreter::addText(const string &text) {
-//	syntax->addText(text);
-//}
+	// heap is next
+	HEAP_START = LP_EMPTY;
+	HEAP_END = HEAP_START + HEAP_STARTSIZE - 1;
+	HEAP_NEXTFREE = HEAP_START;
+	
+	// allocate stack+locals+heap
+	OBJMEM = (Object*)x_malloc((HEAP_END+1) * sizeof(Object));
+}
 
 void Interpreter::push(Object obj) {
 	if(SP <= SP_MIN) {
 		throw LangError("Stack overflow");
 	}
-	STACKLOCALS[--SP] = obj;
+	OBJMEM[--SP] = obj;
 }
 
 Object Interpreter::pop() {
 	if(SP >= SP_EMPTY) {
 		throw LangError("Stack underflow");
 	}
-	return STACKLOCALS[SP++];
+	return OBJMEM[SP++];
 }
 
 string Interpreter::reprStack() const {
 	string s = "";
 	for(int i=SP_EMPTY-1; i>=SP; --i) {
-		s += STACKLOCALS[i].fmtStackPrint() + " ";
+		s += OBJMEM[i].fmtStackPrint() + " ";
 	}
 	return s;
+}
+
+int Interpreter::heap_alloc(int nr) {
+	if((HEAP_NEXTFREE + nr) >= HEAP_END) {
+		// not enough memory, double it
+		size_t newsize = max(HEAP_END+nr, (HEAP_END+1)*2);
+		OBJMEM = (Object*)x_realloc(OBJMEM, newsize);
+		HEAP_END = newsize - 1;
+	}
+	int addr = HEAP_NEXTFREE;
+	Object zero = newInt(0);
+	HEAP_NEXTFREE += nr;
+	// init memory to zeros
+	for(int i=0; i<nr; ++i) {
+		OBJMEM[addr+i] = zero;
+	}
+	return addr;
 }
 
 Object Interpreter::nextCodeObj() {
@@ -155,12 +164,12 @@ ObjList* Interpreter::lookup_word(const char *name) {
 		return NULL;
 }
 
-Object Interpreter::lookup_var(const char *name) {
+int Interpreter::lookup_var(const char *name) {
 	auto uservar = VARS.find(name);
 	if(uservar != VARS.end())
 		return uservar->second;
 	else
-		return newNull();
+		return -1;
 }
 
 void Interpreter::code_call(ObjList *new_code) {
@@ -297,7 +306,7 @@ void Interpreter::run(ObjList *to_run, bool singlestep) {
 				throw LangError("Trying to redefine variable " + name.fmtStackPrint());
 			}
 			// add to VARS so name lookup works (below) 
-			VARS[name.asSymbol()] = newMemArray(count.asInt(), 0);
+			VARS[name.asSymbol()] = heap_alloc(count.asInt());
 			continue;
 		}
 
@@ -347,9 +356,9 @@ void Interpreter::run(ObjList *to_run, bool singlestep) {
 				continue;
 			}
 
-			Object memArray = lookup_var(obj.asSymbol());
-			if(!memArray.isNull()) {
-				push(memArray);
+			int addr = lookup_var(obj.asSymbol());
+			if(addr >= 0) {
+				push(newInt(addr));
 				continue;
 			}
 		}

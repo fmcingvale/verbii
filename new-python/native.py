@@ -9,7 +9,7 @@ from math import floor
 from xml.dom.minidom import ReadOnlySequentialNamedNodeMap
 from errors import LangError
 from interpreter import Interpreter
-from langtypes import LangLambda, MemArray, LangString, FLOAT_PRECISION, fmtDisplay, fmtStackPrint, \
+from langtypes import LangLambda, LangString, FLOAT_PRECISION, fmtDisplay, fmtStackPrint, \
 				isNumeric
 
 # has to be set externally
@@ -38,36 +38,18 @@ def builtin_divmod(I: Interpreter, a, b):
 	I.pushInt(quot)
 
 # ( obj addr -- ) - save obj to addr
-def builtin_set(I: Interpreter, obj, addr):
-	# see if its a stack/locals address or allocated memory
-	if type(addr) == int:
-		if addr < 0 or addr >= I.SIZE_STACKLOCALS:
-			raise LangError("Bad address in set!: " + str(addr))
-		
-		I.STACKLOCALS[addr] = obj
-	elif isinstance(addr, MemArray):
-		if addr.offset < 0 or addr.offset >= len(addr.mem):
-			raise LangError("Offset out of bounds in set!")
-
-		addr.mem[addr.offset] = obj
-	else:
-		raise LangError("Bad address in set!: " + fmtStackPrint(addr))
+def builtin_set(I: Interpreter, obj, addr: int):
+	if addr < 0 or addr >= len(I.OBJMEM):
+		raise LangError("Bad address in set!: " + str(addr))
+	
+	I.OBJMEM[addr] = obj
 	
 # ( addr -- obj ) load obj from addr and push to stack
-def builtin_ref(I: Interpreter, addr):
-	# see if its a stack/locals address or allocated memory
-	if type(addr) == int:
-		if addr < 0 or addr >= I.SIZE_STACKLOCALS: 
-			raise LangError("Bad address in ref: " + str(addr))
-		
-		I.push(I.STACKLOCALS[addr])
-	elif isinstance(addr, MemArray):
-		if addr.offset < 0 or addr.offset >= len(addr.mem):
-			raise LangError("Offset out of bounds in ref")
-
-		I.push(addr.mem[addr.offset])
-	else:
-		raise LangError("Bad address in ref: " + fmtStackPrint(addr))
+def builtin_ref(I: Interpreter, addr: int):
+	if addr < 0 or addr >= len(I.OBJMEM): 
+		raise LangError("Bad address in ref: " + str(addr))
+	
+	I.push(I.OBJMEM[addr])
 
 # set stack pointer from addr on stack
 def builtin_setsp(I: Interpreter, addr):
@@ -89,14 +71,14 @@ def builtin_tolocal(I: Interpreter):
 		raise LangError("Locals overflow")
 	
 	I.LP -= 1
-	I.STACKLOCALS[I.LP] = I.pop()
+	I.OBJMEM[I.LP] = I.pop()
 
 # pop top locals and push to stack
 def builtin_fromlocal(I: Interpreter):
 	if I.LP >= I.LP_EMPTY:
 		raise LangError("Locals underflow")
 	
-	I.push(I.STACKLOCALS[I.LP])
+	I.push(I.OBJMEM[I.LP])
 	I.LP += 1
 
 def builtin_showdef(I):
@@ -166,19 +148,6 @@ def builtin_add(I):
 		#print(a.s+b.s)
 	
 		I.push(LangString(a.s+b.s))
-	elif isinstance(a,MemArray) and type(b) == int:
-		# make & modify a clone, else dup'ing then adding would give
-		# you two of the same object
-		a_ = a.clone()
-		a_.offset += b
-		I.push(a_)
-	# now with swapped args
-	elif isinstance(b,MemArray) and type(a) == int:
-		# make & modify a clone, else dup'ing then adding would give
-		# you two of the same object
-		b_ = b.clone()
-		b_.offset += a
-		I.push(b_)
 	elif type(a) == list and type(b) == list:
 		I.push(a+b)
 	else:
@@ -310,7 +279,6 @@ def builtin_slice(I, obj, index, nr):
 	if type(obj) == str: objsize = len(obj)
 	elif isinstance(obj, LangString): objsize = len(obj.s)
 	elif type(obj) == list: objsize = len(obj)
-	elif isinstance(obj,MemArray): objsize = len(obj.mem)
 	else: raise LangError("Object doesn't support slicing: " + fmtStackPrint(obj))
 	
 	if index < 0: index = objsize + index
@@ -318,7 +286,6 @@ def builtin_slice(I, obj, index, nr):
 		if type(obj) == str: return ""
 		elif isinstance(obj, LangString): return LangString("")
 		elif type(obj) == list: return []
-		elif isinstance(obj,MemArray): return []
 
 	if nr < 0: nr = objsize - index
 	if (index+nr) > objsize: nr = objsize - index
@@ -326,7 +293,6 @@ def builtin_slice(I, obj, index, nr):
 	if type(obj) == str: return obj[index:index+nr]
 	elif isinstance(obj, LangString): return LangString(obj.s[index:index+nr])
 	elif type(obj) == list: return obj[index:index+nr]
-	elif isinstance(obj,MemArray): return obj.mem[index:index+nr]
 		
 	raise LangError("Unreachable code!!")
 
@@ -348,7 +314,6 @@ def builtin_unmake(I, obj):
 
 		I.push(out)
 		return out
-	elif isinstance(obj, MemArray): seq = obj.mem
 	else:
 		raise LangError("Don't know how to unmake object: " + fmtStackPrint(obj))
 
@@ -382,7 +347,6 @@ def builtin_length(I, obj):
 	if type(obj) == str: I.pushInt(len(obj))
 	elif isinstance(obj, LangString): I.pushInt(len(obj.s))
 	elif type(obj) == list: I.pushInt(len(obj))
-	elif isinstance(obj,MemArray): I.pushInt(len(obj.mem))
 	else: raise LangError("Object doesn't support 'length': " + fmtStackPrint(obj))
 
 def builtin_make_word(I):
@@ -412,13 +376,6 @@ def builtin_dumpword(I):
 
 	I.push(I.WORDS[name])
 
-def builtin_dumpvar(I):
-	name = popSymbol(I)
-	if name not in I.VARS:
-		raise LangError("No such var in .dumpvar: " + fmtStackPrint(name))
-
-	I.push(I.VARS[name].mem)
-	
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -446,11 +403,10 @@ BUILTINS = {
 	'symbol?': ([object], lambda I,o: I.push(type(o) == str)),
 	'null?': ([], lambda I: I.push(I.pop() is None)),
 	'lambda?': ([object], lambda I,o: I.push(isinstance(o,LangLambda))),
-	'array?': ([object], lambda I,o: I.push(isinstance(o,MemArray))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
-	'ref': ([object], builtin_ref),
-	'set!': ([object,object], builtin_set),
+	'ref': ([int], builtin_ref),
+	'set!': ([object,int], builtin_set),
 	'SP': ([], lambda I: I.push(I.SP)),
 	'SP!': ([int], builtin_setsp),
 	'LP': ([], lambda I: I.push(I.LP)),
@@ -480,6 +436,5 @@ BUILTINS = {
 	'null': ([], lambda I: I.push(None)),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 	'.dumpword': ([], builtin_dumpword),
-	'.dumpvar': ([], builtin_dumpvar),
 }
 
