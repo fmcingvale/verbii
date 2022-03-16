@@ -8,6 +8,8 @@
 
 require("deserialize")
 require("interpreter")
+require("langtypes")
+require("native")
 
 INITLIB = "../lib/init.verb.b"
 COMPILERLIB = "../lib/compiler.verb.b"
@@ -186,6 +188,7 @@ filename = nil
 noinit = false
 test_mode = false
 singlestep = false
+args_to_script = {}
 
 for i=1,#arg do
 	if arg[i] == "-noinit" then
@@ -194,12 +197,22 @@ for i=1,#arg do
 		test_mode = true
 	elseif arg[i] == "-step" then
 		singlestep = true
+	elseif arg[i] == "--" then
+		-- rest of args go to script
+		i = i + 1
+		while i <= #arg do
+			table.insert(args_to_script, new_String(arg[i]))
+			i = i + 1
+		end
+		break
 	elseif filename == nil then
 		filename = arg[i]
 	else
 		error(">>>Bad command line argument: " .. arg[i])
 	end
 end
+
+set_native_cmdline_args(args_to_script)
 
 if filename == nil then
 	repl(noinit)

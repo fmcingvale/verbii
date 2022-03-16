@@ -7,6 +7,12 @@
 ]]
 require("langtypes")
 
+NATIVE_CMDLINE_ARGS = {}
+
+function set_native_cmdline_args(args)
+	NATIVE_CMDLINE_ARGS = args
+end
+
 function int_divmod(a, b)
 	-- see notes in C++ implementation of this function.
 	--  this returns (quotient,mod) instead of taking mod as a return param.
@@ -306,6 +312,15 @@ function builtin_reader_open_string(intr)
 	READER_POS = 1
 end
 
+function builtin_reader_open_file(intr)
+	local filename = popString(intr)
+	local f = io.open(filename,"r")
+	local text = f:read("a")
+	io.close(f)
+	intr:push(new_String(text))
+	builtin_reader_open_string(intr)
+end
+
 function builtin_reader_next(intr)
 	if READER_POS > #READER_WORDLIST then
 		--print("READER EOF")
@@ -513,6 +528,7 @@ BUILTINS = {
 	["list?"] = { {"any"}, function(intr,o) intr:push(isList(o)) end},
 	["string?"] = { {"any"}, function(intr,o) intr:push(isString(o)) end},
 	["symbol?"] = { {"any"}, function(intr,o) intr:push(isSymbol(o)) end},
+	["lambda?"] = { {"any"}, function(intr,o) intr:push(isCallableWordlist(o)) end},
 	["repr"] = { {}, builtin_repr },
 	["str"] = { {}, builtin_str },
 	["puts"] = { {}, builtin_puts },
@@ -533,6 +549,7 @@ BUILTINS = {
 	[".showdef"] = { {}, builtin_showdef},
 
 	["reader-open-string"] = { {}, builtin_reader_open_string},
+	["reader-open-file"] = { {}, builtin_reader_open_file},
 	["reader-next"] = { {}, builtin_reader_next},
 	["make-list"] = { {"number"}, builtin_make_list},
 	["slice"] = { {"any","number","number"}, builtin_slice},
@@ -549,4 +566,5 @@ BUILTINS = {
 	[".dumpvar"] = { {}, builtin_dumpvar},
 	["null"] = { {}, function(intr) intr:push(new_None()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
+	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},
 }

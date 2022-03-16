@@ -105,7 +105,7 @@ public class Repl {
 			// run __main__
 			code = intr.WORDS["__main__"];
 			intr.run(code);
-			
+
 			Console.WriteLine("=> " + intr.reprStack());
 			// update maxline only after the above runs ok
 			maxrunline = runnable_lines;
@@ -143,22 +143,32 @@ public class MainProgram
 		bool testMode = false;
 		string filename = "";
 		bool singlestep = false;
-		foreach(var arg in args) {
-			if(arg == "-test") {
+		var args_to_script = new LangList();
+		for(int i=0; i<args.Length; ++i) {
+			if(args[i] == "-test") {
 				testMode = true;
 			}
-			else if(arg == "-step") {
+			else if(args[i] == "-step") {
 				singlestep = true;
 			}
-			else if(filename == "" && System.IO.File.Exists(arg)) {
-				filename = arg;
+			else if(args[i] == "--") {
+				// rest of args go to script
+				++i;
+				while(i < args.Length) {
+					args_to_script.objlist.Add(new LangString(args[i++]));
+				}
+				break;
+			}
+			else if(filename == "" && System.IO.File.Exists(args[i])) {
+				filename = args[i];
 			}
 			else {
-				Console.WriteLine("Unknown argument: " + arg);
+				Console.WriteLine("Unknown argument: " + args[i]);
 				return;
 			}
 		}
-		
+		Builtins.NATIVE_CMDLINE_ARGS = args_to_script;
+
 		if(filename == "") {
 			bool exited = false;
 			while(!exited) {

@@ -9,6 +9,8 @@ using System;
 using System.Collections.Generic;
 
 class Builtins {
+	public static LangList NATIVE_CMDLINE_ARGS;
+
 	public static int popInt(Interpreter intr, string where) {
 		var obj = intr.pop();
 		var i = obj as LangInt;
@@ -306,6 +308,13 @@ class Builtins {
 		READER_POS = 0;
 	}
 
+	public static void reader_open_file(Interpreter intr) {
+		string filename = popString(intr,"reader-open-file");
+		var text = System.IO.File.ReadAllText(filename);
+		intr.push(new LangString(text));
+		reader_open_string(intr);
+	}
+
 	public static void reader_next(Interpreter intr) {
 		if(READER_POS >= READER_WORDS.Count) {
 			intr.push(new LangNull());
@@ -497,6 +506,7 @@ class Builtins {
 		{"list?", intr => intr.push(new LangBool(intr.pop() is LangList))},
 		{"string?", intr => intr.push(new LangBool(intr.pop() is LangString))},
 		{"symbol?", intr => intr.push(new LangBool(intr.pop() is LangSymbol))},
+		{"lambda?", intr => intr.push(new LangBool(intr.pop() is LangLambda))},
 		{"null", intr => intr.push(new LangNull())},
 		{".c", printchar},
 		{"repr", intr => intr.push(new LangString(intr.pop().fmtStackPrint()))},
@@ -514,6 +524,7 @@ class Builtins {
 		{".showdef", showdef},
 
 		{"reader-open-string", reader_open_string},
+		{"reader-open-file", reader_open_file},
 		{"reader-next", reader_next},
 		{"make-list", make_list},
 		{"slice", slice},
@@ -528,5 +539,6 @@ class Builtins {
 		{"make-symbol", make_symbol},
 		{".dumpword", dumpword},
 		{"error", intr => throw new LangError(popString(intr,"error")) },
+		{"cmdline-args", intr => intr.push(NATIVE_CMDLINE_ARGS)},
 	};
 }
