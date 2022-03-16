@@ -1,9 +1,5 @@
 (
-	Work in progress -- seeing if entire language can be parsed by itself and
-	then serialized into syntax-free form.
-
-	If this works, eventually this can be used to bootstrap the language to get
-	this working as the runtime syntax module.
+	Verbii compiler, written in verbii
 	
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 )

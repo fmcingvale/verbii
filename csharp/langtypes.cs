@@ -11,15 +11,40 @@
 using System;
 using System.Collections.Generic;
 
-public class LangObject {
-	public virtual string fmtDisplay() { return "<VOID>"; }
-	public virtual string fmtStackPrint() { return "<VOID>"; }
+public abstract class LangObject {
+	public abstract string typename();
+	public abstract string fmtDisplay();
+	public abstract string fmtStackPrint();
+
+	public virtual bool isNumeric() { return false; }
+	public virtual double asFloat() { return 0.0; }
+
+	public virtual bool isStringLike() { return false; }
+	public virtual string asStringLike() { return ""; }
+
+	public virtual bool hasLength() { return false; }
+	public virtual int getLength() { return 0; }
+
+	// guarantees:
+	//	- only called on objects where hasLength() == true
+	//	- index and index+nr will be valid indexes
+	public virtual LangObject getSlice(int index, int nr) { return new LangVoid(); }
+}
+
+// void is differentiated from null since null can be a valid language object.
+// void is used internally only to mean "nothing, not even null"
+public class LangVoid : LangObject {
+	public LangVoid() {}
+
+	public override string typename() { return "<VOID>"; }
+	public override string fmtDisplay() { return "<VOID>"; }
+	public override string fmtStackPrint() { return fmtDisplay(); }
 }
 
 public class LangNull : LangObject {
-	public LangNull() {
-	}
+	public LangNull() {}
 
+	public override string typename() { return "null"; }
 	public override string fmtDisplay() { return "<null>"; }
 	public override string fmtStackPrint() { return fmtDisplay(); }
 }
@@ -38,8 +63,11 @@ public class LangInt : LangObject {
 
 	public int value;
 
+	public override string typename() { return "int"; }
 	public override string fmtDisplay() { return value.ToString(); }
 	public override string fmtStackPrint() { return fmtDisplay(); } 
+	public override bool isNumeric() { return true; }
+	public override double asFloat() { return value; }
 }
 
 public class LangFloat : LangObject {
@@ -51,6 +79,7 @@ public class LangFloat : LangObject {
 
 	public double value;
 
+	public override string typename() { return "float"; }
 	public override string fmtDisplay() { 
 		// there has to be a better way .....
 		string fmt = "{0:G" + FLOAT_PRECISION.ToString() + "}"; 
@@ -60,6 +89,8 @@ public class LangFloat : LangObject {
 	public override string fmtStackPrint() { 
 		return "#" + fmtDisplay();
 	}
+	public override bool isNumeric() { return true; }
+	public override double asFloat() { return value; }
 }
 
 public class LangBool : LangObject {
@@ -69,6 +100,7 @@ public class LangBool : LangObject {
 
 	public bool value;
 
+	public override string typename() { return "bool"; }
 	public override string fmtDisplay() { return value ? "true" : "false"; }
 	public override string fmtStackPrint() { return fmtDisplay(); }
 }
@@ -80,8 +112,16 @@ public class LangString : LangObject {
 
 	public string value;
 
+	public override string typename() { return "string"; }
 	public override string fmtDisplay() { return value; }
 	public override string fmtStackPrint() { return "\"" + value + "\""; }
+
+	public override bool hasLength() { return true; }
+	public override int getLength() { return value.Length; }
+	public override LangObject getSlice(int index, int nr) { return new LangString(value.Substring(index, nr)); }
+
+	public override bool isStringLike() { return true; }
+	public override string asStringLike() { return value; }
 }
 
 public class LangSymbol : LangObject {
@@ -101,35 +141,17 @@ public class LangSymbol : LangObject {
 		}
 	}
 
+	public override string typename() { return "symbol"; }
 	public override string fmtDisplay() { return "'" + value; }
 	public override string fmtStackPrint() { return value; }
-}
 
-// like in the C++ version, memory allocations are separate objects instead of
-// my original idea of having a contiguous MEMORY array in the interpreter.
-// using separate objects is much better for GC than an infinitely growing MEMORY
+	public override bool hasLength() { return true; }
+	public override int getLength() { return value.Length; }
 
-public class LangMemoryArray : LangObject {
-	public LangMemoryArray(int count) {
-		array = new List<LangObject>(count);
-		// prefill memory with zeros
-		for(int i=0; i<count; ++i) {
-			array.Add(new LangInt(0));
-		}
-		offset = 0;
-	}
+	public override LangObject getSlice(int index, int nr) { return new LangSymbol(value.Substring(index, nr)); }
 
-	// init as shallow copy of other, but with my own offset
-	public LangMemoryArray(LangMemoryArray other) {
-		array = other.array;
-		offset = other.offset;
-	}
-
-	public override string fmtDisplay() { return "var:" + array.Count.ToString() + ":" + offset.ToString(); }
-	public override string fmtStackPrint() { return fmtDisplay(); }
-
-	public List<LangObject> array;
-	public int offset;
+	public override bool isStringLike() { return true; }
+	public override string asStringLike() { return value; }
 }
 
 public class LangLambda : LangObject {
@@ -138,6 +160,37 @@ public class LangLambda : LangObject {
 	}
 
 	public List<LangObject> objlist;
+	public override string typename() { return "lambda"; }
 	public override string fmtDisplay() { return "<lambda>"; }
 	public override string fmtStackPrint() { return fmtDisplay(); }
+}
+
+public class LangList : LangObject {
+	public LangList() {
+		objlist = new List<LangObject>();
+	}
+
+	public List<LangObject> objlist;
+	public override string typename() { return "list"; }
+	public override string fmtDisplay() {
+		return fmtStackPrint(); // match c++ port behavior and use stack format for both
+	}
+
+	public override string fmtStackPrint() {
+		string s = "[";
+		foreach(var obj in objlist) {
+			s += " " + obj.fmtStackPrint();
+		}
+		s += " ]";
+		return s;
+	}
+
+	public override bool hasLength() { return true; }
+	public override int getLength() { return objlist.Count; }
+
+	public override LangObject getSlice(int index, int nr) { 
+		var list = new LangList();
+		list.objlist = objlist.GetRange(index,nr);
+		return list;
+	}
 }

@@ -13,81 +13,154 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+#nullable enable
 
 public class Interpreter {
 	// definition of following are similar to C++ version, so see comments there for more detail.
 	// as in C++ version, everything is public here so builtins can change anything.
+
 	public const int STACK_SIZE = (1<<10);
 	public const int LOCALS_SIZE = (1<<10);
+	public const int HEAP_STARTSIZE = (1<<16);
 
-	public List<LangObject> STACKLOCALS;
-	public int SIZE_STACKLOCALS;
+	public List<LangObject> OBJMEM;
 	
 	// current stack pointer (points to item on top of stack), empty value and lowest usable index
 	public int SP, SP_EMPTY, SP_MIN;
 	// same for locals
 	public int LP, LP_EMPTY, LP_MIN;
-
-	public Syntax syntax;
+	// next free index to allocate in heap
+	public int HEAP_NEXTFREE;
 
 	// user defined words
 	public Dictionary<string,List<LangObject>> WORDS;
 	// user defined variables
-	public Dictionary<string,LangMemoryArray> VARS;
+	public Dictionary<string,int> VARS;
 	// unnamed functions
 	public List<List<LangObject>> LAMBDAS;
 
+	// code currently running
+	public List<LangObject>? code;
+	int codepos;
+	// stack of previous frames (code,codepos for each)
+	public List<Tuple<List<LangObject>,int>> callstack;
+
 	public Interpreter() {
-		SIZE_STACKLOCALS = STACK_SIZE + LOCALS_SIZE;
-		STACKLOCALS = new List<LangObject>(SIZE_STACKLOCALS);
+		//Console.WriteLine("*** STARTING INTERPRETER ***");
+		OBJMEM = new List<LangObject>(STACK_SIZE+LOCALS_SIZE+HEAP_STARTSIZE);
 		// any better way to do this??
-		for(int i=0; i<STACK_SIZE+LOCALS_SIZE; ++i) {
-			STACKLOCALS.Add(new LangObject());
+		for(int i=0; i<(STACK_SIZE+LOCALS_SIZE+HEAP_STARTSIZE); ++i) {
+			OBJMEM.Add(new LangInt(0));
 		}
 
-		SP_EMPTY = SIZE_STACKLOCALS;
+		SP_MIN = 0;
+		SP_EMPTY = SP_MIN + STACK_SIZE;
 		SP = SP_EMPTY;
-		SP_MIN = SP_EMPTY - STACK_SIZE;
-
-		LP_EMPTY = SP_MIN;
+		
+		LP_MIN = SP_EMPTY;
+		LP_EMPTY = LP_MIN + LOCALS_SIZE;
 		LP = LP_EMPTY;
-		LP_MIN = LP_EMPTY - LOCALS_SIZE;
-		// sanity that I did that math correctly ...
-		if(LP_MIN != 0) {
-			throw new LangError("stacklocals size is wrong!");
-		}
 
-		syntax = new Syntax();
+		HEAP_NEXTFREE = LP_EMPTY;
 
 		WORDS = new Dictionary<string,List<LangObject>>();
-		VARS = new Dictionary<string,LangMemoryArray>();
+		VARS = new Dictionary<string,int>();
 		LAMBDAS = new List<List<LangObject>>();
+
+		code = null;
+		codepos = -1;
+		callstack = new List<Tuple<List<LangObject>,int>>();
 	}
 
-	public void addText(string text) {
-		syntax.addText(text);
+	// allocate space for nr objects, returning starting index
+	public int heapAllocate(int nr) {
+		int addr = HEAP_NEXTFREE;
+		while((HEAP_NEXTFREE + nr) >= OBJMEM.Count) {
+			// double memory when out of space
+			int newsize = OBJMEM.Count * 2;
+			for(int i=HEAP_NEXTFREE; i<newsize; ++i) {
+				OBJMEM.Add(new LangInt(0));
+			}
+		}
+		HEAP_NEXTFREE += nr;
+		return addr;
 	}
 
 	public void push(LangObject obj) {
 		if(SP <= SP_MIN) {
 			throw new LangError("Stack overflow");
 		}
-		STACKLOCALS[--SP] = obj;
+		OBJMEM[--SP] = obj;
 	}
 
 	public LangObject pop() {
 		if(SP >= SP_EMPTY) {
 			throw new LangError("Stack underflow");
 		}
-		return STACKLOCALS[SP++];
+		return OBJMEM[SP++];
 	}
 
 	public string reprStack() {
 		string s = "";
 		for(int i=SP_EMPTY-1; i>=SP; --i) {
-			s += STACKLOCALS[i].fmtStackPrint() + " ";
+			s += OBJMEM[i].fmtStackPrint() + " ";
 		}
 		return s;
+	}
+
+	public LangObject nextObj() {
+		if(code == null) {
+			throw new LangError("nextObj() called when not running");
+		}
+		if(codepos >= code.Count) {
+			return new LangVoid();
+		}
+		return code[codepos++];
+	}
+
+	public LangObject nextObjOrFail(string where) {
+		var obj = nextObj();
+		if(obj is LangVoid) {
+			throw new LangError("Unexpected end of input (in " + where + ")");
+		}
+		return obj;
+	}
+
+	public LangObject peekNextObj() {
+		if(code == null) {
+			throw new LangError("peekNextObj() called while not running");
+		}
+		if(codepos >= code.Count) {
+			return new LangVoid();
+		}
+		return code[codepos];
+	}
+
+	public LangObject prevObj() {
+		if(code == null) {
+			throw new LangError("prevObj() called while not running");
+		}
+		if(codepos <= 0) {
+			return new LangVoid();
+		}
+		return code[--codepos];
+	}
+
+	public LangObject prevObjOrFail(string where) {
+		var obj = prevObj();
+		if(obj is LangVoid) {
+			throw new LangError("No previous object (in " + where + ")");
+		}
+		return obj;
+	}
+
+	public LangSymbol nextSymbolOrFail(string where) {
+		var obj = nextObj();
+		var sym = obj as LangSymbol;
+		if(sym == null) {
+			throw new LangError("Expecting symbol but got " + obj.fmtStackPrint() + " (in " + where + ")");
+		}
+		return sym;
 	}
 
 	// take symbol like '>>NAME' or '<<NAME' and jump to '@NAME'
@@ -96,7 +169,7 @@ public class Interpreter {
 		if(jumpsym.match(">>",2)) {
 			// forward jump, find word (>>NAME -> @NAME)
 			while(true) {
-				var sym = syntax.nextObjOrFail() as LangSymbol;
+				var sym = nextObjOrFail("do_jump") as LangSymbol;
 				//cout << "NEXT-WORD: " << word << endl;
 				if(sym != null && (sym.value.Substring(1) == jumpsym.value.Substring(2))) {
 					//cout << "FOUND" << endl;
@@ -107,7 +180,7 @@ public class Interpreter {
 		else if(jumpsym.match("<<",2)) {
 			// backward jump
 			while(true) {
-				var sym = syntax.prevObjOrFail() as LangSymbol;
+				var sym = prevObjOrFail("do_jump") as LangSymbol;
 				//cout << "PREV-WORD: " << word << endl;
 				if(sym != null && sym.value.Substring(1) == jumpsym.value.Substring(2)) {
 					//cout << "FOUND" << endl;
@@ -120,26 +193,65 @@ public class Interpreter {
 		}
 	}
 
-	public void run() {
+	public void code_call(List<LangObject> objlist) {
+		//Console.WriteLine("CALLING");
+		if(code == null) {
+			throw new LangError("call while not running");
+		}
+		callstack.Add(Tuple.Create(code,codepos));
+		code = objlist;
+		codepos = 0;
+	}
+
+	public bool havePushedFrames() {
+		return callstack.Count > 0;
+	}
+
+	public void code_return() {
+		//Console.WriteLine("RETURNING");
+		if(!havePushedFrames()) {
+			throw new LangError("return without call");
+		}
+		var tup = callstack[callstack.Count-1];
+		code = tup.Item1;
+		codepos = tup.Item2;
+		callstack.RemoveAt(callstack.Count-1);
+	}
+
+	public void run(List<LangObject> objlist) {
+		if(callstack.Count > 0) {
+			throw new LangError("Interpreter::run called recursively");
+		}
+
+		code = objlist;
+		codepos = 0;
+
+		//Console.WriteLine("RUNNING LIST:");
+		//foreach(var obj in objlist) {
+		//	Console.WriteLine("     " + obj.fmtStackPrint() + "(" + obj.typename() + ")");
+		//}
+
 		// see C++ version for comments, only brief comments here
 		while(true) {
-			var obj = syntax.nextObj();
-			//if(obj != null) {
-			//	Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
-			//}
-			if(obj == null) {
+			//Console.WriteLine("TOP OF RUN LOOP");
+			var obj = nextObj();
+
+			if(obj is LangVoid) {
+				//Console.WriteLine("GOT VOID");
 				// i could be returning from a word that had no 'return',
 				// so pop words like i would if it were a return
-				if(syntax.hasPushedObjLists()) {
-					syntax.popObjList();
-					//Console.WriteLine("POPPED OBJLIST [end], back to:");
-					//syntax.debug_print_objlist();
+				if(havePushedFrames()) {
+					code_return();
 					continue;
 				}
 				else {
+					code = null; // mark self as not running
 					return;
 				}
 			}
+
+			//Console.WriteLine("STACK NOW: " + reprStack());
+			//Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
 
 			// check for immediates that get pushed
 			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda) {
@@ -151,14 +263,19 @@ public class Interpreter {
 			if (obj is LangSymbol) {
 				var sym = obj as LangSymbol;	
 
+				if(sym!.value[0] == '\'') {
+					// quoted symbol - remove one level of quoting and push
+					push(new LangSymbol(sym.value.Substring(1)));
+					continue;
+				}
+
 				if(sym!.match("return")) {
 					// return from word by popping back to previous wordlist (don't call at toplevel)
-					if(syntax.hasPushedObjLists()) {	
-						syntax.popObjList();
-						//Console.WriteLine("POPPED OBJLIST [return], back to:");
-						//syntax.debug_print_objlist();
+					if(havePushedFrames()) {	
+						code_return();
 					}
 					else {
+						code = null; // mark self as not running
 						return; // top level return exits program
 					}
 					continue;
@@ -166,13 +283,7 @@ public class Interpreter {
 
 				if(sym!.match("if")) {
 					// true jump is required
-					var true_jump = syntax.nextSymbolOrFail();
-					// false word is optional
-					var false_jump = syntax.peekObj() as LangSymbol;
-					if(false_jump == null || false_jump.value.Length < 2 ||
-						(false_jump.match("<<",2) == false && false_jump.match(">>",2) == false)) {
-						false_jump = null;
-					}
+					var true_jump = nextSymbolOrFail("if");
 					var cond = pop();
 					var b_cond = cond as LangBool;
 					if(b_cond == null) {
@@ -180,13 +291,9 @@ public class Interpreter {
 					}
 					// these don't run the jump, they just reposition the reader
 					if(b_cond.value) {
-						// no need to actually skip false jump since i'll be looking for '@'
 						do_jump(true_jump);
 					}
-					else if(false_jump != null) {
-						syntax.nextObj(); // only peeked above, so read it now
-						do_jump(false_jump);
-					}
+					// else, keep running with next statement
 					continue;
 				}
 
@@ -201,8 +308,8 @@ public class Interpreter {
 				}
 
 				if(sym!.match("var")) {
-					var name = syntax.nextSymbolOrFail();
-					var count = syntax.nextObjOrFail();
+					var name = nextSymbolOrFail("var, name");
+					var count = nextObjOrFail("var, count");
 					if(!(count is LangInt)) {
 						throw new LangError("Count must be integer but got: " + count.fmtStackPrint());
 					}
@@ -211,12 +318,12 @@ public class Interpreter {
 						throw new LangError("Trying to redefine variable " + name.value);
 					}
 					// add to VARS so name lookup works (below)
-					VARS[name.value] = new LangMemoryArray((count as LangInt)!.value);
+					VARS[name.value] = heapAllocate((count as LangInt)!.value);
 					continue;
 				}
 
 				if(sym!.match("del")) {
-					var name = syntax.nextSymbolOrFail();
+					var name = nextSymbolOrFail("del, name");
 					if(!VARS.ContainsKey(name.value)) {
 						throw new LangError("Trying to delete non-existent variable " + name.value);
 					}
@@ -233,9 +340,7 @@ public class Interpreter {
 					}
 					// now this is just like calling a userword, below
 					// TODO -- tail call elimination??
-					syntax.pushObjList(lambda.objlist);
-					//Console.WriteLine("CALLING, new objlist:");
-					//syntax.debug_print_objlist();
+					code_call(lambda.objlist);
 					continue;
 				}
 			
@@ -249,22 +354,22 @@ public class Interpreter {
 				if(WORDS.ContainsKey(sym!.value)) {
 					// tail call elimination -- if I'm at the end of this wordlist OR next word is 'return', then
 					// i don't need to come back here, so pop my wordlist first to stop stack from growing
-					var next = syntax.peekObj();
+					var next = peekNextObj();
 					var nextSym = next as LangSymbol;
 
 					if(next == null || (nextSym != null && nextSym.match("return"))) {
-						if(syntax.hasPushedObjLists()) { // in case i'm at the toplevel
-							syntax.popObjList();
+						if(havePushedFrames()) { // in case i'm at the toplevel
+							code_return();
 						}
 					}
 
 					// execute word by pushing its wordlist and continuing
-					syntax.pushObjList(WORDS[sym!.value]);
+					code_call(WORDS[sym!.value]);
 					continue;
 				}
 
 				if(VARS.ContainsKey(sym!.value)) {
-					push(VARS[sym!.value]);
+					push(new LangInt(VARS[sym!.value]));
 					continue;
 				}
 			}

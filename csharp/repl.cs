@@ -7,22 +7,27 @@ using System;
 using System.Text.RegularExpressions;
 
 public class Repl {
-	static string INITFILE = "../lib/init.txt";
+	static string INITLIB = "../lib/init.verb.b";
+	static string COMPILERLIB = "../lib/compiler.verb.b";
 
-	public static Interpreter make_interpreter(bool noinit) {
+	public static Interpreter make_interpreter() {
 		var intr = new Interpreter();
-		if(!noinit) {
-			var text = System.IO.File.ReadAllText(INITFILE);
-			intr.addText(text);
-			intr.run();
-			// don't want initlib in the backtrace history, once it has successfully loaded
-			//intr.reader.clearAll();
-		}
+		// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
+		var fileIn = System.IO.File.OpenText(INITLIB);
+		Deserializer.deserialize_stream(intr, fileIn);
+		// run __main__ in initlib to setup any globals
+		var code = intr.WORDS["__main__"];
+		intr.run(code);
+
+		fileIn = System.IO.File.OpenText(COMPILERLIB);
+		Deserializer.deserialize_stream(intr, fileIn);
+		// do NOT run compiler __main__ since that is used for compiling from the cmdline
+
 		return intr;
 	}
 
-	public void run_repl(bool noinit) {
-		var intr = make_interpreter(noinit);
+	public void run_repl() {
+		var intr = make_interpreter();
 	
 		while(true) {
 			Console.Write(">> ");
@@ -32,13 +37,26 @@ public class Repl {
 				return;
 			}
 			if(line != null) {
-				intr.addText(line);
-				intr.run();
+				// push string, then call byte-compile-string
+				intr.push(new LangString(line));
+				var code = intr.WORDS["byte-compile-string"];
+				intr.run(code);
+
+				//Console.WriteLine("AFTER COMPILATION ... STACK: " + intr.reprStack());
+
+				// byte-compile-string leaves list of words on stack -- used by serializer -- but i
+				// don't need them here
+				intr.pop();
+
+				// run __main__
+				code = intr.WORDS["__main__"];
+
+				intr.run(code);
+
 				Console.Write("=> " + intr.reprStack() + "\n");
 			}
 		}
 	} 
-
 
 	// like a non-interactive repl, reads a line at a time, prints it,
 	// runs it, then prints the stack. this is intented for unittesting.
@@ -50,7 +68,7 @@ public class Repl {
 
 		var re_blankline = new Regex(@"(^[ \t\r\n]*$)");
 
-		var intr = make_interpreter(noinit);
+		var intr = make_interpreter();
 
 		var all_lines = System.IO.File.ReadAllLines(filename);
 
@@ -70,9 +88,24 @@ public class Repl {
 				continue;
 			}
 			Console.WriteLine(">> " + line);
-			intr.syntax.clearAll(); // remove any leftover text from previous line run
-			intr.addText(line);
-			intr.run();
+			//intr.syntax.clearAll(); // remove any leftover text from previous line run
+			//intr.addText(line);
+			//intr.run();
+			// push string, then call byte-compile-string
+			intr.push(new LangString(line));
+			var code = intr.WORDS["byte-compile-string"];
+			intr.run(code);
+
+			//Console.WriteLine("AFTER COMPILATION ... STACK: " + intr.reprStack());
+
+			// byte-compile-string leaves list of words on stack -- used by serializer -- but i
+			// don't need them here
+			intr.pop();
+
+			// run __main__
+			code = intr.WORDS["__main__"];
+			intr.run(code);
+			
 			Console.WriteLine("=> " + intr.reprStack());
 			// update maxline only after the above runs ok
 			maxrunline = runnable_lines;
@@ -83,10 +116,24 @@ public class Repl {
 	public void run_file(Interpreter intr, string filename, bool singlestep) {
 		// run file
 		var text = System.IO.File.ReadAllText(filename);
-		intr.addText(text);
-		intr.run();
-	}
+		//intr.addText(text);
+		//intr.run();
+		// push string, then call byte-compile-string
+		intr.push(new LangString(text));
+		var code = intr.WORDS["byte-compile-string"];
+		intr.run(code);
 
+		//Console.WriteLine("AFTER COMPILATION ... STACK: " + intr.reprStack());
+		
+		// byte-compile-string leaves list of words on stack -- used by serializer -- but i
+		// don't need them here
+		intr.pop();
+
+		// run __main__
+		code = intr.WORDS["__main__"];
+
+		intr.run(code);
+	}
 }
 
 public class MainProgram
@@ -95,14 +142,10 @@ public class MainProgram
     {
 		bool testMode = false;
 		string filename = "";
-		bool noinit = false;
 		bool singlestep = false;
 		foreach(var arg in args) {
 			if(arg == "-test") {
 				testMode = true;
-			}
-			else if(arg == "-noinit") {
-				noinit = true;
 			}
 			else if(arg == "-step") {
 				singlestep = true;
@@ -124,7 +167,7 @@ public class MainProgram
 				// confused after exceptions, so probably best to restart here as well
 				try {
 					var r = new Repl();
-					r.run_repl(noinit);
+					r.run_repl();
 					exited = true;
 				}
 				catch (LangError err) {
@@ -140,7 +183,7 @@ public class MainProgram
 				// that i ran before so i can restart on next line
 				try {
 					var r = new Repl();
-					r.run_test_mode(filename, noinit, ref maxrunline, ref done);
+					r.run_test_mode(filename, false, ref maxrunline, ref done);
 				}
 				catch (LangError err) {
 					Console.WriteLine("*** " + err.Message + " ***");
@@ -149,7 +192,7 @@ public class MainProgram
 			}
 		}
 		else {		
-			var intr = Repl.make_interpreter(noinit);
+			var intr = Repl.make_interpreter();
 
 			try {
 				var r = new Repl();
