@@ -142,7 +142,7 @@ bool Object::opEqual(const Object &other) {
 		case TYPE_FLOAT: return (other.type == TYPE_FLOAT && other.data.d == data.d) ||
 							(other.type == TYPE_INT && other.data.i == data.d);
 		case TYPE_BOOL: return other.type == TYPE_BOOL && other.data.b == data.b;
-		case TYPE_LAMBDA: throw LangError("Lambdas cannot be compared with ==");
+		case TYPE_LAMBDA: return false; // lambdas never equal any other object, even themselves
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
 		default: 
@@ -303,10 +303,11 @@ Object Object::opSlice(int index, int nr) {
 			throw LangError("Object doesn't support slicing: " + fmtStackPrint());
 	}
 
-	if(index < 0) {
+	// adjust index & nr for negative & out of bounds conditions
+	if(index < 0) { // index < 0 means count from end
  		index = objsize + index;
 	}
-	if(index < 0 || index >= objsize) {
+	if(index < 0 || index >= objsize) { // out of bounds - return empty object
 		if(type == TYPE_STRING || type == TYPE_SYMBOL)
 			return newString("");
 		else if(type == TYPE_LIST)
@@ -315,10 +316,10 @@ Object Object::opSlice(int index, int nr) {
 			throw LangError("Should never happen");
 		}
 	}
-	if(nr < 0) {
+	if(nr < 0) { // nr < 0 means "copy all, starting at index"
 		nr = objsize - index;
 	}
-	if((index+nr) > objsize) {
+	if((index+nr) > objsize) { // past end of object, truncate
 		nr = objsize - index;
 	}
 

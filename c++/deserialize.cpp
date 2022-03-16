@@ -14,8 +14,9 @@ static void string_replace(string &s, const char *from, const char *to) {
 		s.replace(i, strlen(from), to);
 }
 
-// stream from compiler will be a single list containing word definitions
+// FYI -- stream from compiler will be a single list containing word definitions
 
+// deserialize & return next object from stream
 Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 	string line;
 	if(getline(fileIn, line)) {
@@ -31,7 +32,7 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 				string_replace(line, "%%", "%");
 				return newString(line.substr(2));
 			case 'y': return newSymbol(line.substr(2));
-			case 'L':
+			case 'L': // list
 				{
 					int nr = parseInt(line.substr(2)).asInt();
 					Object list = newList();
@@ -39,14 +40,14 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 						list.data.objlist->push_back(deserialize_stream(intr,fileIn));
 					return list;
 				}
-			case 'F':
+			case 'F': // lambda
 				{
 					Object list = deserialize_stream(intr,fileIn);
 					if(!list.isList())
-						throw LangError("Expecting list but got:" + list.fmtStackPrint());
+						throw LangError("Expecting list after F but got:" + list.fmtStackPrint());
 					return newLambda(list.data.objlist);
 				}
-			case 'W':
+			case 'W': // word definition
 				{
 					string name = line.substr(2);
 					Object list = deserialize_stream(intr,fileIn);
@@ -66,7 +67,4 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 	}
 	return newVoid();
 }
- 
-
 	
-			

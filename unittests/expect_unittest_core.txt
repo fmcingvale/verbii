@@ -147,6 +147,16 @@
 => true false false 
 >> clear
 => 
+>> ( lambdas are never equal to anything, but it should not cause an error to compare them )
+=> 
+>> { 1 2 3 } { 1 2 3 } ==
+=> false 
+>> { 10 20 30 } dup ==
+=> false false 
+>> { 11 22 33 } 112233 ==
+=> false false false 
+>> clear
+=> 
 >> 1 1 == 2 2 == ==
 => true 
 >> 1 2 == 2 3 == ==

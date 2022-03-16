@@ -285,6 +285,7 @@ static void builtin_slice(Interpreter *intr) {
 	intr->push(obj.opSlice(index, nr));
 }
 
+// append modifies original object
 static void builtin_append(Interpreter *intr) {
 	Object add = intr->pop();
 	Object list = popList(intr, "Bad arg to append");
@@ -318,6 +319,7 @@ static const char *popStringOrSymbol(Interpreter *intr) {
 
 static void builtin_unmake(Interpreter *intr) {
 	Object obj = intr->pop();
+	// strings & symbols are unmade into ASCII values
 	if(obj.isString() || obj.isSymbol()) {
 		int len = strlen(obj.data.str);
 		for(int i=0; i<len; ++i) {

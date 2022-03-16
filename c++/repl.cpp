@@ -34,7 +34,7 @@ Interpreter* newInterpreter() {
 	// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
 	ifstream fileIn(INITLIB);
 	deserialize_stream(intr, fileIn);
-	// run __main__ in initlib to setup SP_EMPTY
+	// run __main__ in initlib to setup any globals
 	auto code = intr->lookup_word("__main__");
 	intr->run(code);
 	fileIn = ifstream(COMPILERLIB);

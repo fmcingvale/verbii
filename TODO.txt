@@ -38,3 +38,14 @@ Global TODO
 
 * Lua: remove obsolete code
 
+* rename CallableWordList in python port for consistency
+
+* sort out usage of null/NULL/'void' in ports for consistency. add some unittests
+that include null to make sure it is handled correctly. also make sure voids are 
+never visible from verbii code
+
+* add a "where" parameter to all 'popOrFail' type functions to give context on errors
+
+* mae sure no ports still looking for false_jump after 'if'
+
+
