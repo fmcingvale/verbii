@@ -22,7 +22,7 @@
 ;;;==================================================================================
 
 ; need a null type that is distinct from '() so that '() can be the empty list
-; ---- ugh ... that's obsolete since I have LangList, but still LangNull is preferred to '()
+; ---- ugh ... that's obsolete since I have LangList, but I still prefer LangNull to '()
 (define-record LangNull)
 (set-record-printer! LangNull (lambda (obj out) (fprintf out "<null>")))
 
@@ -171,7 +171,7 @@
 								(make-LangLambda objlist)
 								(raise "Expecting list after 'F' but got: " (fmtStackPrint objlist)))))
 					((#\W) ; W name followed by list
-						(let ((name (string-drop line 2))
+						(let ((name (string->symbol (string-drop line 2)))
 								(objlist (deserialize-stream fileIn)))
 							(if (LangList? objlist)
 								(begin
@@ -264,6 +264,103 @@
 			(set! (slot intr 'callstack) (cdr (slot intr 'callstack))))
 		(raise "Return without call!")))
 
+(define-method (nextObj (intr <Interpreter>))
+	(if (>= (slot intr 'codepos) (len (slot intr 'code)))
+		(make-LangVoid)
+		(begin
+			(set! (slot intr 'codepos) (+ (slot intr 'codepos) 1))
+			(get (slot intr 'code) (- (slot intr 'codepos) 1)))))
+
+(define-method (nextObjOrFail (intr <Interpreter>) where)
+	(let ((obj (nextObj intr)))
+		(if (LangVoid? obj)
+			(raise (string-append "Unexpected end of input in " where))
+			obj)))
+
+(define-method (peekObj (intr <Interpreter>))
+	(if (>= (slot intr 'codepos) (len (slot intr 'code)))
+		(make-LangVoid)
+		(get (slot intr 'code) (slot intr 'codepos))))
+
+(define-method (prevObj (intr <Interpreter>))
+	(if (== (slot intr 'codepos) 0)
+		(make-LangVoid)
+		(begin
+			(set! (slot intr 'codepos) (- (slot intr 'codepos) 1))
+			(get (slot intr 'code) (slot intr 'codepos)))))
+
+(define-method (prevObjOrFail (intr <Interpreter>) where)
+	(let ((obj (prevObj intr)))
+		(if (LangVoid? obj)
+			(raise (string-append "Failed to find previous object in " where))
+			obj)))
+
+(define-method (havePushedFrames (intr <Interpreter>))
+	(not (null? (slot intr 'callstack))))
+
+(define BUILTINS
+	(list
+		(list 'int? (lambda (intr) (push intr (integer? (pop intr)))))
+	))
+
+(set! BUILTINS (alist->hash-table BUILTINS))
+
+(define-method (run (intr <Interpreter>) objlist)
+	(if (not (null? (slot intr 'code)))
+		(raise "Interpreter called recursively!"))
+	(set! (slot intr 'code) objlist)
+	(set! (slot intr 'codepos) 0)
+	(let run-loop ((obj (nextObj intr)))
+		(cond
+			((LangVoid? obj)
+				; either return or exit
+				(if (havePushedFrames intr)
+					(begin
+						(code-return intr)
+						(run-loop (nextObj intr)))
+					; else set self not running & exit
+					(set! (slot intr 'code) '())
+				))
+			; literals get pushed
+			((or (integer? obj) (LangFloat? obj) (string? obj) (LangLambda? obj))
+				(push intr obj)
+				(run-loop (nextObj intr)))
+			; symbols do the most stuff ...
+			((symbol? obj)
+				(cond
+					((eqv? obj 'return)
+						; as above - return or exit
+						(if (havePushedFrames intr)
+							(begin
+								(code-return intr)
+								(run-loop (nextObj intr)))
+							; else set self not running & exit
+							(set! (slot intr 'code) '())
+						))
+					; builtin (native) functions
+					((hash-table-exists? BUILTINS obj)
+						; hmmm not sure what i did wrong that i have to use car here ...
+						(let ((fn (car (hash-table-ref BUILTINS obj))))
+							(print "RUN BUILTIN: " fn)
+							(fn intr))
+						(run-loop (nextObj intr)))
+					; user-defined word
+					((hash-table-exists? WORDS obj)
+						; tail-call elimination
+						(let ((next (peekObj intr)))
+							(if (or (LangVoid? next) (eqv? next 'return))
+								; end of list or return - don't need to come back here
+								(if (havePushedFrames intr)
+									(code-return))))
+						(code-call (hash-table-ref WORDS obj))
+						(run-loop (nextObj intr)))
+					(else
+						(raise (string-append "Unknown word: " (fmtStackPrint obj))))))
+			(else
+				(raise (string-append "Unknown word: " (fmtStackPrint obj)))))))
+
+					
+
 (set! intr (make <Interpreter>))
 (print "SP NOW: " (SP intr))
 (push intr 111)
@@ -307,4 +404,14 @@
 (print (fmtStackPrint (slot intr 'code)))
 (code-return intr)
 (print (fmtStackPrint (slot intr 'code)))
+(set! (slot intr 'code) '())
 
+(print (hash-table-ref BUILTINS 'int?))
+
+(print "=>" (reprStack intr))
+(run intr (make LangList 'objlist (list->dynvector '(10 20 30))))
+(print "=>" (reprStack intr))
+(run intr (make LangList 'objlist (list->dynvector '(40 50 60))))
+(print "=>" (reprStack intr))
+(run intr (make LangList 'objlist (list->dynvector '(int? 123))))
+(print "=>" (reprStack intr))
