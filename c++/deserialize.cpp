@@ -29,7 +29,7 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 				string_replace(line, "%32", " ");
 				string_replace(line, "%10", "\n");
 				string_replace(line, "%13", "\r");
-				string_replace(line, "%%", "%");
+				string_replace(line, "%37", "%");
 				return newString(line.substr(2));
 			case 'y': return newSymbol(line.substr(2));
 			case 'L': // list

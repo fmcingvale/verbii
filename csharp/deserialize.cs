@@ -30,7 +30,7 @@ public class Deserializer {
 					line = line.Replace("%32", " ");
 					line = line.Replace("%10", "\n");
 					line = line.Replace("%13", "\r");
-					line = line.Replace("%%", "%");
+					line = line.Replace("%37", "%");
 					return new LangString(line);
 				case 'y': return new LangSymbol(line.Substring(2));
 				case 'L':

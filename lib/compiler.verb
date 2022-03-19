@@ -258,8 +258,8 @@
 		@space ( escaped string charcode )
 		drop swap "%32" + swap ( escaped+%32 string )
 		return
-		@percent ( escape % as %% )
-		drop swap "%%" + swap ( escaped+%% string )
+		@percent ( escape % as %37 )
+		drop swap "%37" + swap ( escaped+%37 string )
 		return
 		@lf drop swap "%10" + swap return ( \n -- %10 )
 		@cr drop swap "%13" + swap return ( \r -- %13 )

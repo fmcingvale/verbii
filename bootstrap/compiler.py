@@ -100,7 +100,7 @@ def syntaxString(first):
 	while True:
 		# test is done here to allow for a one word string
 		if s[-1] == '"':
-			s = s[:-1].replace('%','%%').replace(' ','%32').replace('\n','%10').replace('\r','%13')
+			s = s[:-1].replace('%','%37').replace(' ','%32').replace('\n','%10').replace('\r','%13')
 			return LangString(s)
 
 		o = readerNext() # NOT syntaxNext() - don't want to try and intepret objs inside string

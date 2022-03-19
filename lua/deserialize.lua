@@ -32,7 +32,7 @@ function deserialize_stream(intr, fileIn)
 		s = s:gsub("%%32", " ")
 		s = s:gsub("%%10", "\n")
 		s = s:gsub("%%13", "\r")
-		s = s:gsub("%%%%", "%%")
+		s = s:gsub("%%37", "%%")
 		return new_String(s)
 	elseif line:sub(1,1) == "y" then
 		return line:sub(3) -- symbols don't need escaping

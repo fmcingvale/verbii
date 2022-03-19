@@ -21,7 +21,7 @@ def deserialize_stream(intr, fileIn):
 	elif line[0] == 'b': return True if line[2:] == 'true' else False
 	elif line[0] == 's':
 		s = line[2:]
-		s = s.replace("%32"," ").replace("%10","\n").replace("%13","\r").replace("%%","%")
+		s = s.replace("%32"," ").replace("%10","\n").replace("%13","\r").replace("%37","%")
 		return LangString(s)
 	elif line[0] == 'y': return line[2:]
 	elif line[0] == 'L':
