@@ -1,0 +1,29 @@
+L 12
+i 123
+f 456.75
+s hello%32string%32with%32spaces
+y this-is-a-symbol
+b true
+b false
+n
+L 3
+s one
+s two
+s three
+F
+L 3
+i 111
+i 222
+i 333
+W four-floats
+L 4
+f 12.75
+f 34
+f 56.0
+f 1e2
+W three-ints
+L 3
+i 111
+i 222
+i 333
+y the-end

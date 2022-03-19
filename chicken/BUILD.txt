@@ -1,0 +1,17 @@
+Tested with chicken-5.3.0
+
+1. Extract chicken source here.
+
+2. mkdir local-chicken
+
+2. cd chicken-*
+
+3. make PREFIX=/mnt/c/frank/src/verbii/chicken/local-chicken
+
+4. make PREFIX=/mnt/c/frank/src/verbii/chicken/local-chicken install
+
+NOTE: The chicken compiler (csc) has the same name as the C# compiler, so
+I build it here to avoid nameclash with existing builds.
+
+5. ./local-chicken/bin/chicken-install coops
+./local-chicken/bin/chicken-install srfi-13
