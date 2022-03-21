@@ -36,7 +36,8 @@
 	(print "READER_WORDLIST: " READER_WORDLIST))
 
 (define (reader-next intr)
-	(if READER_WORDLIST
+	;(print "READER-NEXT FROM: " READER_WORDLIST)
+	(if (not (null? READER_WORDLIST))
 		(begin
 			(push intr (car READER_WORDLIST))
 			(set! READER_WORDLIST (cdr READER_WORDLIST)))
@@ -94,6 +95,14 @@
 			(push intr (and (boolean? B) (equal? A B))))
 		(else (lang-error "Don't know how to compare " A " and " B))))
 
+(define (builtin-greater intr A B)
+	; unlike above, both A and B have to be same (or comparable) types
+	(cond
+		((and (is-numeric? A) (is-numeric? B)) (push intr (> (value A) (value B))))
+		((and (LangString? A) (LangString? B)) (push intr (string> (value A) (value B))))
+		((and (LangSymbol? A) (LangSymbol? B)) (push intr (string> A B)))
+		(else (lang-error "Don't know how to compare " A " and " B))))
+
 (define (builtin-add intr A B)
 	(cond
 		((integer? A)
@@ -121,6 +130,21 @@
 				(lang-error "Don't know how to add " A " and " B)))
 		(else (lang-error "Don't know how to add " A " and " B))))
 
+(define (builtin-subtract intr A B)
+	; only hande ints and floats here - preserve ints when possible
+	(cond
+		((integer? A)
+			(cond
+				((integer? B) (push intr (- A B)))
+				((LangFloat? B) (push intr (make LangFloat 'value (- A (value B)))))
+				(else (lang-error "Don't know how to subtract " A " and " B))))
+		((LangFloat? A)
+			(cond
+				((integer? B) (push intr (make LangFloat 'value (+ (value A) B))))
+				((LangFloat? B) (push intr (make LangFloat 'value (+ (value A) (value B)))))
+				(else (lang-error "Don't know how to subtract " A " and " B))))
+		(else (lang-error "Don't know how to subtract " A " and " B))))
+		
 (define (is-sequence? obj)
 	(or (LangString? obj) (LangSymbol? obj) (LangList? obj)))
 
@@ -187,6 +211,15 @@
 	(push intr (make LangString 'value 
 		(apply string (map integer->char (pop-nr-objs intr NR))))))
 
+(define (builtin-make-word intr name)
+	(let ((llist (popTypeOrFail intr LangList? "symbol" "make-word")))
+		(hash-table-set! (WORDS intr) name llist)))
+
+(define (builtin-append intr llist obj)
+	; modify in place and push back on stack
+	(push-back llist obj)
+	(push intr llist))
+
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
 	(list
@@ -203,16 +236,25 @@
 		(list "SP" "" (lambda (intr) (push intr (SP intr))))
 		(list "SP!" "i" (lambda (intr addr) (set! (SP intr) addr)))
 		(list "LP" "" (lambda (intr) (push intr (LP intr))))
+		(list "LP!" "i" (lambda (intr addr) (set! (LP intr) addr)))
 		(list ">L" "*" builtin-to-local)
 		(list "L>" "" builtin-from-local)
 		(list "reader-next" "" reader-next)
 		(list "ref" "i" builtin-ref)
 		(list "==" "**" builtin-equal)
+		(list ">" "**" builtin-greater)
 		(list "+" "**" builtin-add)
+		(list "-" "**" builtin-subtract)
 		(list "slice" "*ii" builtin-slice)
 		(list "unmake" "*" builtin-unmake)
 		(list "make-string" "i" builtin-make-string)
+		(list "make-word" "y" builtin-make-word)
 		(list "length" "*" builtin-length)
+		(list "append" "L*" builtin-append)
+		(list "parse-int" "" (lambda (intr) 
+			(push intr (string->number (value 
+				(popTypeOrFail intr (lambda (o) (or (LangString? o) (LangSymbol? o)))
+					"string|symbol" "parse-int"))))))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test equal?))

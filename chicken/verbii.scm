@@ -166,3 +166,6 @@
 (print (list->LangList (list 2048)))
 
 (byte-compile intr "123 456 789")
+(print "COMPILED TO: " (fmtStackPrint (hash-table-ref (WORDS intr) "__main__")))
+(run intr (hash-table-ref (WORDS intr) "__main__"))
+(print "STACK AFTER RUN: " (reprStack intr))

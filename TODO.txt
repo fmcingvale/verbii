@@ -46,6 +46,9 @@ never visible from verbii code
 
 * add a "where" parameter to all 'popOrFail' type functions to give context on errors
 
-* mae sure no ports still looking for false_jump after 'if'
+* make sure no ports still looking for false_jump after 'if'
 
+* shouldn't syntax-next return void on end of input instead of null? check/change across ports.
+
+* why do we need a list AND a lambda? why not just call lists? there needs to be something different about lambdas to justify the separate type (like closures?)
 

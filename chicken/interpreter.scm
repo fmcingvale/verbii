@@ -183,6 +183,7 @@
 					((#\f) (value (popTypeOrFail intr LangFloat? "float" where)))
 					((#\s) (value (popTypeOrFail intr LangString? "string" where)))
 					((#\y) (popTypeOrFail intr string? "symbol" where))
+					((#\L) (popTypeOrFail intr LangList? "list" where))
 					((#\*) (pop intr))
 					(else 
 						(raise (string-append "Unknown argtype: " argtypes))))
@@ -190,9 +191,10 @@
 			; return arglist
 			args)))
 					
-; is str: '>>...'
-(define (is-forward-jump? str) (equal? (string-take str 2) ">>"))
-(define (is-backward-jump? str) (equal? (string-take str 2) "<<"))
+; is str: '>>NAME'
+(define (is-forward-jump? str) (and (>= (len str) 2) (equal? (string-take str 2) ">>")))
+; is str: '<<NAME'
+(define (is-backward-jump? str) (and (>= (len str) 2) (equal? (string-take str 2) "<<")))
 
 (define lang-error (lambda args
 	(raise (string-append (map fmtDisplay args)))))
@@ -257,10 +259,16 @@
 							(if bval (do-jump intr target))
 							; else - keep running with next object
 							(run-loop (nextObj intr))))
+					; <<NAME and >>NAME
+					((or (is-forward-jump? obj) (is-backward-jump? obj))
+						(do-jump intr obj)
+						(run-loop (nextObj intr)))
+
 					; @name -- jump target, ignore
 					((equal? (string-take obj 1) "@")
 						(run-loop (nextObj intr)))
 					; var
+					; TODO -- this should pop count from stack instead of being syntax "var count"
 					((equal? obj "var")
 						(let* ((name (nextSymbolOrFail intr "var"))
 								(count (nextObjOrFail intr "var,count")))
@@ -273,6 +281,19 @@
 											(list->LangList (list (allocate intr count))))
 									(run-loop (nextObj intr)))
 								(raise (string-append "Expecting int for count but got: " count)))))
+					; del
+					; TODO -- this should pop symbol from stack instead of being syntax "del NAME"
+					((equal? obj "del")
+						(let ((name (nextSymbolOrFail intr "del")))
+							(hash-table-delete! (WORDS intr) name)
+							(run-loop (nextObj intr))))
+					; call
+					((equal? obj "call")
+						; pop lambda and call
+						(let ((L (popTypeOrFail intr LangLambda? "lambda" "call")))
+							; TODO - tail call elimination??
+							(code-call intr (slot L 'llist))
+							(run-loop (nextObj intr))))
 
 					; builtin (native) functions
 					((hash-table-exists? BUILTINS obj)

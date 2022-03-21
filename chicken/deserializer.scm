@@ -61,18 +61,17 @@
 									(set! lst (filter (lambda (obj) (not (LangVoid? obj))) lst))
 									(list->LangList lst)))))
 					((#\F) ; lambda - read list
-						(let ((objlist (deserialize-stream intr fileIn)))
-							(if (LangList? objlist)
-								; pull the vector out of LangLlist
-								(make LangLambda 'objlist (slot objlist 'objlist))
+						(let ((llist (deserialize-stream intr fileIn)))
+							(if (LangList? llist)
+								(make LangLambda 'llist llist)
 								(raise "Expecting list after 'F' but got: " (fmtStackPrint objlist)))))
 					((#\W) ; W name followed by list
 						(let ((name (string-drop line 2))
-								(objlist (deserialize-stream intr fileIn)))
-							(if (LangList? objlist)
+								(llist (deserialize-stream intr fileIn)))
+							(if (LangList? llist)
 								(begin
-									(print "DESERIALIZED WORD: " objlist)
-									(hash-table-set! (slot intr 'WORDS) name objlist)
+									(print "DESERIALIZED WORD: " llist)
+									(hash-table-set! (slot intr 'WORDS) name llist)
 									(make LangVoid))
 								(raise (string-append "Expecting list after 'W' but got: " (fmtStackPrint objlist))))))
 					(else

@@ -53,20 +53,29 @@
 ; ---- ugh ... that's obsolete since I have LangList, but I still prefer LangNull to '()
 
 (define-class LangNull ())
+	
 	(define (LangNull? obj) (subclass? (class-of obj) LangNull))
 
 ; and a void type distinct from null & '()
 (define-class LangVoid ())
+	
 	(define (LangVoid? obj) (subclass? (class-of obj) LangVoid))
+
+(define-method (value (i <integer>)) i)
 
 ; in scheme a number like 123.0 tests true as an integer; in verbii it is a float, so cannot
 ; use scheme floats directly (at least I haven't figure out a way)
 (define-class LangFloat ()
 	((value accessor: value initform: 0)))
+	
 	(define (LangFloat? obj) (subclass? (class-of obj) LangFloat))
 
+; for code that doesn't care if its int or float and will just use (value obj)
+(define (is-numeric? obj) (or (integer? obj) (LangFloat? obj)))
+
 (define-class LangLambda ()
-	((objlist accessor: objlist initform: (make-dynvector 0 0)) ))
+	((llist initform: (make LangList))))
+
 	(define (LangLambda? obj) (subclass? (class-of obj) LangLambda))
 
 ; verbii string type
@@ -92,6 +101,7 @@
 			(raise "Out of bounds in LangList"))
 		(dynvector-ref (objlist llist) index))
 
+	; append an object
 	(define-method (push-back (llist LangList) obj)
 		(dynvector-set! (objlist llist) (dynvector-length (objlist llist)) obj))
 
