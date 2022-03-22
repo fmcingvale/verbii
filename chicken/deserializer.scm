@@ -39,7 +39,7 @@
 	(let ((line (string-trim-both (read-line fileIn))))
 		(if (not (eof-object? line))
 			(begin
-				(print "Line: " line)
+				;(print "Line: " line)
 				(case (string-ref line 0)
 					((#\i) (string->number (string-drop line 2)))
 					((#\f) (make LangFloat 'value (string->number (string-drop line 2))))
@@ -70,7 +70,7 @@
 								(llist (deserialize-stream intr fileIn)))
 							(if (LangList? llist)
 								(begin
-									(print "DESERIALIZED WORD: " llist)
+									;(print "DESERIALIZED WORD: " llist)
 									(hash-table-set! (slot intr 'WORDS) name llist)
 									(make LangVoid))
 								(raise (string-append "Expecting list after 'W' but got: " (fmtStackPrint objlist))))))

@@ -112,7 +112,7 @@
 	(define (LangList? obj) (subclass? (class-of obj) LangList))
 
 	(define (list->LangList lst) 
-		(print "LANGLIST FROM LIST: " lst)
+		;(print "LANGLIST FROM LIST: " lst)
 		(make LangList 'objlist (list->dynvector lst)))
 
 ;(define (LangNull? obj) (subclass? (class-of obj) LangNull))

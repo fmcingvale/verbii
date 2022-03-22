@@ -33,7 +33,8 @@
 
 (define (reader-open-string intr str)
 	(set! READER_WORDLIST (string-tokenize str))
-	(print "READER_WORDLIST: " READER_WORDLIST))
+	;(print "READER_WORDLIST: " READER_WORDLIST))
+)
 
 (define (reader-next intr)
 	;(print "READER-NEXT FROM: " READER_WORDLIST)

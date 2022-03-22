@@ -100,7 +100,7 @@
 			(raise "Call while not running!")))
 
 	(define-method (code-return (intr <Interpreter>))
-		(print "CODE-RETURN - CALLSTACK:" (slot intr 'callstack))
+		;(print "CODE-RETURN - CALLSTACK:" (slot intr 'callstack))
 		(if (not (null? (slot intr 'callstack)))
 			(begin
 				;(print "CODE: " (caar (slot intr 'callstack)))
@@ -145,8 +145,8 @@
 		(not (null? (slot intr 'callstack))))
 
 	(define-method (popTypeOrFail (intr <Interpreter>) test what where)
-		(print "POP-TYPE-OR-FAIL, STACK: " (reprStack intr))
-		(print "POPPING:" test)
+		;(print "POP-TYPE-OR-FAIL, STACK: " (reprStack intr))
+		;(print "POPPING:" test)
 		(let ((obj (pop intr)))
 			(if (test obj)
 				obj
@@ -172,9 +172,9 @@
 ;
 ; returns popped arglist
 (define (pop-typed-objs intr typestr where)
-	(print "POP-TYPED-OBJS: typestr=" typestr)
+	;(print "POP-TYPED-OBJS: typestr=" typestr)
 	(let loop ((argtypes typestr) (args '()))
-		(print "LOOP, typestr=" argtypes)
+		;(print "LOOP, typestr=" argtypes)
 		;(print "CHAR=" (string-take argtypes 1))
 		(if (> (string-length argtypes) 0)
 			(loop (string-drop-right argtypes 1) (cons 
@@ -219,10 +219,10 @@
 	(set! (slot intr 'code) objlist)
 	(set! (slot intr 'codepos) 0)
 	(let run-loop ((obj (nextObj intr)))
-		(print "RUN OBJ: " (fmtStackPrint obj))
+		;(print "RUN OBJ: " (fmtStackPrint obj))
 		(cond
 			((LangVoid? obj)
-				(print "RETURN OR EXIT:")
+				;(print "RETURN OR EXIT:")
 				; either return or exit
 				(if (havePushedFrames intr)
 					(begin
@@ -300,9 +300,9 @@
 						(let* ((type-fn (hash-table-ref BUILTINS obj))
 								(args (pop-typed-objs intr (car type-fn) obj)))
 
-							(print "POP ARGLIST: " (car type-fn))
-							(print "ARGS:" args)
-							(print "RUN BUILTIN: " obj (cadr type-fn))
+							;(print "POP ARGLIST: " (car type-fn))
+							;(print "ARGS:" args)
+							;(print "RUN BUILTIN: " obj (cadr type-fn))
 							(apply (cadr type-fn) (cons intr args)))
 						(run-loop (nextObj intr)))
 					; user-defined word

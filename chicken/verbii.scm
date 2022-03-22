@@ -67,7 +67,7 @@
 		(push-back lst "a-long-symbol-here")
 		(print "LIST: " (fmtDisplay lst))))
 
-(test-printing)
+;(test-printing)
 
 
 (define (test-deserialize)
@@ -84,61 +84,62 @@
 ;(test-deserialize)
 
 
+(define (intr-tests)
+	(set! intr (make <Interpreter>))
+	(print "SP NOW: " (SP intr))
+	(push intr 111)
+	(push intr 222)
+	(push intr 333)
 
-(set! intr (make <Interpreter>))
-(print "SP NOW: " (SP intr))
-(push intr 111)
-(push intr 222)
-(push intr 333)
+	(print "=>" (reprStack intr))
 
-(print "=>" (reprStack intr))
+	(print "POP: " (pop intr))
+	(print "POP: " (pop intr))
 
-(print "POP: " (pop intr))
-(print "POP: " (pop intr))
+	(print "=>" (reprStack intr))
 
-(print "=>" (reprStack intr))
+	(push intr "AAA")
+	(push intr "BBB")
 
-(push intr "AAA")
-(push intr "BBB")
+	(print "=>" (reprStack intr))
 
-(print "=>" (reprStack intr))
+	(print "POP: " (pop intr))
 
-(print "POP: " (pop intr))
+	(print "POP: " (pop intr))
+	(print "POP: " (pop intr))
 
-(print "POP: " (pop intr))
-(print "POP: " (pop intr))
+	(print "=>" (reprStack intr))
 
-(print "=>" (reprStack intr))
+	(set! L1 (list->LangList '(1 2 3 4)))
+	(set! L2 (list->LangList '(5 6 7 8)))
+	(set! L3 (list->LangList '(9 10 11 12)))
 
-(set! L1 (list->LangList '(1 2 3 4)))
-(set! L2 (list->LangList '(5 6 7 8)))
-(set! L3 (list->LangList '(9 10 11 12)))
+	(print (fmtStackPrint L1))
+	(print (fmtStackPrint L2))
+	(print (fmtStackPrint L3))
 
-(print (fmtStackPrint L1))
-(print (fmtStackPrint L2))
-(print (fmtStackPrint L3))
+	(set! (slot intr 'code) L1)
+	(print (fmtStackPrint (slot intr 'code)))
+	(code-call intr L2)
+	(print (fmtStackPrint (slot intr 'code)))
+	(code-call intr L3)
+	(print (fmtStackPrint (slot intr 'code)))
+	(code-return intr)
+	(print (fmtStackPrint (slot intr 'code)))
+	(code-return intr)
+	(print (fmtStackPrint (slot intr 'code)))
+	(set! (slot intr 'code) '())
 
-(set! (slot intr 'code) L1)
-(print (fmtStackPrint (slot intr 'code)))
-(code-call intr L2)
-(print (fmtStackPrint (slot intr 'code)))
-(code-call intr L3)
-(print (fmtStackPrint (slot intr 'code)))
-(code-return intr)
-(print (fmtStackPrint (slot intr 'code)))
-(code-return intr)
-(print (fmtStackPrint (slot intr 'code)))
-(set! (slot intr 'code) '())
+	(print (hash-table-ref BUILTINS "int?"))
 
-(print (hash-table-ref BUILTINS "int?"))
-
-(print "=>" (reprStack intr))
-(run intr (list->LangList '(10 20 30)))
-(print "=>" (reprStack intr))
-(run intr (list->LangList '(40 50 60)))
-(print "=>" (reprStack intr))
-(run intr (list->LangList '("int?" 123)))
-(print "=>" (reprStack intr))
+	(print "=>" (reprStack intr))
+	(run intr (list->LangList '(10 20 30)))
+	(print "=>" (reprStack intr))
+	(run intr (list->LangList '(40 50 60)))
+	(print "=>" (reprStack intr))
+	(run intr (list->LangList '("int?" 123)))
+	(print "=>" (reprStack intr))
+)
 
 ; load a precompiled (.b) file into interpreter
 (define (load-byte-compiled-file intr filename)
@@ -154,18 +155,67 @@
 		intr))
 		
 (define (byte-compile intr text)
-	(print "BYTE-COMPILING text: " text)
+	;(print "BYTE-COMPILING text: " text)
 	(push intr (make LangString 'value text))
 	(run intr (hash-table-ref (WORDS intr) "byte-compile-string"))
-	(print "STACK NOW: " (reprStack intr)))
+	;(print "STACK NOW: " (reprStack intr)))
+)
 
-(set! intr (new-interpreter))
-(print "WORDS:" (hash-table-keys (WORDS intr)))
-(hash-table-walk (WORDS intr) (lambda (key val) (print key ": " (fmtStackPrint val))))
+;(set! intr (new-interpreter))
+;(print "WORDS:" (hash-table-keys (WORDS intr)))
+;(hash-table-walk (WORDS intr) (lambda (key val) (print key ": " (fmtStackPrint val))))
 
-(print (list->LangList (list 2048)))
+;(print (list->LangList (list 2048)))
 
-(byte-compile intr "123 456 789")
-(print "COMPILED TO: " (fmtStackPrint (hash-table-ref (WORDS intr) "__main__")))
-(run intr (hash-table-ref (WORDS intr) "__main__"))
-(print "STACK AFTER RUN: " (reprStack intr))
+;(byte-compile intr "123 456 789")
+;(print "COMPILED TO: " (fmtStackPrint (hash-table-ref (WORDS intr) "__main__")))
+;(run intr (hash-table-ref (WORDS intr) "__main__"))
+;(print "STACK AFTER RUN: " (reprStack intr))
+
+(import (chicken process signal))
+(import breadline)
+; from example code in breadline docs
+(set-signal-handler! signal/int
+	(lambda _
+		(cleanup-after-signal!)
+		(reset-after-signal!)
+		; I added this ...
+		(print "Use quit to exit")))
+		
+(on-exit reset-terminal!)
+
+; compile and run text - if OK returns null, else returns error message (string)
+(define (safe-compile-and-run intr text)
+	(call/cc
+		(lambda (kontinue)
+			(with-exception-handler
+				(lambda (exc) (kontinue exc))
+				(lambda ()
+					(byte-compile intr text)
+					(pop intr) ; pop list of compiled words, don't need
+					(run intr (hash-table-ref (WORDS intr) "__main__"))
+					; ran OK if we made it here, return null
+					'())))))
+
+(define (repl)
+	(let ((intr (new-interpreter)))
+		(let repl-loop ()
+			(let ((line (readline ">> ")))
+				(cond
+					((equal? line "quit"))
+					(else
+						(let ((result (safe-compile-and-run intr line)))
+							(if (null? result)
+								; no errors, print stack and continue
+								(begin
+									(print "=> " (reprStack intr))
+									(repl-loop))
+								; print error and restart interpreter
+								(begin
+									(print result)
+									(set! intr (new-interpreter))
+									(repl-loop))))))))))
+
+
+(repl)
+
