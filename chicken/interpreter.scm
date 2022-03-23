@@ -26,6 +26,7 @@
 (define slot slot-value)
 
 (import langtypes)
+(import errors)
 
 (define STACK_SIZE (expt 2 10))
 (define LOCALS_SIZE (expt 2 10))
@@ -72,14 +73,14 @@
 
 	(define-method (push (intr <Interpreter>) obj)
 		(if (<= (SP intr) (SP_MIN intr))
-			(raise "Stack overflow!"))
+			(lang-error 'push "Stack overflow!"))
 		;(set! (SP intr) (- (SP intr) 1))
 		(dec! (SP intr))
 		(memset intr (SP intr) obj))
 		
 	(define-method (pop (intr <Interpreter>))
 		(if (>= (SP intr) (SP_EMPTY intr))
-			(raise "Stack underflow!"))
+			(lang-error 'pop "Stack underflow!"))
 		;(set! (SP intr) (+ (SP intr) 1))
 		(inc! (SP intr))
 		(memget intr (- (SP intr) 1)))
@@ -97,7 +98,7 @@
 				(set! (slot intr 'callstack) (cons (list (slot intr 'code) (slot intr 'codepos)) (slot intr 'callstack)))
 				(set! (slot intr 'code) objlist)
 				(set! (slot intr 'codepos) 0))
-			(raise "Call while not running!")))
+			(lang-error 'code-call "Call while not running!")))
 
 	(define-method (code-return (intr <Interpreter>))
 		;(print "CODE-RETURN - CALLSTACK:" (slot intr 'callstack))
@@ -108,7 +109,7 @@
 				(set! (slot intr 'code) (caar (slot intr 'callstack)))
 				(set! (slot intr 'codepos) (cadar (slot intr 'callstack)))
 				(set! (slot intr 'callstack) (cdr (slot intr 'callstack))))
-			(raise "Return without call!")))
+			(lang-error 'code-return "Return without call!")))
 
 	(define-method (nextObj (intr <Interpreter>))
 		(if (>= (slot intr 'codepos) (len (slot intr 'code)))
@@ -117,10 +118,10 @@
 				(set! (slot intr 'codepos) (+ (slot intr 'codepos) 1))
 				(get (slot intr 'code) (- (slot intr 'codepos) 1)))))
 
-	(define-method (nextObjOrFail (intr <Interpreter>) where)
+	(define-method (nextObjOrFail (intr <Interpreter>) wheresym)
 		(let ((obj (nextObj intr)))
 			(if (LangVoid? obj)
-				(raise (string-append "Unexpected end of input in " where))
+				(lang-error wheresym "Unexpected end of input")
 				obj)))
 
 	(define-method (peekObj (intr <Interpreter>))
@@ -135,43 +136,42 @@
 				(set! (slot intr 'codepos) (- (slot intr 'codepos) 1))
 				(get (slot intr 'code) (slot intr 'codepos)))))
 
-	(define-method (prevObjOrFail (intr <Interpreter>) where)
+	(define-method (prevObjOrFail (intr <Interpreter>) wheresym)
 		(let ((obj (prevObj intr)))
 			(if (LangVoid? obj)
-				(raise (string-append "Failed to find previous object in " where))
+				(lang-error wheresym "Failed to find previous object")
 				obj)))
 	
 	(define-method (havePushedFrames (intr <Interpreter>))
 		(not (null? (slot intr 'callstack))))
 
-	(define-method (popTypeOrFail (intr <Interpreter>) test what where)
+	(define-method (popTypeOrFail (intr <Interpreter>) test what wheresym)
 		;(print "POP-TYPE-OR-FAIL, STACK: " (reprStack intr))
 		;(print "POPPING:" test)
 		(let ((obj (pop intr)))
 			(if (test obj)
 				obj
-				(raise (string-append "Expecting " what " in " where " but got: " (fmtStackPrint obj))))))
+				(lang-error wheresym "Expecting " what " but got: " (fmtStackPrint obj)))))
 
 	; pop integer or fail
-	(define-method (popInt (intr <Interpreter>) where)
-		(popTypeOrFail intr integer? "integer" where))
+	;(define-method (popInt (intr <Interpreter>) wheresym)
+	;	(popTypeOrFail intr integer? "integer" wheresym))
 
 	; pop a LangString (as string) or fail
-	(define-method (popString (intr <Interpreter>) where)
-		(value (popTypeOrFail intr LangString? "string" where)))
+	;(define-method (popString (intr <Interpreter>) wheresym)
+	;	(value (popTypeOrFail intr LangString? "string" wheresym)))
 
-(define (nextSymbolOrFail intr where)
-	(let ((obj (nextObjOrFail intr where)))
+(define (nextSymbolOrFail intr wheresym)
+	(let ((obj (nextObjOrFail intr wheresym)))
 		(if (LangSymbol? obj)
 			obj
-			(raise (string-append "Expecting symbol in " where " but got " (fmtStackPrint obj))))))
-
+			(lang-error wheresym "Expecting symbol but got " (fmtStackPrint obj)))))
 
 ; typestr is list of type strings, like in serialize, e.g.: "i", "f", "s", etc,
 ; concatenated into a string. use "*" for "any object"
 ;
 ; returns popped arglist
-(define (pop-typed-objs intr typestr where)
+(define (pop-typed-objs intr typestr wheresym)
 	;(print "POP-TYPED-OBJS: typestr=" typestr)
 	(let loop ((argtypes typestr) (args '()))
 		;(print "LOOP, typestr=" argtypes)
@@ -179,14 +179,14 @@
 		(if (> (string-length argtypes) 0)
 			(loop (string-drop-right argtypes 1) (cons 
 				(case (string-ref argtypes (- (string-length argtypes) 1))
-					((#\i) (popTypeOrFail intr integer? "integer" where))
-					((#\f) (value (popTypeOrFail intr LangFloat? "float" where)))
-					((#\s) (value (popTypeOrFail intr LangString? "string" where)))
-					((#\y) (popTypeOrFail intr string? "symbol" where))
-					((#\L) (popTypeOrFail intr LangList? "list" where))
+					((#\i) (popTypeOrFail intr integer? "integer" wheresym))
+					((#\f) (value (popTypeOrFail intr LangFloat? "float" wheresym)))
+					((#\s) (value (popTypeOrFail intr LangString? "string" wheresym)))
+					((#\y) (popTypeOrFail intr string? "symbol" wheresym))
+					((#\L) (popTypeOrFail intr LangList? "list" wheresym))
 					((#\*) (pop intr))
 					(else 
-						(raise (string-append "Unknown argtype: " argtypes))))
+						(lang-error wheresym "Unknown argtype: " argtypes)))
 				args))
 			; return arglist
 			args)))
@@ -196,26 +196,23 @@
 ; is str: '<<NAME'
 (define (is-backward-jump? str) (and (>= (len str) 2) (equal? (string-take str 2) "<<")))
 
-(define lang-error (lambda args
-	(raise (string-append (map fmtDisplay args)))))
-
 (define-method (do-jump (intr <Interpreter>) target)
 	(let ((movefn '()))
 		(cond 
 			((is-forward-jump? target) (set! movefn nextObjOrFail))
 			((is-backward-jump? target) (set! movefn prevObjOrFail))
-			(else (lang-error "Not a valid jump target: " target)))
-		(let loop ((obj (movefn intr "do-jump")))
+			(else (lang-error 'do-jump "Not a valid jump target: " target)))
+		(let loop ((obj (movefn intr 'do-jump)))
 			(cond
-				((LangVoid? obj) (lang-error "End of input looking for: " target))
+				((LangVoid? obj) (lang-error 'do-jump "End of input looking for: " target))
 				((and (LangSymbol? obj) (equal? (string-drop target 2) (string-drop obj 1)))
 					; found it, stop
 				)
-				(else (loop (movefn intr "do-jump")))))))
+				(else (loop (movefn intr 'do-jump)))))))
 				
 (define-method (run (intr <Interpreter>) (objlist LangList)) 
 	(if (not (null? (slot intr 'code)))
-		(raise "Interpreter called recursively!"))
+		(lang-error 'intepreter "Interpreter called recursively!"))
 	(set! (slot intr 'code) objlist)
 	(set! (slot intr 'codepos) 0)
 	(let run-loop ((obj (nextObj intr)))
@@ -254,7 +251,7 @@
 					; if
 					((equal? obj "if")
 						(let ((target (nextSymbolOrFail intr "if"))
-								(bval (popTypeOrFail intr boolean? "true|false" "if")))
+								(bval (popTypeOrFail intr boolean? "true|false" 'if)))
 							; this only repositions the reader
 							(if bval (do-jump intr target))
 							; else - keep running with next object
@@ -271,7 +268,7 @@
 					; TODO -- this should pop count from stack instead of being syntax "var count"
 					((equal? obj "var")
 						(let* ((name (nextSymbolOrFail intr "var"))
-								(count (nextObjOrFail intr "var,count")))
+								(count (nextObjOrFail intr 'var)))
 							(if (integer? count)
 								(begin
 									; NOTE different from other ports -- create WORD with name that
@@ -280,7 +277,7 @@
 									(hash-table-set! (WORDS intr) name 
 											(list->LangList (list (allocate intr count))))
 									(run-loop (nextObj intr)))
-								(raise (string-append "Expecting int for count but got: " count)))))
+								(lang-error 'var "Expecting int for count but got: " count))))
 					; del
 					; TODO -- this should pop symbol from stack instead of being syntax "del NAME"
 					((equal? obj "del")
@@ -290,15 +287,16 @@
 					; call
 					((equal? obj "call")
 						; pop lambda and call
-						(let ((L (popTypeOrFail intr LangLambda? "lambda" "call")))
+						(let ((L (popTypeOrFail intr LangLambda? "lambda" 'call)))
 							; TODO - tail call elimination??
 							(code-call intr (slot L 'llist))
 							(run-loop (nextObj intr))))
 
 					; builtin (native) functions
 					((hash-table-exists? BUILTINS obj)
+						;(print "CALL BUILTIN: " obj)
 						(let* ((type-fn (hash-table-ref BUILTINS obj))
-								(args (pop-typed-objs intr (car type-fn) obj)))
+								(args (pop-typed-objs intr (car type-fn) (string->symbol obj))))
 
 							;(print "POP ARGLIST: " (car type-fn))
 							;(print "ARGS:" args)
@@ -307,6 +305,7 @@
 						(run-loop (nextObj intr)))
 					; user-defined word
 					((hash-table-exists? (WORDS intr) obj)
+						;(print "CALL USERWORD: " obj)
 						; tail-call elimination
 						(let ((next (peekObj intr)))
 							(if (or (LangVoid? next) (eqv? next 'return))
@@ -316,8 +315,8 @@
 						(code-call intr (hash-table-ref (WORDS intr) obj))
 						(run-loop (nextObj intr)))
 					(else
-						(raise (string-append "Unknown word: " (fmtStackPrint obj))))))
+						(lang-error 'intepreter "Unknown word:" obj))))
 			(else
-				(raise (string-append "Unknown word: " (fmtStackPrint obj)))))))
+				(lang-error 'interpreter "Unknown word:" obj)))))
 
 ) ; end of module

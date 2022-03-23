@@ -15,3 +15,5 @@ new-python/__pycache__/
 new-python/test-output/
 bootstrap/test-output/
 chicken/local-chicken/
+*.import.scm
+*.link

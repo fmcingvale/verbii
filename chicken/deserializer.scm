@@ -26,6 +26,7 @@
 (import (chicken io))
 
 (import langtypes)
+(import errors)
 
 (define (replace-escapes text)
 	(cond ; recursively apply until no more escapes remain
@@ -64,7 +65,8 @@
 						(let ((llist (deserialize-stream intr fileIn)))
 							(if (LangList? llist)
 								(make LangLambda 'llist llist)
-								(raise "Expecting list after 'F' but got: " (fmtStackPrint objlist)))))
+								(lang-error 'deserializer-list 
+									"Expecting list after 'F' but got: " objlist))))
 					((#\W) ; W name followed by list
 						(let ((name (string-drop line 2))
 								(llist (deserialize-stream intr fileIn)))
@@ -73,7 +75,8 @@
 									;(print "DESERIALIZED WORD: " llist)
 									(hash-table-set! (slot intr 'WORDS) name llist)
 									(make LangVoid))
-								(raise (string-append "Expecting list after 'W' but got: " (fmtStackPrint objlist))))))
+								(lang-error 'deserializer-word 
+									"Expecting list after 'W' but got: " objlist))))
 					(else
 						(print "Unknown char: " (string-ref line 0))))
 			)

@@ -37,6 +37,15 @@
 ; shorthand
 (define slot slot-value)
 
+(import simple-exceptions)
+
+; define local version of lang-error, to avoid circular import. use same tags so that
+; exception handlers will see it as a lang-error
+(define langtype-error (lambda (wheresym . args)
+	(raise ((make-exception 
+		(string-append "[" (symbol->string wheresym) "] " 
+			(string-join (map fmtDisplay args) " ")) 'lang-error) 'lang-error))))
+
 ; like the Python port, plain strings are used as symbols, and LangString is used
 ; for strings. i think this will be better to avoid at least two corner cases: (1) symbols
 ; starting with ' are treated specially by scheme and (2) i'm not sure it is possible to
@@ -74,7 +83,7 @@
 (define (is-numeric? obj) (or (integer? obj) (LangFloat? obj)))
 
 (define-class LangLambda ()
-	((llist initform: (make LangList))))
+	((llist accessor: llist initform: (make LangList))))
 
 	(define (LangLambda? obj) (subclass? (class-of obj) LangLambda))
 
@@ -98,8 +107,8 @@
 	; get i'th object
 	(define-method (get (llist LangList) index)
 		(if (or (< index 0) (>= index (dynvector-length (objlist llist))))
-			(raise "Out of bounds in LangList"))
-		(dynvector-ref (objlist llist) index))
+			(langtype-error 'LangList-get "Out of bounds in LangList")
+			(dynvector-ref (objlist llist) index)))
 
 	; append an object
 	(define-method (push-back (llist LangList) obj)
@@ -117,13 +126,17 @@
 
 ;(define (LangNull? obj) (subclass? (class-of obj) LangNull))
 
+;; "stack printing" shows objects in a way that their type can be deduced.
+;; so i.e. symbols are shown as 'a-symbol, strings as "a string", etc.
+;;
+;; NOTE: this differs from other ports where symbols do not get a '
 (define (fmtStackPrint obj)
 	;(print "FMT_STACK_PRINT:" obj)
 	(cond
 		((integer? obj) (number->string obj))
 		((LangFloat? obj) (string-append "#" (number->string (value obj))))
-		((boolean? obj) (if obj "true" "false"))
-		((LangSymbol? obj) obj) ; obj is a string
+		((boolean? obj) (if obj "<true>" "<false>"))
+		((LangSymbol? obj) (string-append "'" obj)) ; obj is a string
 		((LangString? obj) (string-append "\"" (value obj) "\""))
 		((LangList? obj)
 			(string-append 
@@ -132,14 +145,21 @@
 		((LangNull? obj) "<null>")
 		((LangVoid? obj) "<VOID>")
 		((LangLambda? obj) "<lambda>")
-		(else (raise "Unknown object in fmtStackPrint"))))
+		; for sanity, don't use lang-error (or langtype-error) just in case they switch to
+		; using fmtStackPrint. this would be an obvious bug that needs to be fixed, so just
+		; print message and exit
+		(else (print "FATAL ERROR: Unknown object in fmtStackPrint: " obj) (exit 1))))
 
+;; "display printing" shows values in an undecorated format, so no
+;; quotes, or ', etc.
+;;
+;; NOTE: this differs from other ports where displayed symbols get '
 (define (fmtDisplay obj)
 	(cond
 		((integer? obj) (number->string obj))
 		((LangFloat? obj) (number->string (value obj)))
 		((boolean? obj) (if obj "true" "false"))
-		((LangSymbol? obj) (string-append "'" obj)) ; obj is a string
+		((LangSymbol? obj) obj) ; obj is a string
 		((LangString? obj) (value obj))
 		; OTHER PORTS USE fmtStackPrint here ... trying this out to see if i like it better ...
 		((LangList? obj)
@@ -149,6 +169,9 @@
 		((LangNull? obj) "<null>")
 		((LangVoid? obj) "<VOID>")
 		((LangLambda? obj) "<lambda>")
-		(else (raise "Unknown object in fmtStackPrint"))))
+		; like above, but lang-error/langtype-error DOES us this so it would be a loop to
+		; use those here
+		(else 
+			(print "FATAL ERROR: Unknown object in fmtDisplay: " obj) (exit 1))))
 
 ) ; end of module

@@ -26,6 +26,7 @@
 (define slot slot-value)
 
 (import langtypes)
+(import errors)
 (import interpreter)
 
 ;; Reader interface: reader-open-string, reader-next
@@ -64,14 +65,14 @@
 ; ( obj -- to local stack )
 (define (builtin-to-local intr obj)
 	(if (<= (LP intr) (LP_MIN intr))
-		(raise "Locals overflow!"))
+		(lang-error '>L "Locals overflow!"))
 	(dec! (LP intr))
 	(memset intr (LP intr) obj))
 			
 ; ( -- obj from local stack )
 (define (builtin-from-local intr)
 	(if (>= (LP intr) (LP_EMPTY intr))
-		(lang-error "Locals underflow!"))
+		(lang-error 'L> "Locals underflow!"))
 	(push intr (memget intr (LP intr)))
 	(inc! (LP intr)))
 		
@@ -94,7 +95,8 @@
 			(push intr (and (string? B) (equal? A B))))
 		((boolean? A)
 			(push intr (and (boolean? B) (equal? A B))))
-		(else (lang-error "Don't know how to compare " A " and " B))))
+		((LangLambda? A) (push intr #f)) ; lambdas never equal to anything else even themselves
+		(else (lang-error '== "Don't know how to compare " A " and " B))))
 
 (define (builtin-greater intr A B)
 	; unlike above, both A and B have to be same (or comparable) types
@@ -102,7 +104,7 @@
 		((and (is-numeric? A) (is-numeric? B)) (push intr (> (value A) (value B))))
 		((and (LangString? A) (LangString? B)) (push intr (string> (value A) (value B))))
 		((and (LangSymbol? A) (LangSymbol? B)) (push intr (string> A B)))
-		(else (lang-error "Don't know how to compare " A " and " B))))
+		(else (lang-error '> "Don't know how to compare " A " and " B))))
 
 (define (builtin-add intr A B)
 	(cond
@@ -110,26 +112,26 @@
 			(cond
 				((integer? B) (push intr (+ A B)))
 				((LangFloat? B) (push intr (make LangFloat 'value (+ A (value B)))))
-				(else (lang-error "Don't know how to add " A " and " B))))
+				(else (lang-error '+ "Don't know how to add " A " and " B))))
 		((LangFloat? A)
 			(cond
 				((integer? B) (push intr (make LangFloat 'value (+ (value A) B))))
 				((LangFloat? B) (push intr (make LangFloat 'value (+ (value A) (value B)))))
-				(else (lang-error "Don't know how to add " A " and " B))))
+				(else (lang-error '+ "Don't know how to add " A " and " B))))
 		((LangString? A)
 			(if (LangString? B)
-				(make LangString 'value (string-append (value A) (value B)))
-				(lang-error "Don't know how to add " A " and " B)))
+				(push intr (make LangString 'value (string-append (value A) (value B))))
+				(lang-error '+ "Don't know how to add " A " and " B)))
 		((string? A)
 			(if (string? B)
-				(string-append A B)
-				(lang-error "Don't know how to add " A " and " B)))
+				(push intr (string-append A B))
+				(lang-error '+ "Don't know how to add " A " and " B)))
 		((LangList? A)
 			(if (LangList? B)
 				(push intr (make LangList 'objlist 
 					(list->dynvector (append (dynvector->list (objlist A)) (dynvector->list (objlist B))))))
-				(lang-error "Don't know how to add " A " and " B)))
-		(else (lang-error "Don't know how to add " A " and " B))))
+				(lang-error '+ "Don't know how to add " A " and " B)))
+		(else (lang-error '+ "Don't know how to add " A " and " B))))
 
 (define (builtin-subtract intr A B)
 	; only hande ints and floats here - preserve ints when possible
@@ -138,26 +140,65 @@
 			(cond
 				((integer? B) (push intr (- A B)))
 				((LangFloat? B) (push intr (make LangFloat 'value (- A (value B)))))
-				(else (lang-error "Don't know how to subtract " A " and " B))))
+				(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		((LangFloat? A)
 			(cond
-				((integer? B) (push intr (make LangFloat 'value (+ (value A) B))))
-				((LangFloat? B) (push intr (make LangFloat 'value (+ (value A) (value B)))))
-				(else (lang-error "Don't know how to subtract " A " and " B))))
-		(else (lang-error "Don't know how to subtract " A " and " B))))
+				((integer? B) (push intr (make LangFloat 'value (- (value A) B))))
+				((LangFloat? B) (push intr (make LangFloat 'value (- (value A) (value B)))))
+				(else (lang-error '- "Don't know how to subtract " A " and " B))))
+		(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		
+(define (builtin-multiply intr A B)
+	; like subtract, only hande ints and floats here - preserve ints when possible
+	(cond
+		((integer? A)
+			(cond
+				((integer? B) (push intr (* A B)))
+				((LangFloat? B) (push intr (make LangFloat 'value (* A (value B)))))
+				(else (lang-error '* "Don't know how to multiply " A " and " B))))
+		((LangFloat? A)
+			(cond
+				((integer? B) (push intr (make LangFloat 'value (* (value A) B))))
+				((LangFloat? B) (push intr (make LangFloat 'value (* (value A) (value B)))))
+				(else (lang-error '* "Don't know how to multiply " A " and " B))))
+		(else (lang-error '* "Don't know how to multiply " A " and " B))))
+		
+(define (builtin-divide intr A B)
+	; results is ALWAYS float here
+	(if (and (is-numeric? A) (is-numeric? B))
+		(if (= (value B) 0)
+			(lang-error '/ "Divide by zero")
+			(push intr (make LangFloat 'value (exact->inexact (/ (value A) (value B))))))
+		(lang-error '/ "Don't know how to divide " A " and " B)))
+		
+;; see C++ version for extensive comments on divmod
+(define (builtin-divmod intr a b)
+	(if (= b 0)
+		(lang-error '/mod "Divide by zero"))
+
+	(let* ((quot (floor (/ (abs a) (abs b))))
+			(samesign (or (and (< a 0) (< b 0)) (and (>= a 0) (>= b 0))))
+			(mod 0))
+		(if samesign
+			(set! mod (- a (* quot b)))
+			(begin
+				(set! mod (+ a (* quot b)))
+				(set! quot (- 0 quot))))
+		(push intr mod)
+		(push intr quot)))
+
 (define (is-sequence? obj)
 	(or (LangString? obj) (LangSymbol? obj) (LangList? obj)))
 
 (define (builtin-length intr obj)
 	(if (is-sequence? obj)
 		(push intr (len obj))
-		(lang-error "Object does not support 'length': " obj)))
+		(lang-error 'length "Object does not support 'length': " obj)))
 
 (define (builtin-slice intr obj index nr)
 	; ported from c#
 	(if (not (is-sequence? obj))
-		(lang-error "Object does not support slicing: " obj))
+		(lang-error 'slice "Object does not support slicing: " obj))
 
 	(let ((objsize (len obj)))
 		; adjust index & nr for negative & out of bounds conditions
@@ -183,8 +224,9 @@
 						(let ((newlist (make LangList)))
 							(let loop ((i index) (n nr))
 								(if (> n 0)
-									(push-back newlist (get obj i))
-									(loop (+ i 1) (- n 1))))
+									(begin
+										(push-back newlist (get obj i))
+										(loop (+ i 1) (- n 1)))))
 							(push intr newlist))))))))
 
 (define (builtin-unmake intr obj)
@@ -197,8 +239,8 @@
 			(push intr (len obj)))
 		((LangLambda? obj)
 			; like other ports, push a copy
-			(push intr (make LangLambda 'objlist (dynvector-copy (objlist obj)))))
-		(else (lang-error "Don't know how to unmake object: " obj))))
+			(push intr (make LangList 'objlist (dynvector-copy (objlist (llist obj))))))
+		(else (lang-error 'unmake "Don't know how to unmake object: " obj))))
 
 ; pop N objects and return as list in stack order
 (define (pop-nr-objs intr N)
@@ -212,6 +254,10 @@
 	(push intr (make LangString 'value 
 		(apply string (map integer->char (pop-nr-objs intr NR))))))
 
+(define (builtin-make-symbol intr NR)
+	; pop list of integers into lst and make symbol
+	(push intr (apply string (map integer->char (pop-nr-objs intr NR)))))
+
 (define (builtin-make-word intr name)
 	(let ((llist (popTypeOrFail intr LangList? "symbol" "make-word")))
 		(hash-table-set! (WORDS intr) name llist)))
@@ -220,6 +266,18 @@
 	; modify in place and push back on stack
 	(push-back llist obj)
 	(push intr llist))
+
+(define (LangString-or-Symbol? o) (or (LangString? o) (LangSymbol? o)))
+
+(define (builtin-dumpword intr name)
+	(if (not (hash-table-exists? (WORDS intr) name))
+		(lang-error '.dumpword "No such word: " name))
+	; like other ports, make a copy of list
+	(let ((newlist (make LangList)))
+		(dynvector-for-each 
+			(lambda (i o) (push-back newlist o)) 
+				(objlist (hash-table-ref (WORDS intr) name)))
+		(push intr newlist)))
 
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
@@ -246,6 +304,9 @@
 		(list ">" "**" builtin-greater)
 		(list "+" "**" builtin-add)
 		(list "-" "**" builtin-subtract)
+		(list "*" "**" builtin-multiply)
+		(list "/" "**" builtin-divide)
+		(list "/mod" "ii" builtin-divmod)
 		(list "slice" "*ii" builtin-slice)
 		(list "unmake" "*" builtin-unmake)
 		(list "make-string" "i" builtin-make-string)
@@ -254,8 +315,17 @@
 		(list "append" "L*" builtin-append)
 		(list "parse-int" "" (lambda (intr) 
 			(push intr (string->number (value 
-				(popTypeOrFail intr (lambda (o) (or (LangString? o) (LangSymbol? o)))
-					"string|symbol" "parse-int"))))))
+				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-int"))))))
+		(list "parse-float" "" (lambda (intr) 
+			(push intr (make LangFloat 'value (string->number (value 
+				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-int")))))))
+		(list "str" "*" (lambda (intr obj) (push intr (make LangString 'value (fmtDisplay obj)))))
+		(list "repr" "*" (lambda (intr obj) (push intr (make LangString 'value (fmtStackPrint obj)))))
+		(list "puts" "s" (lambda (intr obj) (display (value obj))))
+		(list ".c" "i" (lambda (intr obj) (display (integer->char obj))))
+		(list "make-lambda" "L" (lambda (intr llist) (push intr (make LangLambda 'llist llist))))
+		(list "make-symbol" "i" builtin-make-symbol)
+		(list ".dumpword" "y" builtin-dumpword)
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test equal?))

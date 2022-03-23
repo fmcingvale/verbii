@@ -11,6 +11,7 @@
 (import coops-primitive-objects)
 (import srfi-13) ; string library
 (import srfi-34) ; exceptions
+(import (chicken condition)) ; exception object
 (import (chicken format)) ; fprintf
 (import srfi-1) ; list library
 (import coops)
@@ -26,12 +27,13 @@
 ; uncomment them when running under interpreter.
 ; ... there has to be a better way ...
 (load "langtypes.scm")
+(load "errors.scm")
 (load "deserializer.scm")
 (load "interpreter.scm")
 (load "native.scm")
 
-
 (import langtypes)
+(import errors)
 (import deserializer)
 (import native)
 (import interpreter)
@@ -151,7 +153,9 @@
 (define (new-interpreter)
 	(let ((intr (make <Interpreter>)))
 		(load-byte-compiled-file intr "../lib/init.verb.b")
+		(run intr (hash-table-ref (WORDS intr) "__main__"))
 		(load-byte-compiled-file intr "../lib/compiler.verb.b")
+		; do NOT run __main__ for compiler since that would run command-line compiler
 		intr))
 		
 (define (byte-compile intr text)
@@ -184,38 +188,106 @@
 		
 (on-exit reset-terminal!)
 
+(import simple-exceptions) ; with-exn-handler
+
 ; compile and run text - if OK returns null, else returns error message (string)
 (define (safe-compile-and-run intr text)
-	(call/cc
-		(lambda (kontinue)
-			(with-exception-handler
-				(lambda (exc) (kontinue exc))
-				(lambda ()
-					(byte-compile intr text)
-					(pop intr) ; pop list of compiled words, don't need
-					(run intr (hash-table-ref (WORDS intr) "__main__"))
-					; ran OK if we made it here, return null
-					'())))))
+	(handle-exceptions exn
+		(cond
+			; for verbii (lang-error) return string, caller can handle
+			(((exception-of? 'lang-error) exn) (message exn))
+			; for scheme errors (i.e. bugs in the interpreter, not user code,
+			; re-raise the error to show the full traceback)
+			(else (abort exn)))
+		(print "Compile ...")
+		(byte-compile intr text)
+		(pop intr) ; pop list of compiled words, don't need
+		(print "Run ...")
+		(run intr (hash-table-ref (WORDS intr) "__main__"))
+		; ran OK if we made it here, return null
+		'()))
+
+; for debugging - does same as safe-compile-and-run but doesn't catch exceptions
+(define (unsafe-compile-and-run intr text)
+	(byte-compile intr text)
+	(pop intr) ; pop list of compiled words, don't need
+	(run intr (hash-table-ref (WORDS intr) "__main__"))
+	'())
+
+; normally this should be set to the safe version, but to get tracebacks on scheme
+; errors, set it to the unsafe version instead
+(define compile-and-run safe-compile-and-run)
+;(define compile-and-run unsafe-compile-and-run)
 
 (define (repl)
 	(let ((intr (new-interpreter)))
 		(let repl-loop ()
 			(let ((line (readline ">> ")))
 				(cond
-					((equal? line "quit"))
+					((equal? line "quit")) ; stop looping
+					((equal? line ",q")) ; shorthand for 'quit'
 					(else
-						(let ((result (safe-compile-and-run intr line)))
+						(let ((result (compile-and-run intr line)))
 							(if (null? result)
 								; no errors, print stack and continue
 								(begin
-									(print "=> " (reprStack intr))
+									(print "=>" (reprStack intr))
 									(repl-loop))
 								; print error and restart interpreter
 								(begin
-									(print result)
+									(print "** ERROR ** " result)
 									(set! intr (new-interpreter))
 									(repl-loop))))))))))
 
+(import (chicken file posix))
 
-(repl)
+(define (run-program filename)
+	(let* ((intr (new-interpreter))
+			(fileIn (file-open filename open/rdonly))
+			(text (car (file-read fileIn (file-size fileIn)))))
+		(file-close fileIn)
+		;(print "READ FILE: " text)
+		(let ((result (compile-and-run intr text)))
+			(if (not (null? result))
+				(print "** ERROR ** " result)))))
+					
+(import srfi-193)
+(import (chicken file))
+
+(print "COMMAND LINE: " (command-line))
+;(repl)
+
+(define (main)
+	(let ((filename #f)
+			(test-mode #f)
+			(script-args #f))
+		(for-each (lambda (arg)
+			; once i get '--' all the remaining args go to script-args
+			(if script-args
+				(set! script-args (append script-args (list arg)))
+				; else process as normal
+				(cond
+					((equal? arg "-test") (set! test-mode #t))
+					((equal? arg "--") (set! script-args '())) ; rest go to script-args
+					(else
+						(if (and (file-exists? arg) (not filename))
+							(set! filename arg)
+							(begin
+								(print "Unknown arg: " arg)
+								(exit 1))))))) (cdr (command-line)))
+		(print "Parsed args:")
+		(print "Filename: " filename)
+		(print "test mode: " test-mode)
+		(print "script args: " script-args)
+		; decide what to do based on args
+		(cond
+			((not filename) (repl))
+			((and filename (not test-mode)) (run-program filename))
+			(else (print "NOT IMPLEMENTED YET")))))
+
+
+(main)
+
+
+
 
