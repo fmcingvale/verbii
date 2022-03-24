@@ -79,6 +79,11 @@
 	
 	(define (LangFloat? obj) (subclass? (class-of obj) LangFloat))
 
+; NOTE - use this factory function to make LangFloats instead of calling 'make' directly
+(define (make-lang-float value) 
+	; ensure i really have a float value
+	(make LangFloat 'value (exact->inexact value)))
+
 ; for code that doesn't care if its int or float and will just use (value obj)
 (define (is-numeric? obj) (or (integer? obj) (LangFloat? obj)))
 
@@ -134,7 +139,11 @@
 	;(print "FMT_STACK_PRINT:" obj)
 	(cond
 		((integer? obj) (number->string obj))
-		((LangFloat? obj) (string-append "#" (number->string (value obj))))
+		((LangFloat? obj) 
+			(let ((s (string-append "#" (number->string (value obj)))))
+				(if (and (> (string-length s) 2) (equal? (string-take-right s 2) ".0"))
+					(string-drop-right s 2)
+					s)))
 		((boolean? obj) (if obj "<true>" "<false>"))
 		((LangSymbol? obj) (string-append "'" obj)) ; obj is a string
 		((LangString? obj) (string-append "\"" (value obj) "\""))
@@ -157,7 +166,12 @@
 (define (fmtDisplay obj)
 	(cond
 		((integer? obj) (number->string obj))
-		((LangFloat? obj) (number->string (value obj)))
+		((LangFloat? obj) 
+			; for consistency with other ports, if number string ends with ".0", remove it
+			(let ((s (number->string (value obj))))
+				(if (and (> (string-length s) 2) (equal? (string-take-right s 2) ".0"))
+					(string-drop-right s 2)
+					s)))
 		((boolean? obj) (if obj "true" "false"))
 		((LangSymbol? obj) obj) ; obj is a string
 		((LangString? obj) (value obj))

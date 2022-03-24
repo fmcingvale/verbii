@@ -41,7 +41,7 @@
 (define (test-printing)
 	(print "--- STACK FORMAT: ---")
 	(print (fmtStackPrint 123))
-	(print (fmtStackPrint (make LangFloat 'value (/ 1.0 3.0))))
+	(print (fmtStackPrint (make-lang-float (/ 1.0 3.0))))
 	(print (fmtStackPrint #t))
 	(print (fmtStackPrint #f))
 	(print (fmtStackPrint "abc"))
@@ -56,7 +56,7 @@
 
 	(print "--- DISPLAY FORMAT: ---")
 	(print (fmtDisplay 123))
-	(print (fmtDisplay (make LangFloat 'value (/ 1.0 3.0))))
+	(print (fmtDisplay (make-lang-float (/ 1.0 3.0))))
 	(print (fmtDisplay #t))
 	(print (fmtDisplay #f))
 	(print (fmtDisplay "abc"))
@@ -176,17 +176,19 @@
 ;(run intr (hash-table-ref (WORDS intr) "__main__"))
 ;(print "STACK AFTER RUN: " (reprStack intr))
 
-(import (chicken process signal))
-(import breadline)
+;(import (chicken process signal))
+;(import breadline)
 ; from example code in breadline docs
-(set-signal-handler! signal/int
-	(lambda _
-		(cleanup-after-signal!)
-		(reset-after-signal!)
-		; I added this ...
-		(print "Use quit to exit")))
+;(set-signal-handler! signal/int
+;	(lambda _
+;		(cleanup-after-signal!)
+;		(reset-after-signal!)
+;		; I added this ...
+;		;(print "Use quit to exit")))
+;		(reset-terminal!)
+;		(exit 1)))
 		
-(on-exit reset-terminal!)
+;(on-exit reset-terminal!)
 
 (import simple-exceptions) ; with-exn-handler
 
@@ -199,10 +201,10 @@
 			; for scheme errors (i.e. bugs in the interpreter, not user code,
 			; re-raise the error to show the full traceback)
 			(else (abort exn)))
-		(print "Compile ...")
+		;(print "Compile ...")
 		(byte-compile intr text)
 		(pop intr) ; pop list of compiled words, don't need
-		(print "Run ...")
+		;(print "Run ...")
 		(run intr (hash-table-ref (WORDS intr) "__main__"))
 		; ran OK if we made it here, return null
 		'()))
@@ -222,7 +224,8 @@
 (define (repl)
 	(let ((intr (new-interpreter)))
 		(let repl-loop ()
-			(let ((line (readline ">> ")))
+			(display ">> ")
+			(let ((line (read-line)))
 				(cond
 					((equal? line "quit")) ; stop looping
 					((equal? line ",q")) ; shorthand for 'quit'
@@ -250,7 +253,35 @@
 		(let ((result (compile-and-run intr text)))
 			(if (not (null? result))
 				(print "** ERROR ** " result)))))
-					
+
+; does text contain only whitespace?
+(define (blank-string? text)
+	(equal? 0 (string-length (string-trim-both text))))
+
+; like a non-interactive repl that runs a line at a time, printing either the
+; stack or error message that occurred, restarting the interpreter on errors			
+(define (run-test filename)
+	(with-input-from-file filename (lambda ()
+		(let ((intr (new-interpreter)))
+			(let run-loop ((line (read-line)))
+				(if (not (eof-object? line))
+					(if (blank-string? line)
+						(run-loop (read-line))
+					(begin
+			
+						(print ">> " line)
+						(let ((result (compile-and-run intr line)))
+							(if (null? result)
+								; no errors, print stack and continue
+								(begin
+									(print "=>" (reprStack intr))
+									(run-loop (read-line)))
+								; else print error and restart interpreter
+								(begin
+									(print result)
+									(set! intr (new-interpreter))
+									(run-loop ((read-line))))))))))))))
+
 (import srfi-193)
 (import (chicken file))
 
@@ -282,6 +313,7 @@
 		; decide what to do based on args
 		(cond
 			((not filename) (repl))
+			((and filename test-mode) (run-test filename))
 			((and filename (not test-mode)) (run-program filename))
 			(else (print "NOT IMPLEMENTED YET")))))
 

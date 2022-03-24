@@ -1,8 +1,8 @@
 
 all: repl
 
-CFLAGS=
-#CFLAGS=-O3
+#CFLAGS=
+CFLAGS=-O3
 
 clean:
 	rm -f *.o repl *.import.scm *.link

@@ -24,6 +24,7 @@
 (import srfi-69) ; hash-tables
 ; shorthand
 (define slot slot-value)
+(import (chicken flonum)) ; flonum-print-precision
 
 (import langtypes)
 (import errors)
@@ -111,12 +112,12 @@
 		((integer? A)
 			(cond
 				((integer? B) (push intr (+ A B)))
-				((LangFloat? B) (push intr (make LangFloat 'value (+ A (value B)))))
+				((LangFloat? B) (push intr (make-lang-float (+ A (value B)))))
 				(else (lang-error '+ "Don't know how to add " A " and " B))))
 		((LangFloat? A)
 			(cond
-				((integer? B) (push intr (make LangFloat 'value (+ (value A) B))))
-				((LangFloat? B) (push intr (make LangFloat 'value (+ (value A) (value B)))))
+				((integer? B) (push intr (make-lang-float (+ (value A) B))))
+				((LangFloat? B) (push intr (make-lang-float (+ (value A) (value B)))))
 				(else (lang-error '+ "Don't know how to add " A " and " B))))
 		((LangString? A)
 			(if (LangString? B)
@@ -139,12 +140,12 @@
 		((integer? A)
 			(cond
 				((integer? B) (push intr (- A B)))
-				((LangFloat? B) (push intr (make LangFloat 'value (- A (value B)))))
+				((LangFloat? B) (push intr (make-lang-float (- A (value B)))))
 				(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		((LangFloat? A)
 			(cond
-				((integer? B) (push intr (make LangFloat 'value (- (value A) B))))
-				((LangFloat? B) (push intr (make LangFloat 'value (- (value A) (value B)))))
+				((integer? B) (push intr (make-lang-float (- (value A) B))))
+				((LangFloat? B) (push intr (make-lang-float (- (value A) (value B)))))
 				(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		
@@ -154,12 +155,12 @@
 		((integer? A)
 			(cond
 				((integer? B) (push intr (* A B)))
-				((LangFloat? B) (push intr (make LangFloat 'value (* A (value B)))))
+				((LangFloat? B) (push intr (make-lang-float (* A (value B)))))
 				(else (lang-error '* "Don't know how to multiply " A " and " B))))
 		((LangFloat? A)
 			(cond
-				((integer? B) (push intr (make LangFloat 'value (* (value A) B))))
-				((LangFloat? B) (push intr (make LangFloat 'value (* (value A) (value B)))))
+				((integer? B) (push intr (make-lang-float (* (value A) B))))
+				((LangFloat? B) (push intr (make-lang-float (* (value A) (value B)))))
 				(else (lang-error '* "Don't know how to multiply " A " and " B))))
 		(else (lang-error '* "Don't know how to multiply " A " and " B))))
 		
@@ -168,7 +169,7 @@
 	(if (and (is-numeric? A) (is-numeric? B))
 		(if (= (value B) 0)
 			(lang-error '/ "Divide by zero")
-			(push intr (make LangFloat 'value (exact->inexact (/ (value A) (value B))))))
+			(push intr (make-lang-float (/ (value A) (value B)))))
 		(lang-error '/ "Don't know how to divide " A " and " B)))
 		
 ;; see C++ version for extensive comments on divmod
@@ -284,11 +285,13 @@
 	(list
 		; each as: <function-name> <arg-list-typestr> <function>
 		(list "int?" "*" (lambda (intr obj) (push intr (integer? obj))))
+		(list "float?" "*" (lambda (intr obj) (push intr (LangFloat? obj))))
 		(list "null?" "*" (lambda (intr obj) (push intr (LangNull? obj))))
 		(list "bool?" "*" (lambda (intr obj) (push intr (boolean? obj))))
 		(list "list?" "*" (lambda (intr obj) (push intr (LangList? obj))))
 		(list "string?" "*" (lambda (intr obj) (push intr (LangString? obj))))
 		(list "symbol?" "*" (lambda (intr obj) (push intr (string? obj))))
+		(list "null" "" (lambda (intr) (push intr (make LangNull))))
 		(list "reader-open-string" "s" reader-open-string)
 		(list "make-list" "i" builtin-make-list)
 		(list "set!" "*i" builtin-set)
@@ -317,8 +320,8 @@
 			(push intr (string->number (value 
 				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-int"))))))
 		(list "parse-float" "" (lambda (intr) 
-			(push intr (make LangFloat 'value (string->number (value 
-				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-int")))))))
+			(push intr (make-lang-float (string->number (value 
+				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-float")))))))
 		(list "str" "*" (lambda (intr obj) (push intr (make LangString 'value (fmtDisplay obj)))))
 		(list "repr" "*" (lambda (intr obj) (push intr (make LangString 'value (fmtStackPrint obj)))))
 		(list "puts" "s" (lambda (intr obj) (display (value obj))))
@@ -326,6 +329,7 @@
 		(list "make-lambda" "L" (lambda (intr llist) (push intr (make LangLambda 'llist llist))))
 		(list "make-symbol" "i" builtin-make-symbol)
 		(list ".dumpword" "y" builtin-dumpword)
+		(list "f.setprec" "i" (lambda (intr i) (flonum-print-precision i)))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test equal?))

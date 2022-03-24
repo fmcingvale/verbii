@@ -37,13 +37,14 @@
 		(else text)))
 
 (define (deserialize-stream intr fileIn)
-	(let ((line (string-trim-both (read-line fileIn))))
+	(let ((line (read-line fileIn)))
 		(if (not (eof-object? line))
 			(begin
+				(set! line (string-trim-both line))
 				;(print "Line: " line)
 				(case (string-ref line 0)
 					((#\i) (string->number (string-drop line 2)))
-					((#\f) (make LangFloat 'value (string->number (string-drop line 2))))
+					((#\f) (make-lang-float (string->number (string-drop line 2))))
 					((#\n) (make LangNull))
 					((#\s) 
 						(if (>= (string-length line) 2) ; watch for empty string
