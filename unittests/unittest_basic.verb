@@ -308,6 +308,8 @@ clear
 'hello-a-long-symbol 4 3 slice
 'short 3 100 slice
 'simple -4 2 slice
+'what-about-zero 6 0 slice
+depth
 
 clear
 10 20 30 40 50 60 70 80 90 100 10 make-list
@@ -366,7 +368,7 @@ null null?
 0 null?
 
 clear
-10 'word #13.425 3 4 5 3 make-list "end" 5 make-list
+10 'word #13.125 3 4 5 3 make-list "end" 5 make-list
 make-lambda
 unmake
 unmake

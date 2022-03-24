@@ -74,6 +74,7 @@ clear
 123 #123 ==
 -45 #-45 ==
 123 #1234 ==
+#987.0 987 ==
 
 clear
 "hello" "hello" ==
@@ -101,6 +102,17 @@ clear
 212 -84 >
 123 123 >
 -456 -456 >
+
+clear
+( make sure f.setprec is working )
+4 f.setprec
+#1.2345678 . CR
+
+1 f.setprec
+#0.3456789 . CR
+
+2 f.setprec
+#8.8567843 . CR
 
 ( jumps )
 clear

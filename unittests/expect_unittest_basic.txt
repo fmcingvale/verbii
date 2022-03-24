@@ -522,6 +522,10 @@ oneword
 => o-a rt 
 >> 'simple -4 2 slice
 => o-a rt mp 
+>> 'what-about-zero 6 0 slice
+=> o-a rt mp  
+>> depth
+=> o-a rt mp  4 
 >> clear
 => 
 >> 10 20 30 40 50 60 70 80 90 100 10 make-list
@@ -624,14 +628,14 @@ oneword
 => true false true false true false true false true false true false 
 >> clear
 => 
->> 10 'word #13.425 3 4 5 3 make-list "end" 5 make-list
-=> [ 10 word #13.425000000000001 [ 3 4 5 ] "end" ] 
+>> 10 'word #13.125 3 4 5 3 make-list "end" 5 make-list
+=> [ 10 word #13.125 [ 3 4 5 ] "end" ] 
 >> make-lambda
 => <lambda> 
 >> unmake
-=> [ 10 word #13.425000000000001 [ 3 4 5 ] "end" ] 
+=> [ 10 word #13.125 [ 3 4 5 ] "end" ] 
 >> unmake
-=> 10 word #13.425000000000001 [ 3 4 5 ] "end" 5 
+=> 10 word #13.125 [ 3 4 5 ] "end" 5 
 >> clear
 => 
 >> ( append should modify original object )

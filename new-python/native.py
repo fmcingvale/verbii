@@ -9,7 +9,7 @@ from math import floor
 from xml.dom.minidom import ReadOnlySequentialNamedNodeMap
 from errors import LangError
 from interpreter import Interpreter
-from langtypes import LangLambda, LangString, FLOAT_PRECISION, fmtDisplay, fmtStackPrint, \
+from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric
 
 # has to be set externally
@@ -192,8 +192,8 @@ def builtin_div(I):
 		raise LangError("Unable to divide '{0}' and '{1}'".format(a,b))
 
 def builtin_fsetprec(I, a):
-	global FLOAT_PRECISION 
-	FLOAT_PRECISION = a
+	import langtypes
+	langtypes.FLOAT_PRECISION = a
 
 def builtin_gt(I):
 	b = popIntOrFloat(I)
