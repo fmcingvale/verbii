@@ -110,73 +110,73 @@
 >> clear
 => 
 >> 12 12 ==
-=> true 
+=> <true> 
 >> -34 -34 ==
-=> true true 
+=> <true> <true> 
 >> 20 8 ==
-=> true true false 
+=> <true> <true> <false> 
 >> clear
 => 
 >> #123.125 #123.125 ==
-=> true 
+=> <true> 
 >> #-4.5 #-4.5 ==
-=> true true 
+=> <true> <true> 
 >> #45.125 #35.125 ==
-=> true true false 
+=> <true> <true> <false> 
 >> clear
 => 
 >> 123 #123 ==
-=> true 
+=> <true> 
 >> -45 #-45 ==
-=> true true 
+=> <true> <true> 
 >> 123 #1234 ==
-=> true true false 
+=> <true> <true> <false> 
 >> #987.0 987 ==
-=> true true false true 
+=> <true> <true> <false> <true> 
 >> clear
 => 
 >> "hello" "hello" ==
-=> true 
+=> <true> 
 >> "hello5" "hello" ==
-=> true false 
+=> <true> <false> 
 >> clear
 => 
 >> 'abc 'abc ==
-=> true 
+=> <true> 
 >> 'abc 'abcd ==
-=> true false 
+=> <true> <false> 
 >> 'abc "abc" ==
-=> true false false 
+=> <true> <false> <false> 
 >> clear
 => 
 >> ( lambdas are never equal to anything, but it should not cause an error to compare them )
 => 
 >> { 1 2 3 } { 1 2 3 } ==
-=> false 
+=> <false> 
 >> { 10 20 30 } dup ==
-=> false false 
+=> <false> <false> 
 >> { 11 22 33 } 112233 ==
-=> false false false 
+=> <false> <false> <false> 
 >> clear
 => 
 >> 1 1 == 2 2 == ==
-=> true 
+=> <true> 
 >> 1 2 == 2 3 == ==
-=> true true 
+=> <true> <true> 
 >> 1 1 == 2 1 == ==
-=> true true false 
+=> <true> <true> <false> 
 >> ( > )
-=> true true false 
+=> <true> <true> <false> 
 >> -12 8 >
-=> true true false false 
+=> <true> <true> <false> <false> 
 >> 100 2 >
-=> true true false false true 
+=> <true> <true> <false> <false> <true> 
 >> 212 -84 >
-=> true true false false true true 
+=> <true> <true> <false> <false> <true> <true> 
 >> 123 123 >
-=> true true false false true true false 
+=> <true> <true> <false> <false> <true> <true> <false> 
 >> -456 -456 >
-=> true true false false true true false false 
+=> <true> <true> <false> <false> <true> <true> <false> <false> 
 >> clear
 => 
 >> ( make sure f.setprec is working )

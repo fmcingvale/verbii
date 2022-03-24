@@ -251,6 +251,7 @@ static void builtin_reader_open_string(Interpreter *intr) {
 	reader_input = istringstream(text);
 }
 
+// simple reader interface here ... 'next' is only operation
 static void builtin_reader_next(Interpreter *intr) {
 	string word;
 	reader_input >> word;

@@ -342,6 +342,15 @@ Object Object::opSlice(int index, int nr) {
 
 int FLOAT_PRECISION = 17;
 
+/*
+	"display printing" shows values in an undecorated format, so comparing
+	with stack-printing:
+		- floats DO NOT get a '#' prefix
+		- strings are shown WITHOUT quotes
+		- symbols get a ' since they are not meant to be used as string
+		  values, so printing is probably being used for debugging, so show as symbol
+		- true/false do not get < .. >
+*/
 string Object::fmtDisplay() const {
 	switch(type) {
 		case TYPE_NULL: return "<null>";
@@ -366,6 +375,15 @@ string Object::fmtDisplay() const {
 	}
 }
 
+/*
+ 	"stack printing" shows objects in a way that their type can be deduced.
+ 	specifically this means:
+		- floats get a '#' prefix to distinguish them from integers
+		- strings are shown as "..."
+		- symbols do NOT get ' since they can be distinguised from strings
+		  by lack of " .. "
+		- true/false become <true>, <false> to distinguish them from symbols
+*/
 string Object::fmtStackPrint() const {
 	switch(type) {
 		case TYPE_NULL: return "<null>";
@@ -378,7 +396,7 @@ string Object::fmtStackPrint() const {
 			snprintf(buf, 39, "#%.*g", FLOAT_PRECISION, data.d);
 			return string(buf);
 		}
-		case TYPE_BOOL: return data.b ? "true" : "false";
+		case TYPE_BOOL: return data.b ? "<true>" : "<false>";
 		case TYPE_LAMBDA: return "<lambda>";
 		// add " .. " so its clear on stack that it is a string
 		case TYPE_STRING: return "\"" + string(data.str) + "\"";

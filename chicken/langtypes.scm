@@ -131,10 +131,7 @@
 
 ;(define (LangNull? obj) (subclass? (class-of obj) LangNull))
 
-;; "stack printing" shows objects in a way that their type can be deduced.
-;; so i.e. symbols are shown as 'a-symbol, strings as "a string", etc.
-;;
-;; NOTE: this differs from other ports where symbols do not get a '
+;; see c++ comments for display vs. stack format
 (define (fmtStackPrint obj)
 	;(print "FMT_STACK_PRINT:" obj)
 	(cond
@@ -145,7 +142,7 @@
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "<true>" "<false>"))
-		((LangSymbol? obj) (string-append "'" obj)) ; obj is a string
+		((LangSymbol? obj) obj) ; obj is a string
 		((LangString? obj) (string-append "\"" (value obj) "\""))
 		((LangList? obj)
 			(string-append 
@@ -159,10 +156,7 @@
 		; print message and exit
 		(else (print "FATAL ERROR: Unknown object in fmtStackPrint: " obj) (exit 1))))
 
-;; "display printing" shows values in an undecorated format, so no
-;; quotes, or ', etc.
-;;
-;; NOTE: this differs from other ports where displayed symbols get '
+;; see c++ comments for display vs. stack format
 (define (fmtDisplay obj)
 	(cond
 		((integer? obj) (number->string obj))
@@ -173,7 +167,7 @@
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "true" "false"))
-		((LangSymbol? obj) obj) ; obj is a string
+		((LangSymbol? obj) (string-append "'" obj)) ; obj is a string
 		((LangString? obj) (value obj))
 		; OTHER PORTS USE fmtStackPrint here ... trying this out to see if i like it better ...
 		((LangList? obj)

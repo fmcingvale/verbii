@@ -99,37 +99,37 @@ Hello world!
 >> clear
 => 
 >> true
-=> true 
+=> <true> 
 >> false
-=> true false 
+=> <true> <false> 
 >> clear
 => 
 >> true not
-=> false 
+=> <false> 
 >> false not
-=> false true 
+=> <false> <true> 
 >> clear
 => 
 >> true true or
-=> true 
+=> <true> 
 >> true false or
-=> true true 
+=> <true> <true> 
 >> false true or
-=> true true true 
+=> <true> <true> <true> 
 >> false false or
-=> true true true false 
+=> <true> <true> <true> <false> 
 >> clear
 => 
 >> true true and
-=> true 
+=> <true> 
 >> true false and
-=> true false 
+=> <true> <false> 
 >> false true and
-=> true false false 
+=> <true> <false> <false> 
 >> false false and
-=> true false false false 
+=> <true> <false> <false> <false> 
 >> ( stack operations )
-=> true false false false 
+=> <true> <false> <false> <false> 
 >> clear
 => 
 >> 11 22 33 44 55 66 77
@@ -165,29 +165,29 @@ Hello world!
 >> clear
 => 
 >> 10 20 >=
-=> false 
+=> <false> 
 >> 30 20 >=
-=> false true 
+=> <false> <true> 
 >> 40 40 >=
-=> false true true 
+=> <false> <true> <true> 
 >> clear
 => 
 >> 10 20 <
-=> true 
+=> <true> 
 >> 30 10 <
-=> true false 
+=> <true> <false> 
 >> 40 40 <
-=> true false false 
+=> <true> <false> <false> 
 >> clear
 => 
 >> 15 20 <=
-=> true 
+=> <true> 
 >> 35 21 <=
-=> true false 
+=> <true> <false> 
 >> 40 40 <=
-=> true false true 
+=> <true> <false> <true> 
 >> ( combinations of rich math operations )
-=> true false true 
+=> <true> <false> <true> 
 >> clear
 => 
 >> 10 20 +
@@ -579,17 +579,17 @@ oneword
 >> #3.75 repr
 => "1234" "#3.75" 
 >> true repr
-=> "1234" "#3.75" "true" 
+=> "1234" "#3.75" "<true>" 
 >> false repr
-=> "1234" "#3.75" "true" "false" 
+=> "1234" "#3.75" "<true>" "<false>" 
 >> 10 20 30 40 4 make-list repr
-=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" 
+=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" 
 >> { 1 2 3 } repr
-=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" "<lambda>" 
+=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<lambda>" 
 >> 'a-long-symbol repr
-=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" 
+=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" 
 >> "hello there world" repr
-=> "1234" "#3.75" "true" "false" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" ""hello there world"" 
+=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" ""hello there world"" 
 >> clear
 => 
 >> { 10 20 30 40 }
@@ -603,29 +603,29 @@ oneword
 >> clear
 => 
 >> 123 int?
-=> true 
+=> <true> 
 >> #123 int?
-=> true false 
+=> <true> <false> 
 >> #446 float?
-=> true false true 
+=> <true> <false> <true> 
 >> 123 float?
-=> true false true false 
+=> <true> <false> <true> <false> 
 >> "hello" string?
-=> true false true false true 
+=> <true> <false> <true> <false> <true> 
 >> "there" symbol?
-=> true false true false true false 
+=> <true> <false> <true> <false> <true> <false> 
 >> 'world symbol?
-=> true false true false true false true 
+=> <true> <false> <true> <false> <true> <false> <true> 
 >> 'foobar string?
-=> true false true false true false true false 
+=> <true> <false> <true> <false> <true> <false> <true> <false> 
 >> true bool?
-=> true false true false true false true false true 
+=> <true> <false> <true> <false> <true> <false> <true> <false> <true> 
 >> 1 bool?
-=> true false true false true false true false true false 
+=> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> 
 >> null null?
-=> true false true false true false true false true false true 
+=> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> <true> 
 >> 0 null?
-=> true false true false true false true false true false true false 
+=> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> 
 >> clear
 => 
 >> 10 'word #13.125 3 4 5 3 make-list "end" 5 make-list
@@ -663,16 +663,16 @@ oneword
 >> ( tests of 'any' )
 => [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ] 
 >> clear "abcde" { "e" == } any
-=> true 
+=> <true> 
 >> clear "01234" { "9" == } any
-=> false 
+=> <false> 
 >> clear 10 20 30 40 4 make-list { 30 > } any
-=> true 
+=> <true> 
 >> clear 10 20 30 40 4 make-list { 0 <  } any
-=> false 
+=> <false> 
 >> clear "mnopqr" dup { "m" >= } all swap { "r" <= } all and
-=> true 
+=> <true> 
 >> clear "1234.567" dup { "0" >= } all swap { "9" <= } all and
-=> false 
+=> <false> 
 >> clear "1234567" dup { "0" >= } all swap { "9" <= } all and
-=> true 
+=> <true> 

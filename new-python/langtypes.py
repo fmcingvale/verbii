@@ -30,7 +30,7 @@ class LangLambda(object):
 		return "<lambda>"
 
 def fmtDisplay(obj):
-	"get obj as string for normal program output (like '.')"
+	"see c++ comments for display vs. stack format"
 	if obj is None:
 		return "<null>"
 	elif type(obj) is int:
@@ -55,7 +55,7 @@ def fmtDisplay(obj):
 		raise LangError("Don't know how to print object: " + str(obj))
 
 def fmtStackPrint(obj):
-	"get obj as verbose string for stack display"
+	"see c++ comments for display vs. stack format"
 	if obj is None:
 		return "<null>"
 	elif type(obj) is int:
@@ -64,9 +64,9 @@ def fmtStackPrint(obj):
 		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
 		return '#' + fmt.format(obj)
 	elif obj is True:
-		return "true"
+		return "<true>"
 	elif obj is False:
-		return "false"
+		return "<false>"
 	elif isinstance(obj, LangLambda):
 		return "<lambda>"
 	elif isinstance(obj, LangString):

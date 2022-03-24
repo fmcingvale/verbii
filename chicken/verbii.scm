@@ -23,14 +23,19 @@
 ; shorthand
 (define slot slot-value)
 
-; must comment these out when building standalone executable.
-; uncomment them when running under interpreter.
-; ... there has to be a better way ...
-(load "langtypes.scm")
-(load "errors.scm")
-(load "deserializer.scm")
-(load "interpreter.scm")
-(load "native.scm")
+(import (chicken platform))
+(cond-expand
+	(compiling #t)
+	; call load only when running as a script, not when compiled
+	; (if called in the compiled version, it appears to run the .scm instead
+	; of the compiled versions)
+	(else
+		;(print "LOADING .SCM FILES")
+		(load "langtypes.scm")
+		(load "errors.scm")
+		(load "deserializer.scm")
+		(load "interpreter.scm")
+		(load "native.scm")))
 
 (import langtypes)
 (import errors)
@@ -280,12 +285,12 @@
 								(begin
 									(print result)
 									(set! intr (new-interpreter))
-									(run-loop ((read-line))))))))))))))
+									(run-loop (read-line)))))))))))))
 
 (import srfi-193)
 (import (chicken file))
 
-(print "COMMAND LINE: " (command-line))
+;(print "COMMAND LINE: " (command-line))
 ;(repl)
 
 (define (main)
@@ -306,10 +311,10 @@
 							(begin
 								(print "Unknown arg: " arg)
 								(exit 1))))))) (cdr (command-line)))
-		(print "Parsed args:")
-		(print "Filename: " filename)
-		(print "test mode: " test-mode)
-		(print "script args: " script-args)
+		;(print "Parsed args:")
+		;(print "Filename: " filename)
+		;(print "test mode: " test-mode)
+		;(print "script args: " script-args)
 		; decide what to do based on args
 		(cond
 			((not filename) (repl))

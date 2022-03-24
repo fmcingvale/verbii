@@ -13,6 +13,8 @@ else
 	UTEST="./test"
 fi
 
+mkdir -p ../unittests/RESULTS/c++
+
 $REPL -test ../unittests/unittest_core.verb > ../unittests/RESULTS/c++/actual_unittest_core.txt
 $REPL -test ../unittests/unittest_basic.verb > ../unittests/RESULTS/c++/actual_unittest_basic.txt
 $REPL -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/c++/actual_unittest_errors.txt

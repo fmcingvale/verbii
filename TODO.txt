@@ -52,3 +52,9 @@ never visible from verbii code
 
 * why do we need a list AND a lambda? why not just call lists? there needs to be something different about lambdas to justify the separate type (like closures?)
 
+* 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count var and 'NAME del so they be implemented outside of interpreter correctly
+
+* add a 'safe-compile-and-run' to other ports (like chicken) -- should allow simplifying repls.
+	* make run-test in other ports like chicken ... much more straightforward implementation
+
+* ensure consistent behavior between ports on when lists are copied -- prime example is .dumpword - it should create a copy of the objlist because it is not safe for programs to try and edit words directly -- the compiler is allowed to transform the objlist so cannot assume the source code matches 1:1 with the compiled objlist

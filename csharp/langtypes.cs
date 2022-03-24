@@ -13,6 +13,7 @@ using System.Collections.Generic;
 
 public abstract class LangObject {
 	public abstract string typename();
+	// see c++ comments for display vs. stack format
 	public abstract string fmtDisplay();
 	public abstract string fmtStackPrint();
 
@@ -102,7 +103,7 @@ public class LangBool : LangObject {
 
 	public override string typename() { return "bool"; }
 	public override string fmtDisplay() { return value ? "true" : "false"; }
-	public override string fmtStackPrint() { return fmtDisplay(); }
+	public override string fmtStackPrint() { return value ? "<true>" : "<false>"; }
 }
 
 public class LangString : LangObject {

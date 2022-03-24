@@ -130,7 +130,7 @@ function isList(obj)
 	return type(obj) == "table" and obj.__class__ == nil
 end
 
--- format obj for normal program output, like '.'
+-- see c++ comments for display vs. stack format
 function fmtDisplay(obj)
 	if type(obj) == "number" then
 		return tostring(obj)
@@ -155,7 +155,7 @@ function fmtDisplay(obj)
 	end
 end
 
--- format obj for stack display
+-- see c++ comments for display vs. stack format
 function fmtStackPrint(obj)
 	if obj == nil then
 		return "<VOID>" -- the type that means "nothing, not even null"
@@ -168,9 +168,9 @@ function fmtStackPrint(obj)
 		return "#" .. string.format(fmt, obj.value)
 	elseif type(obj) == "boolean" then
 		if obj then
-			return "true"
+			return "<true>"
 		else
-			return "false"
+			return "<false>"
 		end
 	elseif isCallableWordlist(obj) then
 		return "<lambda>"
