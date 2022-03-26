@@ -138,7 +138,7 @@
 		((integer? obj) (number->string obj))
 		((LangFloat? obj) 
 			(let ((s (string-append "#" (number->string (value obj)))))
-				(if (and (> (string-length s) 2) (equal? (string-take-right s 2) ".0"))
+				(if (and (> (string-length s) 2) (string=? (string-take-right s 2) ".0"))
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "<true>" "<false>"))
@@ -163,7 +163,7 @@
 		((LangFloat? obj) 
 			; for consistency with other ports, if number string ends with ".0", remove it
 			(let ((s (number->string (value obj))))
-				(if (and (> (string-length s) 2) (equal? (string-take-right s 2) ".0"))
+				(if (and (> (string-length s) 2) (string=? (string-take-right s 2) ".0"))
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "true" "false"))

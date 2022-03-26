@@ -232,8 +232,8 @@
 			(display ">> ")
 			(let ((line (read-line)))
 				(cond
-					((equal? line "quit")) ; stop looping
-					((equal? line ",q")) ; shorthand for 'quit'
+					((string=? line "quit")) ; stop looping
+					((string=? line ",q")) ; shorthand for 'quit'
 					(else
 						(let ((result (compile-and-run intr line)))
 							(if (null? result)
@@ -261,7 +261,7 @@
 
 ; does text contain only whitespace?
 (define (blank-string? text)
-	(equal? 0 (string-length (string-trim-both text))))
+	(= 0 (string-length (string-trim-both text))))
 
 ; like a non-interactive repl that runs a line at a time, printing either the
 ; stack or error message that occurred, restarting the interpreter on errors			
@@ -303,8 +303,8 @@
 				(set! script-args (append script-args (list arg)))
 				; else process as normal
 				(cond
-					((equal? arg "-test") (set! test-mode #t))
-					((equal? arg "--") (set! script-args '())) ; rest go to script-args
+					((string=? arg "-test") (set! test-mode #t))
+					((string=? arg "--") (set! script-args '())) ; rest go to script-args
 					(else
 						(if (and (file-exists? arg) (not filename))
 							(set! filename arg)

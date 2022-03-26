@@ -34,3 +34,9 @@ interpreted: 83 seconds (from 104)
 compiled: 40 seconds (from 54)
 
 => so ... it appears that string-related stuff is really slow.
+
+==============
+Changed: replaced equal? with type-appropriate equality checks.
+
+interpreted: 82 seconds (no change)
+compiled: 35 seconds (improved from 40)

@@ -52,7 +52,7 @@
 							(make LangString 'value "")))
 					((#\y) (string-drop line 2)) ; verbii symbols are scheme strings
 					((#\b)
-						(if (equal? (string-drop line 2) "true")
+						(if (string=? (string-drop line 2) "true")
 							#t #f))
 					((#\L)
 						(let read-list ((nr (string->number (string-drop line 2))) (lst '()))

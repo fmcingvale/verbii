@@ -51,7 +51,7 @@
 		(HEAP_NEXTFREE accessor: HEAP_NEXTFREE initform: (+ STACK_SIZE LOCALS_SIZE))
 
 		; WORDS[name: string] = LangList
-		(WORDS accessor: WORDS initform: (make-hash-table #:test equal?))
+		(WORDS accessor: WORDS initform: (make-hash-table #:test string=?))
 
 		(code '()) ; currently running code (LangList)
 		(codepos -1) ; next obj to run as index into code
@@ -130,8 +130,8 @@
 			(get (slot intr 'code) (slot intr 'codepos))))
 
 	(define-method (prevObj (intr <Interpreter>))
-		(if (equal? (slot intr 'codepos) 0)
-			(make LangVoid)
+		(if (= (slot intr 'codepos) 0)
+			(make-LangVoid)
 			(begin
 				(set! (slot intr 'codepos) (- (slot intr 'codepos) 1))
 				(get (slot intr 'code) (slot intr 'codepos)))))
@@ -192,9 +192,9 @@
 			args)))
 					
 ; is str: '>>NAME'
-(define (is-forward-jump? str) (and (>= (len str) 2) (equal? (string-take str 2) ">>")))
+(define (is-forward-jump? str) (and (>= (len str) 2) (string=? (string-take str 2) ">>")))
 ; is str: '<<NAME'
-(define (is-backward-jump? str) (and (>= (len str) 2) (equal? (string-take str 2) "<<")))
+(define (is-backward-jump? str) (and (>= (len str) 2) (string=? (string-take str 2) "<<")))
 
 (define-method (do-jump (intr <Interpreter>) target)
 	(let ((movefn '()))
@@ -205,7 +205,7 @@
 		(let loop ((obj (movefn intr 'do-jump)))
 			(cond
 				((LangVoid? obj) (lang-error 'do-jump "End of input looking for: " target))
-				((and (LangSymbol? obj) (equal? (string-drop target 2) (string-drop obj 1)))
+				((and (LangSymbol? obj) (string=? (string-drop target 2) (string-drop obj 1)))
 					; found it, stop
 				)
 				(else (loop (movefn intr 'do-jump)))))))
@@ -235,11 +235,11 @@
 			; symbols do the most stuff ...
 			((LangSymbol? obj) ; obj is a string
 				(cond
-					((equal? (string-ref obj 0) #\')
+					((char=? (string-ref obj 0) #\')
 						; remove one level of quoting and push
 						(push intr (string-drop obj 1))
 						(run-loop (nextObj intr)))
-					((equal? obj "return")
+					((string=? obj "return")
 						; as above - return or exit
 						(if (havePushedFrames intr)
 							(begin
@@ -249,7 +249,7 @@
 							(set! (slot intr 'code) '())
 						))
 					; if
-					((equal? obj "if")
+					((string=? obj "if")
 						(let ((target (nextSymbolOrFail intr "if"))
 								(bval (popTypeOrFail intr boolean? "true|false" 'if)))
 							; this only repositions the reader
@@ -266,7 +266,7 @@
 						(run-loop (nextObj intr)))
 					; var
 					; TODO -- this should pop count from stack instead of being syntax "var count"
-					((equal? obj "var")
+					((string=? obj "var")
 						(let* ((name (nextSymbolOrFail intr "var"))
 								(count (nextObjOrFail intr 'var)))
 							(if (integer? count)
@@ -280,12 +280,12 @@
 								(lang-error 'var "Expecting int for count but got: " count))))
 					; del
 					; TODO -- this should pop symbol from stack instead of being syntax "del NAME"
-					((equal? obj "del")
+					((string=? obj "del")
 						(let ((name (nextSymbolOrFail intr "del")))
 							(hash-table-delete! (WORDS intr) name)
 							(run-loop (nextObj intr))))
 					; call
-					((equal? obj "call")
+					((string=? obj "call")
 						; pop lambda and call
 						(let ((L (popTypeOrFail intr LangLambda? "lambda" 'call)))
 							; TODO - tail call elimination??

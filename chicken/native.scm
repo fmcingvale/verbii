@@ -82,20 +82,20 @@
 		((LangNull? A) (push intr (LangNull? B)))
 		((integer? A)
 			(cond
-				((integer? B) (push intr (equal? A B)))
-				((LangFloat? B) (push intr (equal? (exact->inexact A) (value B))))
+				((integer? B) (push intr (= A B)))
+				((LangFloat? B) (push intr (= A (value B))))
 				(else (push intr #f))))
 		((LangFloat? A)
 			(cond
-				((integer? B) (push intr (equal? (value A) (exact->inexact B))))
-				((LangFloat? B) (push intr (equal? (value A) (value B))))
+				((integer? B) (push intr (= (value A) B)))
+				((LangFloat? B) (push intr (= (value A) (value B))))
 				(else (push intr #f))))
 		((LangString? A)
-			(push intr (and (LangString? B) (equal? (value A) (value B)))))
+			(push intr (and (LangString? B) (string=? (value A) (value B)))))
 		((string? A)
-			(push intr (and (string? B) (equal? A B))))
+			(push intr (and (string? B) (string=? A B))))
 		((boolean? A)
-			(push intr (and (boolean? B) (equal? A B))))
+			(push intr (and (boolean? B) (eq? A B))))
 		((LangLambda? A) (push intr #f)) ; lambdas never equal to anything else even themselves
 		(else (lang-error '== "Don't know how to compare " A " and " B))))
 
@@ -332,6 +332,6 @@
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 	))
 
-(set! BUILTINS (alist->hash-table N_BUILTINS #:test equal?))
+(set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))
 
 ) ; end of modules
