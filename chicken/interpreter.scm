@@ -167,24 +167,24 @@
 			obj
 			(lang-error wheresym "Expecting symbol but got " (fmtStackPrint obj)))))
 
-; typestr is list of type strings, like in serialize, e.g.: "i", "f", "s", etc,
-; concatenated into a string. use "*" for "any object"
+; typelist is a list of symbols giving argument types. symbols are same as in deserializer,
+; i.e. 'i, 'f, 's, or '* meaning "any object"
 ;
 ; returns popped arglist
-(define (pop-typed-objs intr typestr wheresym)
-	;(print "POP-TYPED-OBJS: typestr=" typestr)
-	(let loop ((argtypes typestr) (args '()))
-		;(print "LOOP, typestr=" argtypes)
+(define (pop-typed-objs intr typelist wheresym)
+	;(print "POP-TYPED-OBJS " typelist)
+	(let loop ((argtypes typelist) (args '()))
+		;(print "LOOP, argtypes=" argtypes " args=" args)
 		;(print "CHAR=" (string-take argtypes 1))
-		(if (> (string-length argtypes) 0)
-			(loop (string-drop-right argtypes 1) (cons 
-				(case (string-ref argtypes (- (string-length argtypes) 1))
-					((#\i) (popTypeOrFail intr integer? "integer" wheresym))
-					((#\f) (value (popTypeOrFail intr LangFloat? "float" wheresym)))
-					((#\s) (value (popTypeOrFail intr LangString? "string" wheresym)))
-					((#\y) (popTypeOrFail intr string? "symbol" wheresym))
-					((#\L) (popTypeOrFail intr LangList? "list" wheresym))
-					((#\*) (pop intr))
+		(if (not (null? argtypes))
+			(loop (cdr argtypes) (cons 
+				(case (car argtypes)
+					((i) (popTypeOrFail intr integer? "integer" wheresym))
+					((f) (value (popTypeOrFail intr LangFloat? "float" wheresym)))
+					((s) (value (popTypeOrFail intr LangString? "string" wheresym)))
+					((y) (popTypeOrFail intr string? "symbol" wheresym))
+					((L) (popTypeOrFail intr LangList? "list" wheresym))
+					((*) (pop intr))
 					(else 
 						(lang-error wheresym "Unknown argtype: " argtypes)))
 				args))

@@ -1,0 +1,36 @@
+
+Before starting any chicken optimization (commit [1796e19])
+
+(NOTE: makediffs was run after EACH run below to ensure no new errors.)
+
+time ./regression.sh, interpreted: 104 seconds
+time, compiled (with -O3): 54 seconds
+
+For baseline comparison with other ports:
+	* Python:	5.7 seconds
+	* Lua:		5.6 seconds
+	* C#: 		2.8 seconds
+	* C++: 		1.7 seconds (non-optimized)
+	* C++:		0.8 seconds (-O3)
+
+===============
+Added (declare (declare (standard-bindings)) to all .scm files.
+Result: No difference in times.
+
+===============
+Added (declare (extended-bindings)) [in addition to above].
+Result: No difference in times.
+
+===============
+Changed: memset, memget, pop, push from (define-method) to (define)
+Result: No difference in times.
+
+===============
+Changed: pop-typed-objs - use a list for argtypes instead of a string.
+
+improved times:
+
+interpreted: 83 seconds (from 104)
+compiled: 40 seconds (from 54)
+
+=> so ... it appears that string-related stuff is really slow.
