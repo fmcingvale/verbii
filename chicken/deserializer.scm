@@ -4,6 +4,11 @@
 ;;; Copyright (c) 2022 Frank McIngvale, see LICENSE
 ;;;==================================================================================
 
+;; optimization settings (these are supposed to be global but not sure how they are
+;; visible in different compilation units, so I'm including this header in all files
+(declare (standard-bindings))
+(declare (extended-bindings))
+
 ; module header
 (module deserializer *
 (import scheme)
@@ -13,18 +18,19 @@
 ; start of module code
 
 ; could probably trim some of these ...
-(import coops-primitive-objects)
+;(import coops-primitive-objects)
 (import srfi-13) ; string library
 (import srfi-34) ; exceptions
 (import (chicken format)) ; fprintf
 (import srfi-1) ; list library
-(import coops)
+;(import coops)
 (import dyn-vector)
 (import miscmacros) ; inc! dec! 
 
 (import srfi-69) ; hash-tables
 (import (chicken io))
 
+(import interpreter)
 (import langtypes)
 (import errors)
 
@@ -45,11 +51,11 @@
 				(case (string-ref line 0)
 					((#\i) (string->number (string-drop line 2)))
 					((#\f) (make-lang-float (string->number (string-drop line 2))))
-					((#\n) (make LangNull))
+					((#\n) (make-LangNull))
 					((#\s) 
 						(if (>= (string-length line) 2) ; watch for empty string
-							(make LangString 'value (replace-escapes (string-drop line 2)))
-							(make LangString 'value "")))
+							(make-LangString (replace-escapes (string-drop line 2)))
+							(make-LangString "")))
 					((#\y) (string-drop line 2)) ; verbii symbols are scheme strings
 					((#\b)
 						(if (string=? (string-drop line 2) "true")
@@ -65,23 +71,23 @@
 					((#\F) ; lambda - read list
 						(let ((llist (deserialize-stream intr fileIn)))
 							(if (LangList? llist)
-								(make LangLambda 'llist llist)
+								(make-LangLambda llist)
 								(lang-error 'deserializer-list 
-									"Expecting list after 'F' but got: " objlist))))
+									"Expecting list after 'F' but got: " llist))))
 					((#\W) ; W name followed by list
 						(let ((name (string-drop line 2))
 								(llist (deserialize-stream intr fileIn)))
 							(if (LangList? llist)
 								(begin
 									;(print "DESERIALIZED WORD: " llist)
-									(hash-table-set! (slot intr 'WORDS) name llist)
-									(make LangVoid))
+									(hash-table-set! (WORDS intr) name llist)
+									(make-LangVoid))
 								(lang-error 'deserializer-word 
-									"Expecting list after 'W' but got: " objlist))))
+									"Expecting list after 'W' but got: " llist))))
 					(else
 						(print "Unknown char: " (string-ref line 0))))
 			)
-			(make LangVoid) ; eof
+			(make-LangVoid) ; eof
 		)
 	)
 )

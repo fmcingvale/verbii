@@ -3,6 +3,7 @@ all: repl
 
 #CFLAGS=
 CFLAGS=-O3
+#CFLAGS=-profile
 
 clean:
 	rm -f *.o repl *.import.scm *.link
@@ -23,7 +24,7 @@ native.o: native.scm
 	./local-chicken/bin/csc -c ${CFLAGS} -static -J native.scm -unit native -o native.o
 
 # note that compilation order is important here
-repl: verbii.scm langtypes.o errors.o deserializer.o interpreter.o native.o 
-	./local-chicken/bin/csc -o repl ${CFLAGS} -static langtypes.o deserializer.o native.o interpreter.o -uses langtypes -uses errors -uses deserializer -uses native -uses interpreter -L -lreadline verbii.scm
+repl: verbii.scm langtypes.o errors.o interpreter.o deserializer.o native.o 
+	./local-chicken/bin/csc -o repl ${CFLAGS} -static langtypes.o deserializer.o native.o interpreter.o -uses langtypes -uses errors -uses deserializer -uses native -uses interpreter verbii.scm
 
 

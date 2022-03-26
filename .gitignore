@@ -18,3 +18,5 @@ chicken/local-chicken/
 *.import.scm
 *.link
 chicken/repl
+chicken/PROFILE.*
+chicken/bench_objs

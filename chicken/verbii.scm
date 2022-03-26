@@ -6,22 +6,24 @@
 ;;; Copyright (c) 2022 Frank McIngvale, see LICENSE
 ;;;==================================================================================
 
+;; optimization settings (these are supposed to be global but not sure how they are
+;; visible in different compilation units, so I'm including this header in all files
+(declare (standard-bindings))
+(declare (extended-bindings))
+
 ;; this is my first try using coops so ... may be some suboptimal stuff here ...
 
-(import coops-primitive-objects)
+;(import coops-primitive-objects)
 (import srfi-13) ; string library
 (import srfi-34) ; exceptions
 (import (chicken condition)) ; exception object
 (import (chicken format)) ; fprintf
 (import srfi-1) ; list library
-(import coops)
+;(import coops)
 (import dyn-vector)
 (import miscmacros) ; inc! dec! 
 (import srfi-69) ; hash-tables
 (import (chicken io))
-
-; shorthand
-(define slot slot-value)
 
 (import (chicken platform))
 (cond-expand
@@ -33,49 +35,15 @@
 		;(print "LOADING .SCM FILES")
 		(load "langtypes.scm")
 		(load "errors.scm")
-		(load "deserializer.scm")
 		(load "interpreter.scm")
+		(load "deserializer.scm")
 		(load "native.scm")))
 
 (import langtypes)
 (import errors)
+(import interpreter)
 (import deserializer)
 (import native)
-(import interpreter)
-
-(define (test-printing)
-	(print "--- STACK FORMAT: ---")
-	(print (fmtStackPrint 123))
-	(print (fmtStackPrint (make-lang-float (/ 1.0 3.0))))
-	(print (fmtStackPrint #t))
-	(print (fmtStackPrint #f))
-	(print (fmtStackPrint "abc"))
-	(print (fmtStackPrint (make LangNull)))
-	(print (fmtStackPrint (make LangString 'value "abc")))
-	(let ((lst (make LangList)))
-		(push-back lst 111)
-		(push-back lst 222)
-		(push-back lst (make LangString 'value "hello world"))
-		(push-back lst "a-long-symbol-here")
-		(print "LIST: " (fmtStackPrint lst)))
-
-	(print "--- DISPLAY FORMAT: ---")
-	(print (fmtDisplay 123))
-	(print (fmtDisplay (make-lang-float (/ 1.0 3.0))))
-	(print (fmtDisplay #t))
-	(print (fmtDisplay #f))
-	(print (fmtDisplay "abc"))
-	(print (fmtDisplay (make LangNull)))
-	(print (fmtDisplay (make LangString 'value "abc")))
-	(let ((lst (make LangList)))
-		(push-back lst 111)
-		(push-back lst 222)
-		(push-back lst (make LangString 'value "hello world"))
-		(push-back lst "a-long-symbol-here")
-		(print "LIST: " (fmtDisplay lst))))
-
-;(test-printing)
-
 
 (define (test-deserialize)
 	(let* ((fileIn (open-input-file "data.txt"))
@@ -92,7 +60,7 @@
 
 
 (define (intr-tests)
-	(set! intr (make <Interpreter>))
+	(set! intr (make-Interpreter))
 	(print "SP NOW: " (SP intr))
 	(push intr 111)
 	(push intr 222)
@@ -125,26 +93,26 @@
 	(print (fmtStackPrint L2))
 	(print (fmtStackPrint L3))
 
-	(set! (slot intr 'code) L1)
-	(print (fmtStackPrint (slot intr 'code)))
+	(intr-code-set! intr L1)
+	(print (fmtStackPrint (intr-code intr)))
 	(code-call intr L2)
-	(print (fmtStackPrint (slot intr 'code)))
+	(print (fmtStackPrint (intr-code intr)))
 	(code-call intr L3)
-	(print (fmtStackPrint (slot intr 'code)))
+	(print (fmtStackPrint (intr-code intr)))
 	(code-return intr)
-	(print (fmtStackPrint (slot intr 'code)))
+	(print (fmtStackPrint (intr-code intr)))
 	(code-return intr)
-	(print (fmtStackPrint (slot intr 'code)))
-	(set! (slot intr 'code) '())
+	(print (fmtStackPrint (intr-code intr)))
+	(intr-code-set! intr '())
 
 	(print (hash-table-ref BUILTINS "int?"))
 
 	(print "=>" (reprStack intr))
-	(run intr (list->LangList '(10 20 30)))
+	(intr-run intr (list->LangList '(10 20 30)))
 	(print "=>" (reprStack intr))
-	(run intr (list->LangList '(40 50 60)))
+	(intr-run intr (list->LangList '(40 50 60)))
 	(print "=>" (reprStack intr))
-	(run intr (list->LangList '("int?" 123)))
+	(intr-run intr (list->LangList '("int?" 123)))
 	(print "=>" (reprStack intr))
 )
 
@@ -155,45 +123,20 @@
 		(close-input-port fileIn)
 		result))
 
-(define (new-interpreter)
-	(let ((intr (make <Interpreter>)))
+(define (make-loaded-interpreter)
+	(let ((intr (make-Interpreter)))
 		(load-byte-compiled-file intr "../lib/init.verb.b")
-		(run intr (hash-table-ref (WORDS intr) "__main__"))
+		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
 		(load-byte-compiled-file intr "../lib/compiler.verb.b")
 		; do NOT run __main__ for compiler since that would run command-line compiler
 		intr))
 		
 (define (byte-compile intr text)
 	;(print "BYTE-COMPILING text: " text)
-	(push intr (make LangString 'value text))
-	(run intr (hash-table-ref (WORDS intr) "byte-compile-string"))
+	(push intr (make-LangString text))
+	(intr-run intr (hash-table-ref (WORDS intr) "byte-compile-string"))
 	;(print "STACK NOW: " (reprStack intr)))
 )
-
-;(set! intr (new-interpreter))
-;(print "WORDS:" (hash-table-keys (WORDS intr)))
-;(hash-table-walk (WORDS intr) (lambda (key val) (print key ": " (fmtStackPrint val))))
-
-;(print (list->LangList (list 2048)))
-
-;(byte-compile intr "123 456 789")
-;(print "COMPILED TO: " (fmtStackPrint (hash-table-ref (WORDS intr) "__main__")))
-;(run intr (hash-table-ref (WORDS intr) "__main__"))
-;(print "STACK AFTER RUN: " (reprStack intr))
-
-;(import (chicken process signal))
-;(import breadline)
-; from example code in breadline docs
-;(set-signal-handler! signal/int
-;	(lambda _
-;		(cleanup-after-signal!)
-;		(reset-after-signal!)
-;		; I added this ...
-;		;(print "Use quit to exit")))
-;		(reset-terminal!)
-;		(exit 1)))
-		
-;(on-exit reset-terminal!)
 
 (import simple-exceptions) ; with-exn-handler
 
@@ -210,7 +153,7 @@
 		(byte-compile intr text)
 		(pop intr) ; pop list of compiled words, don't need
 		;(print "Run ...")
-		(run intr (hash-table-ref (WORDS intr) "__main__"))
+		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
 		; ran OK if we made it here, return null
 		'()))
 
@@ -218,7 +161,7 @@
 (define (unsafe-compile-and-run intr text)
 	(byte-compile intr text)
 	(pop intr) ; pop list of compiled words, don't need
-	(run intr (hash-table-ref (WORDS intr) "__main__"))
+	(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
 	'())
 
 ; normally this should be set to the safe version, but to get tracebacks on scheme
@@ -227,7 +170,8 @@
 ;(define compile-and-run unsafe-compile-and-run)
 
 (define (repl)
-	(let ((intr (new-interpreter)))
+	(print "Verbii running on Chicken " (chicken-version))
+	(let ((intr (make-loaded-interpreter)))
 		(let repl-loop ()
 			(display ">> ")
 			(let ((line (read-line)))
@@ -244,13 +188,13 @@
 								; print error and restart interpreter
 								(begin
 									(print "** ERROR ** " result)
-									(set! intr (new-interpreter))
+									(set! intr (make-loaded-interpreter))
 									(repl-loop))))))))))
 
 (import (chicken file posix))
 
 (define (run-program filename)
-	(let* ((intr (new-interpreter))
+	(let* ((intr (make-loaded-interpreter))
 			(fileIn (file-open filename open/rdonly))
 			(text (car (file-read fileIn (file-size fileIn)))))
 		(file-close fileIn)
@@ -267,7 +211,7 @@
 ; stack or error message that occurred, restarting the interpreter on errors			
 (define (run-test filename)
 	(with-input-from-file filename (lambda ()
-		(let ((intr (new-interpreter)))
+		(let ((intr (make-loaded-interpreter)))
 			(let run-loop ((line (read-line)))
 				(if (not (eof-object? line))
 					(if (blank-string? line)
@@ -284,7 +228,7 @@
 								; else print error and restart interpreter
 								(begin
 									(print result)
-									(set! intr (new-interpreter))
+									(set! intr (make-loaded-interpreter))
 									(run-loop (read-line)))))))))))))
 
 (import srfi-193)
@@ -321,7 +265,6 @@
 			((and filename test-mode) (run-test filename))
 			((and filename (not test-mode)) (run-program filename))
 			(else (print "NOT IMPLEMENTED YET")))))
-
 
 (main)
 

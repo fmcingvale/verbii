@@ -6,8 +6,8 @@ mkdir -p ../unittests/RESULTS/chicken
 
 # choose whether to run interpreter or compiled version
 #CMD="./local-chicken/bin/csi -s verbii.scm"
-CMD="./repl"
 
+CMD="./repl"
 make
 
 echo "Core ..."

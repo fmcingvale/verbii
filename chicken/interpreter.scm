@@ -4,6 +4,11 @@
 ;;; Copyright (c) 2022 Frank McIngvale, see LICENSE
 ;;;==================================================================================
 
+;; optimization settings (these are supposed to be global but not sure how they are
+;; visible in different compilation units, so I'm including this header in all files
+(declare (standard-bindings))
+(declare (extended-bindings))
+
 ; module header
 (module interpreter *
 (import scheme)
@@ -13,17 +18,13 @@
 ; start of module code
 
 ; could probably trim some of these ...
-(import coops-primitive-objects)
 (import srfi-13) ; string library
 (import srfi-34) ; exceptions
 (import (chicken format)) ; fprintf
 (import srfi-1) ; list library
-(import coops)
 (import dyn-vector)
 (import miscmacros) ; inc! dec! 
 (import srfi-69) ; hash-tables
-; shorthand
-(define slot slot-value)
 
 (import langtypes)
 (import errors)
@@ -35,123 +36,146 @@
 ; populated from native.scm
 (define BUILTINS (make-hash-table))
 
-(define-class <Interpreter> ()
-	(
-		(OBJMEM accessor: OBJMEM initform: (make-dynvector (+ STACK_SIZE LOCALS_SIZE HEAP_STARTSIZE) 0))
+(define-record-type Interpreter	
+	(make-empty-Interpreter) ;; don't use this, use make-Interpreter, below
+	interpreter?
+	(OBJMEM intr-OBJMEM intr-OBJMEM-set!)
 
-		(SP_MIN accessor: SP_MIN initform: 0)
-		(SP_EMPTY accessor: SP_EMPTY initform: STACK_SIZE)
-		(SP accessor: SP initform: STACK_SIZE)
+	(SP_MIN intr-SP_MIN intr-SP_MIN-set!)
+	(SP_EMPTY intr-SP_EMPTY intr-SP_EMPTY-set!)
+	(SP intr-SP intr-SP-set!)
+
+	(LP_MIN intr-LP_MIN intr-LP_MIN-set!)
+	(LP_EMPTY intr-LP_EMPTY intr-LP_EMPTY-set!)
+	(LP intr-LP intr-LP-set!)
+	; heap will grow as needed, thanks to dynvector
+	(HEAP_NEXTFREE intr-HEAP_NEXTFREE intr-HEAP_NEXTFREE-set!)
+	; WORDS[name: string] = LangList
+	(WORDS intr-WORDS intr-WORDS-set!)
+
+	(code intr-code intr-code-set!) ; currently running code (LangList)
+	(codepos intr-codepos intr-codepos-set!) ; next obj to run as index into code
+	(callstack intr-callstack intr-callstack-set!)) ; frame pushed here on call (pushed to head), as (code,codepos)
+
+(define (make-Interpreter)
+	(let ((intr (make-empty-Interpreter)))
+		(intr-OBJMEM-set! intr (make-dynvector (+ STACK_SIZE LOCALS_SIZE HEAP_STARTSIZE) 0))
 		
-		(LP_MIN accessor: LP_MIN initform: STACK_SIZE)
-		(LP_EMPTY accessor: LP_EMPTY initform: (+ STACK_SIZE LOCALS_SIZE))
-		(LP accessor: LP initform: (+ STACK_SIZE LOCALS_SIZE))
+		(intr-SP_MIN-set! intr 0)
+		(intr-SP_EMPTY-set! intr STACK_SIZE)
+		(intr-SP-set! intr (intr-SP_EMPTY intr))
 
-		; heap will grow as needed, thanks to dynvector
-		(HEAP_NEXTFREE accessor: HEAP_NEXTFREE initform: (+ STACK_SIZE LOCALS_SIZE))
+		(intr-LP_MIN-set! intr STACK_SIZE)
+		(intr-LP_EMPTY-set! intr (+ STACK_SIZE LOCALS_SIZE))
+		(intr-LP-set! intr (intr-LP_EMPTY intr))
 
-		; WORDS[name: string] = LangList
-		(WORDS accessor: WORDS initform: (make-hash-table #:test string=?))
+		(intr-HEAP_NEXTFREE-set! intr (+ STACK_SIZE LOCALS_SIZE))
 
-		(code '()) ; currently running code (LangList)
-		(codepos -1) ; next obj to run as index into code
-		(callstack '()) ; frame pushed here on call (pushed to head), as (code,codepos)
-	)
-)
+		(intr-WORDS-set! intr (make-hash-table #:test string=?))
 
-	(define-method (allocate (intr <Interpreter>) nr)
-		(let ((addr (HEAP_NEXTFREE intr)))
-			(set! (HEAP_NEXTFREE intr) (+ (HEAP_NEXTFREE intr) nr))
-			addr))
+		(intr-code-set! intr '())
+		(intr-codepos-set! intr 0)
+		(intr-callstack-set! intr '())
+		intr))
 
-	; get or set memory
-	(define-method (memget (intr <Interpreter>) (addr <integer>))
-		(dynvector-ref (OBJMEM intr) addr))
+; shorthand since usually i want the vector
+(define (intr-code-list intr) (LangList-objlist (intr-code intr)))
 
-	(define-method (memset (intr <Interpreter>) (addr <integer>) obj)
-		(dynvector-set! (OBJMEM intr) addr obj))
+(define (allocate intr nr)
+	(let ((addr (intr-HEAP_NEXTFREE intr)))
+		(intr-HEAP_NEXTFREE-set! intr (+ (intr-HEAP_NEXTFREE intr) nr))
+		addr))
 
-	(define-method (push (intr <Interpreter>) obj)
-		(if (<= (SP intr) (SP_MIN intr))
-			(lang-error 'push "Stack overflow!"))
-		;(set! (SP intr) (- (SP intr) 1))
-		(dec! (SP intr))
-		(memset intr (SP intr) obj))
-		
-	(define-method (pop (intr <Interpreter>))
-		(if (>= (SP intr) (SP_EMPTY intr))
-			(lang-error 'pop "Stack underflow!"))
-		;(set! (SP intr) (+ (SP intr) 1))
-		(inc! (SP intr))
-		(memget intr (- (SP intr) 1)))
-		
-	(define-method (reprStack (intr <Interpreter>))
-		(let loop ((s "") (i (- (SP_EMPTY intr) 1)))
-			(if (>= i (SP intr))
-				(loop (string-append s " " (fmtStackPrint (memget intr i)))
-					(- i 1))
-				s)))
-			
-	(define-method (code-call (intr <Interpreter>) (objlist LangList))
-		(if (not (null? (slot intr 'code)))
-			(begin
-				(set! (slot intr 'callstack) (cons (list (slot intr 'code) (slot intr 'codepos)) (slot intr 'callstack)))
-				(set! (slot intr 'code) objlist)
-				(set! (slot intr 'codepos) 0))
-			(lang-error 'code-call "Call while not running!")))
+; get or set memory
+(define (memget intr addr)
+	(dynvector-ref (intr-OBJMEM intr) addr))
 
-	(define-method (code-return (intr <Interpreter>))
-		;(print "CODE-RETURN - CALLSTACK:" (slot intr 'callstack))
-		(if (not (null? (slot intr 'callstack)))
-			(begin
-				;(print "CODE: " (caar (slot intr 'callstack)))
-				;(print "POS: " (cadar (slot intr 'callstack)))
-				(set! (slot intr 'code) (caar (slot intr 'callstack)))
-				(set! (slot intr 'codepos) (cadar (slot intr 'callstack)))
-				(set! (slot intr 'callstack) (cdr (slot intr 'callstack))))
-			(lang-error 'code-return "Return without call!")))
+(define (memset intr addr obj)
+	(dynvector-set! (intr-OBJMEM intr) addr obj))
 
-	(define-method (nextObj (intr <Interpreter>))
-		(if (>= (slot intr 'codepos) (len (slot intr 'code)))
-			(make LangVoid)
-			(begin
-				(set! (slot intr 'codepos) (+ (slot intr 'codepos) 1))
-				(get (slot intr 'code) (- (slot intr 'codepos) 1)))))
-
-	(define-method (nextObjOrFail (intr <Interpreter>) wheresym)
-		(let ((obj (nextObj intr)))
-			(if (LangVoid? obj)
-				(lang-error wheresym "Unexpected end of input")
-				obj)))
-
-	(define-method (peekObj (intr <Interpreter>))
-		(if (>= (slot intr 'codepos) (len (slot intr 'code)))
-			(make LangVoid)
-			(get (slot intr 'code) (slot intr 'codepos))))
-
-	(define-method (prevObj (intr <Interpreter>))
-		(if (= (slot intr 'codepos) 0)
-			(make-LangVoid)
-			(begin
-				(set! (slot intr 'codepos) (- (slot intr 'codepos) 1))
-				(get (slot intr 'code) (slot intr 'codepos)))))
-
-	(define-method (prevObjOrFail (intr <Interpreter>) wheresym)
-		(let ((obj (prevObj intr)))
-			(if (LangVoid? obj)
-				(lang-error wheresym "Failed to find previous object")
-				obj)))
+(define (push intr obj)
+	(if (<= (intr-SP intr) (intr-SP_MIN intr))
+		(lang-error 'push "Stack overflow!"))
+	;(set! (SP intr) (- (SP intr) 1))
+	(intr-SP-set! intr (- (intr-SP intr) 1))
+	(memset intr (intr-SP intr) obj))
 	
-	(define-method (havePushedFrames (intr <Interpreter>))
-		(not (null? (slot intr 'callstack))))
+(define (pop intr)
+	(if (>= (intr-SP intr) (intr-SP_EMPTY intr))
+		(lang-error 'pop "Stack underflow!"))
+	;(set! (SP intr) (+ (SP intr) 1))
+	(intr-SP-set! intr (+ (intr-SP intr) 1))
+	(memget intr (- (intr-SP intr) 1)))
 
-	(define-method (popTypeOrFail (intr <Interpreter>) test what wheresym)
-		;(print "POP-TYPE-OR-FAIL, STACK: " (reprStack intr))
-		;(print "POPPING:" test)
-		(let ((obj (pop intr)))
-			(if (test obj)
-				obj
-				(lang-error wheresym "Expecting " what " but got: " (fmtStackPrint obj)))))
+(define (reprStack intr)	
+	(let loop ((s "") (i (- (intr-SP_EMPTY intr) 1)))
+		(if (>= i (intr-SP intr))
+			(loop (string-append s " " (fmtStackPrint (memget intr i)))
+				(- i 1))
+			s)))
+
+(define (WORDS intr) (intr-WORDS intr))
+
+(define (code-call intr objlist)		
+	(if (not (null? (intr-code intr)))
+		(begin
+			(intr-callstack-set! intr (cons (list (intr-code intr) (intr-codepos intr)) (intr-callstack intr)))
+			(intr-code-set! intr objlist)
+			(intr-codepos-set! intr 0))
+		(lang-error 'code-call "Call while not running!")))
+
+(define (code-return intr)
+	;(print "CODE-RETURN - CALLSTACK:" (slot intr 'callstack))
+	(if (not (null? (intr-callstack intr)))
+		(begin
+			;(print "CODE: " (caar (slot intr 'callstack)))
+			;(print "POS: " (cadar (slot intr 'callstack)))
+			(intr-code-set! intr (caar (intr-callstack intr)))
+			(intr-codepos-set! intr (cadar (intr-callstack intr)))
+			(intr-callstack-set! intr (cdr (intr-callstack intr))))
+		(lang-error 'code-return "Return without call!")))
+
+(define (nextObj intr)
+	(if (>= (intr-codepos intr) (dynvector-length (intr-code-list intr)))
+		(make-LangVoid)
+		(begin
+			(intr-codepos-set! intr (+ (intr-codepos intr) 1))
+			(dynvector-ref (intr-code-list intr) (- (intr-codepos intr) 1)))))
+
+(define (nextObjOrFail intr wheresym)
+	(let ((obj (nextObj intr)))
+		(if (LangVoid? obj)
+			(lang-error wheresym "Unexpected end of input")
+			obj)))
+
+(define (peekObj intr)
+	(if (>= (intr-codepos intr) (dynvector-length (intr-code-list intr)))
+		(make-LangVoid)
+		(dynvector-ref (intr-code-list intr) (intr-codepos intr))))
+
+(define (prevObj intr)
+	(if (= (intr-codepos intr) 0)
+		(make-LangVoid)
+		(begin
+			(intr-codepos-set! intr (- (intr-codepos intr) 1))
+			(dynvector-ref (intr-code-list intr) (intr-codepos intr)))))
+
+(define (prevObjOrFail intr wheresym)
+	(let ((obj (prevObj intr)))
+		(if (LangVoid? obj)
+			(lang-error wheresym "Failed to find previous object")
+			obj)))
+	
+(define (havePushedFrames intr)
+	(not (null? (intr-callstack intr))))
+
+(define (popTypeOrFail intr test what wheresym)
+	;(print "POP-TYPE-OR-FAIL, STACK: " (reprStack intr))
+	;(print "POPPING:" test)
+	(let ((obj (pop intr)))
+		(if (test obj)
+			obj
+			(lang-error wheresym "Expecting " what " but got: " (fmtStackPrint obj)))))
 
 	; pop integer or fail
 	;(define-method (popInt (intr <Interpreter>) wheresym)
@@ -192,11 +216,11 @@
 			args)))
 					
 ; is str: '>>NAME'
-(define (is-forward-jump? str) (and (>= (len str) 2) (string=? (string-take str 2) ">>")))
+(define (is-forward-jump? str) (and (>= (string-length str) 2) (string=? (string-take str 2) ">>")))
 ; is str: '<<NAME'
-(define (is-backward-jump? str) (and (>= (len str) 2) (string=? (string-take str 2) "<<")))
+(define (is-backward-jump? str) (and (>= (string-length str) 2) (string=? (string-take str 2) "<<")))
 
-(define-method (do-jump (intr <Interpreter>) target)
+(define (do-jump intr target)
 	(let ((movefn '()))
 		(cond 
 			((is-forward-jump? target) (set! movefn nextObjOrFail))
@@ -210,11 +234,11 @@
 				)
 				(else (loop (movefn intr 'do-jump)))))))
 				
-(define-method (run (intr <Interpreter>) (objlist LangList)) 
-	(if (not (null? (slot intr 'code)))
+(define (intr-run intr objlist)
+	(if (not (null? (intr-code intr)))
 		(lang-error 'intepreter "Interpreter called recursively!"))
-	(set! (slot intr 'code) objlist)
-	(set! (slot intr 'codepos) 0)
+	(intr-code-set! intr objlist)
+	(intr-codepos-set! intr 0)
 	(let run-loop ((obj (nextObj intr)))
 		;(print "RUN OBJ: " (fmtStackPrint obj))
 		(cond
@@ -226,7 +250,7 @@
 						(code-return intr)
 						(run-loop (nextObj intr)))
 					; else set self not running & exit
-					(set! (slot intr 'code) '())
+					(intr-code-set! intr '())
 				))
 			; literals get pushed
 			((or (integer? obj) (LangFloat? obj) (LangString? obj) (LangLambda? obj))
@@ -246,7 +270,7 @@
 								(code-return intr)
 								(run-loop (nextObj intr)))
 							; else set self not running & exit
-							(set! (slot intr 'code) '())
+							(intr-code-set! intr '())
 						))
 					; if
 					((string=? obj "if")
@@ -256,14 +280,6 @@
 							(if bval (do-jump intr target))
 							; else - keep running with next object
 							(run-loop (nextObj intr))))
-					; <<NAME and >>NAME
-					((or (is-forward-jump? obj) (is-backward-jump? obj))
-						(do-jump intr obj)
-						(run-loop (nextObj intr)))
-
-					; @name -- jump target, ignore
-					((equal? (string-take obj 1) "@")
-						(run-loop (nextObj intr)))
 					; var
 					; TODO -- this should pop count from stack instead of being syntax "var count"
 					((string=? obj "var")
@@ -289,7 +305,7 @@
 						; pop lambda and call
 						(let ((L (popTypeOrFail intr LangLambda? "lambda" 'call)))
 							; TODO - tail call elimination??
-							(code-call intr (slot L 'llist))
+							(code-call intr (lambda-llist L))
 							(run-loop (nextObj intr))))
 
 					; builtin (native) functions
@@ -314,6 +330,16 @@
 									(code-return intr))))
 						(code-call intr (hash-table-ref (WORDS intr) obj))
 						(run-loop (nextObj intr)))
+					
+					; <<NAME and >>NAME
+					((or (is-forward-jump? obj) (is-backward-jump? obj))
+						(do-jump intr obj)
+						(run-loop (nextObj intr)))
+
+					; @name -- jump target, ignore
+					((char=? (string-ref obj 0) #\@)
+						(run-loop (nextObj intr)))
+					
 					(else
 						(lang-error 'intepreter "Unknown word:" obj))))
 			(else

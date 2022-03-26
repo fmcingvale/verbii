@@ -40,3 +40,13 @@ Changed: replaced equal? with type-appropriate equality checks.
 
 interpreted: 82 seconds (no change)
 compiled: 35 seconds (improved from 40)
+
+==============
+Changed: removed all coops code, changed to records
+
+interpreted: 41 seconds (down from 82!!)
+compiled: 8 seconds (down from 35!!!!!!!!!!!)
+
+==> So ... my conclusion is that coops is very slow, at least for this use case.
+
+==> Chicken (compiled) is only slightly slower than Python, so that's good enough for now.
