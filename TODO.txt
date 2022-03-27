@@ -58,3 +58,5 @@ never visible from verbii code
 	* make run-test in other ports like chicken ... much more straightforward implementation
 
 * ensure consistent behavior between ports on when lists are copied -- prime example is .dumpword - it should create a copy of the objlist because it is not safe for programs to try and edit words directly -- the compiler is allowed to transform the objlist so cannot assume the source code matches 1:1 with the compiled objlist
+
+* all ports should do debug_hook like lua port

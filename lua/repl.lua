@@ -29,14 +29,70 @@ function make_interpreter()
 	io.close(f)
 	-- do NOT run __main__ since that would run the cmdline compiler
 
-	-- remove __main__ so i don't try to run it again later
+	-- remove __main__ so i don't try to run it again later (i.e. should another
+	-- byte-compilation fail, I don't want this __main__ to still be here)
 	intr.WORDS['__main__'] = nil
 	
 	return intr
 end
 
-function repl()
+function debug_hook(intr, word)
+	print("=> " .. intr:reprStack())
+	print("Run: " .. word)
+	io.write("press ENTER to continue ...")
+	io.flush()
+	io.read()
+end
+
+-- use safe_ version instead - this has no error checking
+function compile_and_run(intr, text, singlestep)
+	-- push text and byte-compile it
+	intr:push(new_String(text))
+	code = intr.WORDS['byte-compile-string']
+	intr:run(code)
+
+	-- remove list of words produced by byte compiler
+	intr:pop()
+
+	-- now run the __main__ that was compiled
+	code = intr.WORDS['__main__']
+	
+	if singlestep then
+		intr:run(code,debug_hook)
+	else
+		intr:run(code)
+	end
+	
+	-- remove __main__ so i don't try to run it again later (i.e. should another
+	-- byte-compilation fail, I don't want this __main__ to still be here)
+	intr.WORDS['__main__'] = nil
+end
+
+-- returns error string or nil if no error
+function safe_compile_and_run(intr, text, singlestep, backtrace_on_error)
+	local result,error = pcall(compile_and_run, intr, text, singlestep)
+	if result == false then
+		-- match sequence >>> to strip out filename from error message that lua added
+		match = string.match(error, "^.+>>>")
+		if match == nil then
+			-- didn't get expected error format, so print raw error to show something at least
+			errstr = "*** " .. error .. " ***"
+			return errstr
+		else
+			errstr = "*** " .. string.sub(error, #match+1) .. " ***"
+			if backtrace_on_error then
+				print_backtrace(intr)
+			end
+			return errstr
+		end
+	else
+		return nil -- no error
+	end
+end
+
+function repl(singlestep)
 	-- Run interactively
+	print("Verbii running on " .. _VERSION)
 	intr = make_interpreter()
 
 	while true do
@@ -45,33 +101,25 @@ function repl()
 		line = io.read()
 		if line == nil then
 			return -- eof
-		elseif line == "quit" then
+		elseif line == "quit" or line == ",q" then
 			return
 		end
 		
-		-- push line and byte-compile it
-		intr:push(new_String(line))
-		code = intr.WORDS['byte-compile-string']
-		intr:run(code)
-
-		-- remove list of words produced by byte compiler
-		intr:pop()
-
-		-- now run the __main__ that was compiled
-		code = intr.WORDS['__main__']
-		intr:run(code)
-		
-		print("=> " .. intr:reprStack())
+		-- compile & run each line, watching for errors
+		local err = safe_compile_and_run(intr, line, singlestep, true)
+		if err ~= nil then
+			print(err)
+			intr = make_interpreter() -- restart interpreter on error
+		else
+			print("=> " .. intr:reprStack())
+		end
 	end
 end
 
-function run_test_mode(filename, noinit, status)
+function run_test_mode(filename)
 	-- read one line at a time from file and run, printing results and stack. 
 	-- used for unit testing
 	local intr = make_interpreter(noinit)
-
-	if status["max-count"] == nil then status["max-count"] = 0 end
-	status["done"] = false
 
 	local fileIn = io.open(filename,"r")
 	local runnable_lines = 0 -- how many lines have I seen that are non-blank
@@ -82,52 +130,34 @@ function run_test_mode(filename, noinit, status)
 			break
 		end
 		if string.match(line, "^[%s]+$") then
-			goto LOOP -- don't count blank lines
+			goto LOOP -- skip blank lines
 		end
 
-		runnable_lines = runnable_lines + 1
-		
-		if runnable_lines <= status["max-count"] then
-			-- skipping line counts as running since either i successfully ran
-			-- it previously, or am skipping it because it crashed
-			status["max-count"] = math.max(status["max-count"],runnable_lines)
-			goto LOOP
-		end
-		
 		io.write(">> " .. line) -- line has \n at end already
-		--intr.syntax:clearAll() -- remove any leftover text from previous line run
-
-		-- push line and byte-compile it
-		intr:push(new_String(line))
-		local code = intr.WORDS['byte-compile-string']
-		intr:run(code)
-
-		-- remove list of words produced by byte compiler
-		intr:pop()
-
-		-- now run the __main__ that was compiled
-		code = intr.WORDS['__main__']
-		intr:run(code)
 		
-		print("=> " .. intr:reprStack())
-		-- update count AFTER above suceeds
-		status["max-count"] = runnable_lines
+		-- i only want the errors not the backtraces -- if an unexpected error occurred,
+		-- just run again in non-test mode to see backtrace
+		local err = safe_compile_and_run(intr, line, false, false)
+		if err ~= nil then
+			print(err)
+			intr = make_interpreter() -- restart interpreter on error
+		else
+			print("=> " .. intr:reprStack())
+		end
 	end
 	io.close(fileIn)
-	-- made it all the way through, set 'done'
-	status["done"] = True
 end
 
 function backtrace_curframe(intr)
 	local trace = ""
 	local nr = 7 -- number of words to print in each frame
 	while nr > 0 do
-		w = intr.reader:prevWord()
-		if w == "" then
+		local w = intr:prevObj()
+		if w == nil then
 			print(trace)
 			return
 		else
-			trace = w .. " " .. trace
+			trace = fmtStackPrint(w) .. " " .. trace
 		end
 		nr = nr - 1
 	end
@@ -141,20 +171,12 @@ function print_backtrace(intr)
 		io.write("FRAME " .. tostring(i) .. ": ")
 		i = i + 1
 		backtrace_curframe(intr)
-		if intr.reader:hasPushedWords() then
-			intr.reader:popWords()
+		if intr:havePrevFrames() then
+			intr:code_return() -- pop current frame and print next one
 		else
-			return
+			return -- end of callstack, done
 		end
 	end
-end
-
-function debug_hook(intr, word)
-	print("=> " .. intr:reprStack())
-	print("Run: " .. word)
-	io.write("press ENTER to continue ...")
-	io.flush()
-	io.read()
 end
 
 function run_file(intr, filename, singlestep)
@@ -166,21 +188,9 @@ function run_file(intr, filename, singlestep)
 	local buf = f:read("a")
 	io.close(f)
 
-	-- push buf and byte-compile it
-	intr:push(new_String(buf))
-	local code = intr.WORDS['byte-compile-string']
-	intr:run(code)
-
-	-- remove list of words produced by byte compiler
-	intr:pop()
-
-	-- now run the __main__ that was compiled
-	code = intr.WORDS['__main__']
-
-	if singlestep then
-		intr:run(code,debug_hook)
-	else
-		intr:run(code)
+	local err = safe_compile_and_run(intr, buf, singlestep, true)
+	if err ~= nil then
+		print(err)
 	end
 end
 
@@ -215,43 +225,10 @@ end
 set_native_cmdline_args(args_to_script)
 
 if filename == nil then
-	repl(noinit)
+	repl(singlestep)
 elseif test_mode then
-	status = {}
-	while not status["done"] do
-		--run_test_mode(filename, noinit, status)
-		local result,error = pcall(run_test_mode, filename, noinit, status)
-		--print("RESULT:",result)
-		if result == false then
-			-- match sequence >>> to strip out filename from error message that lua added
-			match = string.match(error, "^.+>>>")
-			if match == nil then
-				-- didn't get expected error format, so print raw error to show something at least
-				print("*** " .. error .. " ***")
-				os.exit() -- just exit since something is extra wrong here ...
-			else
-				print("*** " .. string.sub(error, #match+1) .. " ***")
-				--print("MAX COUNT " .. tostring(status["max-count"]))
-			end
-			status["max-count"] = status["max-count"] + 1
-		elseif result==true then
-			break
-		end
-	end
+	run_test_mode(filename)
 else
 	local intr = make_interpreter(noinit)
-	local result,error = pcall(run_file, intr, filename, singlestep)
-	if result == false then
-		-- match sequence >>> to strip out filename from error message that lua added
-		match = string.match(error, "^.+>>>")
-		-- like above, if that didn't match, print raw error and exit
-		if match == nil then
-			print("*** " .. error .. " ***")
-			os.exit()
-		else
-			print("*** " .. string.sub(error, #match+1) .. " ***")
-			print_backtrace(intr)
-		end
-	end
+	run_file(intr, filename, singlestep)
 end
-

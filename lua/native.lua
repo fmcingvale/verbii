@@ -61,21 +61,6 @@ function builtin_puts(intr)
 	io.write(obj.value)
 end
 
-function builtin_define_word(intr)
-	name = intr.syntax:nextObjOrFail()
-	words = {}
-	while true do
-		w = intr.syntax:nextObjOrFail()
-		--print("DEFINE WORD:" .. w)
-		if w == ';' then
-			intr.WORDS[name] = words
-			return
-		else
-			table.insert(words, w)
-		end
-	end
-end
-
 -- ( obj addr -- ) - save obj to addr
 function builtin_set(intr, obj, addr)
 	if addr < 0 or addr >= #intr.OBJMEM then
@@ -127,23 +112,6 @@ function builtin_fromlocal(intr)
 	intr:push(intr.OBJMEM[intr.LP])
 	intr.LP = intr.LP + 1
 end
-
-function builtin_showdef(intr)
-	name = intr.syntax:nextObjOrFail()
-	if intr.WORDS[name] == nil then
-		print("No such word: " .. name)
-		return
-	end
-
-	wordlist = intr.WORDS[name]
-	io.write(name .. ": ")
-	for i=1,#wordlist do
-		io.write(wordlist[i] .. " ")
-	end
-
-	print(";")
-end
-
 
 function builtin_printchar(intr,a) 
 	io.write(string.char(a))
@@ -200,39 +168,6 @@ function popStringOrSymbol(intr)
 	else
 		error(">>>Expecting string or symbol but got: " .. fmtStackPrint(obj))
 	end
-end
-
-function builtin_fadd(intr)
-
-	-- the +0.0 ensures it is really a float, else lua will keep large
-	-- values as integers, leading to overflow when usercode assumes a
-	-- float is being used. oddly, doing this in popFloatOrInt does NOT work
-	b = popFloatOrInt(intr) + 0.0
-	a = popFloatOrInt(intr) + 0.0
-	intr:push(new_Float(a+b))
-end
-
-function builtin_fsub(intr)
-	-- +0.0 as above
-	b = popFloatOrInt(intr) + 0.0
-	a = popFloatOrInt(intr) + 0.0
-	intr:push(new_Float(a-b))
-end
-
-function builtin_fmul(intr)
-	b = popFloatOrInt(intr) + 0.0
-	a = popFloatOrInt(intr) + 0.0
-	--print("FMUL " .. tostring(a) .. " * " .. tostring(b) .. " " .. tostring(a*b))
-	intr:push(new_Float(a*b))
-end
-
-function builtin_fdiv(intr)
-	b = popFloatOrInt(intr) + 0.0
-	if b == 0 then
-		error(">>>Floating point divide by zero")
-	end
-	a = popFloatOrInt(intr) + 0.0
-	intr:push(new_Float(a/b))
 end
 
 function builtin_add(intr, a, b)
@@ -352,7 +287,7 @@ function builtin_equal(intr, a, b)
 		intr:push(isNone(b))
 	elseif isBool(a) then
 		intr:push(isBool(b) and a==b)
-	elseif isCallableWordlist(a) then
+	elseif isLambda(a) then
 		intr:push(false) -- lambdas never compare equal, even if same object
 	else
 		error(">>>Don't know how to compare (==) objects: " .. fmtStackPrint(a) .. " and " .. fmtStackPrint(b))
@@ -430,7 +365,7 @@ function builtin_unmake(intr, obj)
 			intr:push(obj[i])
 		end
 		intr:pushInt(#obj)
-	elseif isCallableWordlist(obj) then
+	elseif isLambda(obj) then
 		-- as in c++, make a new list so caller can modify
 		local newlist = {}
 		for i=1,#obj.wordlist do
@@ -488,7 +423,7 @@ end
 function builtin_make_lambda(intr)
 	local list = intr:pop()
 	if isList(list) then
-		intr:push(new_CallableWordlist(list))
+		intr:push(new_Lambda(list))
 	else
 		error(">>>make-lambda expecting list but got: " .. fmtStackPrint(list))
 	end
@@ -500,15 +435,6 @@ function builtin_dumpword(intr)
 		error(">>>Unknown word: " .. name)
 	else
 		intr:push(intr.WORDS[name])
-	end
-end
-
-function builtin_dumpvar(intr)
-	local name = popSymbol(intr)
-	if intr.VARS[name] == nil then
-		error(">>>Unknown variable: " .. name)
-	else
-		intr:push(intr.VARS[name].mem)
 	end
 end
 
@@ -528,26 +454,21 @@ BUILTINS = {
 	["list?"] = { {"any"}, function(intr,o) intr:push(isList(o)) end},
 	["string?"] = { {"any"}, function(intr,o) intr:push(isString(o)) end},
 	["symbol?"] = { {"any"}, function(intr,o) intr:push(isSymbol(o)) end},
-	["lambda?"] = { {"any"}, function(intr,o) intr:push(isCallableWordlist(o)) end},
+	["lambda?"] = { {"any"}, function(intr,o) intr:push(isLambda(o)) end},
 	["repr"] = { {}, builtin_repr },
 	["str"] = { {}, builtin_str },
 	["puts"] = { {}, builtin_puts },
-	[".\""] = {  {}, builtin_print_string },
 	[".c"] = { {"number"}, builtin_printchar },
 	["SP"] = { {}, function(intr) intr:push(intr.SP) end },
 	["SP!"] = { {"number"}, builtin_setsp},
 	["LP"] = { {}, function(intr) intr:push(intr.LP) end },
 	["LP!"] = { {"number"}, builtin_setlp},
-	[":"] = { {}, builtin_define_word },
-	-- alias for ':'
-	["def"] = { {}, builtin_define_word },
 	["set!"] = { {"any","number"}, builtin_set},
 	["ref"] = { {"number"}, builtin_ref },
 	[">L"] = { {}, builtin_tolocal},
 	["L>"] = { {}, builtin_fromlocal},
 	["depth"] = { {}, function(intr) intr:push(intr.SP_EMPTY - intr.SP) end },
-	[".showdef"] = { {}, builtin_showdef},
-
+	
 	["reader-open-string"] = { {}, builtin_reader_open_string},
 	["reader-open-file"] = { {}, builtin_reader_open_file},
 	["reader-next"] = { {}, builtin_reader_next},
@@ -563,7 +484,6 @@ BUILTINS = {
 	["make-symbol"] = { {"number"}, builtin_make_symbol},
 	["make-lambda"] = { {}, builtin_make_lambda},
 	[".dumpword"] = { {}, builtin_dumpword},
-	[".dumpvar"] = { {}, builtin_dumpvar},
 	["null"] = { {}, function(intr) intr:push(new_None()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},

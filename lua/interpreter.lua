@@ -197,7 +197,7 @@ function Interpreter:run(objlist, stephook)
 		end
 
 		-- see if its a literal to push
-		if type(obj) == "number" or isFloat(obj) or isString(obj) or isCallableWordlist(obj) then
+		if type(obj) == "number" or isFloat(obj) or isString(obj) or isLambda(obj) then
 			self:push(obj)
 			goto MAINLOOP
 		end
@@ -272,9 +272,9 @@ function Interpreter:run(objlist, stephook)
 			end
 				
 			if obj == "call" then
-				-- top of stack must be a CallableWordlist
+				-- top of stack must be a Lambda
 				obj = self:pop()
-				if not isCallableWordlist(obj) then
+				if not isLambda(obj) then
 					error(">>>call expects a lambda, but got: " .. fmtStackPrint(obj))
 				end
 

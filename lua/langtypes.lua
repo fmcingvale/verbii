@@ -14,8 +14,7 @@
 	symbol		string	** since symbols are more commonly used in the Lua source, then
 						** like Python, use Lua strings for symbols
 	string		String (class)
-	lambda		CallableWorldlist **TODO rename to Lambda like other ports**
-
+	lambda		Lambda (class)
 --]]
 
 -- make a "none" class that is differentiated from nil
@@ -102,22 +101,22 @@ function new_String(str)
 	return String:new({}, str)
 end
 
-function isCallableWordlist(obj)
-	return type(obj) == "table" and obj.__class__ == "CallableWordlist"
+function isLambda(obj)
+	return type(obj) == "table" and obj.__class__ == "Lambda"
 end
 
 -- lambda type
-CallableWordlist = {}
-function CallableWordlist:new(obj, wordlist)
+Lambda = {}
+function Lambda:new(obj, wordlist)
 	setmetatable(obj, self)
 	self.__index = self
-	obj.__class__ = "CallableWordlist"
+	obj.__class__ = "Lambda"
 	obj.wordlist = wordlist
 	return obj
 end
 
-function new_CallableWordlist(wordlist)
-	return CallableWordlist:new({},wordlist)
+function new_Lambda(wordlist)
+	return Lambda:new({},wordlist)
 end
 
 -- normal lua strings are used as symbols
@@ -143,7 +142,7 @@ function fmtDisplay(obj)
 		else
 			return "false"
 		end
-	elseif isCallableWordlist(obj) then
+	elseif isLambda(obj) then
 		return "<lambda>"
 	elseif isString(obj) then
 		return obj.value
@@ -172,7 +171,7 @@ function fmtStackPrint(obj)
 		else
 			return "<false>"
 		end
-	elseif isCallableWordlist(obj) then
+	elseif isLambda(obj) then
 		return "<lambda>"
 	elseif isString(obj) then
 		-- in stack display, strings get " .. "

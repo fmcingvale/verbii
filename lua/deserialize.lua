@@ -46,7 +46,7 @@ function deserialize_stream(intr, fileIn)
 	elseif line:sub(1,1) == "F" then --lambda
 		local objs = deserialize_stream(intr, fileIn)
 		if isList(objs) then
-			return new_CallableWordlist(objs)
+			return new_Lambda(objs)
 		else
 			error(">>>Expecting list after 'F' but got: " .. fmtStackPrint(objs))
 		end
