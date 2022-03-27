@@ -41,107 +41,48 @@ Interpreter* newInterpreter() {
 	deserialize_stream(intr, fileIn);
 	// do NOT run compiler __main__ since that is used for compiling from the cmdline
 
+	// delete __main__ now so I don't inadvertently run it again -- i.e. a later byte-compilation
+	// might fail, but leaving and older __main__ in place
+	intr->deleteWord("__main__");
+
 	// GC after loading large file
 	x_mem_gcollect();
 
 	return intr;
 }
 
-void repl() {
-	auto intr = newInterpreter();
-	
-	while(1) {
-		printf(">> ");
-		fflush(stdout);
-		string line;
-		if(!getline(cin, line)) {
-			return;
-		}
-		if (line == "quit") {
-			return;
-		}
-		//cout << "LINE: " << line << endl;
-		//intr->addText(line);
-
-		// push string, then call byte-compile-string
-		intr->push(newString(line));
-		auto code = intr->lookup_word("byte-compile-string");
-		intr->run(code);
-
-		// byte-compile-string leaves list of words on stack -- used by serializer -- but i
-		// don't need them here
-		intr->pop();
-
-		// run __main__
-		code = intr->lookup_word("__main__");
-
-		intr->run(code);
-		cout << "=> " << intr->reprStack() << endl;
-	}
-}
-
-// like a non-interactive repl, reads a line at a time, prints it,
-// runs it, then prints the stack. this is intented for unittesting.
-// maxline is maximum line that ran OK last time so i ca restart.
-void run_test_mode(string filename, int &maxrunline, bool &done) {
-
-	//cout << "Test mode starting ... " << endl;
-	done = false;
-
-	regex blankline(R"""(^[ \t\r\n]*$)""");
-
-	auto intr = newInterpreter();
-
+void debug_hook(Interpreter *intr, Object obj) {
+	std::cout << "=> " << intr->reprStack() << endl;
+	std::cout << "Run: " << obj.fmtStackPrint() << endl;
+	cout << "press ENTER to continue ...";
+	fflush(stdout);
 	string line;
-	ifstream fileIn(filename);
-	
-	int runnable_lines = 0; // how many runnable lines have i seen (i.e. not counting blank lines)
-	while(getline(fileIn, line)) {
-		// skip blank lines
-		if(regex_match(line, blankline)) {
-			continue;
-		}
-		++runnable_lines;
-		//cout << "On runnable line# " << runnable_lines << ", maxrunline " << maxrunline << endl;
-
-		if(runnable_lines <= maxrunline) {
-			//cout << "Skipping line ... " << endl;
-			// counts as running, since if i fail i want to restart at the NEXT line
-			maxrunline = max(maxrunline,runnable_lines);
-			continue;
-		}
-		cout << ">> " << line << endl;
-		//intr->syntax->clearAll(); // ensure no leftover text from previous line
-		//intr->addText(line);
-		// like above, compile and run line
-		intr->push(newString(line));
-		auto code = intr->lookup_word("byte-compile-string");
-		intr->run(code);
-		intr->pop(); // like above, pop list of compiled words
-
-		code = intr->lookup_word("__main__");
-		intr->run(code);
-
-		cout << "=> " << intr->reprStack() << endl;
-		// update maxline only after the above runs ok
-		maxrunline = runnable_lines;
-	}
-	done = true; // done
+	getline(cin, line);
 }
 
-void run_file(Interpreter *intr, string filename, bool singlestep) {
-	// run file
-	auto buf = readfile(filename);
-	// as above, compile then run
-	intr->push(newString(buf));
+// use safe_ version below
+void compile_and_run(Interpreter *intr, string text, bool singlestep) {
+	// push string, then call byte-compile-string
+	intr->push(newString(text));
 	auto code = intr->lookup_word("byte-compile-string");
 	intr->run(code);
-	intr->pop(); // like above, pop list of compiled words
 
+	// byte-compile-string leaves list of words on stack -- used by serializer -- but i
+	// don't need them here
+	intr->pop();
+
+	// run __main__
 	code = intr->lookup_word("__main__");
-	intr->run(code, singlestep);
-}
 
+	if(singlestep)
+		intr->run(code, &debug_hook);
+	else
+		intr->run(code);
+
+	// like above, delete __main__ after running
+	intr->deleteWord("__main__");
+}
+	
 void backtrace_curframe(Interpreter *intr) {
 	string trace = "";
 	int nr = 7; // number of words to print in each frame
@@ -169,6 +110,85 @@ void print_backtrace(Interpreter *intr) {
 		else {
 			return;
 		}
+	}
+}
+
+// return empty string if OK, error message on error
+string safe_compile_and_run(Interpreter *intr, string text, bool singlestep, bool backtrace_on_error) {
+	try {
+		compile_and_run(intr, text, singlestep);
+		return "";
+	}
+	catch (LangError &err) {
+		auto errstr = "*** " + string(err.what()) + " ***";
+		if(backtrace_on_error) {
+			print_backtrace(intr);
+		}
+		return errstr;
+	}
+}
+
+void repl(bool singlestep) {
+	cout << "Verbii compiled with g++ " << __GNUC__ << "." << __GNUC_MINOR__ << "." << __GNUC_PATCHLEVEL__ << endl;
+	auto intr = newInterpreter();
+	
+	while(1) {
+		printf(">> ");
+		fflush(stdout);
+		string line;
+		if(!getline(cin, line)) {
+			return;
+		}
+		if (line == "quit" || line == ",q") {
+			return;
+		}
+		auto errmsg = safe_compile_and_run(intr, line, singlestep, true);
+		if(errmsg.length() > 0) {
+			cout << errmsg << endl;
+			intr = newInterpreter(); // restart interpreter on error
+		}
+		else {
+			std::cout << "=> " << intr->reprStack() << endl;
+		}
+	}
+}
+
+// like a non-interactive repl, reads a line at a time, prints it,
+// runs it, then prints the stack. this is intented for unittesting.
+// maxline is maximum line that ran OK last time so i ca restart.
+void run_test_mode(string filename) {
+
+	regex blankline(R"""(^[ \t\r\n]*$)""");
+
+	auto intr = newInterpreter();
+
+	string line;
+	ifstream fileIn(filename);
+	
+	while(getline(fileIn, line)) {
+		// skip blank lines
+		if(regex_match(line, blankline)) {
+			continue;
+		}
+	
+		cout << ">> " << line << endl;
+		// no backtraces here - if an unexpected error occurs, rerun test case without -test
+		// to see the backtrace
+		auto errmsg = safe_compile_and_run(intr, line, false, false);
+		if(errmsg.length() > 0) {
+			cout << errmsg << endl;
+			intr = newInterpreter(); // restart on error
+		}
+		else {
+			cout << "=> " << intr->reprStack() << endl;
+		}
+	}
+}
+
+void run_file(string filename, bool singlestep) {
+	auto errmsg = safe_compile_and_run(newInterpreter(), readfile(filename), singlestep, true);
+	if(errmsg.length() > 0) {
+		cout << errmsg << endl;
 	}
 }
 
@@ -232,48 +252,12 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if(filename == "") {
-		bool exited = false;
-		while(!exited) {
-			// restart repl on exceptions - continue until it exits OK.
-			// (continuing after the exception gives weird errors so something
-			// is getting corrupted in the interpreter)
-			try {
-				repl();
-				exited = true;
-			}
-			catch (LangError &err) {
-				cout << "*** " << err.what() << " ***\n";
-			}
-		}
-	}
-	else if(testMode) {
-		int maxrunline = 0;
-		bool done = false;
-		while(!done) {
-			// when exception occurs, need to restart interpreter, or
-			// weird errors happen. track max line that i ran before so
-			// it restarts on next line
-			try {
-				run_test_mode(filename, maxrunline, done);
-			}
-			catch (LangError &err) {
-				cout << "*** " << err.what() << " ***\n";
-				++maxrunline; // skip line that failed last time
-			}
-		}
-	}
-	else {		
-		auto intr = newInterpreter();
-
-		try {
-			run_file(intr, filename, singlestep);
-		}
-		catch (LangError &err) {
-			cout << "*** " << err.what() << " ***\n";
-			print_backtrace(intr);
-		}
-	}
+	if(filename == "")
+		repl(singlestep);
+	else if(testMode)
+		run_test_mode(filename);
+	else
+		run_file(filename, singlestep);
 
 	//GC_gcollect();
 	if(gcstats) {

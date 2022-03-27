@@ -13,12 +13,12 @@ TEST_SRC = test_reader.cpp
 GC_FLAGS = -DUSE_GCMALLOC
 GC_LIBS = -lgc -lgccpp
 
-CFLAGS = -g $(GC_FLAGS)
+#CFLAGS = -g $(GC_FLAGS)
 #CFLAGS = -pg $(GC_FLAGS)
 # max optimization that works under mingw-x64 (gcc 11)
 #CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
 # this optimization level works fine under Ubuntu
-#CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
+CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
 
 all: repl.exe  # test.exe gctest.exe
 

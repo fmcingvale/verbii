@@ -30,7 +30,7 @@ class Interpreter {
 	// get representation of stack for printing
 	std::string reprStack() const;
 
-	void run(ObjList *to_run, bool singlestep=false);
+	void run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object)=NULL);
 
 	// all are public so builtins can use without a hassle
 	std::map<std::string,ObjList*> WORDS; // user-defined words
@@ -65,6 +65,8 @@ class Interpreter {
 	int lookup_var(const char *name);
 
 	void do_jump(const char *jumpword);
+
+	void deleteWord(const char* name);
 
 	//Syntax *syntax;
 

@@ -60,3 +60,7 @@ never visible from verbii code
 * ensure consistent behavior between ports on when lists are copied -- prime example is .dumpword - it should create a copy of the objlist because it is not safe for programs to try and edit words directly -- the compiler is allowed to transform the objlist so cannot assume the source code matches 1:1 with the compiled objlist
 
 * all ports should do debug_hook like lua port
+
+* 'del' should be able to delete either vars or userwords (but not builtins)
+
+* make sure ports all implement the same builtins (c++ has more that are not in other ports right now)

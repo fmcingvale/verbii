@@ -197,7 +197,22 @@ void Interpreter::code_return() {
 	callstack_pos.pop_back();
 }
 
-void Interpreter::run(ObjList *to_run, bool singlestep) {
+void Interpreter::deleteWord(const char* name) {
+	auto var = VARS.find(name);
+	if(var != VARS.end()) {
+		VARS.erase(name);
+		return;
+	}
+	auto userword = WORDS.find(name);
+	if(userword != WORDS.end()) {
+		WORDS.erase(name);
+		return;
+	}
+
+	throw LangError("Trying to delete non-existent name: " + string(name));
+}
+
+void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object)) {
 	if(code) {
 		throw LangError("Interpreter run() called recursively");
 	}
@@ -207,7 +222,10 @@ void Interpreter::run(ObjList *to_run, bool singlestep) {
 
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
-		auto obj = nextCodeObj();
+		Object obj = nextCodeObj();
+		if(debug_hook)
+			debug_hook(this, obj);
+
 		// general note: there is kind of an artificial separation between words that are
 		// recognized here, and words implemented in native.cpp. In priciple, all these words
 		// could be implemented in native.cpp. However, I tend to put words here that directly
@@ -232,12 +250,6 @@ void Interpreter::run(ObjList *to_run, bool singlestep) {
 				code = NULL; // mark self as not running
 				return;
 			}
-		}
-		if(singlestep) {
-			cout << "Run word: " << obj.fmtStackPrint() << endl;
-			cout << "=> " << reprStack() << endl;
-			string line;
-			getline(cin, line);
 		}
 		
 		// check for literal objects that just get pushed
@@ -312,11 +324,7 @@ void Interpreter::run(ObjList *to_run, bool singlestep) {
 
 		if(obj.isSymbol("del")) {
 			auto name = nextSymbolOrFail("expecting symbol after 'del'");
-			auto userword = VARS.find(name.asSymbol());
-			if(userword == VARS.end()) {
-				throw LangError("Trying to delete non-existent variable " + name.fmtStackPrint());
-			}
-			VARS.erase(name.asSymbol());
+			deleteWord(name.asSymbol());
 			continue;
 		}
 

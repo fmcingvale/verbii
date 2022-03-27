@@ -76,10 +76,32 @@
 => 
 >> var fff 1
 *** Trying to redefine variable fff ***
+>> ( however, show that a word can be deleted and THEN redefined ... )
+=> 
+>> : zzz 10 20 30 ;
+=> 
+>> : zzz 40 50 60 ;
+*** Trying to redefine name: zzz ***
+>> ( that should have crashed & restarted, so set it up again then delete first ... )
+=> 
+>> : zzz 10 20 30 ;
+=> 
+>> del zzz
+=> 
+>> : zzz 40 50 60 ;
+=> 
+>> ( now same with var - already tested crash case above )
+=> 
+>> var yyyy 11
+=> 
+>> del yyyy
+=> 
+>> var yyyy 18
+=> 
 >> ( deleting non existant var should fail )
 => 
 >> del ggg
-*** Trying to delete non-existent variable ggg ***
+*** Trying to delete non-existent name: ggg ***
 >> ( end of input inside " )
 => 
 >> "hello world oops ...

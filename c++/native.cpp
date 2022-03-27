@@ -4,14 +4,6 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 
-//
-// TODO -- the functions that call intr->syntax-> should probably really be in Syntax
-//
-
-// TODO -- might want 'dup' as builtin so it can optimize things like shallow copying strings
-//         since they are immutable??
-//
-
 #include "native.hpp"
 #include "errors.hpp"
 #include "xmalloc.hpp"
@@ -98,34 +90,14 @@ static void builtin_divmod(Interpreter *intr) {
 	pushInt(intr, quot);
 }
 
-// TODO - move this to syntax layer and change WORDS to a linear list and
-// convert words to index values -- add new 'call-word' in interpreter
-//
-// actually, could push as a lambda (or maybe a new class, since lambdas need an
-// explicit call, and words don't) then interpreter doesn't need to know
-// what WORDS is
-#if 0
-static void builtin_define_word(Interpreter *intr) {
-	auto name = intr->syntax->nextSymbolOrFail();
-	ObjList *objs = new ObjList();
-	while(1) {
-		auto o = intr->syntax->nextObjOrFail();
-		if(o.isSymbol(";")) {
-			intr->WORDS[name.asSymbol()] = objs;
-			return;
-		}
-		else {
-			objs->push_back(o);
-		}
-	}
-}
-#endif
-
 /* ( list name -- adds word ) */
 static void builtin_make_word(Interpreter *intr) {
 	//cout << "MAKE-WORD ENTRY:" << intr->reprStack() << endl;
 	const char *name = popSymbol(intr, "make-word bad name");
 	Object list = popList(intr, "make-word bad list");
+	if(intr->WORDS.find(name) != intr->WORDS.end())
+		throw LangError("Trying to redefine name: " + string(name));
+
 	intr->WORDS[name] = list.data.objlist;
 }
 
@@ -233,21 +205,16 @@ static string readfile(string filename) {
 
 #include <sstream>
 istringstream reader_input;
-//Reader syntax_reader;
 // read words from filename on top of stack, discarding any previous input
 static void builtin_reader_open_file(Interpreter *intr) {
 	const char *filename = popString(intr, "reader-open-file missing filename");
 	string buf = readfile(filename);
 	reader_input = istringstream(buf);
-	//syntax_reader.clearAll();
-	//syntax_reader.addText(buf);
 }
 
 // read words from string on top of stack, discarding any previous input
 static void builtin_reader_open_string(Interpreter *intr) {
 	const char *text = popString(intr, "reader-open-string missing text");
-	//syntax_reader.clearAll();
-	//syntax_reader.addText(text);
 	reader_input = istringstream(text);
 }
 
@@ -261,12 +228,6 @@ static void builtin_reader_next(Interpreter *intr) {
 	else {
 		intr->push(newSymbol(word));
 	}
-	//Object sym = syntax_reader.nextObj();
-	//cout << "builtin-reader-next:" << sym.fmtStackPrint() << endl;
-	//if(!sym.isNull() && !sym.isSymbol()) {
-	//	throw LangError("reader-next expecting null or symbol but got: " + sym.fmtStackPrint());
-	//}
-	//intr->push(sym);
 }
 
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
@@ -307,15 +268,12 @@ static void builtin_greater(Interpreter *intr) {
 
 static const char *popStringOrSymbol(Interpreter *intr) {
 	Object o = intr->pop();
-	if(o.isString()) {
+	if(o.isString())
 		return o.asString();
-	}
-	else if(o.isSymbol()) {
+	else if(o.isSymbol())
 		return o.asSymbol();
-	}
-	else {
+	else
 		throw LangError("Expecting string or symbol but got: " + o.fmtStackPrint());
-	}
 }
 
 static void builtin_unmake(Interpreter *intr) {
@@ -400,7 +358,6 @@ static void builtin_loadc(Interpreter *intr) {
 	const char *filename = popString(intr, "Bad filename for .loadc");
 	ifstream fileIn(filename);
 	Object o = deserialize_stream(intr, fileIn);
-	//intr->push(o);
 }
 
 static void builtin_cmdline_args(Interpreter *intr) {
@@ -414,14 +371,10 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"/", [](Interpreter *intr) { do_binop(intr, &Object::opDivide); }},
 	{"/mod", builtin_divmod},
 	{"f.setprec", [](Interpreter *intr) { FLOAT_PRECISION = popInt(intr, "Bad arg to f.setprec");}},
-	// TODO - implement in script
-	//{":", builtin_define_word},
-	// synonym for ':', for readability (TODO implement in script)
-	//{"def", builtin_define_word},
 	{".c", builtin_printchar},
 	{"puts", [](Interpreter *intr) {printf("%s", popString(intr, "bad puts arg"));}},
 	
-	// - NOTE - repr & str COULD be implemented in script, however, they have to be
+	// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
 	//          implemented natively anyways for internal error printing, so
 	//          no purpose in implementing twice
 
