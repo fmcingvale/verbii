@@ -1,6 +1,6 @@
 from __future__ import annotations
 from errors import LangError
-from langtypes import LangString
+from langtypes import LangString, fmtStackPrint
 """
 	repl - run code interactively, run unittests, or run programs.
 
@@ -28,46 +28,72 @@ def new_interpreter():
 	fileIn = open(COMPILERLIB,"r")
 	deserialize_stream(intr, fileIn)
 
+	# remove __main__ so I don't inadvertently run it again (i.e. if a later
+	# byte-compile fails, I don't want this to remain)
+	del intr.WORDS['__main__']
+
 	return intr
 
-def repl():
-	"Run interactively"
+def debug_hook(intr: Interpreter, word: str):
+	print("=> " + intr.reprStack())
+	print("Run: " + str(word))
+	sys.stdout.write("press ENTER to continue ...")
+	sys.stdout.flush()
+	sys.stdin.readline()
+
+def compile_and_run(intr, text, singlestep):
+	# push code and run byte-compile-string
+	intr.push(LangString(text))
+	code = intr.WORDS['byte-compile-string']
+	intr.run(code)
 	
+	# byte-compile leaves list of words on stack -- used by serializer -- but i
+	# don't need them here
+	intr.pop()
+	
+	# run __main__
+	code = intr.WORDS['__main__']
+
+	if singlestep:
+		intr.run(code,debug_hook)
+	else:
+		intr.run(code)
+
+	# as above, delete __main__ to avoid inadvertent reuse
+	del intr.WORDS['__main__']
+
+# returns string on error, None on success	
+def safe_compile_and_run(intr, text, singlestep, backtrace_on_error):
+	try:
+		compile_and_run(intr, text, singlestep)
+	except LangError as exc:
+		errmsg = "*** " + exc.msg + " ***"
+		if backtrace_on_error:
+			print_backtrace(intr)
+		
+		return errmsg
+
+def repl(singlestep):
+	"Run interactively"
+	print("Verbii running on Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro))
+
 	intr = new_interpreter()
 
 	while(True):
 		sys.stdout.write(">> ")
 		sys.stdout.flush()
-		line = sys.stdin.readline()
+		line = sys.stdin.readline().strip()
 		if len(line) == 0:
 			return # eof
-		if line == "quit":
+		if line == "quit" or line == ",q":
 			return
 		
-		#intr.addText(line)
-		intr.push(LangString(line))
-		code = intr.WORDS['byte-compile-string']
-		#intr.run(code)
-		try:
-			intr.run(code)
-		except LangError as exc:
-			print("*** " + exc.msg + " ***")
-			continue
+		err = safe_compile_and_run(intr, line, singlestep, True)
+		if err is not None:
+			print(err)
+			intr = new_interpreter() # restart on error
 
-		#print("COMPILED OK")
-		# byte-compile leaves list of words on stack -- used by serializer -- but i
-		# don't need them here
-		intr.pop()
-		
-		# run __main__
-		code = intr.WORDS['__main__']
-		try:
-			intr.run(code)
-			print("=> " + intr.reprStack())
-		except LangError as exc:
-			print("*** " + exc.msg + " ***")
-
-def run_test_mode(filename: str, status: dict):
+def run_test_mode(filename: str):
 	"""read one line at a time from file and run, printing results and stack. 
 	used for unit testing"""
 	intr = new_interpreter()
@@ -77,46 +103,29 @@ def run_test_mode(filename: str, status: dict):
 	runnable_lines = 0 # how many lines have I seen that are non-blank
 	while (line := fileIn.readline()) != "":
 		if re_blankline.match(line):
-			continue # don't count blank lines
-
-		runnable_lines += 1
-		#print("LINE:",runnable_lines)
-
-		if runnable_lines <= status['max-count']:
-			# skipping line counts as running since either i successfully ran
-			# it previously, or am skipping it because it crashed
-			status['max-count'] = max(status['max-count'],runnable_lines)
-			continue
+			continue # skip blank lines
 		
 		sys.stdout.write(">> " + line) # line has \n at end already
 
-		# compile and run line, like above
-		intr.push(LangString(line))
-		code = intr.WORDS['byte-compile-string']
-		intr.run(code)
-		intr.pop() # don't need wordlist
+		# don't want backtraces in -test mode; if an unknown error occurs, rerun
+		# case without -test to see backtrace
+		err = safe_compile_and_run(intr, line, False, False)
+		if err is not None:
+			print(err)
+			intr = new_interpreter() # restart on error
+		else:	
+			print("=> " + intr.reprStack())
 		
-		code = intr.WORDS['__main__']
-		intr.run(code)
-
-		print("=> " + intr.reprStack())
-		# update count AFTER above suceeds
-		status['max-count'] = runnable_lines
-		#print(status['max-count'])
-
-	# made it all the way through, set 'done'
-	status['done'] = True
-
 def backtrace_curframe(intr: Interpreter):
 	trace = ""
 	nr = 7; # number of words to print in each frame
 	while nr > 0:
-		w = intr.reader.prevWord()
+		w = intr.prevCodeObject()
 		if(w == None):
 			print(trace)
 			return
 		else:
-			trace = w + ' ' + trace
+			trace = fmtStackPrint(w) + ' ' + trace
 		
 		nr -= 1
 	
@@ -128,45 +137,18 @@ def print_backtrace(intr: Interpreter):
 		sys.stdout.write("FRAME " + str(i) + ": ")
 		i += 1
 		backtrace_curframe(intr)
-		if intr.reader.hasPushedWords():
-			intr.reader.popWords()
+		if intr.havePushedFrames():
+			intr.code_return() # pop frame and print next
 		else:
-			return
-
-def debug_hook(intr: Interpreter, word: str):
-	print("=> " + intr.reprStack())
-	print("Run: " + str(word))
-	sys.stdout.write("press ENTER to continue ...")
-	sys.stdout.flush()
-	sys.stdin.readline()
+			return # end of callstack
 
 def run_file(intr: Interpreter, filename: str, singlestep: bool):
 	# run file
 	buf = open(filename,'r').read()
 
-	intr.push(LangString(buf))
-	code = intr.WORDS['byte-compile-string']
-	#intr.run(code)
-	try:
-		intr.run(code)
-	except LangError as exc:
-		print("*** " + exc.msg + " ***")
-		return
-
-	# byte-compile leaves list of words on stack -- used by serializer -- but i
-	# don't need them here
-	intr.pop()
-	
-	#print("PRESS ENTER TO RUN ...")
-	#sys.stdin.readline()
-
-	# run __main__
-	code = intr.WORDS['__main__']
-	try:
-		intr.run(code) #, debug_hook)
-		#print("=> " + intr.reprStack())
-	except LangError as exc:
-		print("*** " + exc.msg + " ***")
+	err = safe_compile_and_run(intr, buf, singlestep, True)
+	if err is not None:
+		print(err)
 
 if __name__ == '__main__':
 	testmode = False
@@ -195,22 +177,10 @@ if __name__ == '__main__':
 			sys.exit(1)
 
 	if filename is None:
-		repl()
+		repl(singlestep)
 	elif testmode is True:
-		status = {'done': False, 'max-count': 0}
-		while not status['done']:
-			try:
-				run_test_mode(filename, status)
-			except LangError as exc:
-				print("*** " + exc.msg + " ***")
-				#print("MAX LINE:",status)
-				status['max-count'] += 1
+		run_test_mode(filename)
 	else:
 		intr = new_interpreter()
-
-		try:
-			run_file(intr, filename, singlestep)
-		except LangError as err:
-			print("*** " + err.msg + " ***")
-			print_backtrace(intr)
-	
+		run_file(intr, filename, singlestep)
+		

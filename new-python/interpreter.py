@@ -63,6 +63,9 @@ class Interpreter(object):
 		self.code = code
 		self.codepos = 0
 
+	def havePushedFrames(self):
+		return len(self.callstack) > 0
+
 	def code_return(self):
 		self.code,self.codepos = self.callstack.pop()
 		#print("CODE RETURN (POS={0}): {1}".format(self.codepos, fmtStackPrint(self.code)))
@@ -170,7 +173,7 @@ class Interpreter(object):
 			if word is None:
 				# i could be returning from a word that had no 'return',
 				# so do return, if possible
-				if len(self.callstack):
+				if self.havePushedFrames():
 					self.code_return()
 					continue
 				else:
@@ -193,7 +196,7 @@ class Interpreter(object):
 			# string are symbols
 			if word == "return":
 				# return from word by popping back to previous wordlist (if not at toplevel)
-				if len(self.callstack):
+				if self.havePushedFrames():
 					self.code_return()
 				else:
 					return # top level return exits program
