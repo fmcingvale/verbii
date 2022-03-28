@@ -53,7 +53,8 @@ never visible from verbii code
 * why do we need a list AND a lambda? why not just call lists? there needs to be something different about lambdas to justify the separate type (like closures?)
 
 * 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count var and 'NAME del so they be implemented outside of interpreter correctly
-
+	* -- vars should be words in all ports that return their address
+	
 * add a 'safe-compile-and-run' to other ports (like chicken) -- should allow simplifying repls.
 	* make run-test in other ports like chicken ... much more straightforward implementation
 
@@ -64,3 +65,6 @@ never visible from verbii code
 * 'del' should be able to delete either vars or userwords (but not builtins)
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
+
+* don't allow words & vars with same name.
+

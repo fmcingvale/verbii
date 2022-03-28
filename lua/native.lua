@@ -397,7 +397,11 @@ function builtin_make_word(intr)
 	local name = popSymbol(intr)
 	local list = intr:pop()
 	if isList(list) then
-		intr.WORDS[name] = list
+		if intr:hasWord(name) then
+			error(">>>Trying to redefine name: " .. name)
+		else
+			intr.WORDS[name] = list
+		end
 	else
 		error(">>>make-word expecting list but got: " .. fmtStackPrint(list))
 	end

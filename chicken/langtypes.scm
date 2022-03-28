@@ -79,6 +79,10 @@
 
 ; (define-method (value (i <integer>)) i)
 
+; 31-bit integer limits
+(define MAX_INT_31 1073741823)
+(define MIN_INT_31 -1073741823)
+
 ; in scheme a number like 123.0 tests true as an integer; in verbii it is a float, so cannot
 ; use scheme floats directly (at least I haven't figured out a way)
 (define-record LangFloat value)

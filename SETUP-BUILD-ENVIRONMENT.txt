@@ -9,3 +9,16 @@ Setting up build environment:
 
 * C#:
 	- Get .NET SDK x64 6.0 from https://dotnet.microsoft.com/en-us/download
+
+==================
+
+More Ubuntu stuff ...
+
+* /etc/inputrc:
+	set bell-style none
+	tab: complete-filename
+
+* ~/.bashrc
+	alias more='less'
+	export LESS="-X"
+	alias dir='ls -l'

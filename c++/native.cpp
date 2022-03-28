@@ -95,7 +95,7 @@ static void builtin_make_word(Interpreter *intr) {
 	//cout << "MAKE-WORD ENTRY:" << intr->reprStack() << endl;
 	const char *name = popSymbol(intr, "make-word bad name");
 	Object list = popList(intr, "make-word bad list");
-	if(intr->WORDS.find(name) != intr->WORDS.end())
+	if(intr->hasWord(name))
 		throw LangError("Trying to redefine name: " + string(name));
 
 	intr->WORDS[name] = list.data.objlist;

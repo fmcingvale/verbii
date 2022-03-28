@@ -462,6 +462,9 @@ class Builtins {
 	public static void make_word(Interpreter intr) {
 		var name = popSymbol(intr, "make-word");
 		var list = popList(intr, "make-word");
+		if(intr.hasWord(name)) {
+			throw new LangError("Trying to redefine name: " + name);
+		}
 		intr.WORDS[name] = list.objlist;
 	}
 

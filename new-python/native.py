@@ -354,7 +354,9 @@ def builtin_make_word(I):
 	objlist = I.pop()
 	if type(objlist) != list:
 		raise LangError("make-word expects list but got: " + fmtStackPrint(objlist))
-
+	if I.hasWord(name):
+		raise LangError("Trying to redefine name: " + name)
+		
 	I.WORDS[name] = objlist
 
 def builtin_append(I):

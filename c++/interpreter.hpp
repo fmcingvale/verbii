@@ -66,6 +66,7 @@ class Interpreter {
 
 	void do_jump(const char *jumpword);
 
+	bool hasWord(const char *name);
 	void deleteWord(const char* name);
 
 	//Syntax *syntax;
@@ -79,6 +80,7 @@ class Interpreter {
 	Object nextSymbolOrFail(const char *failmsg);
 
 	void code_call(ObjList *new_code);
+	bool havePushedFrames();
 	void code_return();
 	
 	// current running code & callstack of previous frames

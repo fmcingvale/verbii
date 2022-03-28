@@ -24,7 +24,11 @@
 
 (define lang-error (lambda (wheresym . args)
 	(raise ((make-exception 
-		(string-append "[" (symbol->string wheresym) "] " 
-			(string-join (map fmtDisplay args) " ")) 'lang-error) 'lang-error))))
+		(string-append "*** " 
+			(string-join (map 
+				(lambda (obj)
+					(cond
+						((string? obj) obj)
+						(else (fmtDisplay obj)))) args) " ") " ***") 'lang-error) 'lang-error))))
 
 ) ; end of module

@@ -44,25 +44,35 @@ foobarbadword
 >L >L >L
 >L
 
-( show that trying to redefine a name fails )
+( show that trying to redefine a var fails )
 var fff 4
 var fff 1
 
-( however, show that a word can be deleted and THEN redefined ... )
+( but deleting it first works )
+var fff 4
+del fff
+var fff 8
+del fff
+
+( same with words )
 : zzz 10 20 30 ;
 : zzz 40 50 60 ;
 
-( that should have crashed & restarted, so set it up again then delete first ... )
+( now delete first so it works )
 : zzz 10 20 30 ;
 del zzz
 : zzz 40 50 60 ;
+del zzz
 
-( now same with var - already tested crash case above )
-var yyyy 11
-del yyyy
-var yyyy 18
+( vars & words are in same namespace so can't redefine this way either ... )
+var fff 4
+: fff 1 2 3 ;
 
-( deleting non existant var should fail )
+( and trying to redefine a word as var )
+: fff 1 2 3 ;
+var fff 4
+
+( deleting non existant name should fail )
 del ggg
 
 ( end of input inside " )

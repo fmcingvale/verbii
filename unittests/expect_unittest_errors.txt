@@ -70,19 +70,29 @@
 => 
 >> >L
 *** Stack underflow ***
->> ( show that trying to redefine a name fails )
+>> ( show that trying to redefine a var fails )
 => 
 >> var fff 4
 => 
 >> var fff 1
-*** Trying to redefine variable fff ***
->> ( however, show that a word can be deleted and THEN redefined ... )
+*** Trying to redefine name: fff ***
+>> ( but deleting it first works )
+=> 
+>> var fff 4
+=> 
+>> del fff
+=> 
+>> var fff 8
+=> 
+>> del fff
+=> 
+>> ( same with words )
 => 
 >> : zzz 10 20 30 ;
 => 
 >> : zzz 40 50 60 ;
 *** Trying to redefine name: zzz ***
->> ( that should have crashed & restarted, so set it up again then delete first ... )
+>> ( now delete first so it works )
 => 
 >> : zzz 10 20 30 ;
 => 
@@ -90,15 +100,21 @@
 => 
 >> : zzz 40 50 60 ;
 => 
->> ( now same with var - already tested crash case above )
+>> del zzz
 => 
->> var yyyy 11
+>> ( vars & words are in same namespace so can't redefine this way either ... )
 => 
->> del yyyy
+>> var fff 4
 => 
->> var yyyy 18
+>> : fff 1 2 3 ;
+*** Trying to redefine name: fff ***
+>> ( and trying to redefine a word as var )
 => 
->> ( deleting non existant var should fail )
+>> : fff 1 2 3 ;
+=> 
+>> var fff 4
+*** Trying to redefine name: fff ***
+>> ( deleting non existant name should fail )
 => 
 >> del ggg
 *** Trying to delete non-existent name: ggg ***

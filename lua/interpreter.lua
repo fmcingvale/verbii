@@ -158,6 +158,22 @@ function Interpreter:code_return()
 	end
 end
 
+function Interpreter:hasWord(name)
+	return self.VARS[name] ~= nil or self.WORDS[name] ~= nil
+end
+
+function Interpreter:deleteWord(name)
+	if self.VARS[name] ~= nil then
+		self.VARS[name] = nil
+		return
+	elseif self.WORDS[name] ~= nil then
+		self.WORDS[name] = nil
+		return
+	else
+		error(">>>Trying to delete non-existent name: " .. name)
+	end
+end
+
 function Interpreter:run(objlist, stephook)
 	--print("** RUN: " .. fmtStackPrint(objlist))
 	
@@ -253,8 +269,8 @@ function Interpreter:run(objlist, stephook)
 					error(">>>Expected int after var name but got " .. fmtStackPrint(count))
 				end
 				-- must be unique name
-				if self.VARS[name] ~= nil then
-					error(">>>Trying to redefine variable "  .. name)
+				if self:hasWord(name) then
+					error(">>>Trying to redefine name: "  .. name)
 				end
 			
 				self.VARS[name] = self:heap_alloc(count)
@@ -263,11 +279,7 @@ function Interpreter:run(objlist, stephook)
 				
 			if obj == "del" then
 				name = self:nextObjOrFail()
-				if self.VARS[name] == nil then
-					error(">>>Trying to delete non-existent variable " .. name)
-				end
-				
-				self.VARS[name] = nil
+				self:deleteWord(name)
 				goto MAINLOOP
 			end
 				

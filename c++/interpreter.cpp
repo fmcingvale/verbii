@@ -182,6 +182,10 @@ void Interpreter::code_call(ObjList *new_code) {
 	codepos = 0;
 }
 
+bool Interpreter::havePushedFrames() {
+	return callstack_code.size() > 0;
+}
+
 void Interpreter::code_return() {
 	if(!code) {
 		throw LangError("code_return but no code is running");
@@ -195,6 +199,10 @@ void Interpreter::code_return() {
 	callstack_code.pop_back();
 	codepos = callstack_pos.back();
 	callstack_pos.pop_back();
+}
+
+bool Interpreter::hasWord(const char *name) {
+	return (VARS.find(name) != VARS.end() || WORDS.find(name) != WORDS.end());
 }
 
 void Interpreter::deleteWord(const char* name) {
@@ -242,7 +250,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			//	syntax->popObjList();
 			//	continue;
 			//}
-			if(callstack_code.size() > 0) {
+			if(havePushedFrames()) {
 				code_return();
 				continue;
 			}
@@ -269,7 +277,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			//if(syntax->hasPushedObjLists()) {	
 			//	syntax->popObjList();
 			//}
-			if(callstack_code.size() > 0) {
+			if(havePushedFrames()) {
 				code_return();
 			}
 			else {
@@ -314,8 +322,8 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 				throw LangError("Count must be int, got: " + count.fmtStackPrint());
 			}
 			// must be unique userword
-			if(VARS.find(name.asSymbol()) != VARS.end()) {
-				throw LangError("Trying to redefine variable " + name.fmtStackPrint());
+			if(hasWord(name.asSymbol())) {
+				throw LangError("Trying to redefine name: " + name.fmtStackPrint());
 			}
 			// add to VARS so name lookup works (below) 
 			VARS[name.asSymbol()] = heap_alloc(count.asInt());
@@ -354,7 +362,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 				// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 				// i don't need to come back here, so pop my wordlist first to stop stack from growing
 				if(peekNextCodeObj().isNull() || peekNextCodeObj().isSymbol("return")) {
-					if(callstack_code.size() > 0) { // in case i'm at the toplevel
+					if(havePushedFrames()) { // in case i'm at the toplevel
 						code_return();
 					}
 				}

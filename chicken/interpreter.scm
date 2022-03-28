@@ -95,14 +95,19 @@
 
 (define (push intr obj)
 	(if (<= (intr-SP intr) (intr-SP_MIN intr))
-		(lang-error 'push "Stack overflow!"))
+		(lang-error 'push "Stack overflow"))
 	;(set! (SP intr) (- (SP intr) 1))
 	(intr-SP-set! intr (- (intr-SP intr) 1))
 	(memset intr (intr-SP intr) obj))
 	
+(define (push-int intr i)
+	(if (or (> i MAX_INT_31) (< i MIN_INT_31))
+		(lang-error 'push-int "Integer overflow")
+		(push intr i)))
+
 (define (pop intr)
 	(if (>= (intr-SP intr) (intr-SP_EMPTY intr))
-		(lang-error 'pop "Stack underflow!"))
+		(lang-error 'pop "Stack underflow"))
 	;(set! (SP intr) (+ (SP intr) 1))
 	(intr-SP-set! intr (+ (intr-SP intr) 1))
 	(memget intr (- (intr-SP intr) 1)))
@@ -233,7 +238,15 @@
 					; found it, stop
 				)
 				(else (loop (movefn intr 'do-jump)))))))
-				
+
+(define (intr-has-word intr name)
+	(hash-table-exists? (WORDS intr) name))
+			
+(define (intr-delete-word intr name)
+	(if (hash-table-exists? (WORDS intr) name)
+		(hash-table-delete! (WORDS intr) name)
+		(lang-error 'delete-word "Trying to delete non-existent name: " name)))
+		
 (define (intr-run intr objlist)
 	(if (not (null? (intr-code intr)))
 		(lang-error 'intepreter "Interpreter called recursively!"))
@@ -253,7 +266,8 @@
 					(intr-code-set! intr '())
 				))
 			; literals get pushed
-			((or (integer? obj) (LangFloat? obj) (LangString? obj) (LangLambda? obj))
+			((integer? obj) (push-int intr obj) (run-loop (nextObj intr)))
+			((or (LangFloat? obj) (LangString? obj) (LangLambda? obj))
 				(push intr obj)
 				(run-loop (nextObj intr)))
 			; symbols do the most stuff ...
@@ -285,20 +299,22 @@
 					((string=? obj "var")
 						(let* ((name (nextSymbolOrFail intr "var"))
 								(count (nextObjOrFail intr 'var)))
-							(if (integer? count)
-								(begin
-									; NOTE different from other ports -- create WORD with name that
-									; returns the start address -- doing it this way should allow this
-									; code to eventually move to init.verb
-									(hash-table-set! (WORDS intr) name 
-											(list->LangList (list (allocate intr count))))
-									(run-loop (nextObj intr)))
-								(lang-error 'var "Expecting int for count but got: " count))))
+							(if not (integer? count)
+								(lang-error 'var "Expecting int for count but got: " count))
+							(if (intr-has-word intr name)
+								(lang-error 'var "Trying to redefine name: " name))
+
+							; NOTE different from other ports -- create WORD with name that
+							; returns the start address -- doing it this way should allow this
+							; code to eventually move to init.verb
+							(hash-table-set! (WORDS intr) name 
+									(list->LangList (list (allocate intr count))))
+							(run-loop (nextObj intr))))
 					; del
 					; TODO -- this should pop symbol from stack instead of being syntax "del NAME"
 					((string=? obj "del")
 						(let ((name (nextSymbolOrFail intr "del")))
-							(hash-table-delete! (WORDS intr) name)
+							(intr-delete-word intr name)
 							(run-loop (nextObj intr))))
 					; call
 					((string=? obj "call")
@@ -341,8 +357,8 @@
 						(run-loop (nextObj intr)))
 					
 					(else
-						(lang-error 'intepreter "Unknown word:" obj))))
+						(lang-error 'intepreter "Unknown word" obj))))
 			(else
-				(lang-error 'interpreter "Unknown word:" obj)))))
+				(lang-error 'interpreter "Unknown word" obj)))))
 
 ) ; end of module

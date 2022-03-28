@@ -114,7 +114,7 @@
 	(cond
 		((integer? A)
 			(cond
-				((integer? B) (push intr (+ A B)))
+				((integer? B) (push-int intr (+ A B)))
 				((LangFloat? B) (push intr (make-lang-float (+ A (value B)))))
 				(else (lang-error '+ "Don't know how to add " A " and " B))))
 		((LangFloat? A)
@@ -142,7 +142,7 @@
 	(cond
 		((integer? A)
 			(cond
-				((integer? B) (push intr (- A B)))
+				((integer? B) (push-int intr (- A B)))
 				((LangFloat? B) (push intr (make-lang-float (- A (value B)))))
 				(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		((LangFloat? A)
@@ -157,7 +157,7 @@
 	(cond
 		((integer? A)
 			(cond
-				((integer? B) (push intr (* A B)))
+				((integer? B) (push-int intr (* A B)))
 				((LangFloat? B) (push intr (make-lang-float (* A (value B)))))
 				(else (lang-error '* "Don't know how to multiply " A " and " B))))
 		((LangFloat? A)
@@ -188,15 +188,15 @@
 			(begin
 				(set! mod (+ a (* quot b)))
 				(set! quot (- 0 quot))))
-		(push intr mod)
-		(push intr quot)))
+		(push-int intr mod)
+		(push-int intr quot)))
 
 (define (is-sequence? obj)
 	(or (LangString? obj) (LangSymbol? obj) (LangList? obj)))
 
 (define (builtin-length intr obj)
 	(if (is-sequence? obj)
-		(push intr (len obj))
+		(push-int intr (len obj))
 		(lang-error 'length "Object does not support 'length': " obj)))
 
 (define (builtin-slice intr obj index nr)
@@ -236,11 +236,11 @@
 (define (builtin-unmake intr obj)
 	(cond
 		((or (LangString? obj) (LangSymbol? obj))
-			(string-for-each (lambda (c) (push intr (char->integer c))) (value obj))
-			(push intr (len obj)))
+			(string-for-each (lambda (c) (push-int intr (char->integer c))) (value obj))
+			(push-int intr (len obj)))
 		((LangList? obj)
 			(dynvector-for-each (lambda (i o) (push intr o)) (LangList-objlist obj))
-			(push intr (len obj)))
+			(push-int intr (len obj)))
 		((LangLambda? obj)
 			; like other ports, push a copy
 			(push intr (make-LangList (dynvector-copy (LangList-objlist (lambda-llist obj))))))
@@ -263,6 +263,8 @@
 
 (define (builtin-make-word intr name)
 	(let ((llist (popTypeOrFail intr LangList? "symbol" "make-word")))
+		(if (intr-has-word intr name)
+			(lang-error 'make-word "Trying to redefine name: " name))
 		(hash-table-set! (WORDS intr) name llist)))
 
 (define (builtin-append intr llist obj)
@@ -297,9 +299,9 @@
 		(list "reader-open-string" (list 's) reader-open-string)
 		(list "make-list" (list 'i) builtin-make-list)
 		(list "set!" 	(reverse (list '* 'i)) builtin-set)
-		(list "SP" 		'() (lambda (intr) (push intr (intr-SP intr))))
+		(list "SP" 		'() (lambda (intr) (push-int intr (intr-SP intr))))
 		(list "SP!" 	(list 'i) (lambda (intr addr) (intr-SP-set! intr addr)))
-		(list "LP" 		'() (lambda (intr) (push intr (intr-LP intr))))
+		(list "LP" 		'() (lambda (intr) (push-int intr (intr-LP intr))))
 		(list "LP!" 	(list 'i) (lambda (intr addr) (intr-LP-set! intr addr)))
 		(list ">L" 		(list '*)  builtin-to-local)
 		(list "L>" 		'() builtin-from-local)
@@ -319,7 +321,7 @@
 		(list "length" 		(list '*)  builtin-length)
 		(list "append"	 	(reverse (list 'L '*)) builtin-append)
 		(list "parse-int"	'() (lambda (intr) 
-			(push intr (string->number (value 
+			(push-int intr (string->number (value 
 				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-int"))))))
 		(list "parse-float" '() (lambda (intr) 
 			(push intr (make-lang-float (string->number (value 
@@ -332,6 +334,7 @@
 		(list "make-symbol" (list 'i) builtin-make-symbol)
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
+		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

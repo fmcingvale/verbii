@@ -45,77 +45,6 @@
 (import deserializer)
 (import native)
 
-(define (test-deserialize)
-	(let* ((fileIn (open-input-file "data.txt"))
-			(result (deserialize-stream fileIn)))
-		(print "Raw result: " result)
-		(print "DISPLAY: " (fmtDisplay result))
-		(print "STACK: " (fmtStackPrint result))
-		(close-input-port fileIn))
-
-	(print "WORDS:" (hash-table-keys WORDS))
-	(hash-table-walk WORDS (lambda (key val) (print key ": " (fmtStackPrint val)))))
-
-;(test-deserialize)
-
-
-(define (intr-tests)
-	(set! intr (make-Interpreter))
-	(print "SP NOW: " (SP intr))
-	(push intr 111)
-	(push intr 222)
-	(push intr 333)
-
-	(print "=>" (reprStack intr))
-
-	(print "POP: " (pop intr))
-	(print "POP: " (pop intr))
-
-	(print "=>" (reprStack intr))
-
-	(push intr "AAA")
-	(push intr "BBB")
-
-	(print "=>" (reprStack intr))
-
-	(print "POP: " (pop intr))
-
-	(print "POP: " (pop intr))
-	(print "POP: " (pop intr))
-
-	(print "=>" (reprStack intr))
-
-	(set! L1 (list->LangList '(1 2 3 4)))
-	(set! L2 (list->LangList '(5 6 7 8)))
-	(set! L3 (list->LangList '(9 10 11 12)))
-
-	(print (fmtStackPrint L1))
-	(print (fmtStackPrint L2))
-	(print (fmtStackPrint L3))
-
-	(intr-code-set! intr L1)
-	(print (fmtStackPrint (intr-code intr)))
-	(code-call intr L2)
-	(print (fmtStackPrint (intr-code intr)))
-	(code-call intr L3)
-	(print (fmtStackPrint (intr-code intr)))
-	(code-return intr)
-	(print (fmtStackPrint (intr-code intr)))
-	(code-return intr)
-	(print (fmtStackPrint (intr-code intr)))
-	(intr-code-set! intr '())
-
-	(print (hash-table-ref BUILTINS "int?"))
-
-	(print "=>" (reprStack intr))
-	(intr-run intr (list->LangList '(10 20 30)))
-	(print "=>" (reprStack intr))
-	(intr-run intr (list->LangList '(40 50 60)))
-	(print "=>" (reprStack intr))
-	(intr-run intr (list->LangList '("int?" 123)))
-	(print "=>" (reprStack intr))
-)
-
 ; load a precompiled (.b) file into interpreter
 (define (load-byte-compiled-file intr filename)
 	(let* ((fileIn (open-input-file filename))
@@ -129,6 +58,10 @@
 		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
 		(load-byte-compiled-file intr "../lib/compiler.verb.b")
 		; do NOT run __main__ for compiler since that would run command-line compiler
+
+		; delete __main__ so I don't inadvertently reuse it later
+		(intr-delete-word intr "__main__")
+
 		intr))
 		
 (define (byte-compile intr text)
@@ -154,6 +87,8 @@
 		(pop intr) ; pop list of compiled words, don't need
 		;(print "Run ...")
 		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
+		; delete __main__ once run
+		(intr-delete-word intr "__main__")
 		; ran OK if we made it here, return null
 		'()))
 
@@ -162,6 +97,8 @@
 	(byte-compile intr text)
 	(pop intr) ; pop list of compiled words, don't need
 	(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
+	; delete __main__ once run
+	(intr-delete-word intr "__main__")
 	'())
 
 ; normally this should be set to the safe version, but to get tracebacks on scheme
@@ -187,7 +124,7 @@
 									(repl-loop))
 								; print error and restart interpreter
 								(begin
-									(print "** ERROR ** " result)
+									(print result)
 									(set! intr (make-loaded-interpreter))
 									(repl-loop))))))))))
 
@@ -201,7 +138,7 @@
 		;(print "READ FILE: " text)
 		(let ((result (compile-and-run intr text)))
 			(if (not (null? result))
-				(print "** ERROR ** " result)))))
+				(print result)))))
 
 ; does text contain only whitespace?
 (define (blank-string? text)

@@ -218,7 +218,23 @@ public class Interpreter {
 		callstack.RemoveAt(callstack.Count-1);
 	}
 
-	public void run(List<LangObject> objlist) {
+	public bool hasWord(string name) {
+		return WORDS.ContainsKey(name) || VARS.ContainsKey(name);
+	}
+
+	public void deleteWord(string name) {
+		if(WORDS.ContainsKey(name)) {
+			WORDS.Remove(name);
+		}
+		else if(VARS.ContainsKey(name)) {
+			VARS.Remove(name);
+		}
+		else {
+			throw new LangError("Trying to delete non-existent name: " + name);
+		}
+	}
+
+	public void run(List<LangObject> objlist, Func<Interpreter,LangObject,int>? debug_hook) {
 		if(callstack.Count > 0) {
 			throw new LangError("Interpreter::run called recursively");
 		}
@@ -235,6 +251,9 @@ public class Interpreter {
 		while(true) {
 			//Console.WriteLine("TOP OF RUN LOOP");
 			var obj = nextObj();
+			if(debug_hook != null) {
+				debug_hook(this, obj);
+			}
 
 			if(obj is LangVoid) {
 				//Console.WriteLine("GOT VOID");
@@ -314,8 +333,8 @@ public class Interpreter {
 						throw new LangError("Count must be integer but got: " + count.fmtStackPrint());
 					}
 					// must be unique userword
-					if(VARS.ContainsKey(name.value)) {
-						throw new LangError("Trying to redefine variable " + name.value);
+					if(hasWord(name.value)) {
+						throw new LangError("Trying to redefine name: " + name.value);
 					}
 					// add to VARS so name lookup works (below)
 					VARS[name.value] = heapAllocate((count as LangInt)!.value);
@@ -324,10 +343,7 @@ public class Interpreter {
 
 				if(sym!.match("del")) {
 					var name = nextSymbolOrFail("del, name");
-					if(!VARS.ContainsKey(name.value)) {
-						throw new LangError("Trying to delete non-existent variable " + name.value);
-					}
-					VARS.Remove(name.value);
+					deleteWord(name.value);
 					continue;
 				}
 				

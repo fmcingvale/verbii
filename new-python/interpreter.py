@@ -154,6 +154,17 @@ class Interpreter(object):
 			raise LangError("Unexpected end of input")
 
 		return obj
+
+	def hasWord(self, name):
+		return name in self.VARS or name in self.WORDS
+
+	def deleteWord(self, name):
+		if name in self.VARS:
+			del self.VARS[name]
+		elif name in self.WORDS:
+			del self.WORDS[name]
+		else:
+			raise LangError("Trying to delete non-existent name: " + name)
 		
 	def run(self, objlist, stephook=None) -> None:
 		if len(self.callstack):
@@ -240,8 +251,8 @@ class Interpreter(object):
 				if type(count) != int:
 					raise LangError("Expecting int after var but got: " + fmtStackPrint(count))
 				# must be unique userword
-				if name in self.VARS:
-					raise LangError("Trying to redefine variable " + name)
+				if self.hasWord(name):
+					raise LangError("Trying to redefine name: " + name)
 			
 				# alloc memory for var
 				self.VARS[name] = self.heap_alloc(count)
@@ -249,10 +260,7 @@ class Interpreter(object):
 		
 			if word == "del":
 				name = self.nextCodeObjOrFail()
-				if name not in self.VARS:
-					raise LangError("Trying to delete non-existent variable " + name)
-				
-				del self.VARS[name]
+				self.deleteWord(name)
 				continue
 		
 			if word == "call":

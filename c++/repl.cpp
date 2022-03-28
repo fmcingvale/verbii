@@ -104,7 +104,7 @@ void print_backtrace(Interpreter *intr) {
 	while(1) {
 		cout << "FRAME " << i++ << ": ";
 		backtrace_curframe(intr);
-		if(intr->callstack_code.size() > 0) {
+		if(intr->havePushedFrames()) {
 			intr->code_return();
 		}
 		else {
