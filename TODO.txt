@@ -1,29 +1,11 @@
 Global TODO
 
-* ALL PORTS: Syntax "if >>true >>false" -- don't need to parse false_jump since program will always continue there 
-  on false without doing anything
-
-* Add string type
-
-	* I'm thinking ." should be deprecated in favor of "string" . since that is 
-	  what ." does internally now
-
-* After strings added, add 'error' to cause program exit with message
-	* change string parser to look for " at start/end of words, instead of as
-	separate words
-
-* After above, make expect-f exit test when %diff too large
-
 * More expect-* things to further automate unittests
 
 * More error checking of input types in library/tests/demos
 
 * 63-bit integers
 	* or ... maybe 52 since some host languages use floats for ints??
-
-* add lists
-	* this will enable things like closures where a list can be bound to lambda
-	and add an 'apply' that's like call except it pushes the bound list first
 
 * add bit level operations -- limit to 32 bits
 	* add random number generator (pcg32)
@@ -32,39 +14,26 @@ Global TODO
   at end since values for powers of 10 can be in a table (exp algorithm seems
   to have trouble with larger values)
   
-* should delete comments from source as read so they don't have to be reparsed on every pass
-
 * add cmdline params: -stack -locals -heap to give values for memory sizes
-
-* Lua: remove obsolete code
-
-* rename CallableWordList in python port for consistency
 
 * sort out usage of null/NULL/'void' in ports for consistency. add some unittests
 that include null to make sure it is handled correctly. also make sure voids are 
 never visible from verbii code
 
-* add a "where" parameter to all 'popOrFail' type functions to give context on errors
-
 * make sure no ports still looking for false_jump after 'if'
 
 * shouldn't syntax-next return void on end of input instead of null? check/change across ports.
 
-* why do we need a list AND a lambda? why not just call lists? there needs to be something different about lambdas to justify the separate type (like closures?)
+* why do we need a list AND a lambda? why not just call lists? there needs to be something different about lambdas to justify the separate type (like closures?) .. binding a list of values to lambdas that are pushed on call?
 
-* 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count var and 'NAME del so they be implemented outside of interpreter correctly
-	* -- vars should be words in all ports that return their address
-	
-* add a 'safe-compile-and-run' to other ports (like chicken) -- should allow simplifying repls.
-	* make run-test in other ports like chicken ... much more straightforward implementation
+* 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count var and 'NAME del so they can be implemented outside of interpreter correctly
 
 * ensure consistent behavior between ports on when lists are copied -- prime example is .dumpword - it should create a copy of the objlist because it is not safe for programs to try and edit words directly -- the compiler is allowed to transform the objlist so cannot assume the source code matches 1:1 with the compiled objlist
 
-* all ports should do debug_hook like lua port
-
-* 'del' should be able to delete either vars or userwords (but not builtins)
-
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
-* don't allow words & vars with same name.
+* all ports should implement var as making a new word, like chicken port
 
+* add open-input-file, open-output-file, open-string, read-line, read-char, write-string, write-char ... basically I/O with ports concept like scheme
+
+* add \ for line comments
