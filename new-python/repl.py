@@ -92,6 +92,8 @@ def repl(singlestep):
 		if err is not None:
 			print(err)
 			intr = new_interpreter() # restart on error
+		else:
+			print("=> " + intr.reprStack())
 
 def run_test_mode(filename: str):
 	"""read one line at a time from file and run, printing results and stack. 

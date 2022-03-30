@@ -292,36 +292,10 @@ class Builtins {
 		}
 	}
 
-	// reader interface
-	public static List<LangSymbol> READER_WORDS;
-	public static int READER_POS;
-
-	public static void reader_open_string(Interpreter intr) {
-		// clear any existing content
-		READER_WORDS = new List<LangSymbol>();
-		string text = popString(intr, "reader-open-string");
-		string[] whitespace = { " ", "\n", "\r", "\t" };
-		string[] words = text.Split(whitespace, System.StringSplitOptions.RemoveEmptyEntries);
-		foreach(var word in words) {
-			READER_WORDS.Add(new LangSymbol(word));
-		}
-		READER_POS = 0;
-	}
-
-	public static void reader_open_file(Interpreter intr) {
-		string filename = popString(intr,"reader-open-file");
+	public static void read_file(Interpreter intr) {
+		string filename = popString(intr,"read-file");
 		var text = System.IO.File.ReadAllText(filename);
 		intr.push(new LangString(text));
-		reader_open_string(intr);
-	}
-
-	public static void reader_next(Interpreter intr) {
-		if(READER_POS >= READER_WORDS.Count) {
-			intr.push(new LangNull());
-		}
-		else {
-			intr.push(READER_WORDS[READER_POS++]);
-		}
 	}
 
 	public static void make_list(Interpreter intr) {
@@ -526,9 +500,6 @@ class Builtins {
 		{"ref", _ref},
 		{".showdef", showdef},
 
-		{"reader-open-string", reader_open_string},
-		{"reader-open-file", reader_open_file},
-		{"reader-next", reader_next},
 		{"make-list", make_list},
 		{"slice", slice},
 		{"unmake", unmake},
@@ -543,5 +514,6 @@ class Builtins {
 		{".dumpword", dumpword},
 		{"error", intr => throw new LangError(popString(intr,"error")) },
 		{"cmdline-args", intr => intr.push(NATIVE_CMDLINE_ARGS)},
+		{"read-file", read_file},
 	};
 }

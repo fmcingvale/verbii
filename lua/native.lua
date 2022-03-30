@@ -442,6 +442,17 @@ function builtin_dumpword(intr)
 	end
 end
 
+function builtin_readfile(intr)
+	local filename = popString(intr)
+	local f = io.open(filename, "r")
+	if f == nil then
+		error(">>>No such file: " .. filename)
+	end
+	local buf = f:read("a")
+	io.close(f)
+	intr:push(new_String(buf))
+end
+
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
 	["-"] = { {"any","any" }, builtin_sub },
@@ -473,9 +484,6 @@ BUILTINS = {
 	["L>"] = { {}, builtin_fromlocal},
 	["depth"] = { {}, function(intr) intr:push(intr.SP_EMPTY - intr.SP) end },
 	
-	["reader-open-string"] = { {}, builtin_reader_open_string},
-	["reader-open-file"] = { {}, builtin_reader_open_file},
-	["reader-next"] = { {}, builtin_reader_next},
 	["make-list"] = { {"number"}, builtin_make_list},
 	["slice"] = { {"any","number","number"}, builtin_slice},
 	["unmake"] = { {"any"}, builtin_unmake},
@@ -491,4 +499,6 @@ BUILTINS = {
 	["null"] = { {}, function(intr) intr:push(new_None()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},
+
+	["read-file"] = { {}, builtin_readfile},
 }

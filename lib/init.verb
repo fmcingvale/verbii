@@ -127,3 +127,68 @@ SP SP_EMPTY set!
 	repr
 	@string
 	;
+
+( --- reader interface, used by compiler, but may be generally useful
+	usage:
+		" ... " reader-open-string
+		or
+		filename reader-open-file
+
+		then reader-next until it returns null
+)
+
+( -- fyi -- this can't be in compiler.verb because its __main__ is not run on startup,
+	so the vars never get defined 
+	-- )
+
+var READER_TEXT 1 ( string )
+var READER_TEXT_LEN 1
+var READER_POS 1
+
+: string->symbol ( string -- symbol )
+	unmake make-symbol
+	;
+
+: reader-open-string ( string )
+	READER_TEXT set!
+	READER_TEXT ref length READER_TEXT_LEN set!
+	0 READER_POS set!
+	;
+
+: ord ( string -- ascii ; get ASCII value of first char of string )
+	0 get unmake drop
+	;
+
+: chr ( ASCII -- string ; turn ASCII character value into single-character string )
+	1 make-string
+	;
+
+: reader-next ( -- word ; get next word from reader stream, or null on eof )
+	"" ( word )
+	@skipws ( skip leading whitespace )
+		READER_POS ref READER_TEXT_LEN ref >= if >>eof
+		READER_TEXT ref READER_POS ref get ( word char )
+		ord 32 > if >>word-loop
+		READER_POS ref 1 + READER_POS set! ( word char; ++pos )
+		<<skipws
+		
+	@word-loop ( word )
+		READER_POS ref READER_TEXT_LEN ref >= if >>eof
+		READER_TEXT ref READER_POS ref get ( word char )
+		READER_POS ref 1 + READER_POS set! ( word char; ++pos )
+		( check for whitespace )
+		dup ord 32 <= if >>space  ( treat anything from ' ' to NUL as whitespace )
+		( not whitespace, append and continue )
+		+ <<word-loop
+	
+	@space ( word char )
+		drop ( fall through to return word below )
+
+	@eof ( word ) 
+		( return word, null on end of file )
+		dup length 0 == if >>isnull
+		string->symbol return ( return word as symbol )
+
+	@isnull drop null return
+	;
+

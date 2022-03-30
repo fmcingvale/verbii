@@ -188,46 +188,23 @@ static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &)) {
 	intr->push((a.*op)(b));
 }
 
-// =============== experimental syntax scripting ===============================
 #include <iostream>
 #include <fstream>
-static string readfile(string filename) {
-	ifstream fileIn(filename);
+
+static void builtin_readfile(Interpreter *intr) {
+	const char *filename = popString(intr, "read-file missing filename");
+	ifstream fileIn(filename, ios::binary);
 	if(fileIn.rdstate() != ios_base::goodbit) {
-		throw LangError("No such file in readfile():" + filename);
+		throw LangError("No such file in read-file: " + string(filename));
 	}
-	string line, buf;
-	while(getline(fileIn, line)) {
-		buf += "\n" + line;
-	}
-	return buf;
-}
+	fileIn.seekg(0, ios::end);
+	size_t len = fileIn.tellg();
+	fileIn.seekg(0, ios::beg);
+	char *buf = (char*)x_malloc(len);
+	fileIn.read(buf, len);
+	fileIn.close();
 
-#include <sstream>
-istringstream reader_input;
-// read words from filename on top of stack, discarding any previous input
-static void builtin_reader_open_file(Interpreter *intr) {
-	const char *filename = popString(intr, "reader-open-file missing filename");
-	string buf = readfile(filename);
-	reader_input = istringstream(buf);
-}
-
-// read words from string on top of stack, discarding any previous input
-static void builtin_reader_open_string(Interpreter *intr) {
-	const char *text = popString(intr, "reader-open-string missing text");
-	reader_input = istringstream(text);
-}
-
-// simple reader interface here ... 'next' is only operation
-static void builtin_reader_next(Interpreter *intr) {
-	string word;
-	reader_input >> word;
-	if(reader_input.fail()) {
-		intr->push(newNull());
-	}
-	else {
-		intr->push(newSymbol(word));
-	}
+	intr->push(newString(buf, len, true)); // give pointer away
 }
 
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
@@ -357,7 +334,7 @@ static void builtin_dumpword(Interpreter *intr) {
 static void builtin_loadc(Interpreter *intr) {
 	const char *filename = popString(intr, "Bad filename for .loadc");
 	ifstream fileIn(filename);
-	Object o = deserialize_stream(intr, fileIn);
+	deserialize_stream(intr, fileIn);
 }
 
 static void builtin_cmdline_args(Interpreter *intr) {
@@ -408,10 +385,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{".dumpword", builtin_dumpword},
 	{"error", builtin_error},
 
-	// experimental
-	{"reader-open-file", builtin_reader_open_file},
-	{"reader-open-string", builtin_reader_open_string},
-	{"reader-next", builtin_reader_next},
 	{"make-list", builtin_make_list},
 	{"make-string", builtin_make_string},
 	{"make-symbol", builtin_make_symbol},
@@ -427,4 +400,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"null", [](Interpreter *intr){intr->push(Object());}},
 	{".loadc", builtin_loadc},
 	{"cmdline-args", builtin_cmdline_args},
+
+	{"read-file", builtin_readfile},
 };

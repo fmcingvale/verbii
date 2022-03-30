@@ -208,36 +208,10 @@ def builtin_puts(I, obj):
 
 def builtin_wordlist(I):
 	I.push(list(I.WORDS.keys()))
-	
-# reader interface
-READER_WORDLIST = []
-READER_POS = 0
 
-def builtin_reader_open_file(I):
-	global READER_WORDLIST
-	global READER_POS
-	filename = popString(I,'reader-open-file')
-	READER_WORDLIST = open(filename, 'r').read().split()
-	READER_POS = 0
-
-def builtin_reader_open_string(I):
-	global READER_WORDLIST
-	global READER_POS
-	READER_WORDLIST = popString(I,'reader-open-string').split()
-	#print("READER OPEN STRING, WORDS:",READER_WORDLIST)
-	READER_POS = 0
-
-def builtin_reader_next(I):
-	global READER_WORDLIST
-	global READER_POS
-	if READER_POS >= len(READER_WORDLIST):
-		#print("READER NEXT DONE")
-		I.push(None)
-	else:
-		w = READER_WORDLIST[READER_POS]
-		READER_POS += 1
-		#print("READER NEXT RETURNING:",w)
-		I.push(w)
+def builtin_readfile(I):
+	filename = popString(I, "read-file")
+	I.push(LangString(open(filename, 'r').read()))
 
 def builtin_make_list(I):
 	nr = popInt(I)
@@ -419,10 +393,6 @@ BUILTINS = {
 	'.wordlist': ([], builtin_wordlist),
 	'error': ([], builtin_error),
 
-	# reader interface
-	'reader-open-file': ([], builtin_reader_open_file),
-	'reader-open-string': ([], builtin_reader_open_string),
-	'reader-next': ([], builtin_reader_next),
 	# compiler words
 	'make-list': ([], builtin_make_list),
 	'slice': ([object,int,int], lambda I,obj,index,nr: I.push(builtin_slice(I,obj,index,nr))),
@@ -438,5 +408,6 @@ BUILTINS = {
 	'null': ([], lambda I: I.push(None)),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 	'.dumpword': ([], builtin_dumpword),
+	'read-file': ([], builtin_readfile),
 }
 

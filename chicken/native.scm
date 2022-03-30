@@ -33,23 +33,6 @@
 (import errors)
 (import interpreter)
 
-;; Reader interface: reader-open-string, reader-next
-(define READER_WORDLIST '())
-
-(define (reader-open-string intr str)
-	(set! READER_WORDLIST (string-tokenize str))
-	;(print "READER_WORDLIST: " READER_WORDLIST))
-)
-
-(define (reader-next intr)
-	;(print "READER-NEXT FROM: " READER_WORDLIST)
-	(if (not (null? READER_WORDLIST))
-		(begin
-			(push intr (car READER_WORDLIST))
-			(set! READER_WORDLIST (cdr READER_WORDLIST)))
-	
-		(push intr (make-LangNull))))
-
 ; ( xn .. x1 N -- list of N items )
 (define (builtin-make-list intr N)
 	(let loop ((nr N) (lst '()))
@@ -284,6 +267,13 @@
 				(LangList-objlist (hash-table-ref (WORDS intr) name)))
 		(push intr newlist)))
 
+(import (chicken file posix))
+
+(define (builtin-read-file intr filename)
+	(let* ((fileIn (file-open filename open/rdonly))
+			(text (car (file-read fileIn (file-size fileIn)))))
+		(push intr (make-LangString text))))
+
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
 	(list
@@ -296,7 +286,6 @@
 		(list "string?" (list '*)  (lambda (intr obj) (push intr (LangString? obj))))
 		(list "symbol?" (list '*)  (lambda (intr obj) (push intr (string? obj))))
 		(list "null" 	'() (lambda (intr) (push intr (make-LangNull))))
-		(list "reader-open-string" (list 's) reader-open-string)
 		(list "make-list" (list 'i) builtin-make-list)
 		(list "set!" 	(reverse (list '* 'i)) builtin-set)
 		(list "SP" 		'() (lambda (intr) (push-int intr (intr-SP intr))))
@@ -305,7 +294,6 @@
 		(list "LP!" 	(list 'i) (lambda (intr addr) (intr-LP-set! intr addr)))
 		(list ">L" 		(list '*)  builtin-to-local)
 		(list "L>" 		'() builtin-from-local)
-		(list "reader-next" '() reader-next)
 		(list "ref" 		(list 'i) builtin-ref)
 		(list "==" 			(reverse (list '* '*)) builtin-equal)
 		(list ">" 			(reverse (list '* '*)) builtin-greater)
@@ -335,6 +323,7 @@
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
+		(list "read-file"   (list 's) builtin-read-file),
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))
