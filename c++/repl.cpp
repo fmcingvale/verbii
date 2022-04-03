@@ -26,21 +26,23 @@ string readfile(string filename) {
 	return buf;
 }
 
+void deserialize_and_run(Interpreter *intr, string filename) {
+	ifstream fileIn(filename);
+	deserialize_stream(intr, fileIn);
+	// run __main__ to setup any vars
+	auto code = intr->lookup_word("__main__");
+	intr->run(code);
+}
+
 Interpreter* newInterpreter() {
 	auto intr = new Interpreter();
 	
 	//cout << "Starting interpreter ..." << endl;
 
 	// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
-	ifstream fileIn(INITLIB);
-	deserialize_stream(intr, fileIn);
-	// run __main__ in initlib to setup any globals
-	auto code = intr->lookup_word("__main__");
-	intr->run(code);
-	fileIn = ifstream(COMPILERLIB);
-	deserialize_stream(intr, fileIn);
-	// do NOT run compiler __main__ since that is used for compiling from the cmdline
-
+	deserialize_and_run(intr, INITLIB);
+	deserialize_and_run(intr, COMPILERLIB);
+	
 	// delete __main__ now so I don't inadvertently run it again -- i.e. a later byte-compilation
 	// might fail, but leaving and older __main__ in place
 	intr->deleteWord("__main__");
@@ -74,13 +76,14 @@ void compile_and_run(Interpreter *intr, string text, bool singlestep) {
 	// run __main__
 	code = intr->lookup_word("__main__");
 
+	// subtlety -- the code i'm about to run might want to redefine __main__
+	// (i.e. if i'm running the compiler). so delete __main__ BEFORE running
+	intr->deleteWord("__main__");
+
 	if(singlestep)
 		intr->run(code, &debug_hook);
 	else
 		intr->run(code);
-
-	// like above, delete __main__ after running
-	intr->deleteWord("__main__");
 }
 	
 void backtrace_curframe(Interpreter *intr) {

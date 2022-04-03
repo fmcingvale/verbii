@@ -286,13 +286,16 @@ function Interpreter:run(objlist, stephook)
 			if obj == "call" then
 				-- top of stack must be a Lambda
 				obj = self:pop()
-				if not isLambda(obj) then
+				if isLambda(obj) then
+					-- now this is just like calling a userword, below
+					-- TODO -- tail call elimination??
+					self:code_call(obj.wordlist)
+				elseif isList(obj) then
+					self:code_call(obj)
+				else
 					error(">>>call expects a lambda, but got: " .. fmtStackPrint(obj))
 				end
 
-				-- now this is just like calling a userword, below
-				-- TODO -- tail call elimination??
-				self:code_call(obj.wordlist)
 				goto MAINLOOP
 			end
 

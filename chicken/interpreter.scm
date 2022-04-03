@@ -318,11 +318,18 @@
 							(run-loop (nextObj intr))))
 					; call
 					((string=? obj "call")
-						; pop lambda and call
-						(let ((L (popTypeOrFail intr LangLambda? "lambda" 'call)))
-							; TODO - tail call elimination??
-							(code-call intr (lambda-llist L))
-							(run-loop (nextObj intr))))
+						; pop lambda or list and call
+						(let ((L (pop intr)))
+							(cond
+								((LangLambda? L)
+									; TODO - tail call elimination??
+									(code-call intr (lambda-llist L))
+									(run-loop (nextObj intr)))
+								((LangList? L)
+									(code-call intr L)
+									(run-loop (nextObj intr)))
+								(else
+									(lang-error 'call "Expecting lambda or list but got:" L)))))
 
 					; builtin (native) functions
 					((hash-table-exists? BUILTINS obj)

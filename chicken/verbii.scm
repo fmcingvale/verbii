@@ -57,8 +57,8 @@
 		(load-byte-compiled-file intr "../lib/init.verb.b")
 		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
 		(load-byte-compiled-file intr "../lib/compiler.verb.b")
-		; do NOT run __main__ for compiler since that would run command-line compiler
-
+		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
+		
 		; delete __main__ so I don't inadvertently reuse it later
 		(intr-delete-word intr "__main__")
 

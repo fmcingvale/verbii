@@ -351,12 +351,19 @@ public class Interpreter {
 					// top of stack must be a lambda
 					var val = pop();
 					var lambda = val as LangLambda;
-					if(lambda == null) {
+					var list = val as LangList;
+					if(lambda != null) {
+						// now this is just like calling a userword, below
+						// TODO -- tail call elimination??
+						code_call(lambda.objlist);
+					}
+					else if(list != null) {
+						// call list like lambda
+						code_call(list.objlist);
+					}
+					else {			
 						throw new LangError("call expects a lambda, but got: " + val.fmtStackPrint());
 					}
-					// now this is just like calling a userword, below
-					// TODO -- tail call elimination??
-					code_call(lambda.objlist);
 					continue;
 				}
 			

@@ -264,15 +264,19 @@ class Interpreter(object):
 				continue
 		
 			if word == "call":
-				# top of stack must be a CallableWordlist
+				# see if top of stack is Lambda or list
 				obj = self.pop()
-				if not isinstance(obj,LangLambda):
-					raise LangError("call expects a lambda, but got: " + fmtStackPrint(obj))
+				if isinstance(obj,LangLambda):
+					#print("CALLING LAMBDA:",obj.wordlist)
+					# now this is just like calling a userword, below
+					# TODO -- tail call elimination??
+					self.code_call(obj.objlist)
+				elif type(obj) == list:
+					# call list like lambda
+					self.code_call(obj)
+				else:				
+					raise LangError("call expects a lambda or list, but got: " + fmtStackPrint(obj))
 
-				#print("CALLING LAMBDA:",obj.wordlist)
-				# now this is just like calling a userword, below
-				# TODO -- tail call elimination??
-				self.code_call(obj.objlist)
 				continue
 		
 			# builtins, then userwords, then vars

@@ -15,10 +15,14 @@ fi
 
 mkdir -p ../unittests/RESULTS/c++
 
+echo "Core ..."
 $REPL -test ../unittests/unittest_core.verb > ../unittests/RESULTS/c++/actual_unittest_core.txt
+echo "Basic ..."
 $REPL -test ../unittests/unittest_basic.verb > ../unittests/RESULTS/c++/actual_unittest_basic.txt
+echo "Errors ..."
 $REPL -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/c++/actual_unittest_errors.txt
 
 # demos are complete programs, so no -test
+echo "Math ..."
 $REPL ../unittests/demo_math.verb > ../unittests/RESULTS/c++/actual_demo_math.txt
 

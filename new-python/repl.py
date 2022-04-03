@@ -14,20 +14,22 @@ import sys, re, os
 INITLIB = "../lib/init.verb.b"
 COMPILERLIB = "../lib/compiler.verb.b"
 
+def deserialize_and_run(intr, filename):
+	from deserialize import deserialize_stream
+	fileIn = open(filename, "r")
+	deserialize_stream(intr, fileIn)
+	code = intr.WORDS['__main__']
+	intr.run(code)
+	
 def new_interpreter():
 	"convenience to start interpreter and optionally load init lib"
 	intr = Interpreter()
 
 	# load serialized versions of init.verb and compiler.verb (required
 	# to bootstrap interpreter)
-	from deserialize import deserialize_stream
-	fileIn = open(INITLIB,"r")
-	deserialize_stream(intr, fileIn)
-	code = intr.WORDS['__main__']
-	intr.run(code)
-	fileIn = open(COMPILERLIB,"r")
-	deserialize_stream(intr, fileIn)
-
+	deserialize_and_run(intr, INITLIB)
+	deserialize_and_run(intr, COMPILERLIB)
+	
 	# remove __main__ so I don't inadvertently run it again (i.e. if a later
 	# byte-compile fails, I don't want this to remain)
 	del intr.WORDS['__main__']

@@ -10,18 +10,19 @@ public class Repl {
 	static string INITLIB = "../lib/init.verb.b";
 	static string COMPILERLIB = "../lib/compiler.verb.b";
 
-	public static Interpreter make_interpreter() {
-		var intr = new Interpreter();
-		// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
-		var fileIn = System.IO.File.OpenText(INITLIB);
+	public static void deserialize_and_run(Interpreter intr, string filename) {
+		var fileIn = System.IO.File.OpenText(filename);
 		Deserializer.deserialize_stream(intr, fileIn);
 		// run __main__ in initlib to setup any globals
 		var code = intr.WORDS["__main__"];
 		intr.run(code, null);
+	}
 
-		fileIn = System.IO.File.OpenText(COMPILERLIB);
-		Deserializer.deserialize_stream(intr, fileIn);
-		// do NOT run compiler __main__ since that is used for compiling from the cmdline
+	public static Interpreter make_interpreter() {
+		var intr = new Interpreter();
+		// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
+		deserialize_and_run(intr, INITLIB);
+		deserialize_and_run(intr, COMPILERLIB);
 
 		// delete __main__ after running so don't get confused it a later byte-compilation fails
 		// and leaves old __main__ here

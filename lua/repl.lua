@@ -14,21 +14,21 @@ require("native")
 INITLIB = "../lib/init.verb.b"
 COMPILERLIB = "../lib/compiler.verb.b"
 
-function make_interpreter()
-	local intr = new_Interpreter()
-	
-	-- load bootstrap libraries so compiler works
-	local f = io.open(INITLIB, "r")
+function deserialize_and_run(intr, filename)
+	local f = io.open(filename, "r")
 	deserialize_stream(intr, f)
 	io.close(f)
 	local code = intr.WORDS['__main__']
 	intr:run(code)
+end
 
-	f = io.open(COMPILERLIB, "r")
-	deserialize_stream(intr, f)
-	io.close(f)
-	-- do NOT run __main__ since that would run the cmdline compiler
-
+function make_interpreter()
+	local intr = new_Interpreter()
+	
+	-- load bootstrap libraries so compiler works
+	deserialize_and_run(intr, INITLIB)
+	deserialize_and_run(intr, COMPILERLIB)
+	
 	-- remove __main__ so i don't try to run it again later (i.e. should another
 	-- byte-compilation fail, I don't want this __main__ to still be here)
 	intr.WORDS['__main__'] = nil
