@@ -35,40 +35,56 @@ var READER_POS 1
 	read-file reader-open-string
 	;
 
+: reader-peek-char ( -- char; get next char [string] from reader without advancing stream )
+	READER_POS ref READER_TEXT_LEN ref >= if >>eof
+	READER_TEXT ref READER_POS ref get ( char )
+	return
+	@eof 
+		null
+	;
+
+: reader-next-char ( -- char; get next char [string] from reader stream or null on eof )
+	READER_POS ref READER_TEXT_LEN ref >= if >>eof
+	READER_TEXT ref READER_POS ref get ( char )
+	READER_POS ref 1 + READER_POS set! ( char; ++pos )
+	return
+	@eof
+		null
+	;
+
 : reader-next ( -- word ; get next word from reader stream, or null on eof )
 	"" ( word )
 	@skipws ( skip leading whitespace )
-		READER_POS ref READER_TEXT_LEN ref >= if >>eof
-		READER_TEXT ref READER_POS ref get ( word char )
+		reader-peek-char
+		dup null? if >>null-on-read 
 		ord 32 > if >>word-precheck
-		READER_POS ref 1 + READER_POS set! ( word char; ++pos )
+		reader-next-char ( word char; ++pos )
+		drop
 		<<skipws
-		
-	@word-precheck ( check for special chars before looking for normal word )
-		READER_POS ref READER_TEXT_LEN ref >= if >>eof
-		READER_TEXT ref READER_POS ref get ( word char )
-		( don't do ++ here, just want to peek at next char without messing up word-loop )
+
+	@null-on-read ( word null )
+		drop >>eof
+
+	@word-precheck ( word; check for special chars before looking for normal word )
+		reader-peek-char ( word char; peek at next char without messing up word-loop )
 		dup "\" == if >>skip-comment
 		( not a special char, drop char and fall through to word-loop )
 		drop 
 
 	@word-loop ( word )
-		READER_POS ref READER_TEXT_LEN ref >= if >>eof
-		READER_TEXT ref READER_POS ref get ( word char )
-		READER_POS ref 1 + READER_POS set! ( word char; ++pos )
+		reader-next-char ( word char )
+		dup null? if <<null-on-read
 		( check for whitespace )
 		dup ord 32 <= if >>space  ( treat anything from ' ' to NUL as whitespace )
 		( not whitespace, append and continue )
 		+ <<word-loop
 	
 	@skip-comment ( word char )
-		( "SKIP COMMENT:" . .S CR )
 		drop
 	@skip-comment-loop ( word )
 		( skip to end of line then start again )
-		READER_POS ref READER_TEXT_LEN ref >= if >>eof
-		READER_TEXT ref READER_POS ref get ( word char )
-		READER_POS ref 1 + READER_POS set! ( word char; ++pos )
+		reader-next-char ( word char )
+		dup null? if >>found-eol
 		dup ord 13 == if >>found-eol
 		dup ord 10 == if >>found-eol
 		drop <<skip-comment-loop
@@ -85,7 +101,7 @@ var READER_POS 1
 
 	@isnull drop null return
 	;
-	
+
 : digit? ( string|symbol -- true|false; is single char a digit? )
 	dup string? if >>string
 		dup '0 < if >>notdigit
@@ -124,20 +140,16 @@ var READER_POS 1
 	;
 
 : int-string? ( string -- true|false if string can be parsed as integer )
-		( "INT-STRING?:" . .S CR )
 	dup any-digits? not if >>nodigits ( must have digits, not just +/- )
 	ltrim-sign
 	ltrim-digits
 	length 0 == return
 	@nodigits 
-		( "@nodigits:" . .S CR )
 		drop false
 	;
 
 : int-symbol? ( like above but for symbols )
-		( "INT-SYMBOL?" . .S CR )
 	unmake make-string 
-		( "BEFORE CALL:" . .S CR )
 	int-string?
 	;
 
@@ -161,9 +173,7 @@ var READER_POS 1
 	;
 
 : syntax-next ( convert next word from input to runnable object )
-		( "syntax-next" . CR )
 	reader-next
-		( "reader-next" . .S CR )
 	dup null? if >>null
 	dup '( == if >>comment
 	dup '{ == if >>lambda
@@ -173,7 +183,6 @@ var READER_POS 1
 	( test for correct format before passing to parse-int or parse-float since those functions
 	  will happily parse something like "123abc" as 123 )
 	dup int-symbol? 
-		( "AFTER INT-SYMBOL:" . .S CR )
 	if >>integer
 	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float
 	@nomatch
@@ -196,65 +205,41 @@ var READER_POS 1
 	;
 
 : syntax-define-word
-		( "define-word" . CR )
 	syntax-next ( name should be next )
-		( "read name" . dup . CR )
 	dup symbol? not if >>badname
 	>L SP >L   ( L0=starting SP, L1=name )
-		( 2 .L CR )
 	@loop
 	syntax-next ( get next processed object - assume it can be more than 1 object )
-		( "NEXT" . dup . CR )
 	dup null? if >>eof
 	dup '; == if >>endword
 	<<loop
 	@badname repr "Invalid name after ':' : " swap + error
 	@eof "Unexpected end of input looking for ';'" error
 	@endword
-		( "ENDWORD, stack: " . .S CR )
 	drop ( drop ; )
 	L> SP - 1 - ( calc number of items )
-		( "NR ITEMS:" . dup . " STACK NOW" . .S CR )  
 	make-list
-		( "MADE LIST:" . .S CR )
 	L> 
 	( save names of words as I parse them so I can serialize them later )
-		( "ADD WORD NAME:" . dup . CR )
 	dup DEFINED_WORDS ref swap append DEFINED_WORDS set!
-		( "NOW MAKE WORD: " . .S CR )
 	make-word
 	syntax-next ( make-word has no return value, so return NEXT object )
 	;
 
 : syntax-string ( first string part already on stack )
-	(
-		"syntax-string:" . .S CR
-	)
 	>L ( L0 = string in progress )
 	L0 ref -1 get '" == 
 	L0 ref length 1 > and
 		if >>endstring ( " see if its all one word )
 	@loop
-	(
-		"string NOW:" . L0 ref . CR
-		"stack now:" . .S CR
-	)
 	L0 ref 32 1 make-symbol + L0 set! ( add space before next piece )
 	reader-next 
-	(
-		"piece:" . dup . CR
-		"stack now:" . .S CR
-	)
 	dup null? if >>eof
 	dup L0 ref swap + L0 set! ( string += piece )
 	-1 get '" == if >>endstring ( " )
 	<<loop
 	@eof "Unexpected end of input in string near: " L0 ref tostring + error
 	@endstring
-	(
-		"POSTPROCESS STRING:" . L0 ref . CR
-		"STACK NOW:" . .S CR
-	)
 	L0 ref dup length 2 - 1 swap slice ( remove quotes )
 	unmake make-string ( symbol -> string )
 	LP 1 + LP! ( remove locals )
@@ -306,10 +291,8 @@ var READER_POS 1
 	touch the stack otherwise.
 )
 : for-each ( object lambda -- call lambda on each object in string,symbol,list )
-	(  "for-each:" . CR )
 	>L dup length >L 0 >L ( L0=index, L1=length, L2=lambda )
 	@loop
-	( "index " . L0 ref . " length " . L1 ref . CR ) 
 	L0 ref L1 ref >= if >>done
 	L0 ref +get L2 ref 
 	call ( call lambda with element on stack )
@@ -318,24 +301,17 @@ var READER_POS 1
 	;
 
 : serialize-escape-string ( string -- string with whitespace escaped )
-	( "ESCAPE STRING:" .  CR )
 	"" swap  ( escaped string )
-	( .S CR )
 	{ 
 		( escaped string char )
-		( "CHAR:" . dup . )
 		unmake drop  ( escaped string charcode )
 		dup 32 == if >>space
 		dup 37 == if >>percent
 		dup 10 == if >>lf 
 		dup 13 == if >>cr 
-		( "NORMAL CHAR:" . .S CR )
 		1 make-string ( escaped string char )
-		( "MADE STRING:" . .S CR )
 		rot swap ( string escaped char )
-		( "BEFORE ADD:" . .S CR )
 		+ swap ( escaped+char string )
-		( "AFTER ADD:" . .S CR )
 		return
 		@space ( escaped string charcode )
 		drop swap "%32" + swap ( escaped+%32 string )
@@ -346,7 +322,6 @@ var READER_POS 1
 		@lf drop swap "%10" + swap return ( \n -- %10 )
 		@cr drop swap "%13" + swap return ( \r -- %13 )
 	} for-each
-	( "SERIALIZE FINISHED:" . .S CR )
 	;
 
 : serialize-object ( obj -- ; serialize obj to stdout )
@@ -417,7 +392,6 @@ var READER_POS 1
 
 : compile-and-serialize ( filename )
 	byte-compile-file ( this will be all code other than word definitions )
-		( "BYTE COMPILE RESULTS:" . .S CR )
 
 	( that left list of compiled words on stack )
 
