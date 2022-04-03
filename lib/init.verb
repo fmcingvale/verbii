@@ -139,6 +139,8 @@ SP SP_EMPTY set!
 
 ( -- fyi -- this can't be in compiler.verb because its __main__ is not run on startup,
 	so the vars never get defined 
+
+	TODO - should fix compiler.verb since this really should be there
 	-- )
 
 var READER_TEXT 1 ( string )
@@ -149,12 +151,18 @@ var READER_POS 1
 	unmake make-symbol
 	;
 
+( note - the reader-open-* functions discard any current input )
+
 : reader-open-string ( string )
 	READER_TEXT set!
 	READER_TEXT ref length READER_TEXT_LEN set!
 	0 READER_POS set!
 	;
 
+: reader-open-file ( filename )
+	read-file reader-open-string
+	;
+	
 : ord ( string -- ascii ; get ASCII value of first char of string )
 	0 get unmake drop
 	;
@@ -168,10 +176,18 @@ var READER_POS 1
 	@skipws ( skip leading whitespace )
 		READER_POS ref READER_TEXT_LEN ref >= if >>eof
 		READER_TEXT ref READER_POS ref get ( word char )
-		ord 32 > if >>word-loop
+		ord 32 > if >>word-precheck
 		READER_POS ref 1 + READER_POS set! ( word char; ++pos )
 		<<skipws
 		
+	@word-precheck ( check for special chars before looking for normal word )
+		READER_POS ref READER_TEXT_LEN ref >= if >>eof
+		READER_TEXT ref READER_POS ref get ( word char )
+		( don't do ++ here, just want to peek at next char without messing up word-loop )
+		dup "\" == if >>skip-comment
+		( not a special char, drop char and fall through to word-loop )
+		drop 
+
 	@word-loop ( word )
 		READER_POS ref READER_TEXT_LEN ref >= if >>eof
 		READER_TEXT ref READER_POS ref get ( word char )
@@ -181,6 +197,20 @@ var READER_POS 1
 		( not whitespace, append and continue )
 		+ <<word-loop
 	
+	@skip-comment ( word char )
+		( "SKIP COMMENT:" . .S CR )
+		drop
+	@skip-comment-loop ( word )
+		( skip to end of line then start again )
+		READER_POS ref READER_TEXT_LEN ref >= if >>eof
+		READER_TEXT ref READER_POS ref get ( word char )
+		READER_POS ref 1 + READER_POS set! ( word char; ++pos )
+		dup ord 13 == if >>found-eol
+		dup ord 10 == if >>found-eol
+		drop <<skip-comment-loop
+	
+		@found-eol drop <<skipws ( restart, leaving "" on stack )
+
 	@space ( word char )
 		drop ( fall through to return word below )
 
@@ -191,4 +221,3 @@ var READER_POS 1
 
 	@isnull drop null return
 	;
-
