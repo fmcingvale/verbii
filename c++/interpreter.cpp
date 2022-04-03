@@ -337,15 +337,21 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		}
 
 		if(obj.isSymbol("call")) {
-			// top of stack must be a lambda
+			// top of stack must be a lambda OR a list
 			auto val = pop();
-			if(!val.isLambda()) {
+			if(val.isLambda()) {
+				// now this is just like calling a userword, below
+				// TODO -- tail call elimination??
+				//syntax->pushObjList(val.asLambda());
+				code_call(val.asLambda());
+			}
+			else if(val.isList()) {
+				// same as above
+				code_call(val.asList());
+			}
+			else {
 				throw LangError("call expects a lambda, but got: " + val.fmtStackPrint());
 			}
-			// now this is just like calling a userword, below
-			// TODO -- tail call elimination??
-			//syntax->pushObjList(val.asLambda());
-			code_call(val.asLambda());
 			continue;
 		}
 
