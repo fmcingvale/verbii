@@ -1,0 +1,33 @@
+( this is the standalone compiler -- most code is in lib/compiler.verb )
+( Copyright (c) 2022 Frank McIngvale, see LICENSE )
+
+( - check that locals were deleted - )
+: sanity-check-locals
+	LP LP_START ref != if >>badLP >>okLP
+	@badLP
+	"*** LOCALS NOT CLEANED UP ***" error
+	@okLP
+	;
+
+: sanity-check-stack
+	depth 0 == if >>okStack	
+	"*** Stack not empty at exit ***" error
+	@okStack 
+	;
+
+( -- watch for locals not being cleaned up -- )
+var LP_START 1
+LP LP_START set!
+
+cmdline-args length 0 == if >>usage 
+
+cmdline-args 0 get ( get filename to compile )
+compile-and-serialize
+
+sanity-check-locals
+sanity-check-stack
+return
+
+@usage
+	"Usage: compile.verb FILENAME" . CR
+	
