@@ -64,10 +64,10 @@
 
 		intr))
 		
-(define (byte-compile intr text)
+(define (byte-compile-and-load intr text)
 	;(print "BYTE-COMPILING text: " text)
 	(push intr (make-LangString text))
-	(intr-run intr (hash-table-ref (WORDS intr) "byte-compile-string"))
+	(intr-run intr (hash-table-ref (WORDS intr) "compile-and-load-string"))
 	;(print "STACK NOW: " (reprStack intr)))
 )
 
@@ -83,8 +83,7 @@
 			; re-raise the error to show the full traceback)
 			(else (abort exn)))
 		;(print "Compile ...")
-		(byte-compile intr text)
-		(pop intr) ; pop list of compiled words, don't need
+		(byte-compile-and-load intr text)
 		;(print "Run ...")
 		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
 		; delete __main__ once run
@@ -94,8 +93,7 @@
 
 ; for debugging - does same as safe-compile-and-run but doesn't catch exceptions
 (define (unsafe-compile-and-run intr text)
-	(byte-compile intr text)
-	(pop intr) ; pop list of compiled words, don't need
+	(byte-compile-and-load intr text)
 	(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
 	; delete __main__ once run
 	(intr-delete-word intr "__main__")

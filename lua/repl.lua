@@ -48,11 +48,11 @@ end
 function compile_and_run(intr, text, singlestep)
 	-- push text and byte-compile it
 	intr:push(new_String(text))
-	code = intr.WORDS['byte-compile-string']
+	code = intr.WORDS['compile-and-load-string']
 	intr:run(code)
 
 	-- remove list of words produced by byte compiler
-	intr:pop()
+	--intr:pop()
 
 	-- now run the __main__ that was compiled
 	code = intr.WORDS['__main__']

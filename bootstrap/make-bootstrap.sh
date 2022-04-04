@@ -21,7 +21,13 @@ then
 	declare -a Libraries=("init" "compiler")	
 	for name in ${Libraries[@]}; do
 		echo "Bootstrapping " "$name.verb"
-		python compiler.py ../lib/$name.verb > ../lib/$name.verb.b
+		#python compiler.py ../lib/$name.verb > ../lib/$name.verb.b
+		
+		# causes an error to overwrite (at least) compiler.verb.b directly,
+		# so save to temp file then copy
+		../c++/repl ../verb/compile.verb -- ../lib/$name.verb > ../lib/$name.verb.b.temp
+		cp ../lib/$name.verb.b.temp ../lib/$name.verb.b
+		rm ../lib/$name.verb.b.temp
 	done
 else
 	echo ""

@@ -44,14 +44,10 @@ def debug_hook(intr: Interpreter, word: str):
 	sys.stdin.readline()
 
 def compile_and_run(intr, text, singlestep):
-	# push code and run byte-compile-string
+	# push code, compile and load into interpreter
 	intr.push(LangString(text))
-	code = intr.WORDS['byte-compile-string']
+	code = intr.WORDS['compile-and-load-string']
 	intr.run(code)
-	
-	# byte-compile leaves list of words on stack -- used by serializer -- but i
-	# don't need them here
-	intr.pop()
 	
 	# run __main__
 	code = intr.WORDS['__main__']

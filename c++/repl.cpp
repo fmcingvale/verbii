@@ -66,12 +66,12 @@ void debug_hook(Interpreter *intr, Object obj) {
 void compile_and_run(Interpreter *intr, string text, bool singlestep) {
 	// push string, then call byte-compile-string
 	intr->push(newString(text));
-	auto code = intr->lookup_word("byte-compile-string");
+	auto code = intr->lookup_word("compile-and-load-string");
 	intr->run(code);
 
 	// byte-compile-string leaves list of words on stack -- used by serializer -- but i
 	// don't need them here
-	intr->pop();
+	//intr->pop();
 
 	// run __main__
 	code = intr->lookup_word("__main__");

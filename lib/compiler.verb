@@ -57,19 +57,13 @@ var READER_POS 1
 	@skipws ( skip leading whitespace )
 		reader-peek-char
 		dup null? if >>null-on-read 
-		ord 32 > if >>word-precheck
+		ord 32 > if >>word-loop
 		reader-next-char ( word char; ++pos )
 		drop
 		<<skipws
 
 	@null-on-read ( word null )
 		drop >>eof
-
-	@word-precheck ( word; check for special chars before looking for normal word )
-		reader-peek-char ( word char; peek at next char without messing up word-loop )
-		dup "\" == if >>skip-comment
-		( not a special char, drop char and fall through to word-loop )
-		drop 
 
 	@word-loop ( word )
 		reader-next-char ( word char )
@@ -174,6 +168,7 @@ var READER_POS 1
 
 : syntax-next ( convert next word from input to runnable object )
 	reader-next
+		( "syntax-next:" . dup . CR )
 	dup null? if >>null
 	dup '( == if >>comment
 	dup '{ == if >>lambda
@@ -220,10 +215,9 @@ var READER_POS 1
 	L> SP - 1 - ( calc number of items )
 	make-list
 	L> 
-	( save names of words as I parse them so I can serialize them later )
-	dup DEFINED_WORDS ref swap append DEFINED_WORDS set!
-	make-word
-	syntax-next ( make-word has no return value, so return NEXT object )
+	( save names & compiled words )
+	save-defined-word
+	syntax-next ( save-defined-word has no return value, so return NEXT object )
 	;
 
 : syntax-string ( first string part already on stack )
@@ -356,11 +350,23 @@ var READER_POS 1
 		return
 		;
 
-: byte-compile ( byte-compile source from current reader stream )
-	( keep a list of all word definitions that I parse; I only want to serialize
-	those, not EVERY word that is defined )
-	var DEFINED_WORDS 1
-	0 make-list DEFINED_WORDS set!
+: save-defined-word ( list name )
+	swap 2 make-list ( [ name list ] )
+	COMPILED_NAMELISTS ref swap append drop
+	;
+
+: byte-compile ( -- names wordlists ; byte-compile source from current reader stream )
+	( do NOT store compiled words into interpreter since that would prevent compiling
+	  any code that contained a name that was already defined -- for example when
+	  compiling this file
+
+	  instead, store as a list of [name,wordlist]
+	)
+	var COMPILED_NAMELISTS 1
+	0 make-list COMPILED_NAMELISTS set!
+
+	( i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
+	  save starting SP so I can count at the end )
 	SP >L ( L0=SP at start )
 	@loop
 	( read all parsed objects then make into a list )
@@ -370,35 +376,46 @@ var READER_POS 1
 	drop
 	( count # items added to stack and make list )
 	L> SP - 1 - make-list
-	( add this list as word __main__ )
-	'__main__ make-word
-	DEFINED_WORDS ref '__main__ append
-	del DEFINED_WORDS
-	( leave list of added words on stack )
+	( save this code under __main__ )
+	'__main__ save-defined-word
+	( leave list of [ name list ] on stack )
+	COMPILED_NAMELISTS ref
+	( remove vars so compiler can be run again )
+	del COMPILED_NAMELISTS
 	;
 
-: byte-compile-file ( filename -- byte-compile filename and write output to stdout )
+: byte-compile-file ( filename -- list of [ name list ] ; byte-compile filename and leave outputs on stack )
 	reader-open-file byte-compile
 	;
 
-: byte-compile-string ( text -- byte-compile text and write output to stdout )
+: byte-compile-string ( text -- list of [ name list ] ; byte-compile filename and leave outputs on stack )
 	reader-open-string byte-compile
 	;
 
-: serialize-all-words
-	( takes list of words on top of stack and serializes them to stdout )
-	{ "W" . dup repr puts CR .dumpword serialize-object } for-each 
+: serialize-compiled-output
+	( take output of byte-compile-* and serialize to stdout )
+
+	( each obj is [ name wordlist ] )
+	{ "W" . dup 0 get repr puts CR 1 get serialize-object } for-each 
 	;
 
+( compiles filename and writes serialized form to stdout. does NOT alter interpreter words )
 : compile-and-serialize ( filename )
 	byte-compile-file ( this will be all code other than word definitions )
 
-	( that left list of compiled words on stack )
+	( that left list of [ name list ] on stack )
 
-	( this will all be written to a list -- will be length of DEFINED_WORDS )
+	( this will all be written to a list )
 	"L" . dup length str puts CR
 
-	( write word defs first, assuming rest of code depends on them )
-	serialize-all-words 
+	( serialize )
+	serialize-compiled-output
 	;
 
+( compiles filename and loads words into current interpreter )
+: compile-and-load-string ( string )
+	byte-compile-string
+	( "COMPILED: " . dup . CR )
+	( now load the [ name wordlist ] pairs into interpreter )
+	{ ( "FOR-EACH:" . dup . CR ) dup 1 get swap 0 get ( "MAKE" . .S CR ) make-word } for-each
+	;

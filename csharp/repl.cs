@@ -41,14 +41,10 @@ public class Repl {
 
 	// use safe_ version below
 	public void compile_and_run(Interpreter intr, string text, bool singlestep) {
-		// push string, then call byte-compile-string
+		// push string, then compile & load into interpreter
 		intr.push(new LangString(text));
-		var code = intr.WORDS["byte-compile-string"];
+		var code = intr.WORDS["compile-and-load-string"];
 		intr.run(code,null);
-
-		// byte-compile-string leaves list of words on stack -- used by serializer -- but i
-		// don't need them here
-		intr.pop();
 
 		// run __main__
 		code = intr.WORDS["__main__"];
