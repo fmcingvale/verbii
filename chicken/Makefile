@@ -6,7 +6,7 @@ CFLAGS=-O3
 #CFLAGS=-profile
 
 clean:
-	rm -f *.o repl *.import.scm *.link
+	rm -f *.o repl *.import.scm *.link PROFILE.*
 	
 langtypes.o: langtypes.scm
 	./local-chicken/bin/csc -c ${CFLAGS} -static -J langtypes.scm -unit langtypes -o langtypes.o

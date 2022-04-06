@@ -5,18 +5,16 @@
 - Simple - any languages features that become un-simple are out.
 - Small & easy to port - ability to run on many host languages for fun/comparison purposes.
 	- Goal: Source for any particular port should be around 1000 lines or less of host language code (as counted by cloc), not counting any unittests in the host language.
-	- Current stats (updated periodically), lines of native code, excluding any tests:
-		- C++: ~1234
-		- C#: ~903
-		- Python: ~662
-		- Lua ~918
-- Interpreted-only - no parsing, compiling, etc. Run directly from source texts. In addition to simplicity, this allows things like forward-refererences for free, since nothing is evaluated until runtime. Plus it allows easy source-level introspection since nothing is translated, and can even do interesting things like rewrite the source at runtime.
+	- See CODE-STATS.txt for tracking of size.
+- See how much of the language (libraries, etc.) I can write in the language itself.
+	- Currently, the entire parser & compiler are written in Verbii script.
 
 ## Types:
 - integers - range [-1073741823, +1073741823] - values outside this range must raise an error
 - booleans - values true & false - must be a distinct type from integers - must raise error when non-boolean received in boolean context (like "if")
 - floats - these are the host language double type. originally i was going to make a custom "lite" floating point implementation, to avoid cross-language issues with rounding, etc., but even a minimal version was 100+ lines of code. so i decided native floats are ok ("simplicity" rule) and will deal with rounding issues in the implementation of unittests.
 	- floats are written like: #nn.nnn to keep parsing simple (no regex required)
+		- NO longer required; verbii compiler recognizes floats while parsing without '#'
 - strings - a word starting with " begins a string, and a word ending with " ends the string.
 	- Examples of valid strings: "hello world", " hello world ", """hello"""world"""
 - ports can use any internal representation, but the integer range is chosen to fit in 31 bits to allow tagged values if desired, but tagging is not required. if a host language has a suitable object system, garbage collection, etc., those can be freely used as long as the type limitations are enforced. (currenly no ports use tagged values, however some scripting language have a 31 bit limit so this intended for compatibility with those languages)
@@ -26,7 +24,7 @@
 - Unittests must produce identical results to C++ reference implementation. i.e. a diff of the output of 'unittest_NAME' to 'expect_unittest_NAME' must be empty, with the exception that trailing-spaces and line endings (\r, \n, etc.) are allowed to differ from the expected result.
 - All errors must be reported without crashing the program.
 - After errors occur, the stack must be cleared and not printed (in order to match the expected results).
-- It is allowed, but not required, for the interpreter to restart after errors. However, this must be transparent to the user.
+- The interpreter SHOULD restart after errors, transparent to the user.
 
 ## Language spec:
 
