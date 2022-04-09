@@ -307,14 +307,19 @@ var READER_POS 1
 		rot swap ( string escaped char )
 		+ swap ( escaped+char string )
 		return
+
+		( note -- "%" cannot appear in the strings here or the serialize/deserialize
+		  loop would mess up the replacement strings. so use % == chr(37) instead of "%" )
 		@space ( escaped string charcode )
-		drop swap "%32" + swap ( escaped+%32 string )
-		return
+			drop swap 37 chr "32" + + swap ( escaped+%32 string )
+			return
+
 		@percent ( escape % as %37 )
-		drop swap "%37" + swap ( escaped+%37 string )
-		return
-		@lf drop swap "%10" + swap return ( \n -- %10 )
-		@cr drop swap "%13" + swap return ( \r -- %13 )
+			drop swap 37 chr "37" + + swap ( escaped+%37 string )
+			return
+			
+		@lf drop swap 37 chr + "10" + swap return ( \n -- %10 )
+		@cr drop swap 37 chr + "13" + swap return ( \r -- %13 )
 	} for-each
 	;
 
