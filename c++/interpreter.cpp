@@ -246,6 +246,13 @@ bool Interpreter::hasWord(const char *name) {
 	return (VARS.find(name) != VARS.end() || WORDS.find(name) != WORDS.end());
 }
 
+void Interpreter::defineWord(const char *name, ObjList *objlist, bool allow_overwrite) {
+	if(hasWord(name) && !allow_overwrite)
+		throw LangError("Trying to redefine name: " + string(name));
+
+	WORDS[name] = objlist;
+}
+
 void Interpreter::deleteWord(const char* name) {
 	auto var = VARS.find(name);
 	if(var != VARS.end()) {
@@ -259,6 +266,14 @@ void Interpreter::deleteWord(const char* name) {
 	}
 
 	throw LangError("Trying to delete non-existent name: " + string(name));
+}
+
+Object Interpreter::getWordlist() {
+	Object list = newList();
+	for(const auto& pair : WORDS) {
+		list.data.objlist->push_back(newSymbol(pair.first));
+	}
+	return list;
 }
 
 void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object)) {
@@ -355,6 +370,9 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			// jump target -- ignore
 			continue;
 		}
+
+		// TODO -- this should be syntax, rewritten to '[name size] var' so that this
+		// can be in native.cpp
 
 		if(obj.isSymbol("var")) {
 			auto name = nextSymbolOrFail("expecting symbol after 'var'");

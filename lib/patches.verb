@@ -1,0 +1,20 @@
+(
+	Patches file, loaded at startup.
+
+	The load order is:
+		init.verb.b 
+		compiler.verb.b 
+		patches.verb 
+
+	The words defined in patches.verb will overwrite any words of the same name
+	defined in init.verb.b or compiler.verb.b. (Normally overwriting words is
+	not allowed, to avoid subtle bugs.)
+
+	The patches file provides a safe way to modify init.verb/compiler.verb without
+	replacing their .b files, which could easily break the entire system. Once changes
+	are thoroughly tested via patches.verb, then they can be safely moved into init.verb
+	or compiler.verb.
+
+	Copyright (c) 2022 Frank McIngvale, see LICENSE
+)
+

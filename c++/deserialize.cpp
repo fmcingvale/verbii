@@ -56,7 +56,10 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 
 					// insert into interpreter
 					//cout << "Inserting word:>>>" << name << "<<<" << endl;
-					intr->WORDS[name.c_str()] = list.data.objlist;
+					//intr->WORDS[name.c_str()] = list.data.objlist;
+
+					// do not allow overwriting words when deserializing
+					intr->defineWord(name.c_str(), list.data.objlist, false);
 					// this produces nothing extra
 					return newVoid();
 				}

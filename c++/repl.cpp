@@ -16,6 +16,7 @@ using namespace std;
 
 string INITLIB = "../lib/init.verb.b";
 string COMPILERLIB = "../lib/compiler.verb.b";
+string PATCHESLIB = "../lib/patches.verb";
 
 bool SHOW_RUN_STATS = false;
 
@@ -34,6 +35,18 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 	// run __main__ to setup any vars
 	auto code = intr->lookup_word("__main__");
 	intr->run(code);
+	// always delete __main__, else next file will fail to load
+	intr->deleteWord("__main__");
+}
+
+void compile_and_load(Interpreter *intr, string &text, bool allowOverwrite) {
+	// set flag so make-word can overwrite existing words
+	ALLOW_OVERWRITING_WORDS = allowOverwrite;
+	intr->push(newString(text));
+	auto code = intr->lookup_word("compile-and-load-string");
+	intr->run(code);
+	// turn flag back off (default)
+	ALLOW_OVERWRITING_WORDS = false;
 }
 
 Interpreter* newInterpreter() {
@@ -44,9 +57,12 @@ Interpreter* newInterpreter() {
 	// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
 	deserialize_and_run(intr, INITLIB);
 	deserialize_and_run(intr, COMPILERLIB);
-	
-	// delete __main__ now so I don't inadvertently run it again -- i.e. a later byte-compilation
-	// might fail, but leaving and older __main__ in place
+
+	// now that those are loaded, I can load & compile the patches file
+	string text = readfile(PATCHESLIB);
+	// compile & load words, allowing overwriting of existing words
+	compile_and_load(intr, text, true);
+	// delete __main__ now
 	intr->deleteWord("__main__");
 
 	// GC after loading large file
@@ -66,17 +82,10 @@ void debug_hook(Interpreter *intr, Object obj) {
 
 // use safe_ version below
 void compile_and_run(Interpreter *intr, string text, bool singlestep) {
-	// push string, then call byte-compile-string
-	intr->push(newString(text));
-	auto code = intr->lookup_word("compile-and-load-string");
-	intr->run(code);
-
-	// byte-compile-string leaves list of words on stack -- used by serializer -- but i
-	// don't need them here
-	//intr->pop();
-
+	compile_and_load(intr, text, false);
+	
 	// run __main__
-	code = intr->lookup_word("__main__");
+	auto code = intr->lookup_word("__main__");
 
 	// subtlety -- the code i'm about to run might want to redefine __main__
 	// (i.e. if i'm running the compiler). so delete __main__ BEFORE running

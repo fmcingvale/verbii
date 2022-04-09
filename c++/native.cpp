@@ -16,6 +16,9 @@ using namespace std;
 
 Object native_cmdline_args;
 
+// whether make-word is allowed to overwrite existing words
+bool ALLOW_OVERWRITING_WORDS = false;
+
 static int popInt(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isInt()) {
@@ -95,10 +98,7 @@ static void builtin_make_word(Interpreter *intr) {
 	//cout << "MAKE-WORD ENTRY:" << intr->reprStack() << endl;
 	const char *name = popSymbol(intr, "make-word bad name");
 	Object list = popList(intr, "make-word bad list");
-	if(intr->hasWord(name))
-		throw LangError("Trying to redefine name: " + string(name));
-
-	intr->WORDS[name] = list.data.objlist;
+	intr->defineWord(name, list.data.objlist, ALLOW_OVERWRITING_WORDS);
 }
 
 static void builtin_printchar(Interpreter *intr) {
@@ -257,6 +257,14 @@ static const char *popStringOrSymbol(Interpreter *intr) {
 		throw LangError("Expecting string or symbol but got: " + o.fmtStackPrint());
 }
 
+static bool popBool(Interpreter *intr) {
+	Object o = intr->pop();
+	if(!o.isBool())
+		throw LangError("Expecting bool but got: " + o.fmtStackPrint());
+
+	return o.asBool();
+}
+
 static void builtin_unmake(Interpreter *intr) {
 	Object obj = intr->pop();
 	// strings & symbols are unmade into ASCII values
@@ -306,14 +314,6 @@ static void builtin_make_symbol(Interpreter *intr) {
 		s.insert(s.begin(),(char)popInt(intr, "Bad char in make-symbol"));
 	}
 	intr->push(newSymbol(s));
-}
-
-static void builtin_wordlist(Interpreter *intr) {
-	Object list = newList();
-	for(const auto& pair : intr->WORDS) {
-		list.data.objlist->push_back(newSymbol(pair.first));
-	}
-	intr->push(list);
 }
 
 static void builtin_varlist(Interpreter *intr) {
@@ -384,7 +384,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"L>", builtin_fromlocal},
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
-	{".wordlist", builtin_wordlist},
+	{".wordlist", [](Interpreter *intr) {intr->push(intr->getWordlist());}},
 	{".varlist", builtin_varlist},
 	{".dumpword", builtin_dumpword},
 	{"error", builtin_error},

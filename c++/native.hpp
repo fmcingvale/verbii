@@ -17,6 +17,9 @@ extern std::map<std::string,BUILTIN_FUNC> BUILTINS;
 // set from main()
 extern Object native_cmdline_args;
 
+extern bool ALLOW_OVERWRITING_WORDS;
+
+
 
 
 

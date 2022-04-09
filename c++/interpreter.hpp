@@ -32,8 +32,9 @@ class Interpreter {
 
 	void run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object)=NULL);
 
+	// TODO -- get rid of split between VARS and WORDS ... all should be WORDS
+	
 	// all are public so builtins can use without a hassle
-	std::map<std::string,ObjList*> WORDS; // user-defined words
 	std::map<std::string,int> VARS; // user-defined variables, name -> index into OBJMEM
 
 	// 3 memory areas: stack, locals, free memory
@@ -67,7 +68,9 @@ class Interpreter {
 	void do_jump(const char *jumpword);
 
 	bool hasWord(const char *name);
+	void defineWord(const char *name, ObjList *objlist, bool allow_overwrite);
 	void deleteWord(const char* name);
+	Object getWordlist(); // returns a List
 
 	//Syntax *syntax;
 
@@ -95,6 +98,10 @@ class Interpreter {
 	int min_run_SP;
 	int min_run_LP;
 	unsigned long nr_tailcalls;
+
+	protected:
+	// use functions above so error handling can be in one place
+	std::map<std::string,ObjList*> WORDS; // user-defined words
 };
 
 
