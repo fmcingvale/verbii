@@ -85,6 +85,8 @@ function builtin_setsp(intr, addr)
 		error(">>>Bad address in SP!: " .. tostring(addr))
 	end	
 	intr.SP = addr
+	-- stats
+	intr.min_run_SP = math.min(intr.min_run_SP,intr.SP)
 end
 
 -- set locals pointer from addr on stack
@@ -93,6 +95,8 @@ function builtin_setlp(intr, addr)
 		error(">>>Bad address in LP!: " .. tostring(addr))
 	end
 	intr.LP = addr
+	-- stats
+	intr.min_run_LP = math.min(intr.min_run_LP,intr.LP)
 end
 
 -- pop top of stack and push to locals

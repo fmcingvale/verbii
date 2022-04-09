@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 public class Repl {
 	static string INITLIB = "../lib/init.verb.b";
 	static string COMPILERLIB = "../lib/compiler.verb.b";
+	public static bool SHOW_RUNTIME_STATS = false;
 
 	public static void deserialize_and_run(Interpreter intr, string filename) {
 		var fileIn = System.IO.File.OpenText(filename);
@@ -114,6 +115,8 @@ public class Repl {
 			Console.Out.Flush();
 			var line = Console.In.ReadLine();
 			if(line == null || line == "quit" || line == ",q") {
+				if(SHOW_RUNTIME_STATS)
+					intr.printStats();
 				return;
 			}
 			if(line != null) {
@@ -160,10 +163,12 @@ public class Repl {
 	public void run_file(Interpreter intr, string filename, bool singlestep) {
 		// run file
 		var text = System.IO.File.ReadAllText(filename);
-		var errmsg = safe_compile_and_run(make_interpreter(), text, singlestep, true);
+		var errmsg = safe_compile_and_run(intr, text, singlestep, true);
 		if(errmsg != "") {
 			Console.WriteLine(errmsg);
 		}
+		else if(SHOW_RUNTIME_STATS)
+			intr.printStats();
 	}
 }
 
@@ -181,6 +186,9 @@ public class MainProgram
 			}
 			else if(args[i] == "-step") {
 				singlestep = true;
+			}
+			else if(args[i] == "-stats") {
+				Repl.SHOW_RUNTIME_STATS = true;
 			}
 			else if(args[i] == "--") {
 				// rest of args go to script

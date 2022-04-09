@@ -45,6 +45,12 @@ public class Interpreter {
 	// stack of previous frames (code,codepos for each)
 	public List<Tuple<List<LangObject>,int>> callstack;
 
+	// stats
+	public int max_callstack;
+	public int min_run_SP;
+	public int min_run_LP;
+	public ulong nr_tailcalls;
+
 	public Interpreter() {
 		//Console.WriteLine("*** STARTING INTERPRETER ***");
 		OBJMEM = new List<LangObject>(STACK_SIZE+LOCALS_SIZE+HEAP_STARTSIZE);
@@ -70,6 +76,30 @@ public class Interpreter {
 		code = null;
 		codepos = -1;
 		callstack = new List<Tuple<List<LangObject>,int>>();
+
+		// stats
+		max_callstack = 0;
+		min_run_SP = SP;
+		min_run_LP = LP;
+		nr_tailcalls = 0;
+	}
+
+	public void printStats() {
+		Console.WriteLine("\n==== Runtime Stats ====");
+
+		Console.WriteLine("* General:");
+		Console.WriteLine("  Builtin words: " + Builtins.builtins.Count);
+		Console.WriteLine("  User-defined words: " + WORDS.Count);
+		Console.WriteLine("  Max stack depth: " + (SP_EMPTY - min_run_SP));
+		Console.WriteLine("  Max locals depth: " + (LP_EMPTY - min_run_LP));
+		Console.WriteLine("  Max callstack depth: " + max_callstack);
+		Console.WriteLine("  Tail calls: " + nr_tailcalls);
+
+		Console.WriteLine("* Notices:");
+		if(SP != SP_EMPTY)
+			Console.WriteLine("  Stack is not empty! (" + (SP_EMPTY-SP) + " items)");
+		if(LP != LP_EMPTY)
+			Console.WriteLine("  Locals are not empty! (" + (LP_EMPTY-LP) + " items)");
 	}
 
 	// allocate space for nr objects, returning starting index
@@ -97,6 +127,8 @@ public class Interpreter {
 		if(SP >= SP_EMPTY) {
 			throw new LangError("Stack underflow");
 		}
+		// stats
+		min_run_SP = Math.Min(min_run_SP, SP); 
 		return OBJMEM[SP++];
 	}
 
@@ -201,6 +233,8 @@ public class Interpreter {
 		callstack.Add(Tuple.Create(code,codepos));
 		code = objlist;
 		codepos = 0;
+		// stats
+		max_callstack = Math.Max(max_callstack,callstack.Count);
 	}
 
 	public bool havePushedFrames() {
@@ -380,8 +414,9 @@ public class Interpreter {
 					var next = peekNextObj();
 					var nextSym = next as LangSymbol;
 
-					if(next == null || (nextSym != null && nextSym.match("return"))) {
+					if((next is LangVoid) || (nextSym != null && nextSym.match("return"))) {
 						if(havePushedFrames()) { // in case i'm at the toplevel
+							++nr_tailcalls;
 							code_return();
 						}
 					}

@@ -11,6 +11,37 @@ require("langtypes")
 
 Interpreter = {}
 
+-- '#' doesn't work on tables with non-contiguous entries, like when used as a hash table
+function tableSize(t) 
+	local nr = 0
+	for p in pairs(t) do
+		nr = nr + 1
+	end
+	return nr
+end
+	  
+function Interpreter:print_stats()
+	print("\n==== Runtime Stats ====")
+	print("* General:")
+	print("  Builtin words: " .. tostring(tableSize(BUILTINS)))
+	print("  User-defined words: " .. tostring(tableSize(self.WORDS)))
+	print("  Max stack depth: " .. tostring(self.SP_EMPTY - self.min_run_SP))
+	print("  Max locals depth: " .. tostring(self.LP_EMPTY - self.min_run_LP))
+	print("  Max callstack depth: " .. tostring(self.max_callstack))
+	print("  Tail calls: " .. tostring(self.nr_tail_calls))
+
+	print("* Lua:")
+	print("  Memory in use: " .. tostring(math.ceil(1024*collectgarbage("count"))))
+
+	print("* Notices:")
+	if self.SP ~= self.SP_EMPTY then
+		print("  Stack is not empty! (" .. tostring(self.SP_EMPTY-self.SP) .. " items)")
+	end
+	if self.LP ~= self.LP_EMPTY then
+		print("  Locals are not empty! (" .. tostring(self.LP_EMPTY-self.LP) .. " items)")
+	end
+end
+
 -- allocate nr object slots and returning starting index
 function Interpreter:heap_alloc(nr)
 	local addr = self.HEAP_NEXTFREE
@@ -33,6 +64,8 @@ function Interpreter:push(obj)
 	end
 	self.SP = self.SP - 1
 	self.OBJMEM[self.SP] = obj
+	-- stats
+	self.min_run_SP = math.min(self.min_run_SP, self.SP)
 end
 
 function Interpreter:pushInt(val)
@@ -92,7 +125,7 @@ function Interpreter:do_jump(jumpword)
 end
 
 function Interpreter:nextObj()
-	if self.codepos > #self.code then
+	if self.code == nil or self.codepos > #self.code then
 		return nil
 	else
 		local obj = self.code[self.codepos]
@@ -111,7 +144,7 @@ function Interpreter:nextObjOrFail(why)
 end
 
 function Interpreter:peekObj()
-	if self.codepos >= #self.code then
+	if self.code == nil or self.codepos > #self.code then
 		return nil
 	else
 		return self.code[self.codepos]
@@ -119,7 +152,7 @@ function Interpreter:peekObj()
 end
 
 function Interpreter:prevObj()
-	if self.codepos == 1 then
+	if self.code == nil or self.codepos == 1 then
 		return nil
 	else
 		self.codepos = self.codepos - 1
@@ -145,6 +178,8 @@ function Interpreter:code_call(objlist)
 	--print("CALL - DEPTH NOW: " .. tostring(#self.callstack))
 	self.code = objlist
 	self.codepos = 1
+	-- stats
+	self.max_callstack = math.max(self.max_callstack, #self.callstack)
 end
 
 function Interpreter:code_return()
@@ -183,7 +218,7 @@ function Interpreter:run(objlist, stephook)
 
 	self.code = objlist
 	self.codepos = 1
-
+	
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
 		::MAINLOOP::
@@ -191,9 +226,9 @@ function Interpreter:run(objlist, stephook)
 
 		local obj = self:nextObj()
 		
-		if #self.callstack < 2 then
-			--print("RUN OBJ:" .. fmtStackPrint(obj) .. " " .. type(obj))
-		end
+		--if #self.callstack < 2 then
+		--print("RUN OBJ:" .. fmtStackPrint(obj)) -- .. " " .. type(obj))
+		--end
 
 		if stephook ~= nil then
 			stephook(self,word)
@@ -319,6 +354,19 @@ function Interpreter:run(objlist, stephook)
 			end
 
 			if self.WORDS[obj] ~= nil then
+				--print("READY TO CALL WORD:" .. obj)
+				--print("PEEK IS:" .. fmtStackPrint(self:peekObj()))
+				-- tail call elimination
+				if self:peekObj() == nil or (isSymbol(self:peekObj()) and self:peekObj() == "return") then
+					-- last statement in list, will never need to return here,
+					-- so go ahead and pop my frame so callstack won't grow on
+					-- tail-recursive calls
+					if self:havePrevFrames() then
+						--print("*** TAIL CALL RETURN")
+						self:code_return()
+						self.nr_tail_calls = self.nr_tail_calls + 1
+					end
+				end
 				--print("WORD: " .. obj)
 				self:code_call(self.WORDS[obj])
 				--print("CALL USERWORD:" .. fmtStackPrint(obj))
@@ -373,10 +421,14 @@ function Interpreter:new(obj)
 
 	-- user-defined words
 	obj.WORDS = {}
-	-- anonymous words (referenced by index with $<lambda index> in modified wordlists)
-	obj.LAMBDAS = {}
 	-- vars
 	obj.VARS = {}
+
+	-- stats
+	obj.max_callstack = 0
+	obj.min_run_SP = obj.SP
+	obj.min_run_LP = obj.LP
+	obj.nr_tail_calls = 0
 
 	return obj
 end

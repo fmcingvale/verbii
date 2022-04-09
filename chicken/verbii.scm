@@ -45,6 +45,8 @@
 (import deserializer)
 (import native)
 
+(define SHOW_RUNTIME_STATS #f)
+
 ; load a precompiled (.b) file into interpreter
 (define (load-byte-compiled-file intr filename)
 	(let* ((fileIn (open-input-file filename))
@@ -111,8 +113,9 @@
 			(display ">> ")
 			(let ((line (read-line)))
 				(cond
-					((string=? line "quit")) ; stop looping
-					((string=? line ",q")) ; shorthand for 'quit'
+					((or (string=? line "quit") ; stop looping
+						(string=? line ",q"))
+						(if SHOW_RUNTIME_STATS (print-stats intr)))
 					(else
 						(let ((result (compile-and-run intr line)))
 							(if (null? result)
@@ -136,7 +139,8 @@
 		;(print "READ FILE: " text)
 		(let ((result (compile-and-run intr text)))
 			(if (not (null? result))
-				(print result)))))
+				(print result))
+			(if SHOW_RUNTIME_STATS (print-stats intr)))))
 
 ; does text contain only whitespace?
 (define (blank-string? text)
@@ -183,6 +187,7 @@
 				; else process as normal
 				(cond
 					((string=? arg "-test") (set! test-mode #t))
+					((string=? arg "-stats") (set! SHOW_RUNTIME_STATS #t))
 					((string=? arg "--") (set! script-args '())) ; rest go to script-args
 					(else
 						(if (and (file-exists? arg) (not filename))

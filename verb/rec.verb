@@ -1,0 +1,32 @@
+( recursion testing -- run with "-stats" to ensure consistency across host languages )
+( two types of tail calls demonstrated: )
+( 1. word followed by 'return' )
+( 2. word at end of wordlist )
+
+( case 1 )
+: rec-countdown-1 ( count sum -- sum )
+	over 0 == if >>done
+	#1.25 + ( count sum+1.25 )
+	swap 1 - swap ( count-1 sum+1.25 )
+	rec-countdown-1
+	return ( tail call @ return )
+	@done ( count sum )
+	nip
+	;
+
+( case 2 )
+: rec-countdown-2 ( count sum -- sum )
+	over 0 == if >>done >>loop
+	@done nip return
+	@loop
+	#1.25 + ( count sum+1.25 )
+	swap 1 - swap ( count-1 sum+1.25 )
+	rec-countdown-2 ( tail call at end of wordlist )
+	;
+
+"Expect 50000: " . 40000 0 rec-countdown-1 . CR
+
+"Expect 50000: " . 40000 0 rec-countdown-2 . CR
+
+
+

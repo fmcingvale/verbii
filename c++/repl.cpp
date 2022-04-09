@@ -17,6 +17,8 @@ using namespace std;
 string INITLIB = "../lib/init.verb.b";
 string COMPILERLIB = "../lib/compiler.verb.b";
 
+bool SHOW_RUN_STATS = false;
+
 string readfile(string filename) {
 	ifstream fileIn(filename);
 	string line, buf;
@@ -143,6 +145,8 @@ void repl(bool singlestep) {
 			return;
 		}
 		if (line == "quit" || line == ",q") {
+			if(SHOW_RUN_STATS)
+				intr->print_stats();
 			return;
 		}
 		auto errmsg = safe_compile_and_run(intr, line, singlestep, true);
@@ -189,25 +193,15 @@ void run_test_mode(string filename) {
 }
 
 void run_file(string filename, bool singlestep) {
-	auto errmsg = safe_compile_and_run(newInterpreter(), readfile(filename), singlestep, true);
+	auto intr = newInterpreter();
+	auto errmsg = safe_compile_and_run(intr, readfile(filename), singlestep, true);
 	if(errmsg.length() > 0) {
 		cout << errmsg << endl;
 	}
-}
-
-void print_gc_stats() {
-#if defined(USE_GCMALLOC)
-	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
-	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
-	cout << "Heap size: " << pheap_size << endl;
-	cout << "Free bytes: " << pfree_bytes << endl;
-	cout << "Unmapped bytes: " << punmapped_bytes << endl;
-	cout << "Bytes since gc: " << pbytes_since_gc << endl;
-	cout << "Total bytes: " << ptotal_bytes << endl;
-#else
-	cout << "xmalloc bytes: " << X_BYTES_ALLOCATED << endl;
-#endif
-	cout << "# BUILTINS: " << BUILTINS.size() << endl;
+	else {
+		if(SHOW_RUN_STATS)
+			intr->print_stats();
+	}
 }
 
 #include <sys/stat.h>
@@ -224,7 +218,6 @@ int main(int argc, char *argv[]) {
 
 	bool testMode = false;
 	string filename = "";
-	bool gcstats = false;
 	bool singlestep = false;
 
 	native_cmdline_args = newList();
@@ -233,8 +226,8 @@ int main(int argc, char *argv[]) {
 		if(!strcmp(argv[i], "-test")) {
 			testMode = true;
 		}
-		else if(!strcmp(argv[i], "-showgc")) {
-			gcstats = true;
+		else if(!strcmp(argv[i], "-stats")) {
+			SHOW_RUN_STATS = true;
 		}
 		else if(!strcmp(argv[i], "-step")) {
 			singlestep = true;
@@ -263,10 +256,6 @@ int main(int argc, char *argv[]) {
 		run_file(filename, singlestep);
 
 	//GC_gcollect();
-	if(gcstats) {
-		print_gc_stats();
-		cout << "size of Object: " << sizeof(Object) << endl;
-	}
 	return 0;
 }
 

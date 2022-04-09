@@ -200,6 +200,8 @@ class Builtins {
 			throw new LangError("Bad address in SP!: " + addr.ToString());
 		}
 		intr.SP = addr;
+		// stats
+		intr.min_run_SP = Math.Min(intr.min_run_SP,intr.SP);
 	}
 
 	// set locals pointer from addr on stack
@@ -210,6 +212,8 @@ class Builtins {
 			throw new LangError("Bad address in LP!: " + addr.ToString());
 		}
 		intr.LP = addr;
+		// stats
+		intr.min_run_LP = Math.Min(intr.min_run_LP,intr.LP);
 	}
 
 	// pop top of stack and push to locals

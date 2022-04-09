@@ -23,6 +23,9 @@ never visible from verbii code
 * make sure no ports still looking for false_jump after 'if'
 
 * shouldn't syntax-next return void on end of input instead of null? check/change across ports.
+	* actually not -- 'null' has no literal form so cannot be serialized nor found in a source file.
+		so returning null is fine.
+	* update serializer/deserialize to remove null handling since it should never be possible
 
 * why do we need a list AND a lambda? why not just call lists? there needs to be something different about lambdas to justify the separate type (like closures?) .. binding a list of values to lambdas that are pushed on call?
 

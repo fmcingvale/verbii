@@ -38,6 +38,43 @@ Interpreter::Interpreter() {
 	
 	// allocate stack+locals+heap
 	OBJMEM = (Object*)x_malloc((HEAP_END+1) * sizeof(Object));
+
+	// init stats
+	max_callstack = 0;
+	min_run_SP = SP;
+	min_run_LP = LP;
+	nr_tailcalls = 0;
+}
+
+void Interpreter::print_stats() {	
+	cout << "\n==== Runtime Stats ====" << endl;
+	cout << "* General:\n";
+	cout << "  Builtin words: " << BUILTINS.size() << endl;
+	cout << "  User-defined words: " << WORDS.size() << endl;
+	cout << "  Max stack depth: " << (SP_EMPTY - min_run_SP) << endl;
+	cout << "  Max locals depth: " << (LP_EMPTY - min_run_LP) << endl;
+	cout << "  Max callstack depth: " << max_callstack << endl;
+	cout << "  Tail calls: " << nr_tailcalls << endl;
+
+	cout << "* C++:\n";
+#if defined(USE_GCMALLOC)
+	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
+	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
+	cout << "  Heap size: " << pheap_size << endl;
+	cout << "  Free bytes: " << pfree_bytes << endl;
+	cout << "  Unmapped bytes: " << punmapped_bytes << endl;
+	cout << "  Bytes since gc: " << pbytes_since_gc << endl;
+	cout << "  Total bytes: " << ptotal_bytes << endl;
+#else
+	cout << "  xmalloc bytes: " << X_BYTES_ALLOCATED << endl;
+#endif
+	cout << "  size of Object: " << sizeof(Object) << endl;
+
+	cout << "* Notices:\n";
+	if(SP != SP_EMPTY)
+		cout << "  Stack is not empty! (" << (SP_EMPTY-SP) << " items)\n";
+	if(LP != LP_EMPTY)
+		cout << "  Locals are not empty! (" << (LP_EMPTY-LP) << " items)\n";
 }
 
 void Interpreter::push(Object obj) {
@@ -45,6 +82,8 @@ void Interpreter::push(Object obj) {
 		throw LangError("Stack overflow");
 	}
 	OBJMEM[--SP] = obj;
+	// stats
+	min_run_SP = min(min_run_SP,SP);
 }
 
 Object Interpreter::pop() {
@@ -180,6 +219,8 @@ void Interpreter::code_call(ObjList *new_code) {
 	callstack_pos.push_back(codepos);
 	code = new_code;
 	codepos = 0;
+	// stats
+	max_callstack = max(max_callstack,(int)callstack_code.size());
 }
 
 bool Interpreter::havePushedFrames() {
@@ -367,11 +408,14 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			if(wordlist) {
 				// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 				// i don't need to come back here, so pop my wordlist first to stop stack from growing
+				#if 1 // can turn off to test without tail call elimination, if desired
 				if(peekNextCodeObj().isNull() || peekNextCodeObj().isSymbol("return")) {
 					if(havePushedFrames()) { // in case i'm at the toplevel
 						code_return();
+						++nr_tailcalls;
 					}
 				}
+				#endif
 				// execute word by pushing its objlist and continuing
 				code_call(wordlist);
 				//syntax->pushObjList(wordlist);

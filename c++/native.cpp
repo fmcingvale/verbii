@@ -149,6 +149,8 @@ static void builtin_setsp(Interpreter *intr) {
 		throw LangError("Bad address in SP!: " + to_string(addr));
 	}
 	intr->SP = addr;
+	// stats
+	intr->min_run_SP = min(intr->min_run_SP, intr->SP);
 }
 
 // set locals pointer from addr on stack
@@ -159,6 +161,8 @@ static void builtin_setlp(Interpreter *intr) {
 		throw LangError("Bad address in LP!: " + to_string(addr));
 	}
 	intr->LP = addr;
+	// stats
+	intr->min_run_LP = min(intr->min_run_LP, intr->LP);
 }
 
 // pop top of stack and push to locals

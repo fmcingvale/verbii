@@ -38,14 +38,30 @@ class Interpreter(object):
 		
 		# user-defined words
 		self.WORDS = {}
-		# anonymous functions - referred to by $<lambda index> in modified wordlists
-		self.LAMBDAS = []
 		# variables
 		self.VARS = {}
 
-		self.code = []
+		self.code = None
 		self.codepos = 0
 		self.callstack = []
+
+		# stats
+		self.max_callstack = 0
+		self.min_run_SP = self.SP
+		self.min_run_LP = self.LP
+		self.nr_tailcalls = 0
+
+	def print_stats(self):
+		from native import BUILTINS
+
+		print("\n==== Runtime Stats ====")
+		print("* General:")
+		print("  Builtin words: {0}".format(len(BUILTINS)))
+		print("  User-defined words: {0}".format(len(self.WORDS)))
+		print("  Max stack depth: {0}".format(self.SP_EMPTY - self.min_run_SP))
+		print("  Max locals depth: {0}".format(self.LP_EMPTY - self.min_run_LP))
+		print("  Max callstack depth: {0}".format(self.max_callstack))
+		print("  Tail calls: {0}".format(self.nr_tailcalls))
 
 	def heap_alloc(self, nr):
 		"alloc space for nr objects, returning starting index"
@@ -62,6 +78,8 @@ class Interpreter(object):
 		self.callstack.append((self.code,self.codepos))
 		self.code = code
 		self.codepos = 0
+		# stats
+		self.max_callstack = max(self.max_callstack,len(self.callstack))
 
 	def havePushedFrames(self):
 		return len(self.callstack) > 0
@@ -78,6 +96,8 @@ class Interpreter(object):
 
 		self.SP -= 1
 		self.OBJMEM[self.SP] = obj
+		# stats
+		self.min_run_SP = min(self.min_run_SP,self.SP)
 
 	def pushInt(self, a):
 		"like push but checks for valid integer range"
@@ -121,8 +141,8 @@ class Interpreter(object):
 			raise LangError("Bad jumpword " + jumpword)
 
 	def nextCodeObj(self):
-		if self.codepos >= len(self.code):
-			return None
+		if self.code is None: raise LangError("nextCodeObj called while not running!")
+		if self.codepos >= len(self.code): return None
 
 		obj = self.code[self.codepos]
 		self.codepos += 1
@@ -136,12 +156,13 @@ class Interpreter(object):
 		return obj
 
 	def peekNextCodeObj(self):
-		if self.codepos >= len(self.code):
-			return None
+		if self.code is None: raise LangError("peekNextCodeObj called while not running!")
+		if self.codepos >= len(self.code): return None
 
 		return self.code[self.codepos]
 
 	def prevCodeObject(self):
+		if self.code is None: raise LangError("prevCodeObject called while not running!")
 		if self.codepos == 0:
 			return None
 		else:
@@ -167,10 +188,13 @@ class Interpreter(object):
 			raise LangError("Trying to delete non-existent name: " + name)
 		
 	def run(self, objlist, stephook=None) -> None:
-		if len(self.callstack):
+		#if len(self.callstack):
+		if self.code is not None:
 			raise LangError("Attempting to call Interpreter.run() recursively")
 
-		self.code_call(objlist)
+		#self.code_call(objlist)
+		self.code = objlist
+		self.codepos = 0
 
 		from native import BUILTINS
 		# run one object at a time in a loop	
@@ -188,6 +212,7 @@ class Interpreter(object):
 					self.code_return()
 					continue
 				else:
+					self.code = None # mark self as not running
 					return
 
 			#print("RUN OBJ:",word)
@@ -210,6 +235,7 @@ class Interpreter(object):
 				if self.havePushedFrames():
 					self.code_return()
 				else:
+					self.code = None # mark self as not running
 					return # top level return exits program
 			
 				continue
@@ -303,8 +329,14 @@ class Interpreter(object):
 				continue
 
 			if word in self.WORDS:
-				# TODO -- tail call elimination
-			
+				# tail call elimination
+				if self.peekNextCodeObj() is None or self.peekNextCodeObj() == "return":
+					# no need to come back here, so go ahead and pop my call frame before
+					# calling word -- callstack will never grow on recursive tail-calls now
+					if self.havePushedFrames():
+						self.code_return()
+						self.nr_tailcalls += 1 # stats
+
 				# execute word by pushing its wordlist and continuing
 				self.code_call(self.WORDS[word])
 				continue

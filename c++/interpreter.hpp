@@ -88,6 +88,13 @@ class Interpreter {
 	size_t codepos;
 	std::vector<ObjList*> callstack_code;
 	std::vector<size_t> callstack_pos;
+
+	// stats
+	void print_stats();
+	int max_callstack;
+	int min_run_SP;
+	int min_run_LP;
+	unsigned long nr_tailcalls;
 };
 
 

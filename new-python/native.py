@@ -57,6 +57,8 @@ def builtin_setsp(I: Interpreter, addr):
 		raise LangError("Bad address in SP!: " + str(addr))
 	
 	I.SP = addr
+	# stats
+	I.min_run_SP = min(I.min_run_SP,I.SP)
 
 # set locals pointer from addr on stack
 def builtin_setlp(I: Interpreter, addr):
@@ -64,6 +66,8 @@ def builtin_setlp(I: Interpreter, addr):
 		raise LangError("Bad address in LP!: " + str(addr))
 	
 	I.LP = addr
+	# stats
+	I.min_run_LP = min(I.min_run_LP,I.LP)
 
 # pop top of stack and push to locals
 def builtin_tolocal(I: Interpreter):

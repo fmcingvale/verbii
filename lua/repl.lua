@@ -14,6 +14,8 @@ require("native")
 INITLIB = "../lib/init.verb.b"
 COMPILERLIB = "../lib/compiler.verb.b"
 
+SHOW_RUNTIME_STATS = false
+
 function deserialize_and_run(intr, filename)
 	local f = io.open(filename, "r")
 	deserialize_stream(intr, f)
@@ -102,6 +104,9 @@ function repl(singlestep)
 		if line == nil then
 			return -- eof
 		elseif line == "quit" or line == ",q" then
+			if SHOW_RUNTIME_STATS then
+				intr:print_stats()
+			end
 			return
 		end
 		
@@ -191,6 +196,8 @@ function run_file(intr, filename, singlestep)
 	local err = safe_compile_and_run(intr, buf, singlestep, true)
 	if err ~= nil then
 		print(err)
+	elseif SHOW_RUNTIME_STATS then
+		intr:print_stats()
 	end
 end
 
@@ -207,6 +214,8 @@ for i=1,#arg do
 		test_mode = true
 	elseif arg[i] == "-step" then
 		singlestep = true
+	elseif arg[i] == "-stats" then
+		SHOW_RUNTIME_STATS = true
 	elseif arg[i] == "--" then
 		-- rest of args go to script
 		i = i + 1

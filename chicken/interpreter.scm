@@ -25,6 +25,7 @@
 (import dyn-vector)
 (import miscmacros) ; inc! dec! 
 (import srfi-69) ; hash-tables
+(import (chicken gc)) ; memory-statistics
 
 (import langtypes)
 (import errors)
@@ -55,7 +56,14 @@
 
 	(code intr-code intr-code-set!) ; currently running code (LangList)
 	(codepos intr-codepos intr-codepos-set!) ; next obj to run as index into code
-	(callstack intr-callstack intr-callstack-set!)) ; frame pushed here on call (pushed to head), as (code,codepos)
+	(callstack intr-callstack intr-callstack-set!) ; frame pushed here on call (pushed to head), as (code,codepos)
+
+	; stats
+	(callstack-depth callstack-depth callstack-depth-set!)
+	(max-callstack max-callstack max-callstack-set!)
+	(min-run-SP min-run-SP min-run-SP-set!)
+	(min-run-LP min-run-LP min-run-LP-set!)
+	(nr-tail-calls nr-tail-calls nr-tail-calls-set!))
 
 (define (make-Interpreter)
 	(let ((intr (make-empty-Interpreter)))
@@ -76,10 +84,41 @@
 		(intr-code-set! intr '())
 		(intr-codepos-set! intr 0)
 		(intr-callstack-set! intr '())
+
+		; stats
+		(callstack-depth-set! intr 0)
+		(max-callstack-set! intr 0)
+		(min-run-SP-set! intr (intr-SP intr))
+		(min-run-LP-set! intr (intr-LP intr))
+		(nr-tail-calls-set! intr 0)
+
 		intr))
 
 ; shorthand since usually i want the vector
 (define (intr-code-list intr) (LangList-objlist (intr-code intr)))
+
+(define (print-stats intr)
+	(print "\n==== Runtime Stats ====")
+	(print "* General:")
+	(print "  Builtin words: " (length (hash-table-keys BUILTINS)))
+	(print "  User-defined words: " (length (hash-table-keys (WORDS intr))))
+	(print "  Max stack depth: " (- (intr-SP_EMPTY intr) (min-run-SP intr)))
+	(print "  Max locals depth: " (- (intr-LP_EMPTY intr) (min-run-LP intr)))
+	(print "  Max callstack depth: " (max-callstack intr))
+	(print "  Tail calls: " (nr-tail-calls intr))
+
+	(let ((mstats (memory-statistics)))
+		(print "* Chicken:")
+		; really 2x this because of the copying gc, but only count the active half
+		(print "  Heap size: " (vector-ref mstats 0))
+		(print "  Memory in use: " (vector-ref mstats 1))
+		(print "  Nursery (first heap gen) size: " (vector-ref mstats 2)))
+
+	(print "* Notices:")
+	(if (not (= (intr-SP intr) (intr-SP_EMPTY intr)))
+		(print "  Stack is not empty! (" (- (intr-SP_EMPTY intr) (intr-SP intr)) " items)"))
+	(if (not (= (intr-LP intr) (intr-LP_EMPTY intr)))
+		(print "  Locals are not empty! (" (- (intr-LP_EMPTY intr) (intr-LP intr)) " items)")))
 
 (define (allocate intr nr)
 	(let ((addr (intr-HEAP_NEXTFREE intr)))
@@ -98,7 +137,10 @@
 		(lang-error 'push "Stack overflow"))
 	;(set! (SP intr) (- (SP intr) 1))
 	(intr-SP-set! intr (- (intr-SP intr) 1))
-	(memset intr (intr-SP intr) obj))
+	(memset intr (intr-SP intr) obj)
+
+	; stats
+	(min-run-SP-set! intr (min (intr-SP intr) (min-run-SP intr))))
 	
 (define (push-int intr i)
 	(if (or (> i MAX_INT_31) (< i MIN_INT_31))
@@ -126,7 +168,10 @@
 		(begin
 			(intr-callstack-set! intr (cons (list (intr-code intr) (intr-codepos intr)) (intr-callstack intr)))
 			(intr-code-set! intr objlist)
-			(intr-codepos-set! intr 0))
+			(intr-codepos-set! intr 0)
+			; stats
+			(callstack-depth-set! intr (+ 1 (callstack-depth intr)))
+			(max-callstack-set! intr (max (max-callstack intr) (callstack-depth intr))))
 		(lang-error 'code-call "Call while not running!")))
 
 (define (code-return intr)
@@ -137,7 +182,9 @@
 			;(print "POS: " (cadar (slot intr 'callstack)))
 			(intr-code-set! intr (caar (intr-callstack intr)))
 			(intr-codepos-set! intr (cadar (intr-callstack intr)))
-			(intr-callstack-set! intr (cdr (intr-callstack intr))))
+			(intr-callstack-set! intr (cdr (intr-callstack intr)))
+			; stats
+			(callstack-depth-set! intr (- (callstack-depth intr) 1)))
 		(lang-error 'code-return "Return without call!")))
 
 (define (nextObj intr)
@@ -347,10 +394,13 @@
 						;(print "CALL USERWORD: " obj)
 						; tail-call elimination
 						(let ((next (peekObj intr)))
-							(if (or (LangVoid? next) (eqv? next 'return))
+							(if (or (LangVoid? next) 
+									(and (LangSymbol? next) (string=? next "return")))
 								; end of list or return - don't need to come back here
 								(if (havePushedFrames intr)
-									(code-return intr))))
+									(begin
+										(code-return intr)
+										(nr-tail-calls-set! intr (+ 1 (nr-tail-calls intr)))))))
 						(code-call intr (hash-table-ref (WORDS intr) obj))
 						(run-loop (nextObj intr)))
 					

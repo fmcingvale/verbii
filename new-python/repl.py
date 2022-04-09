@@ -71,7 +71,7 @@ def safe_compile_and_run(intr, text, singlestep, backtrace_on_error):
 		
 		return errmsg
 
-def repl(singlestep):
+def repl(singlestep, showstats):
 	"Run interactively"
 	print("Verbii running on Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro))
 
@@ -84,6 +84,7 @@ def repl(singlestep):
 		if len(line) == 0:
 			return # eof
 		if line == "quit" or line == ",q":
+			if showstats: intr.print_stats()
 			return
 		
 		err = safe_compile_and_run(intr, line, singlestep, True)
@@ -100,8 +101,9 @@ def run_test_mode(filename: str):
 
 	re_blankline = re.compile(r"""(^[ \t\r\n]*$)""")
 	fileIn = open(filename,'r')
-	runnable_lines = 0 # how many lines have I seen that are non-blank
-	while (line := fileIn.readline()) != "":
+	while True:
+		line = fileIn.readline()
+		if line == "": return # end of file
 		if re_blankline.match(line):
 			continue # skip blank lines
 		
@@ -142,24 +144,29 @@ def print_backtrace(intr: Interpreter):
 		else:
 			return # end of callstack
 
-def run_file(intr: Interpreter, filename: str, singlestep: bool):
+def run_file(intr: Interpreter, filename: str, singlestep: bool, showstats: bool):
 	# run file
 	buf = open(filename,'r').read()
 
 	err = safe_compile_and_run(intr, buf, singlestep, True)
 	if err is not None:
 		print(err)
+	elif showstats:
+		intr.print_stats()
 
 if __name__ == '__main__':
 	testmode = False
 	filename = None
 	singlestep = False
+	showstats = False
 	for i,arg in enumerate(sys.argv[1:]):
 		#print("ARG:",arg)
 		if arg == '-test':
 			testmode = True
 		elif arg == '-step':
 			singlestep = True
+		elif arg == '-stats':
+			showstats = True
 		elif arg == '--':
 			# pass rest of args to script
 			import native
@@ -177,10 +184,10 @@ if __name__ == '__main__':
 			sys.exit(1)
 
 	if filename is None:
-		repl(singlestep)
+		repl(singlestep, showstats)
 	elif testmode is True:
 		run_test_mode(filename)
 	else:
 		intr = new_interpreter()
-		run_file(intr, filename, singlestep)
+		run_file(intr, filename, singlestep, showstats)
 		
