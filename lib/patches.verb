@@ -18,3 +18,107 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 )
 
+( WIP version )
+: reader-next ( -- word ; get next word from reader stream, or null on eof )
+	"" ( word )
+	@skipws ( skip leading whitespace )
+		reader-peek-char
+		dup null? if >>null-on-read 
+		ord 32 > if >>word-loop
+		reader-next-char ( word char; ++pos )
+		drop
+		<<skipws
+
+	@null-on-read ( word null )
+		drop >>eof
+
+	@word-loop ( word )
+		reader-next-char ( word char )
+		dup null? if <<null-on-read
+		( check for whitespace )
+		dup ord 32 <= if >>space  ( treat anything from ' ' to NUL as whitespace )
+		( not whitespace, append and continue )
+		+ <<word-loop
+
+	@space ( word char )
+		drop ( fall through to return word below )
+
+	@eof ( word ) 
+		( return word, null on end of file )
+		dup length 0 == if >>isnull
+		string->symbol return ( return word as symbol )
+
+	@isnull drop null return
+	;
+
+( WIP VERSON )
+: syntax-comment ( assumes open paren just read )
+	1 >L ( L0 = nesting )
+	@loop
+		reader-next ( puts symbol on stack )
+		dup null? if >>eof
+		dup ') == if >>closeparen
+		dup '( == if >>openparen
+		drop <<loop ( discard and continue )
+	@closeparen
+		LP ref 1 - LP set!
+		LP ref 0 == if >>end
+		drop <<loop
+	@openparen
+		LP ref 1 + LP set!
+		drop <<loop
+	@end
+		LP 1 + LP!
+		drop return
+	@eof
+		"Unexpected end of input inside comment" error
+	;
+
+: syntax-line-comment ( assumes "\" was just read )
+	( read *characters* until EOL found )
+	@loop
+		reader-next-char
+		( if end of stream, "\n" or "\r", then i'm done )
+		dup null? if >>eol
+		dup ord 13 == if >>eol
+		dup ord 10 == if >>eol
+		drop <<loop ( discard char and continue )
+	@eol
+		drop ( discard char and return )
+	;
+
+( WIP VERSION )
+: syntax-next ( convert next word from input to runnable object )
+	reader-next
+		( "syntax-next:" . dup . CR )
+	dup null? if >>null
+	dup '( == if >>comment
+	dup '\ == if >>line-comment
+	dup '{ == if >>lambda
+	dup ': == if >>worddef
+	dup 'def == if >>worddef ( synonym for ':' )
+	dup 0 get '" == if >>string ( "... )
+	( test for correct format before passing to parse-int or parse-float since those functions
+	  will happily parse something like "123abc" as 123 )
+	dup int-symbol? if >>integer
+	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float
+	@nomatch
+		( leave unprocessed word on stack )
+		return
+	@null
+		return ( leave null on stack )
+	@worddef
+		drop syntax-define-word return
+	@comment
+		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
+	@line-comment
+		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
+	@lambda
+		drop syntax-lambda return
+	@string
+		syntax-string return
+	@integer
+		parse-int return
+	@float
+		1 -1 slice parse-float return
+	;

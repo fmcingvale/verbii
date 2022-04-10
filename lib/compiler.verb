@@ -2,6 +2,21 @@
 	Verbii compiler, written in verbii
 	
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+	READ EVERYTHING BELOW BEFORE EDITING THIS CODE!
+
+	* Changing this file can easily break the entire system *
+
+	The safe way to make changes to the compiler is to first put the changes
+	into lib/patches.verb. Copy & paste any words you want to change into
+	patches.verb and make the changes there. At startup, the words defined
+	in patches.verb will overwrite any existing words in init.verb/compiler.verb.
+	This allow changes to be safely testing without damaging the system.
+	
+	** DO NOT run boot/make-bootstrap.sh until all changes have been thoroughly tested. **
+
+	Once changes have been tested, then you can copy them back into init.verb/compiler.verb
+	and run make-bootstrap.sh
 )
 
 ( --- reader interface, used by compiler, but may be generally useful
@@ -12,12 +27,6 @@
 
 		then reader-next until it returns null
 )
-
-( -- fyi -- this can't be in compiler.verb because its __main__ is not run on startup,
-	so the vars never get defined 
-
-	TODO - should fix compiler.verb since this really should be there
-	-- )
 
 var READER_TEXT 1 ( string )
 var READER_TEXT_LEN 1
@@ -420,7 +429,6 @@ var READER_POS 1
 ( compiles filename and loads words into current interpreter )
 : compile-and-load-string ( string )
 	byte-compile-string
-	( "COMPILED: " . dup . CR )
 	( now load the [ name wordlist ] pairs into interpreter )
-	{ ( "FOR-EACH:" . dup . CR ) dup 1 get swap 0 get ( "MAKE" . .S CR ) make-word } for-each
+	{ dup 1 get swap 0 get make-word } for-each
 	;
