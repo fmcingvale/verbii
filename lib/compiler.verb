@@ -11,7 +11,7 @@
 	into lib/patches.verb. Copy & paste any words you want to change into
 	patches.verb and make the changes there. At startup, the words defined
 	in patches.verb will overwrite any existing words in init.verb/compiler.verb.
-	This allow changes to be safely testing without damaging the system.
+	This allow changes to be safely tested without damaging the system.
 	
 	** DO NOT run boot/make-bootstrap.sh until all changes have been thoroughly tested. **
 
