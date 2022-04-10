@@ -27,6 +27,7 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 			case 'b': return (line.substr(2) == "true") ? newBool(true) : newBool(false);
 			case 's':
 				string_replace(line, "%32", " ");
+				string_replace(line, "%09", "\t");
 				string_replace(line, "%10", "\n");
 				string_replace(line, "%13", "\r");
 				string_replace(line, "%37", "%");

@@ -121,7 +121,7 @@
 >> ( end of input inside " )
 => 
 >> "hello world oops ...
-*** Unexpected end of input in string near: "hello world oops ...  ***
+*** Unexpected end of input inside string: "hello world oops ... ***
 >> ( end of input inside { .. )
 => 
 >> { a lambda here uh oh
