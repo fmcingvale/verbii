@@ -32,8 +32,6 @@ public class Interpreter {
 	// next free index to allocate in heap
 	public int HEAP_NEXTFREE;
 
-	// user defined words
-	public Dictionary<string,List<LangObject>> WORDS;
 	// user defined variables
 	public Dictionary<string,int> VARS;
 	// unnamed functions
@@ -51,6 +49,9 @@ public class Interpreter {
 	public int min_run_LP;
 	public ulong nr_tailcalls;
 
+	// user defined words - access with methods only
+	private Dictionary<string,List<LangObject>> WORDS;
+	
 	public Interpreter() {
 		//Console.WriteLine("*** STARTING INTERPRETER ***");
 		OBJMEM = new List<LangObject>(STACK_SIZE+LOCALS_SIZE+HEAP_STARTSIZE);
@@ -256,6 +257,28 @@ public class Interpreter {
 		return WORDS.ContainsKey(name) || VARS.ContainsKey(name);
 	}
 
+	public void defineWord(string name, List<LangObject> objlist, bool allow_overwrite) {
+		if(hasWord(name) && !allow_overwrite)
+			throw new LangError("Trying to redefine name: " + name);
+
+		WORDS[name] = objlist;
+	}
+
+	public List<LangObject>? lookupWord(string name) {
+		if(WORDS.ContainsKey(name))
+			return WORDS[name];
+		else
+			return null;
+	}
+
+	public List<LangObject> lookupWordOrFail(string name) {
+		var list = lookupWord(name);
+		if(list == null)
+			throw new LangError("No such word: " + name);
+
+		return list;
+	}
+	
 	public void deleteWord(string name) {
 		if(WORDS.ContainsKey(name)) {
 			WORDS.Remove(name);

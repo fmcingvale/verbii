@@ -15,6 +15,7 @@
 						** like Python, use Lua strings for symbols
 	string		String (class)
 	lambda		Lambda (class)
+	list		table (i.e. plain table with no __class attribute)
 --]]
 
 -- make a "none" class that is differentiated from nil

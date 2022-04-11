@@ -36,8 +36,8 @@ class Interpreter(object):
 		self.re_integer = re.compile(r"""(^[+\-]?[0-9]+$)""")
 		self.re_lambda = re.compile(r"""\$<lambda ([0-9]+)>""")
 		
-		# user-defined words
-		self.WORDS = {}
+		# user-defined words (access through methods only)
+		self._WORDS = {}
 		# variables
 		self.VARS = {}
 
@@ -56,8 +56,8 @@ class Interpreter(object):
 
 		print("\n==== Runtime Stats ====")
 		print("* General:")
-		print("  Builtin words: {0}".format(len(BUILTINS)))
-		print("  User-defined words: {0}".format(len(self.WORDS)))
+		print("  Builtin _words: {0}".format(len(BUILTINS)))
+		print("  User-defined _words: {0}".format(len(self._WORDS)))
 		print("  Max stack depth: {0}".format(self.SP_EMPTY - self.min_run_SP))
 		print("  Max locals depth: {0}".format(self.LP_EMPTY - self.min_run_LP))
 		print("  Max callstack depth: {0}".format(self.max_callstack))
@@ -177,13 +177,27 @@ class Interpreter(object):
 		return obj
 
 	def hasWord(self, name):
-		return name in self.VARS or name in self.WORDS
+		return name in self.VARS or name in self._WORDS
+
+	def defineWord(self, name, objlist, allow_overwrite):
+		if self.hasWord(name) and not allow_overwrite:
+			raise LangError("Trying to redefine name: " + name)
+
+		self._WORDS[name] = objlist
+
+	def lookupWord(self, name):
+		return self._WORDS.get(name, None)
+
+	def lookupWordOrFail(self, name):
+		lst = self.lookupWord(name)
+		if lst is None: raise LangError("No such word: " + name)
+		else: return lst
 
 	def deleteWord(self, name):
 		if name in self.VARS:
 			del self.VARS[name]
-		elif name in self.WORDS:
-			del self.WORDS[name]
+		elif name in self._WORDS:
+			del self._WORDS[name]
 		else:
 			raise LangError("Trying to delete non-existent name: " + name)
 		
@@ -328,7 +342,7 @@ class Interpreter(object):
 				func(*args)
 				continue
 
-			if word in self.WORDS:
+			if word in self._WORDS:
 				# tail call elimination
 				if self.peekNextCodeObj() is None or self.peekNextCodeObj() == "return":
 					# no need to come back here, so go ahead and pop my call frame before
@@ -338,7 +352,7 @@ class Interpreter(object):
 						self.nr_tailcalls += 1 # stats
 
 				# execute word by pushing its wordlist and continuing
-				self.code_call(self.WORDS[word])
+				self.code_call(self._WORDS[word])
 				continue
 	
 			if word in self.VARS:

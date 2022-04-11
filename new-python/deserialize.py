@@ -21,7 +21,7 @@ def deserialize_stream(intr, fileIn):
 	elif line[0] == 'b': return True if line[2:] == 'true' else False
 	elif line[0] == 's':
 		s = line[2:]
-		s = s.replace("%32"," ").replace("%10","\n").replace("%13","\r").replace("%37","%")
+		s = s.replace("%32"," ").replace("%09","\t").replace("%10","\n").replace("%13","\r").replace("%37","%")
 		return LangString(s)
 	elif line[0] == 'y': return line[2:]
 	elif line[0] == 'L':
@@ -40,7 +40,7 @@ def deserialize_stream(intr, fileIn):
 		objs = deserialize_stream(intr, fileIn)
 		if type(objs) != list:
 			raise LangError("Expecting list after 'W' but got: " + objs.fmtStackPrint())
-		intr.WORDS[name] = objs
+		intr.defineWord(name,objs,False)
 		#print("LOADED WORD: " + name)
 		return None
 	else:

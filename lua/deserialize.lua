@@ -30,6 +30,7 @@ function deserialize_stream(intr, fileIn)
 		local s = line:sub(3)
 		-- unescape string
 		s = s:gsub("%%32", " ")
+		s = s:gsub("%%09", "\t")
 		s = s:gsub("%%10", "\n")
 		s = s:gsub("%%13", "\r")
 		s = s:gsub("%%37", "%%")
@@ -54,7 +55,7 @@ function deserialize_stream(intr, fileIn)
 		local name = line:sub(3)
 		local objs = deserialize_stream(intr, fileIn)
 		if isList(objs) then
-			intr.WORDS[name] = objs
+			intr:defineWord(name, objs, false) -- do not allow overwriting existing words
 		else
 			error(">>>Expecting list after 'W' but got: " .. fmtStackPrint(objs))
 		end
@@ -63,12 +64,6 @@ function deserialize_stream(intr, fileIn)
 	end
 end
 
---local f = io.open("../lib/compiler.verb.b")
---local f = io.open("t.txt")
---local intr = new_Interpreter()
-
---local obj = deserialize_stream(intr,f)
---print(fmtStackPrint(obj))
 
 		
 	

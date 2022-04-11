@@ -33,6 +33,8 @@
 (import errors)
 (import interpreter)
 
+(define ALLOW_OVERWRITING_WORDS #f)
+
 ; ( xn .. x1 N -- list of N items )
 (define (builtin-make-list intr N)
 	(let loop ((nr N) (lst '()))
@@ -246,10 +248,8 @@
 
 (define (builtin-make-word intr name)
 	(let ((llist (popTypeOrFail intr LangList? "symbol" "make-word")))
-		(if (intr-has-word intr name)
-			(lang-error 'make-word "Trying to redefine name: " name))
-		(hash-table-set! (WORDS intr) name llist)))
-
+		(intr-define-word intr name llist ALLOW_OVERWRITING_WORDS)))
+		
 (define (builtin-append intr llist obj)
 	; modify in place and push back on stack
 	(llist-push-back llist obj)
@@ -258,13 +258,13 @@
 (define (LangString-or-Symbol? o) (or (LangString? o) (LangSymbol? o)))
 
 (define (builtin-dumpword intr name)
-	(if (not (hash-table-exists? (WORDS intr) name))
+	(if (not (intr-has-word intr name))
 		(lang-error '.dumpword "No such word: " name))
 	; like other ports, make a copy of list
 	(let ((newlist (new-lang-list)))
 		(dynvector-for-each 
 			(lambda (i o) (llist-push-back newlist o)) 
-				(LangList-objlist (hash-table-ref (WORDS intr) name)))
+				(LangList-objlist (intr-lookup-word intr name)))
 		(push intr newlist)))
 
 (import (chicken file posix))

@@ -47,32 +47,44 @@
 
 (define SHOW_RUNTIME_STATS #f)
 
-; load a precompiled (.b) file into interpreter
-(define (load-byte-compiled-file intr filename)
-	(let* ((fileIn (open-input-file filename))
-			(result (deserialize-stream intr fileIn)))
-		(close-input-port fileIn)
-		result))
+(import (chicken file posix))
 
-(define (make-loaded-interpreter)
-	(let ((intr (make-Interpreter)))
-		(load-byte-compiled-file intr "../lib/init.verb.b")
-		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
-		(load-byte-compiled-file intr "../lib/compiler.verb.b")
-		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
-		
-		; delete __main__ so I don't inadvertently reuse it later
+(define (readfile filename)
+	(let* ((fileIn (file-open filename open/rdonly))
+			(text (car (file-read fileIn (file-size fileIn)))))
+		(file-close fileIn)
+		text))
+
+(define (compile-and-load intr text allow_overwrite)
+	(set! ALLOW_OVERWRITING_WORDS allow_overwrite)
+	(push intr (make-LangString text))
+	(intr-run intr (intr-lookup-word-or-fail intr "compile-and-load-string"))
+	(set! ALLOW_OVERWRITING_WORDS #f))
+
+; load and run precompiled (.b) file
+(define (deserialize-and-run intr filename)
+	(let ((fileIn (open-input-file filename)))
+		(deserialize-stream intr fileIn)
+		; run main to set any vars
+		(intr-run intr (intr-lookup-word-or-fail intr "__main__"))
 		(intr-delete-word intr "__main__")
+		(close-input-port fileIn)))
 
+(define (make-loaded-interpreter verbose)
+	(let ((intr (make-Interpreter)))
+		(deserialize-and-run intr "../lib/init.verb.b")
+		(deserialize-and-run intr "../lib/compiler.verb.b")
+		
+		; load patches (currently, not run, just loaded for words)
+		(let ((buf (readfile "../lib/patches.verb")))
+			; if file is large, print a message since this will take a bit ...
+			(if (and (> (string-length buf) 1000) verbose)
+				(print "Patching ..."))
+			(compile-and-load intr buf #t) ; allowed to overwrite words
+			(intr-delete-word intr "__main__"))
+		
 		intr))
 		
-(define (byte-compile-and-load intr text)
-	;(print "BYTE-COMPILING text: " text)
-	(push intr (make-LangString text))
-	(intr-run intr (hash-table-ref (WORDS intr) "compile-and-load-string"))
-	;(print "STACK NOW: " (reprStack intr)))
-)
-
 (import simple-exceptions) ; with-exn-handler
 
 ; compile and run text - if OK returns null, else returns error message (string)
@@ -85,9 +97,9 @@
 			; re-raise the error to show the full traceback)
 			(else (abort exn)))
 		;(print "Compile ...")
-		(byte-compile-and-load intr text)
+		(compile-and-load intr text #f)
 		;(print "Run ...")
-		(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
+		(intr-run intr (intr-lookup-word-or-fail intr "__main__"))
 		; delete __main__ once run
 		(intr-delete-word intr "__main__")
 		; ran OK if we made it here, return null
@@ -96,7 +108,7 @@
 ; for debugging - does same as safe-compile-and-run but doesn't catch exceptions
 (define (unsafe-compile-and-run intr text)
 	(byte-compile-and-load intr text)
-	(intr-run intr (hash-table-ref (WORDS intr) "__main__"))
+	(intr-run intr (intr-lookup-word-or-fail intr "__main__"))
 	; delete __main__ once run
 	(intr-delete-word intr "__main__")
 	'())
@@ -108,7 +120,7 @@
 
 (define (repl)
 	(print "Verbii running on Chicken " (chicken-version))
-	(let ((intr (make-loaded-interpreter)))
+	(let ((intr (make-loaded-interpreter #t)))
 		(let repl-loop ()
 			(display ">> ")
 			(let ((line (read-line)))
@@ -126,16 +138,12 @@
 								; print error and restart interpreter
 								(begin
 									(print result)
-									(set! intr (make-loaded-interpreter))
+									(set! intr (make-loaded-interpreter #t))
 									(repl-loop))))))))))
 
-(import (chicken file posix))
-
 (define (run-program filename)
-	(let* ((intr (make-loaded-interpreter))
-			(fileIn (file-open filename open/rdonly))
-			(text (car (file-read fileIn (file-size fileIn)))))
-		(file-close fileIn)
+	(let* ((intr (make-loaded-interpreter #f))
+			(text (readfile filename)))
 		;(print "READ FILE: " text)
 		(let ((result (compile-and-run intr text)))
 			(if (not (null? result))
@@ -150,7 +158,7 @@
 ; stack or error message that occurred, restarting the interpreter on errors			
 (define (run-test filename)
 	(with-input-from-file filename (lambda ()
-		(let ((intr (make-loaded-interpreter)))
+		(let ((intr (make-loaded-interpreter #f)))
 			(let run-loop ((line (read-line)))
 				(if (not (eof-object? line))
 					(if (blank-string? line)
@@ -167,7 +175,7 @@
 								; else print error and restart interpreter
 								(begin
 									(print result)
-									(set! intr (make-loaded-interpreter))
+									(set! intr (make-loaded-interpreter #f))
 									(run-loop (read-line)))))))))))))
 
 (import srfi-193)

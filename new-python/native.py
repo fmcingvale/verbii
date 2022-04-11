@@ -14,6 +14,7 @@ from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 
 # has to be set externally
 NATIVE_CMDLINE_ARGS = []
+ALLOW_OVERWRITE_WORDS = False
 
 # see notes in C++ implementation of this function.
 # this returns (quotient,mod) instead of taking mod as a return param.
@@ -332,11 +333,9 @@ def builtin_make_word(I):
 	objlist = I.pop()
 	if type(objlist) != list:
 		raise LangError("make-word expects list but got: " + fmtStackPrint(objlist))
-	if I.hasWord(name):
-		raise LangError("Trying to redefine name: " + name)
-		
-	I.WORDS[name] = objlist
-
+	
+	I.defineWord(name, objlist, ALLOW_OVERWRITE_WORDS)
+	
 def builtin_append(I):
 	#print("APPEND:")
 	#print(I.reprStack())
@@ -348,13 +347,6 @@ def builtin_append(I):
 
 	_list.append(obj)
 	I.push(_list)
-
-def builtin_dumpword(I):
-	name = popSymbol(I)
-	if name not in I.WORDS:
-		raise LangError("No such word in .dumpword: " + fmtStackPrint(name))
-
-	I.push(I.WORDS[name])
 
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
@@ -411,7 +403,7 @@ BUILTINS = {
 	'append': ([], builtin_append),
 	'null': ([], lambda I: I.push(None)),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
-	'.dumpword': ([], builtin_dumpword),
+	'.dumpword': ([], lambda I: I.push(I.lookupWordOrFail(popSymbol(I)))),
 	'read-file': ([], builtin_readfile),
 }
 

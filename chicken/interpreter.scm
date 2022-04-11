@@ -52,7 +52,7 @@
 	; heap will grow as needed, thanks to dynvector
 	(HEAP_NEXTFREE intr-HEAP_NEXTFREE intr-HEAP_NEXTFREE-set!)
 	; WORDS[name: string] = LangList
-	(WORDS intr-WORDS intr-WORDS-set!)
+	(_WORDS intr-WORDS intr-WORDS-set!)
 
 	(code intr-code intr-code-set!) ; currently running code (LangList)
 	(codepos intr-codepos intr-codepos-set!) ; next obj to run as index into code
@@ -101,7 +101,7 @@
 	(print "\n==== Runtime Stats ====")
 	(print "* General:")
 	(print "  Builtin words: " (length (hash-table-keys BUILTINS)))
-	(print "  User-defined words: " (length (hash-table-keys (WORDS intr))))
+	(print "  User-defined words: " (length (hash-table-keys (_WORDS intr))))
 	(print "  Max stack depth: " (- (intr-SP_EMPTY intr) (min-run-SP intr)))
 	(print "  Max locals depth: " (- (intr-LP_EMPTY intr) (min-run-LP intr)))
 	(print "  Max callstack depth: " (max-callstack intr))
@@ -161,7 +161,7 @@
 				(- i 1))
 			s)))
 
-(define (WORDS intr) (intr-WORDS intr))
+(define (_WORDS intr) (intr-WORDS intr))
 
 (define (code-call intr objlist)		
 	(if (not (null? (intr-code intr)))
@@ -287,11 +287,27 @@
 				(else (loop (movefn intr 'do-jump)))))))
 
 (define (intr-has-word intr name)
-	(hash-table-exists? (WORDS intr) name))
+	(hash-table-exists? (_WORDS intr) name))
 			
+(define (intr-define-word intr name objlist allow-overwrite)
+	(if (and (intr-has-word intr name) (not allow-overwrite))
+		(lang-error 'define-word "Trying to redefine name:" name)
+		(hash-table-set! (_WORDS intr) name objlist)))
+
+(define (intr-lookup-word intr name)
+	(if (intr-has-word intr name)
+		(hash-table-ref (_WORDS intr) name)
+		'()))
+
+(define (intr-lookup-word-or-fail intr name)
+	(let ((objlist (intr-lookup-word intr name)))
+		(if (null? objlist)
+			(lang-error 'lookup-word-or-fail "Unknown word: " name)
+			objlist)))
+
 (define (intr-delete-word intr name)
-	(if (hash-table-exists? (WORDS intr) name)
-		(hash-table-delete! (WORDS intr) name)
+	(if (hash-table-exists? (_WORDS intr) name)
+		(hash-table-delete! (_WORDS intr) name)
 		(lang-error 'delete-word "Trying to delete non-existent name: " name)))
 		
 (define (intr-run intr objlist)
@@ -354,7 +370,7 @@
 							; NOTE different from other ports -- create WORD with name that
 							; returns the start address -- doing it this way should allow this
 							; code to eventually move to init.verb
-							(hash-table-set! (WORDS intr) name 
+							(hash-table-set! (_WORDS intr) name 
 									(list->LangList (list (allocate intr count))))
 							(run-loop (nextObj intr))))
 					; del
@@ -390,7 +406,7 @@
 							(apply (cadr type-fn) (cons intr args)))
 						(run-loop (nextObj intr)))
 					; user-defined word
-					((hash-table-exists? (WORDS intr) obj)
+					((hash-table-exists? (_WORDS intr) obj)
 						;(print "CALL USERWORD: " obj)
 						; tail-call elimination
 						(let ((next (peekObj intr)))
@@ -401,7 +417,7 @@
 									(begin
 										(code-return intr)
 										(nr-tail-calls-set! intr (+ 1 (nr-tail-calls intr)))))))
-						(code-call intr (hash-table-ref (WORDS intr) obj))
+						(code-call intr (hash-table-ref (_WORDS intr) obj))
 						(run-loop (nextObj intr)))
 					
 					; <<NAME and >>NAME

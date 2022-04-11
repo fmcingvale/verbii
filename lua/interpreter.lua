@@ -24,7 +24,7 @@ function Interpreter:print_stats()
 	print("\n==== Runtime Stats ====")
 	print("* General:")
 	print("  Builtin words: " .. tostring(tableSize(BUILTINS)))
-	print("  User-defined words: " .. tostring(tableSize(self.WORDS)))
+	print("  User-defined words: " .. tostring(tableSize(self._WORDS)))
 	print("  Max stack depth: " .. tostring(self.SP_EMPTY - self.min_run_SP))
 	print("  Max locals depth: " .. tostring(self.LP_EMPTY - self.min_run_LP))
 	print("  Max callstack depth: " .. tostring(self.max_callstack))
@@ -194,15 +194,34 @@ function Interpreter:code_return()
 end
 
 function Interpreter:hasWord(name)
-	return self.VARS[name] ~= nil or self.WORDS[name] ~= nil
+	return self.VARS[name] ~= nil or self._WORDS[name] ~= nil
+end
+
+function Interpreter:defineWord(name, objlist, allow_overwrite)
+	if self:hasWord(name) and not allow_overwrite then
+		error(">>>Trying to redefine name: " .. name)
+	end
+	self._WORDS[name] = objlist
+end
+
+function Interpreter:lookupWord(name)
+	return self._WORDS[name] -- objlist or nil
+end
+
+function Interpreter:lookupWordOrFail(name)
+	local list = self:lookupWord(name)
+	if list == nil then
+		error(">>>No such word: " + name)
+	end
+	return list
 end
 
 function Interpreter:deleteWord(name)
 	if self.VARS[name] ~= nil then
 		self.VARS[name] = nil
 		return
-	elseif self.WORDS[name] ~= nil then
-		self.WORDS[name] = nil
+	elseif self._WORDS[name] ~= nil then
+		self._WORDS[name] = nil
 		return
 	else
 		error(">>>Trying to delete non-existent name: " .. name)
@@ -353,7 +372,7 @@ function Interpreter:run(objlist, stephook)
 				goto MAINLOOP
 			end
 
-			if self.WORDS[obj] ~= nil then
+			if self._WORDS[obj] ~= nil then
 				--print("READY TO CALL WORD:" .. obj)
 				--print("PEEK IS:" .. fmtStackPrint(self:peekObj()))
 				-- tail call elimination
@@ -368,7 +387,7 @@ function Interpreter:run(objlist, stephook)
 					end
 				end
 				--print("WORD: " .. obj)
-				self:code_call(self.WORDS[obj])
+				self:code_call(self._WORDS[obj])
 				--print("CALL USERWORD:" .. fmtStackPrint(obj))
 				goto MAINLOOP
 			end
@@ -419,8 +438,8 @@ function Interpreter:new(obj)
 	-- stack of previous frames to return to
 	obj.callstack = {}
 
-	-- user-defined words
-	obj.WORDS = {}
+	-- user-defined words - should access via methods only (outside of interpreter.lua)
+	obj._WORDS = {}
 	-- vars
 	obj.VARS = {}
 

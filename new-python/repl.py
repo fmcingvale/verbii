@@ -13,15 +13,29 @@ import sys, re, os
 
 INITLIB = "../lib/init.verb.b"
 COMPILERLIB = "../lib/compiler.verb.b"
+PATCHESLIB = "../lib/patches.verb"
+
+def compile_and_load(intr, text, allow_overwrite):
+	import native
+	native.ALLOW_OVERWRITE_WORDS = allow_overwrite
+
+	# push code, compile and load into interpreter
+	intr.push(LangString(text))
+	code = intr.lookupWordOrFail('compile-and-load-string')
+	intr.run(code)
+
+	native.ALLOW_OVERWRITE_WORDS = False # set back to default
 
 def deserialize_and_run(intr, filename):
 	from deserialize import deserialize_stream
 	fileIn = open(filename, "r")
 	deserialize_stream(intr, fileIn)
-	code = intr.WORDS['__main__']
+	code = intr.lookupWordOrFail("__main__")
 	intr.run(code)
+	# always delete __main__ after running, else it will prevent other code from loading
+	intr.deleteWord("__main__")
 	
-def new_interpreter():
+def new_interpreter(verbose=False):
 	"convenience to start interpreter and optionally load init lib"
 	intr = Interpreter()
 
@@ -30,9 +44,14 @@ def new_interpreter():
 	deserialize_and_run(intr, INITLIB)
 	deserialize_and_run(intr, COMPILERLIB)
 	
-	# remove __main__ so I don't inadvertently run it again (i.e. if a later
-	# byte-compile fails, I don't want this to remain)
-	del intr.WORDS['__main__']
+	# allow patches to overwrite existing words
+	buf = open(PATCHESLIB,'r').read()
+	# if this is likely to take a bit, print a message
+	if verbose and len(buf) > 1000: print("Patching ...")
+	compile_and_load(intr, buf, True)
+
+	# like above, always delete __main__
+	intr.deleteWord("__main__")
 
 	return intr
 
@@ -45,12 +64,10 @@ def debug_hook(intr: Interpreter, word: str):
 
 def compile_and_run(intr, text, singlestep):
 	# push code, compile and load into interpreter
-	intr.push(LangString(text))
-	code = intr.WORDS['compile-and-load-string']
-	intr.run(code)
+	compile_and_load(intr, text, False)
 	
 	# run __main__
-	code = intr.WORDS['__main__']
+	code = intr.lookupWordOrFail('__main__')
 
 	if singlestep:
 		intr.run(code,debug_hook)
@@ -58,7 +75,7 @@ def compile_and_run(intr, text, singlestep):
 		intr.run(code)
 
 	# as above, delete __main__ to avoid inadvertent reuse
-	del intr.WORDS['__main__']
+	intr.deleteWord("__main__")
 
 # returns string on error, None on success	
 def safe_compile_and_run(intr, text, singlestep, backtrace_on_error):
@@ -75,7 +92,7 @@ def repl(singlestep, showstats):
 	"Run interactively"
 	print("Verbii running on Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro))
 
-	intr = new_interpreter()
+	intr = new_interpreter(True)
 
 	while(True):
 		sys.stdout.write(">> ")
@@ -107,7 +124,8 @@ def run_test_mode(filename: str):
 		if re_blankline.match(line):
 			continue # skip blank lines
 		
-		sys.stdout.write(">> " + line) # line has \n at end already
+		line = line.rstrip()
+		print(">> " + line) 
 
 		# don't want backtraces in -test mode; if an unknown error occurs, rerun
 		# case without -test to see backtrace

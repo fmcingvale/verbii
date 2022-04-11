@@ -37,6 +37,7 @@
 (define (replace-escapes text)
 	(cond ; recursively apply until no more escapes remain
 		((string-contains text "%32") => (lambda (n) (replace-escapes (string-replace text " " n (+ n 3)))))
+		((string-contains text "%09") => (lambda (n) (replace-escapes (string-replace text "\t" n (+ n 3)))))
 		((string-contains text "%10") => (lambda (n) (replace-escapes (string-replace text "\n" n (+ n 3)))))
 		((string-contains text "%13") => (lambda (n) (replace-escapes (string-replace text "\r" n (+ n 3)))))
 		((string-contains text "%37") => (lambda (n) (replace-escapes (string-replace text "%" n (+ n 3)))))
@@ -80,7 +81,7 @@
 							(if (LangList? llist)
 								(begin
 									;(print "DESERIALIZED WORD: " llist)
-									(hash-table-set! (WORDS intr) name llist)
+									(intr-define-word intr name llist #f)
 									(make-LangVoid))
 								(lang-error 'deserializer-word 
 									"Expecting list after 'W' but got: " llist))))

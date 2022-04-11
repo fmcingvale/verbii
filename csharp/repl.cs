@@ -9,14 +9,28 @@ using System.Text.RegularExpressions;
 public class Repl {
 	static string INITLIB = "../lib/init.verb.b";
 	static string COMPILERLIB = "../lib/compiler.verb.b";
+	static string PATCHESLIB = "../lib/patches.verb";
+
 	public static bool SHOW_RUNTIME_STATS = false;
 
 	public static void deserialize_and_run(Interpreter intr, string filename) {
 		var fileIn = System.IO.File.OpenText(filename);
 		Deserializer.deserialize_stream(intr, fileIn);
 		// run __main__ in initlib to setup any globals
-		var code = intr.WORDS["__main__"];
+		var code = intr.lookupWordOrFail("__main__");
 		intr.run(code, null);
+		// always delete __main__ after running, else next file will fail to load
+		intr.deleteWord("__main__");
+	}
+
+	public static void compile_and_load(Interpreter intr, string text, bool allow_overwrite) {
+		// set flag so make-word can overwrite existing words
+		Builtins.ALLOW_OVERWRITING_WORDS = allow_overwrite;
+		intr.push(new LangString(text));
+		var code = intr.lookupWordOrFail("compile-and-load-string");
+		intr.run(code, null);
+		// turn flag back off (default)
+		Builtins.ALLOW_OVERWRITING_WORDS = false;
 	}
 
 	public static Interpreter make_interpreter() {
@@ -25,9 +39,12 @@ public class Repl {
 		deserialize_and_run(intr, INITLIB);
 		deserialize_and_run(intr, COMPILERLIB);
 
-		// delete __main__ after running so don't get confused it a later byte-compilation fails
-		// and leaves old __main__ here
-		intr.WORDS.Remove("__main__");
+		// compile & load patches lib, allowing it to overwrite existing words so that
+		// init/compiler can be patched without affecting their .b files
+		var text = System.IO.File.ReadAllText(PATCHESLIB);
+		compile_and_load(intr, text, true);
+
+		intr.deleteWord("__main__");
 
 		return intr;
 	}
@@ -42,22 +59,18 @@ public class Repl {
 
 	// use safe_ version below
 	public void compile_and_run(Interpreter intr, string text, bool singlestep) {
-		// push string, then compile & load into interpreter
-		intr.push(new LangString(text));
-		var code = intr.WORDS["compile-and-load-string"];
-		intr.run(code,null);
-
+		compile_and_load(intr, text, false);
+		
 		// run __main__
-		code = intr.WORDS["__main__"];
+		var code = intr.lookupWordOrFail("__main__");
 
 		if(singlestep)
 			intr.run(code, debug_hook);
 		else
 			intr.run(code, null);
 
-		// delete __main__ after running so don't get confused it a later byte-compilation fails
-		// and leaves old __main__ here
-		intr.WORDS.Remove("__main__");
+		// as above, delete __main__ when done
+		intr.deleteWord("__main__");
 	}
 
 	void backtrace_curframe(Interpreter intr) {

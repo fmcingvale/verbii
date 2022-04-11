@@ -171,6 +171,10 @@ public class LangList : LangObject {
 		objlist = new List<LangObject>();
 	}
 
+	public LangList(List<LangObject> list) {
+		objlist = list;
+	}
+	
 	public List<LangObject> objlist;
 	public override string typename() { return "list"; }
 	public override string fmtDisplay() {

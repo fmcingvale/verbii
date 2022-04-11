@@ -8,6 +8,7 @@
 require("langtypes")
 
 NATIVE_CMDLINE_ARGS = {}
+ALLOW_OVERWRITING_WORDS = false
 
 function set_native_cmdline_args(args)
 	NATIVE_CMDLINE_ARGS = args
@@ -401,11 +402,7 @@ function builtin_make_word(intr)
 	local name = popSymbol(intr)
 	local list = intr:pop()
 	if isList(list) then
-		if intr:hasWord(name) then
-			error(">>>Trying to redefine name: " .. name)
-		else
-			intr.WORDS[name] = list
-		end
+		intr:defineWord(name, list, ALLOW_OVERWRITING_WORDS)
 	else
 		error(">>>make-word expecting list but got: " .. fmtStackPrint(list))
 	end
@@ -434,15 +431,6 @@ function builtin_make_lambda(intr)
 		intr:push(new_Lambda(list))
 	else
 		error(">>>make-lambda expecting list but got: " .. fmtStackPrint(list))
-	end
-end
-
-function builtin_dumpword(intr)
-	local name = popSymbol(intr)
-	if intr.WORDS[name] == nil then
-		error(">>>Unknown word: " .. name)
-	else
-		intr:push(intr.WORDS[name])
 	end
 end
 
@@ -499,7 +487,7 @@ BUILTINS = {
 	["parse-float"] = { {}, function(intr) intr:push(new_Float(tonumber(popStringOrSymbol(intr)))) end},
 	["make-symbol"] = { {"number"}, builtin_make_symbol},
 	["make-lambda"] = { {}, builtin_make_lambda},
-	[".dumpword"] = { {}, builtin_dumpword},
+	[".dumpword"] = { {}, function(intr) intr:push(intr:lookupWordOrFail(popSymbol(intr))) end},
 	["null"] = { {}, function(intr) intr:push(new_None()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},

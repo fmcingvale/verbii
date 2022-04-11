@@ -28,6 +28,7 @@ public class Deserializer {
 				case 's':
 					line = line.Substring(2);
 					line = line.Replace("%32", " ");
+					line = line.Replace("%09", "\t");
 					line = line.Replace("%10", "\n");
 					line = line.Replace("%13", "\r");
 					line = line.Replace("%37", "%");
@@ -57,7 +58,8 @@ public class Deserializer {
 						string name = line.Substring(2);
 						LangObject list = deserialize_stream(intr, stream);
 						if(list is LangList) {
-							intr.WORDS[name] = (list as LangList)!.objlist;
+							// do not allow overwriting words
+							intr.defineWord(name, (list as LangList)!.objlist, false);
 							return new LangVoid();
 						}
 						else {

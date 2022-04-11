@@ -9,7 +9,8 @@ using System;
 using System.Collections.Generic;
 
 class Builtins {
-	public static LangList NATIVE_CMDLINE_ARGS;
+	public static LangList NATIVE_CMDLINE_ARGS = new LangList();
+	public static bool ALLOW_OVERWRITING_WORDS = false;
 
 	public static int popInt(Interpreter intr, string where) {
 		var obj = intr.pop();
@@ -270,20 +271,6 @@ class Builtins {
 		}
 	}
 
-	public static void showdef(Interpreter intr) {
-		var name = intr.nextSymbolOrFail(".showdef");
-		if(!intr.WORDS.ContainsKey(name.value)) {
-			Console.WriteLine("No such word: " + name);
-			return;
-		}
-		var objlist = intr.WORDS[name.value];
-		Console.Write(name.value + ": ");
-		foreach(var o in objlist) {
-			Console.Write(o.fmtStackPrint() + " ");
-		}
-		Console.WriteLine(";");
-	}
-
 	public static void _puts(Interpreter intr) {
 		//Console.WriteLine("_PUTS");
 		var o = intr.pop();
@@ -440,10 +427,7 @@ class Builtins {
 	public static void make_word(Interpreter intr) {
 		var name = popSymbol(intr, "make-word");
 		var list = popList(intr, "make-word");
-		if(intr.hasWord(name)) {
-			throw new LangError("Trying to redefine name: " + name);
-		}
-		intr.WORDS[name] = list.objlist;
+		intr.defineWord(name, list.objlist, ALLOW_OVERWRITING_WORDS);
 	}
 
 	public static void append(Interpreter intr) {
@@ -460,14 +444,11 @@ class Builtins {
 	
 	public static void dumpword(Interpreter intr) {
 		var symbol = popSymbol(intr,".dumpword");
-		if(intr.WORDS.ContainsKey(symbol)) {
-			var newlist = new LangList();
-			newlist.objlist.AddRange(intr.WORDS[symbol]);
-			intr.push(newlist);
-		}
-		else {
+		var list = intr.lookupWord(symbol);
+		if(list == null)
 			throw new LangError("No such word in .dumpword: " + symbol);
-		}
+		else
+			intr.push(new LangList(list));
 	}
 
 	public static Dictionary<string,Action<Interpreter>> builtins = 
@@ -502,8 +483,7 @@ class Builtins {
 		{"L>", fromlocal},
 		{"set!", set},
 		{"ref", _ref},
-		{".showdef", showdef},
-
+		
 		{"make-list", make_list},
 		{"slice", slice},
 		{"unmake", unmake},

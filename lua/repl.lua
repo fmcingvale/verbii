@@ -13,27 +13,55 @@ require("native")
 
 INITLIB = "../lib/init.verb.b"
 COMPILERLIB = "../lib/compiler.verb.b"
+PATCHESLIB = "../lib/patches.verb"
 
 SHOW_RUNTIME_STATS = false
+
+function readfile(filename)
+	local f = io.open(filename, "r")
+	if f == nil then
+		error(">>>No such file: " .. filename)
+	end
+	local buf = f:read("a")
+	io.close(f)
+	return buf
+end
+
+function compile_and_load(intr, text, allow_overwrite)
+	ALLOW_OVERWRITING_WORDS = allow_overwrite
+	intr:push(new_String(text))
+	code = intr:lookupWordOrFail('compile-and-load-string')
+	intr:run(code)
+	-- turn flag back off (default)
+	ALLOW_OVERWRITING_WORDS = false
+end
 
 function deserialize_and_run(intr, filename)
 	local f = io.open(filename, "r")
 	deserialize_stream(intr, f)
 	io.close(f)
-	local code = intr.WORDS['__main__']
+	local code = intr:lookupWordOrFail('__main__')
 	intr:run(code)
+	-- always delete __main__ after running, or next file will fail to load
+	intr:deleteWord('__main__')
 end
 
-function make_interpreter()
+function make_interpreter(verbose)
 	local intr = new_Interpreter()
 	
 	-- load bootstrap libraries so compiler works
 	deserialize_and_run(intr, INITLIB)
 	deserialize_and_run(intr, COMPILERLIB)
 	
+	-- allow patches to overwrite existing words
+	local buf = readfile(PATCHESLIB)
+	-- if this will take a bit, print a message
+	if verbose and #buf > 1000 then print("Patching ...") end
+	compile_and_load(intr, readfile(PATCHESLIB), true)
+
 	-- remove __main__ so i don't try to run it again later (i.e. should another
 	-- byte-compilation fail, I don't want this __main__ to still be here)
-	intr.WORDS['__main__'] = nil
+	intr:deleteWord('__main__')
 	
 	return intr
 end
@@ -48,16 +76,10 @@ end
 
 -- use safe_ version instead - this has no error checking
 function compile_and_run(intr, text, singlestep)
-	-- push text and byte-compile it
-	intr:push(new_String(text))
-	code = intr.WORDS['compile-and-load-string']
-	intr:run(code)
-
-	-- remove list of words produced by byte compiler
-	--intr:pop()
-
+	compile_and_load(intr, text, false)
+	
 	-- now run the __main__ that was compiled
-	code = intr.WORDS['__main__']
+	code = intr:lookupWordOrFail('__main__')
 	
 	if singlestep then
 		intr:run(code,debug_hook)
@@ -65,9 +87,8 @@ function compile_and_run(intr, text, singlestep)
 		intr:run(code)
 	end
 	
-	-- remove __main__ so i don't try to run it again later (i.e. should another
-	-- byte-compilation fail, I don't want this __main__ to still be here)
-	intr.WORDS['__main__'] = nil
+	-- remove __main__ when done
+	intr:deleteWord('__main__')
 end
 
 -- returns error string or nil if no error
@@ -95,7 +116,7 @@ end
 function repl(singlestep)
 	-- Run interactively
 	print("Verbii running on " .. _VERSION)
-	intr = make_interpreter()
+	intr = make_interpreter(true)
 
 	while true do
 		io.write(">> ")
@@ -127,18 +148,17 @@ function run_test_mode(filename)
 	local intr = make_interpreter(noinit)
 
 	local fileIn = io.open(filename,"r")
-	local runnable_lines = 0 -- how many lines have I seen that are non-blank
 	while true do
 		::LOOP::
-		line = fileIn:read("L")
+		line = fileIn:read("l") -- discard \n at end of line
 		if not line then
 			break
 		end
-		if string.match(line, "^[%s]+$") then
+		if string.match(line, "^[%s]*$") then
 			goto LOOP -- skip blank lines
 		end
 
-		io.write(">> " .. line) -- line has \n at end already
+		print(">> " .. line)
 		
 		-- i only want the errors not the backtraces -- if an unexpected error occurred,
 		-- just run again in non-test mode to see backtrace
@@ -185,14 +205,8 @@ function print_backtrace(intr)
 end
 
 function run_file(intr, filename, singlestep)
-	-- run file
-	local f = io.open(filename, "r")
-	if f == nil then
-		error(">>>No such file: " .. filename)
-	end
-	local buf = f:read("a")
-	io.close(f)
-
+	-- load & run file
+	local buf = readfile(filename)
 	local err = safe_compile_and_run(intr, buf, singlestep, true)
 	if err ~= nil then
 		print(err)
