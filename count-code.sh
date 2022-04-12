@@ -1,9 +1,8 @@
 #!/bin/bash
 
-echo "********************************************************"
-echo " Make sure to run cleaning script and/or 'make clean'"
-echo " in each port folder before running this."
-echo "********************************************************"
+echo "*************************************************************"
+echo " Make sure to run ./clean-all-ports.sh before running this."
+echo "*************************************************************"
 
 # count lines of code for all ports
 #
