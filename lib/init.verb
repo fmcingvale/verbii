@@ -140,6 +140,10 @@ SP SP_EMPTY set!
 	unmake make-symbol
 	;
 
+: symbol->string ( symbol -- string )
+	unmake make-string
+	;
+	
 : ord ( string -- ascii ; get ASCII value of first char of string )
 	0 get unmake drop
 	;

@@ -16,7 +16,8 @@
 	** DO NOT run boot/make-bootstrap.sh until all changes have been thoroughly tested. **
 
 	Once changes have been tested, then you can copy them back into init.verb/compiler.verb
-	and run make-bootstrap.sh
+	and run make-bootstrap.sh **TWICE** (so the new compiler compiles itself) then run
+	'run-all-regressions.sh' then unittests/makediffs.sh to ensure no errors occurred.
 )
 
 ( --- reader interface, used by compiler, but may be generally useful
@@ -75,24 +76,13 @@ var READER_POS 1
 		drop >>eof
 
 	@word-loop ( word )
-		reader-next-char ( word char )
+		( i want to preserve any whitespace after word [e.g. for string parsing], so peek first )
+		reader-peek-char ( word char )
 		dup null? if <<null-on-read
 		( check for whitespace )
 		dup ord 32 <= if >>space  ( treat anything from ' ' to NUL as whitespace )
-		( not whitespace, append and continue )
-		+ <<word-loop
-	
-	@skip-comment ( word char )
-		drop
-	@skip-comment-loop ( word )
-		( skip to end of line then start again )
-		reader-next-char ( word char )
-		dup null? if >>found-eol
-		dup ord 13 == if >>found-eol
-		dup ord 10 == if >>found-eol
-		drop <<skip-comment-loop
-	
-		@found-eol drop <<skipws ( restart, leaving "" on stack )
+		( not whitespace, read char, append and continue )
+		drop reader-next-char + <<word-loop
 
 	@space ( word char )
 		drop ( fall through to return word below )
@@ -103,6 +93,11 @@ var READER_POS 1
 		string->symbol return ( return word as symbol )
 
 	@isnull drop null return
+	;
+
+: whitespace? ( string -- bool; is first char of string whitespace? )
+	0 get ord ( get as ascii )
+	32 <= ( treat everthing <= space as whitespace )
 	;
 
 : digit? ( string|symbol -- true|false; is single char a digit? )
@@ -180,32 +175,34 @@ var READER_POS 1
 		( "syntax-next:" . dup . CR )
 	dup null? if >>null
 	dup '( == if >>comment
+	dup '\ == if >>line-comment
 	dup '{ == if >>lambda
 	dup ': == if >>worddef
 	dup 'def == if >>worddef ( synonym for ':' )
 	dup 0 get '" == if >>string ( "... )
 	( test for correct format before passing to parse-int or parse-float since those functions
 	  will happily parse something like "123abc" as 123 )
-	dup int-symbol? 
-	if >>integer
+	dup int-symbol? if >>integer
 	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float
 	@nomatch
-	( leave unprocessed word on stack )
-	return
+		( leave unprocessed word on stack )
+		return
 	@null
-	return ( leave null on stack )
+		return ( leave null on stack )
 	@worddef
-	drop syntax-define-word return
+		drop syntax-define-word return
 	@comment
-	drop syntax-comment return ( skip comment and return NEXT object )
+		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
+	@line-comment
+		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
 	@lambda
-	drop syntax-lambda return
+		drop syntax-lambda return
 	@string
-	syntax-string return
+		syntax-string return
 	@integer
-	parse-int return
+		parse-int return
 	@float
-	1 -1 slice parse-float return
+		1 -1 slice parse-float return
 	;
 
 : syntax-define-word
@@ -229,25 +226,43 @@ var READER_POS 1
 	syntax-next ( save-defined-word has no return value, so return NEXT object )
 	;
 
-: syntax-string ( first string part already on stack )
-	>L ( L0 = string in progress )
-	L0 ref -1 get '" == 
-	L0 ref length 1 > and
-		if >>endstring ( " see if its all one word )
-	@loop
-	L0 ref 32 1 make-symbol + L0 set! ( add space before next piece )
-	reader-next 
-	dup null? if >>eof
-	dup L0 ref swap + L0 set! ( string += piece )
-	-1 get '" == if >>endstring ( " )
-	<<loop
-	@eof "Unexpected end of input in string near: " L0 ref tostring + error
-	@endstring
-	L0 ref dup length 2 - 1 swap slice ( remove quotes )
-	unmake make-string ( symbol -> string )
-	LP 1 + LP! ( remove locals )
-	;
+: syntax-string ( first string part already on stack *as symbol* )
+	( convert first since reader-next-char returns strings )
+	symbol->string
+		
+	( see if first string part ends with " )
+	dup -1 get ord 34 == ( use ascii value for " )
+		over length 1 >
+		and
+		if >>endstring ( first part begins and ends with " so string is complete )
 
+	( now switch to character mode to preserve all inner whitespace )
+	@loop ( string )
+		reader-next-char ( string char )
+		dup null? if >>eof ( EOF in string, error )
+		dup ord 34 == if >>quote ( test against ASCII value for " to avoid any parsing weirdness )
+		( else, append regular char to string )
+		+ <<loop
+		
+	@quote ( string " )
+		+ ( append " to string )
+
+		( if whitespace is next, then string is complete )
+		reader-peek-char
+		dup null? if >>endquote ( EOF ok AFTER end quote )
+		dup whitespace? if >>endquote
+		( else, keep reading more )
+		drop <<loop
+
+	@endquote drop >>endstring
+
+	@eof ( string char ) 
+		drop "Unexpected end of input inside string: " swap + error
+
+	@endstring ( string -- string without quotes )
+		dup length 2 - 1 swap slice ( remove quotes )
+	;
+	
 : syntax-lambda ( assumes { was just read & dropped )
 	0 make-list 
 	@loop
@@ -280,10 +295,22 @@ var READER_POS 1
 		drop <<loop
 	@end
 		LP 1 + LP!
-		drop
-		syntax-next return
+		drop return
 	@eof
 		"Unexpected end of input inside comment" error
+	;
+	
+: syntax-line-comment ( assumes "\" was just read )
+	( read *characters* until EOL found )
+	@loop
+		reader-next-char
+		( if end of stream, "\n" or "\r", then i'm done )
+		dup null? if >>eol
+		dup ord 13 == if >>eol
+		dup ord 10 == if >>eol
+		drop <<loop ( discard char and continue )
+	@eol
+		drop ( discard char and return )
 	;
 
 ( 
@@ -310,6 +337,7 @@ var READER_POS 1
 		unmake drop  ( escaped string charcode )
 		dup 32 == if >>space
 		dup 37 == if >>percent
+		dup 9 == if >>tab
 		dup 10 == if >>lf 
 		dup 13 == if >>cr 
 		1 make-string ( escaped string char )
@@ -321,6 +349,10 @@ var READER_POS 1
 		  loop would mess up the replacement strings. so use % == chr(37) instead of "%" )
 		@space ( escaped string charcode )
 			drop swap 37 chr "32" + + swap ( escaped+%32 string )
+			return
+
+		@tab ( escaped string charcode )
+			drop swap 37 chr "09" + + swap ( escaped+%9 string )
 			return
 
 		@percent ( escape % as %37 )

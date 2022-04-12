@@ -1,4 +1,4 @@
-L 55
+L 56
 W depth
 L 6
 y SP_EMPTY
@@ -508,6 +508,10 @@ W string->symbol
 L 2
 y unmake
 y make-symbol
+W symbol->string
+L 2
+y unmake
+y make-string
 W ord
 L 4
 i 0
