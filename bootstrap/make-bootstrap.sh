@@ -1,13 +1,18 @@
 #!/bin/bash
 
-PRODUCTION=0
+PRODUCTION=1
+# define which repl is considered the production compiler (all should produce identical output,
+# so it's really just a matter of which one is easiest to run)
+REPL='../c++/repl'
 
 if [ $PRODUCTION -eq 1 ]; then
-	echo "* CAUTION *"
+	echo "                     *** CAUTION ***"
 	echo ""
-	echo "You are about to overwrite your bootstrapped library."
+	echo "** You are about to overwrite your bootstrapped compiler & library."
 	echo ""
-	echo "Make sure ./boottest.sh passes (runs with no output) before running this."
+	echo "** Doing this without sufficient testing can break the entire system!"
+	echo ""
+	echo "** Make sure you have read \"READ-ME-BEFORE-RUNNING.txt\" before running this!"
 	echo ""
 	echo -n "Type YES if you really want to do this, anything else to exit: "
 	read line
@@ -21,11 +26,10 @@ then
 	declare -a Libraries=("init" "compiler")	
 	for name in ${Libraries[@]}; do
 		echo "Bootstrapping " "$name.verb"
-		#python compiler.py ../lib/$name.verb > ../lib/$name.verb.b
 		
 		# causes an error to overwrite (at least) compiler.verb.b directly,
 		# so save to temp file then copy
-		../c++/repl ../verb/compile.verb -- ../lib/$name.verb > ../lib/$name.verb.b.temp
+		$REPL ../verb/compile.verb -- ../lib/$name.verb > ../lib/$name.verb.b.temp
 		cp ../lib/$name.verb.b.temp ../lib/$name.verb.b
 		rm ../lib/$name.verb.b.temp
 	done

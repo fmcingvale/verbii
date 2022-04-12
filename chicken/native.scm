@@ -33,6 +33,7 @@
 (import errors)
 (import interpreter)
 
+(define NATIVE_CMDLINE_ARGS (new-lang-list))
 (define ALLOW_OVERWRITING_WORDS #f)
 
 ; ( xn .. x1 N -- list of N items )
@@ -285,6 +286,7 @@
 		(list "list?" 	(list '*)  (lambda (intr obj) (push intr (LangList? obj))))
 		(list "string?" (list '*)  (lambda (intr obj) (push intr (LangString? obj))))
 		(list "symbol?" (list '*)  (lambda (intr obj) (push intr (string? obj))))
+		(list "lambda?" (list '*)  (lambda (intr obj) (push intr (LangLambda? obj))))
 		(list "null" 	'() (lambda (intr) (push intr (make-LangNull))))
 		(list "make-list" (list 'i) builtin-make-list)
 		(list "set!" 	(reverse (list '* 'i)) builtin-set)
@@ -327,7 +329,8 @@
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
-		(list "read-file"   (list 's) builtin-read-file),
+		(list "read-file"   (list 's) builtin-read-file)
+		(list "cmdline-args" '() (lambda (intr) (push intr NATIVE_CMDLINE_ARGS)))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

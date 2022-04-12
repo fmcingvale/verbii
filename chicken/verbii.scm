@@ -186,28 +186,28 @@
 
 (define (main)
 	(let ((filename #f)
-			(test-mode #f)
-			(script-args #f))
+			(test-mode #f))
+		(set! NATIVE_CMDLINE_ARGS '())
 		(for-each (lambda (arg)
-			; once i get '--' all the remaining args go to script-args
-			(if script-args
-				(set! script-args (append script-args (list arg)))
+			; once i get '--' all the remaining args go to NATIVE_CMDLINE_ARGS
+			(if (not (null? NATIVE_CMDLINE_ARGS))
+				(llist-push-back NATIVE_CMDLINE_ARGS (make-LangString arg))
 				; else process as normal
 				(cond
 					((string=? arg "-test") (set! test-mode #t))
 					((string=? arg "-stats") (set! SHOW_RUNTIME_STATS #t))
-					((string=? arg "--") (set! script-args '())) ; rest go to script-args
+					((string=? arg "--") (set! NATIVE_CMDLINE_ARGS (new-lang-list))) ; rest go to NATIVE_CMDLINE_ARGS
 					(else
 						(if (and (file-exists? arg) (not filename))
 							(set! filename arg)
 							(begin
 								(print "Unknown arg: " arg)
 								(exit 1))))))) (cdr (command-line)))
-		;(print "Parsed args:")
-		;(print "Filename: " filename)
-		;(print "test mode: " test-mode)
-		;(print "script args: " script-args)
+
 		; decide what to do based on args
+		(if (null? NATIVE_CMDLINE_ARGS)
+			(set! NATIVE_CMDLINE_ARGS (new-lang-list)))
+
 		(cond
 			((not filename) (repl))
 			((and filename test-mode) (run-test filename))

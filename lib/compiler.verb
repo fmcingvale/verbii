@@ -3,21 +3,8 @@
 	
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-	READ EVERYTHING BELOW BEFORE EDITING THIS CODE!
-
-	* Changing this file can easily break the entire system *
-
-	The safe way to make changes to the compiler is to first put the changes
-	into lib/patches.verb. Copy & paste any words you want to change into
-	patches.verb and make the changes there. At startup, the words defined
-	in patches.verb will overwrite any existing words in init.verb/compiler.verb.
-	This allow changes to be safely tested without damaging the system.
-	
-	** DO NOT run boot/make-bootstrap.sh until all changes have been thoroughly tested. **
-
-	Once changes have been tested, then you can copy them back into init.verb/compiler.verb
-	and run make-bootstrap.sh **TWICE** (so the new compiler compiles itself) then run
-	'run-all-regressions.sh' then unittests/makediffs.sh to ensure no errors occurred.
+	*** Read bootstrap/READ-ME-BEFORE-RUNNING.txt before editing this code! ***
+	***       Changing this file can easily break the entire system!        ***
 )
 
 ( --- reader interface, used by compiler, but may be generally useful

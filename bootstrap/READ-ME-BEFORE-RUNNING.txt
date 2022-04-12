@@ -1,0 +1,60 @@
+***                                                                        ***
+*** READ ALL THESE NOTES BEFORE HACKING lib/init.verb or lib/compiler.verb ***
+***          YOU CAN EASILY BREAK YOUR VERBII INSTALLATION!                ***
+***                                                                        ***
+
+Verbii is fully bootstrapped, meaning there is no longer a non-Verbii compiler that
+can compile Verbii code. There are two bytecode (.b) files which are required in order
+for Verbii to come up in a working state.
+
+Verbii startup sequence:
+
+	1. New Interpreter created, contains only builtin (native) words.
+	   This Interpreter cannot compile code, so is basically non-functional.
+
+	2. The precompiled lib/init.verb.b and lib/compiler.verb.b (bytecode files) are 
+	   loaded into the interpreter.
+
+	3. At this point, Verbii can compile Verbii code.
+	   
+	4. lib/patches.verb is compiled and loaded (this is important, see below)
+
+The chicken-and-egg problem is how to compile the .b files since a working compiler
+is required to create them.
+
+Verbii comes with prebuilt .b files so this isn't a problem normally. However, if you
+wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
+
+1. Copy & paste any existing words you want to change from init.verb and/or compiler.verb 
+   into lib/patches.verb. If you want to add new words, put those changes in patches.verb as well. 
+   Words defined in patches.verb are allowed to overwrite existing words (this is the ONLY time this is possible).
+
+2. Test your changes as throughly as possible. By putting changes ONLY in patches.verb your system is
+   safe since the .b files are not touched. *** DO NOT RUN make-bootstrap.sh ***
+   
+3. Once you are sure your changes are OK, copy & paste them back into compiler.verb or init.verb.
+
+4. Bootstrap new init/compiler:
+
+	$ cd bootstrap
+	$ ./make-bootstrap.sh
+	$ ./make-bootstrap.sh 
+
+	(Yes, run it TWICE to ensure the new compiler can compile itself OK.)
+	
+	$ ./boottest.sh
+
+	Ensure no error output is shown.
+
+5. At the toplevel:
+	$ ./run-all-regressions.sh
+	$ cd unittests
+	$ ./makediffs.sh
+		-- ensure ALL diffs are ZERO before continuing.
+
+Your new compiler/init should be working now.
+
+
+
+
+

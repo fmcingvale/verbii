@@ -1,8 +1,19 @@
 from __future__ import annotations
 """
+	*** THIS COMPILER CAN NO LONGER COMPILER/BOOTSTRAP THE SYSTEM ***
+
+	*** It is here for historical interest only and/or for disaster
+	    recovery should a non-Verbii compiler ever be needed.
+
 	Bootstrap compiler. Only needed to get the Verbii compiler working.
 	
 	This is standalone, no dependenciens (other than Python libs).
+
+	This is kind of the backup compiler -- if something gets broken so badly that
+	the verbii compiler won't work, then this can be used.
+
+	Eventually, I want to get rid of this and make a way to use alternate lib/* files
+	on the fly so that this kind of breakage cannot happen (or at least not as easily).
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 
