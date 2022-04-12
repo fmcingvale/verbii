@@ -1,7 +1,5 @@
 Global TODO
 
-* More expect-* things to further automate unittests
-
 * More error checking of input types in library/tests/demos
 
 * 63-bit integers
@@ -14,13 +12,9 @@ Global TODO
   at end since values for powers of 10 can be in a table (exp algorithm seems
   to have trouble with larger values)
   
-* add cmdline params: -stack -locals -heap to give values for memory sizes
-
 * sort out usage of null/NULL/'void' in ports for consistency. add some unittests
 that include null to make sure it is handled correctly. also make sure voids are 
 never visible from verbii code
-
-* make sure no ports still looking for false_jump after 'if'
 
 * shouldn't syntax-next return void on end of input instead of null? check/change across ports.
 	* actually not -- 'null' has no literal form so cannot be serialized nor found in a source file.
@@ -39,4 +33,3 @@ never visible from verbii code
 
 * add open-input-file, open-output-file, open-string, read-line, read-char, write-string, write-char ... basically I/O with ports concept like scheme
 
-* add \ for line comments

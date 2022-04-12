@@ -260,21 +260,15 @@ class Interpreter(object):
 				# false word is optional
 				peeked = self.peekNextCodeObj()
 
-				if type(peeked) == str and (peeked[:2] == "<<" or peeked[:2] == ">>"):
-					false_jump = self.nextCodeObj()
-				else:
-					false_jump = None
-			
 				cond = self.pop()
 				if cond != True and cond != False:
 					raise LangError("'if' expects true or false but got: " + str(cond))
 			
-				# these don't run the jump, they just reposition the reader
+				# this just repositions the reader
 				if cond:
 					self.do_jump(true_jump)
-				elif false_jump is not None:
-					self.do_jump(false_jump)
-			
+				
+				# else, continue with next instruction
 				continue
 
 			if word[:2] == ">>" or word[:2] == "<<":
