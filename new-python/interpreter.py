@@ -38,8 +38,6 @@ class Interpreter(object):
 		
 		# user-defined words (access through methods only)
 		self._WORDS = {}
-		# variables
-		self.VARS = {}
 
 		self.code = None
 		self.codepos = 0
@@ -177,7 +175,7 @@ class Interpreter(object):
 		return obj
 
 	def hasWord(self, name):
-		return name in self.VARS or name in self._WORDS
+		return name in self._WORDS
 
 	def defineWord(self, name, objlist, allow_overwrite):
 		if self.hasWord(name) and not allow_overwrite:
@@ -194,9 +192,7 @@ class Interpreter(object):
 		else: return lst
 
 	def deleteWord(self, name):
-		if name in self.VARS:
-			del self.VARS[name]
-		elif name in self._WORDS:
+		if name in self._WORDS:
 			del self._WORDS[name]
 		else:
 			raise LangError("Trying to delete non-existent name: " + name)
@@ -289,7 +285,9 @@ class Interpreter(object):
 					raise LangError("Trying to redefine name: " + name)
 			
 				# alloc memory for var
-				self.VARS[name] = self.heap_alloc(count)
+				addr = self.heap_alloc(count)
+				# make new word that returns addr
+				self._WORDS[name] = [addr]
 				continue
 		
 			if word == "del":
@@ -313,7 +311,7 @@ class Interpreter(object):
 
 				continue
 		
-			# builtins, then userwords, then vars
+			# builtins, then userwords
 
 			if word in BUILTINS:
 				argtypes,func = BUILTINS[word]
@@ -347,10 +345,6 @@ class Interpreter(object):
 
 				# execute word by pushing its wordlist and continuing
 				self.code_call(self._WORDS[word])
-				continue
-	
-			if word in self.VARS:
-				self.pushInt(self.VARS[word])
 				continue
 
 			raise LangError("Unknown word " + word)

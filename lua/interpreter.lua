@@ -194,7 +194,7 @@ function Interpreter:code_return()
 end
 
 function Interpreter:hasWord(name)
-	return self.VARS[name] ~= nil or self._WORDS[name] ~= nil
+	return self._WORDS[name] ~= nil
 end
 
 function Interpreter:defineWord(name, objlist, allow_overwrite)
@@ -217,10 +217,7 @@ function Interpreter:lookupWordOrFail(name)
 end
 
 function Interpreter:deleteWord(name)
-	if self.VARS[name] ~= nil then
-		self.VARS[name] = nil
-		return
-	elseif self._WORDS[name] ~= nil then
+	if self._WORDS[name] ~= nil then
 		self._WORDS[name] = nil
 		return
 	else
@@ -317,8 +314,8 @@ function Interpreter:run(objlist, stephook)
 			end
 
 			if obj == "var" then
-				name = self:nextObjOrFail()
-				count = self:nextObjOrFail()
+				local name = self:nextObjOrFail()
+				local count = self:nextObjOrFail()
 				if not type(count) == "number" then
 					error(">>>Expected int after var name but got " .. fmtStackPrint(count))
 				end
@@ -326,13 +323,15 @@ function Interpreter:run(objlist, stephook)
 				if self:hasWord(name) then
 					error(">>>Trying to redefine name: "  .. name)
 				end
-			
-				self.VARS[name] = self:heap_alloc(count)
+				-- alloc space
+				local addr = self:heap_alloc(count)
+				-- make a new word that returns this address
+				self._WORDS[name] = {addr}
 				goto MAINLOOP
 			end
 				
 			if obj == "del" then
-				name = self:nextObjOrFail()
+				local name = self:nextObjOrFail()
 				self:deleteWord(name)
 				goto MAINLOOP
 			end
@@ -353,7 +352,7 @@ function Interpreter:run(objlist, stephook)
 				goto MAINLOOP
 			end
 
-			-- builtins then userwords then vars
+			-- builtins then userwords
 
 			if BUILTINS[obj] ~= nil then
 				--print("BUILTIN: " .. obj)
@@ -389,11 +388,6 @@ function Interpreter:run(objlist, stephook)
 				--print("WORD: " .. obj)
 				self:code_call(self._WORDS[obj])
 				--print("CALL USERWORD:" .. fmtStackPrint(obj))
-				goto MAINLOOP
-			end
-
-			if self.VARS[obj] ~= nil then
-				self:pushInt(self.VARS[obj])
 				goto MAINLOOP
 			end
 		end
@@ -440,9 +434,7 @@ function Interpreter:new(obj)
 
 	-- user-defined words - should access via methods only (outside of interpreter.lua)
 	obj._WORDS = {}
-	-- vars
-	obj.VARS = {}
-
+	
 	-- stats
 	obj.max_callstack = 0
 	obj.min_run_SP = obj.SP

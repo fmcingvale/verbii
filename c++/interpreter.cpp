@@ -203,14 +203,6 @@ ObjList* Interpreter::lookup_word(const char *name) {
 		return NULL;
 }
 
-int Interpreter::lookup_var(const char *name) {
-	auto uservar = VARS.find(name);
-	if(uservar != VARS.end())
-		return uservar->second;
-	else
-		return -1;
-}
-
 void Interpreter::code_call(ObjList *new_code) {
 	if(!code) {
 		throw LangError("code_call but no code is running");
@@ -243,7 +235,7 @@ void Interpreter::code_return() {
 }
 
 bool Interpreter::hasWord(const char *name) {
-	return (VARS.find(name) != VARS.end() || WORDS.find(name) != WORDS.end());
+	return WORDS.find(name) != WORDS.end();
 }
 
 void Interpreter::defineWord(const char *name, ObjList *objlist, bool allow_overwrite) {
@@ -254,11 +246,6 @@ void Interpreter::defineWord(const char *name, ObjList *objlist, bool allow_over
 }
 
 void Interpreter::deleteWord(const char* name) {
-	auto var = VARS.find(name);
-	if(var != VARS.end()) {
-		VARS.erase(name);
-		return;
-	}
 	auto userword = WORDS.find(name);
 	if(userword != WORDS.end()) {
 		WORDS.erase(name);
@@ -384,8 +371,13 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			if(hasWord(name.asSymbol())) {
 				throw LangError("Trying to redefine name: " + name.fmtStackPrint());
 			}
+			int addr = heap_alloc(count.asInt());
+			// make a new word that pushes this address to the stack
+			auto newlist = newList();
+			newlist.data.objlist->push_back(newInt(addr));
+			WORDS[name.asSymbol()] = newlist.data.objlist;
 			// add to VARS so name lookup works (below) 
-			VARS[name.asSymbol()] = heap_alloc(count.asInt());
+			//VARS[name.asSymbol()] = heap_alloc(count.asInt());
 			continue;
 		}
 
@@ -437,12 +429,6 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 				// execute word by pushing its objlist and continuing
 				code_call(wordlist);
 				//syntax->pushObjList(wordlist);
-				continue;
-			}
-
-			int addr = lookup_var(obj.asSymbol());
-			if(addr >= 0) {
-				push(newInt(addr));
 				continue;
 			}
 		}

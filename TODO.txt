@@ -29,7 +29,6 @@ never visible from verbii code
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
-* all ports should implement var as making a new word, like chicken port
-
 * add open-input-file, open-output-file, open-string, read-line, read-char, write-string, write-char ... basically I/O with ports concept like scheme
 
+* why does chicken port report more userwords when running same code as other ports?

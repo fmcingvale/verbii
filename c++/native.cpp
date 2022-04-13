@@ -316,14 +316,6 @@ static void builtin_make_symbol(Interpreter *intr) {
 	intr->push(newSymbol(s));
 }
 
-static void builtin_varlist(Interpreter *intr) {
-	Object list = newList();
-	for(const auto& pair : intr->VARS) {
-		list.data.objlist->push_back(newSymbol(pair.first));
-	}
-	intr->push(list);
-}
-
 static void builtin_dumpword(Interpreter *intr) {
 	const char* symbol = popSymbol(intr,"Bad name in .dumpword");
 	ObjList *wordlist = intr->lookup_word(symbol);
@@ -385,7 +377,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"ref", builtin_ref},
 	{"set!", builtin_set},
 	{".wordlist", [](Interpreter *intr) {intr->push(intr->getWordlist());}},
-	{".varlist", builtin_varlist},
 	{".dumpword", builtin_dumpword},
 	{"error", builtin_error},
 

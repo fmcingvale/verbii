@@ -35,8 +35,7 @@ class Interpreter {
 	// TODO -- get rid of split between VARS and WORDS ... all should be WORDS
 	
 	// all are public so builtins can use without a hassle
-	std::map<std::string,int> VARS; // user-defined variables, name -> index into OBJMEM
-
+	
 	// 3 memory areas: stack, locals, free memory
 	//
 	// the stack & locals are both of fixed size, so live at the bottom of memory.
@@ -62,8 +61,6 @@ class Interpreter {
 
 	// lookup user-defined word or NULL if not found
 	ObjList* lookup_word(const char *name);
-	// get memory address (index into OBJMEM) or return -1
-	int lookup_var(const char *name);
 
 	void do_jump(const char *jumpword);
 

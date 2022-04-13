@@ -32,11 +32,6 @@ public class Interpreter {
 	// next free index to allocate in heap
 	public int HEAP_NEXTFREE;
 
-	// user defined variables
-	public Dictionary<string,int> VARS;
-	// unnamed functions
-	public List<List<LangObject>> LAMBDAS;
-
 	// code currently running
 	public List<LangObject>? code;
 	int codepos;
@@ -71,8 +66,6 @@ public class Interpreter {
 		HEAP_NEXTFREE = LP_EMPTY;
 
 		WORDS = new Dictionary<string,List<LangObject>>();
-		VARS = new Dictionary<string,int>();
-		LAMBDAS = new List<List<LangObject>>();
 
 		code = null;
 		codepos = -1;
@@ -254,7 +247,7 @@ public class Interpreter {
 	}
 
 	public bool hasWord(string name) {
-		return WORDS.ContainsKey(name) || VARS.ContainsKey(name);
+		return WORDS.ContainsKey(name);
 	}
 
 	public void defineWord(string name, List<LangObject> objlist, bool allow_overwrite) {
@@ -282,9 +275,6 @@ public class Interpreter {
 	public void deleteWord(string name) {
 		if(WORDS.ContainsKey(name)) {
 			WORDS.Remove(name);
-		}
-		else if(VARS.ContainsKey(name)) {
-			VARS.Remove(name);
 		}
 		else {
 			throw new LangError("Trying to delete non-existent name: " + name);
@@ -393,8 +383,11 @@ public class Interpreter {
 					if(hasWord(name.value)) {
 						throw new LangError("Trying to redefine name: " + name.value);
 					}
-					// add to VARS so name lookup works (below)
-					VARS[name.value] = heapAllocate((count as LangInt)!.value);
+					// make new word that returns address
+					int addr = heapAllocate((count as LangInt)!.value);
+					var newlist = new List<LangObject>();
+					newlist.Add(new LangInt(addr));
+					WORDS[name.value] = newlist;
 					continue;
 				}
 
@@ -424,7 +417,7 @@ public class Interpreter {
 					continue;
 				}
 			
-				// builtins, then userwords, then vars
+				// builtins, then userwords
 
 				if(Builtins.builtins.ContainsKey(sym!.value)) {
 					Builtins.builtins[sym!.value](this);
@@ -446,11 +439,6 @@ public class Interpreter {
 
 					// execute word by pushing its wordlist and continuing
 					code_call(WORDS[sym!.value]);
-					continue;
-				}
-
-				if(VARS.ContainsKey(sym!.value)) {
-					push(new LangInt(VARS[sym!.value]));
 					continue;
 				}
 			}
