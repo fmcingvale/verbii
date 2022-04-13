@@ -1,6 +1,10 @@
->> ( -- test library functions and other basic things not covered in unittest_core -- )
+>> \
 => 
->> ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+>> \ test library functions and other basic things not covered in unittest_core
+=> 
+>> \ Copyright (c) 2022 Frank McIngvale, see LICENSE
+=> 
+>> \
 => 
 >> 10 20 30 
 => 10 20 30 
@@ -447,6 +451,26 @@ oneword
 => """and some embedded"quote"chars << here""" 
 >> . CR
 ""and some embedded"quote"chars << here"" 
+=> 
+>> "|.......|.......|....|.........|....." . CR
+|.......|.......|....|.........|..... 
+=> 
+>> "here    with    some embedded  spaces" . CR
+here    with    some embedded  spaces 
+=> 
+>> ( assume tabs are printed as 8 spaces )
+=> 
+>> "|.......|.......|.......|.......|.......|.......|.......|......." . CR
+|.......|.......|.......|.......|.......|.......|.......|....... 
+=> 
+>> "and		now		with			tabs" . CR
+and		now		with			tabs 
+=> 
+>> "..." puts "...|......|......|.......|......|..........|.........." puts "..." puts CR
+......|......|......|.......|......|..........|.............
+=> 
+>> ">>>" puts "   now    with   leading and    trailing   space      " puts "<<<" puts CR
+>>>   now    with   leading and    trailing   space      <<<
 => 
 >> ( length operator )
 => 
