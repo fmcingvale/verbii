@@ -226,18 +226,27 @@ def builtin_make_list(I):
 
 	I.push(objlist)
 
-def builtin_equals(I):
-	b = I.pop()
-	a = I.pop()
-
+def test_equals(a,b):
 	if a is None: return b is None
 	elif isNumeric(a): return isNumeric(b) and a==b
 	elif type(a) == bool: return type(b) == bool and a==b
 	elif type(a) == str: return type(b) == str and a==b
 	elif isinstance(a,LangString): return isinstance(b,LangString) and a.s == b.s
 	elif isinstance(a,LangLambda): return False # lambdas are never equal, even if its the same object
+	elif type(a) == list:
+		if type(b) != list: return False
+		if len(a) != len(b): return False
+		for i in range(len(a)):
+			if not test_equals(a[i],b[i]): return False
+
+		return True
 	else:
 		raise LangError("Unable to compare objects (==) {0} and {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
+
+def builtin_equals(I):
+	b = I.pop()
+	a = I.pop()
+	I.push(test_equals(a,b))
 
 def builtin_greater(I):
 	b = I.pop()
@@ -357,7 +366,7 @@ BUILTINS = {
 	'/': ([], builtin_div),
 	'/mod': ([int,int], builtin_divmod),
 	'f.setprec': ([int], builtin_fsetprec),
-	'==': ([], lambda I: I.push(builtin_equals(I))),
+	'==': ([], builtin_equals),
 	'>': ([], lambda I: I.push(builtin_greater(I))),
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
 	# object means any type

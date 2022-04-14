@@ -522,9 +522,69 @@ and		now		with			tabs
 => 
 >> "Hello" "world" 123 2 make-list "the end" 3 make-list
 => [ "Hello" [ "world" 123 ] "the end" ] 
->> ( slicing )
-=> [ "Hello" [ "world" 123 ] "the end" ] 
 >> clear
+=> 
+>> ( list literals )
+=> 
+>> [ 11 22 33 ]
+=> [ 11 22 33 ] 
+>> call
+=> 11 22 33 
+>> clear
+=> 
+>> : aaa + ;
+=> 
+>> : bbb - ;
+=> 
+>> : ccc * ;
+=> 
+>> [ 10 20 30 40 bbb ccc aaa ]
+=> [ 10 20 30 40 bbb ccc aaa ] 
+>> call
+=> -190 
+>> clear
+=> 
+>> del aaa
+=> 
+>> del bbb
+=> 
+>> del ccc
+=> 
+>> [    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
+=> [ [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
+>> call
+=> 10 20 30 
+>> clear
+=> 
+>> ( deep list comparisons )
+=> 
+>> [ 1 2 3 ] [ 1 2 3 ] 
+=> [ 1 2 3 ] [ 1 2 3 ] 
+>> ==
+=> <true> 
+>> [ 1 2 3 ] [ 1 2 4 ]
+=> <true> [ 1 2 3 ] [ 1 2 4 ] 
+>> ==
+=> <true> <false> 
+>> [ 1 2 3 4 ] [ 1 2 3 4 5 ]
+=> <true> <false> [ 1 2 3 4 ] [ 1 2 3 4 5 ] 
+>> ==
+=> <true> <false> <false> 
+>> [ 1 2 3 4 5 ] [ 1 2 3 4 ]
+=> <true> <false> <false> [ 1 2 3 4 5 ] [ 1 2 3 4 ] 
+>> ==
+=> <true> <false> <false> <false> 
+>> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] dup
+=> <true> <false> <false> <false> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] 
+>> ==
+=> <true> <false> <false> <false> <true> 
+>> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 61 ] 7 8 ] 9 10 ]
+=> <true> <false> <false> <false> <true> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 61 ] 7 8 ] 9 10 ] 
+>> ==
+=> <true> <false> <false> <false> <true> <false> 
+>> clear
+=> 
+>> ( slicing )
 => 
 >> "abcdefghijklmnop" 4 5 slice
 => "efghi" 

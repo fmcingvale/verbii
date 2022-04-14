@@ -304,7 +304,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		}
 		
 		// check for literal objects that just get pushed
-		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat()) {
+		if(obj.isInt() || obj.isLambda() || obj.isList() || obj.isString() || obj.isFloat()) {
 			push(obj);
 			continue;
 		}

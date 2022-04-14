@@ -145,6 +145,20 @@ bool Object::opEqual(const Object &other) {
 		case TYPE_LAMBDA: return false; // lambdas never equal any other object, even themselves
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
+		// lists are deep compared, via opEqual at each element
+		case TYPE_LIST:	
+			if(other.type != TYPE_LIST)
+				return false;
+
+			if(data.objlist->size() != other.data.objlist->size())
+				return false;
+
+			for(size_t i=0; i<data.objlist->size(); ++i) {
+				if(!data.objlist->at(i).opEqual(other.data.objlist->at(i)))
+					return false;
+			}
+			return true;
+
 		default: 
 			// i WANT to crash when I forget to add a new type ...
 			throw LangError("Unsupported type in == : " + fmtStackPrint());

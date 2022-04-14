@@ -298,25 +298,46 @@ class Builtins {
 		intr.push(list);
 	}
 
-	public static void equal(Interpreter intr) {
-		var b = intr.pop();
-		var a = intr.pop();
-
-		if(a is LangNull) { intr.push(new LangBool(b is LangNull)); }
-		else if(a.isNumeric()) { intr.push(new LangBool(b.isNumeric() && a.asFloat() == b.asFloat())); }
+	public static bool test_equal(LangObject a, LangObject b) {
+	
+		if(a is LangNull) { return b is LangNull; }
+		else if(a.isNumeric()) { return b.isNumeric() && a.asFloat() == b.asFloat(); }
 		else if(a is LangBool) { 
-			intr.push(new LangBool(b is LangBool && ((a as LangBool).value == (b as LangBool).value)));
+			return b is LangBool && ((a as LangBool).value == (b as LangBool).value);
 		}
-		else if(a is LangLambda) { intr.push(new LangBool(false)); } // lambdas never equal to anything
+		else if(a is LangLambda) { return false; } // lambdas never equal to anything
 		else if(a is LangString) { 
-			intr.push(new LangBool(b is LangString && ((a as LangString).value == (b as LangString).value)));
+			return b is LangString && ((a as LangString).value == (b as LangString).value);
 		}
 		else if(a is LangSymbol) { 
-			intr.push(new LangBool(b is LangSymbol && ((a as LangSymbol).value == (b as LangSymbol).value)));
+			return b is LangSymbol && ((a as LangSymbol).value == (b as LangSymbol).value);
+		}
+		// lists are deep compared with test_equal() on each element
+		else if(a is LangList) {
+			var aList = a as LangList;
+			var bList = b as LangList;
+			// the aList check is to prevent a compiler warning below
+			if(aList == null || bList == null)
+				return false;
+
+			if(aList.objlist.Count != bList.objlist.Count)
+				return false;
+
+			for(var i=0; i<aList.objlist.Count; ++i) {
+				if(!test_equal(aList.objlist[i], bList.objlist[i]))
+					return false;
+			}
+			return true;
 		}
 		else {
 			throw new LangError("Don't know how to compare (==) objects: " + a.fmtStackPrint() + " and " + b.fmtStackPrint());
 		}
+	}
+
+	public static void equal(Interpreter intr) {
+		var b = intr.pop();
+		var a = intr.pop();
+		intr.push(new LangBool(test_equal(a,b)));
 	}
 
 	// unlike ==, here comparing objects of different types in an error

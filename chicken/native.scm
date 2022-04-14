@@ -65,28 +65,46 @@
 		(lang-error 'L> "Locals underflow!"))
 	(push intr (memget intr (intr-LP intr)))
 	(intr-LP-set! intr (+ (intr-LP intr) 1)))
-		
-(define (builtin-equal intr A B)
+
+(define (test-equal-lists A B)
+	(let loop ((i 0))
+		(if (>= i (dynvector-length (LangList-objlist A)))
+			#t
+			(if (not (test-equal (dynvector-ref (LangList-objlist A) i)
+								(dynvector-ref (LangList-objlist B) i)))
+				#f 
+				(loop (+ i 1))))))
+
+(define (test-equal A B)
 	(cond
-		((LangNull? A) (push intr (LangNull? B)))
+		((LangNull? A) (LangNull? B))
 		((integer? A)
 			(cond
-				((integer? B) (push intr (= A B)))
-				((LangFloat? B) (push intr (= A (value B))))
-				(else (push intr #f))))
+				((integer? B) (= A B))
+				((LangFloat? B) (= A (value B)))
+				(else #f)))
 		((LangFloat? A)
 			(cond
-				((integer? B) (push intr (= (value A) B)))
-				((LangFloat? B) (push intr (= (value A) (value B))))
-				(else (push intr #f))))
+				((integer? B) (= (value A) B))
+				((LangFloat? B) (= (value A) (value B)))
+				(else #f)))
 		((LangString? A)
-			(push intr (and (LangString? B) (string=? (value A) (value B)))))
+			(and (LangString? B) (string=? (value A) (value B))))
 		((string? A)
-			(push intr (and (string? B) (string=? A B))))
+			(and (string? B) (string=? A B)))
 		((boolean? A)
-			(push intr (and (boolean? B) (eq? A B))))
-		((LangLambda? A) (push intr #f)) ; lambdas never equal to anything else even themselves
+			(and (boolean? B) (eq? A B)))
+		((LangLambda? A) #f) ; lambdas never equal to anything else even themselves
+		((LangList? A)
+			(cond
+				((not (LangList? B)) #f)
+				((not (= (dynvector-length (LangList-objlist A)) (dynvector-length (LangList-objlist B)))) #f)
+				(else (test-equal-lists A B))))
+
 		(else (lang-error '== "Don't know how to compare " A " and " B))))
+
+(define (builtin-equal intr A B)
+	(push intr (test-equal A B)))
 
 (define (builtin-greater intr A B)
 	; unlike above, both A and B have to be same (or comparable) types

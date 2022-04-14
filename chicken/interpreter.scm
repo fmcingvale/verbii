@@ -330,7 +330,7 @@
 				))
 			; literals get pushed
 			((integer? obj) (push-int intr obj) (run-loop (nextObj intr)))
-			((or (LangFloat? obj) (LangString? obj) (LangLambda? obj))
+			((or (LangFloat? obj) (LangString? obj) (LangLambda? obj) (LangList? obj))
 				(push intr obj)
 				(run-loop (nextObj intr)))
 			; symbols do the most stuff ...

@@ -18,4 +18,70 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 )
 
+: syntax-lambda ( assumes { was just read & dropped )
+	0 make-list 
+	@loop
+		\ note - any inner lambdas will be handled automatically by syntax-next,
+		\ so don't have to check for "{" here
+		syntax-next
+		dup null? if >>eof
+		dup '} == if >>closebrace
+		append ( else append to list and continue ) <<loop
+	@eof
+		"Unexpected end of input inside { .. }" error
+	@closebrace
+		drop make-lambda return
+		;
 
+: syntax-list ( assumes [ was just read & dropped )
+	0 make-list 
+	@loop ( list )
+		\ note - any inner lists/lambdas will be handled automatically by syntax-next,
+		\ so don't have to check for { or [ here
+		syntax-next
+		dup null? if >>eof
+		dup '] == if >>closelist
+		append ( else append to list and continue ) <<loop
+	@eof
+		"Unexpected end of input inside [ .. ]" error
+	@closelist
+		drop
+		;
+
+: syntax-next ( convert next word from input to runnable object )
+	reader-next
+		( "syntax-next:" . dup . CR )
+	dup null? if >>null
+	dup '( == if >>comment
+	dup '\ == if >>line-comment
+	dup '{ == if >>lambda
+	dup '[ == if >>list
+	dup ': == if >>worddef
+	dup 'def == if >>worddef ( synonym for ':' )
+	dup 0 get '" == if >>string ( "... )
+	( test for correct format before passing to parse-int or parse-float since those functions
+	  will happily parse something like "123abc" as 123 )
+	dup int-symbol? if >>integer
+	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float
+	@nomatch
+		( leave unprocessed word on stack )
+		return
+	@null
+		return ( leave null on stack )
+	@worddef
+		drop syntax-define-word return
+	@comment
+		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
+	@line-comment
+		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
+	@lambda
+		drop syntax-lambda return
+	@list
+		drop syntax-list return
+	@string
+		syntax-string return
+	@integer
+		parse-int return
+	@float
+		1 -1 slice parse-float return
+	;

@@ -320,7 +320,8 @@ public class Interpreter {
 			//Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
 
 			// check for immediates that get pushed
-			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda) {
+			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
+					obj is LangList) {
 				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
 				push(obj);
 				continue;

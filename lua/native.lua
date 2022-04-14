@@ -281,22 +281,39 @@ function builtin_make_list(intr, nr)
 	intr:push(list)
 end
 
-function builtin_equal(intr, a, b)
+function test_equal(a, b)
 	if isNumeric(a) then
-		intr:push(isNumeric(b) and asNumeric(a) == asNumeric(b))
+		return isNumeric(b) and asNumeric(a) == asNumeric(b)
 	elseif isString(a) then
-		intr:push(isString(b) and b.value==a.value)
+		return isString(b) and b.value==a.value
 	elseif isSymbol(a) then
-		intr:push(isSymbol(b) and a==b)
+		return isSymbol(b) and a==b
 	elseif isNone(a) then
-		intr:push(isNone(b))
+		return isNone(b)
 	elseif isBool(a) then
-		intr:push(isBool(b) and a==b)
+		return isBool(b) and a==b
 	elseif isLambda(a) then
-		intr:push(false) -- lambdas never compare equal, even if same object
+		return false -- lambdas never compare equal, even if same object
+	elseif isList(a) then
+		if not isList(b) then
+			return false
+		elseif #a ~= #b then
+			return false
+		else
+			for i=1,#a do
+				if not test_equal(a[i],b[i]) then
+					return false
+				end
+			end
+			return true
+		end
 	else
 		error(">>>Don't know how to compare (==) objects: " .. fmtStackPrint(a) .. " and " .. fmtStackPrint(b))
 	end
+end
+
+function builtin_equal(intr, a, b)
+	intr:push(test_equal(a,b))
 end
 
 function builtin_greater(intr, a, b)

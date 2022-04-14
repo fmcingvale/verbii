@@ -304,8 +304,41 @@ length
 clear
 "Hello" "world" 123 2 make-list "the end" 3 make-list
 
-( slicing )
 clear
+( list literals )
+[ 11 22 33 ]
+call
+clear
+: aaa + ;
+: bbb - ;
+: ccc * ;
+[ 10 20 30 40 bbb ccc aaa ]
+call
+clear
+del aaa
+del bbb
+del ccc
+
+[    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
+call
+clear
+
+( deep list comparisons )
+[ 1 2 3 ] [ 1 2 3 ] 
+==
+[ 1 2 3 ] [ 1 2 4 ]
+==
+[ 1 2 3 4 ] [ 1 2 3 4 5 ]
+==
+[ 1 2 3 4 5 ] [ 1 2 3 4 ]
+==
+[ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] dup
+==
+[ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 61 ] 7 8 ] 9 10 ]
+==
+clear
+
+( slicing )
 "abcdefghijklmnop" 4 5 slice
 "abcdefghijklmnop" -5 3 slice
 "zooming" 3 100 slice

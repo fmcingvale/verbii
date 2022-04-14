@@ -230,7 +230,7 @@ class Interpreter(object):
 								
 			# literals that get pushed
 			if type(word) == int or type(word) == float or isinstance(word,LangString) or \
-				isinstance(word, LangLambda):
+				isinstance(word, LangLambda) or type(word) == list:
 				self.push(word)
 				continue
 
