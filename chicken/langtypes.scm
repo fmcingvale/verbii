@@ -122,6 +122,8 @@
 (define-record LangLambda llist)
 (define (lambda-llist obj) (LangLambda-llist obj))
 
+(define-record Closure llist state)
+
 ;(define-class LangLambda ()
 ;	((llist accessor: llist initform: (make LangList))))
 
@@ -182,6 +184,11 @@
 			(error "Bad object in len")
 			(exit 1))))
 
+(define (fmtStackPrintObjlist objlist open-delim close-delim)
+	(string-append 
+		(dynvector-fold (lambda (i str obj) (string-append str " " (fmtStackPrint obj))) open-delim
+			objlist) " " close-delim))
+
 ;; see c++ comments for display vs. stack format
 (define (fmtStackPrint obj)
 	;(print "FMT_STACK_PRINT:" obj)
@@ -196,9 +203,11 @@
 		((LangSymbol? obj) obj) ; obj is a string
 		((LangString? obj) (string-append "\"" (value obj) "\""))
 		((LangList? obj)
-			(string-append 
-				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtStackPrint obj))) "[" 
-					(LangList-objlist obj)) " ]"))
+			(fmtStackPrintObjlist (LangList-objlist obj) "[" "]"))
+		((Closure? obj)
+			(string-append "<" 
+				(fmtStackPrintObjlist (LangList-objlist (Closure-llist obj)) "{" "}")
+				" :: " (fmtStackPrint (Closure-state obj)) ">"))
 		((LangNull? obj) "<null>")
 		((LangVoid? obj) "<VOID>")
 		((LangLambda? obj) "<lambda>")
@@ -225,6 +234,7 @@
 			(string-append 
 				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtDisplay obj))) "[" 
 					(LangList-objlist obj)) " ]"))
+		((Closure? obj) (fmtStackPrint obj))
 		((LangNull? obj) "<null>")
 		((LangVoid? obj) "<VOID>")
 		((LangLambda? obj) "<lambda>")

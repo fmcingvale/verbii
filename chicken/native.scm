@@ -293,6 +293,16 @@
 			(text (car (file-read fileIn (file-size fileIn)))))
 		(push intr (make-LangString text))))
 
+(define (builtin-self-get intr)
+	(if (null? (intr-closure intr))
+		(lang-error 'self "Attempting to reference unbound self")
+		(push intr (Closure-state (intr-closure intr)))))
+
+(define (builtin-self-set intr)
+	(if (null? (intr-closure intr))
+		(lang-error 'self "Attempting to set unbound self")
+		(Closure-state-set! (intr-closure intr) (pop intr))))
+
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
 	(list
@@ -349,6 +359,10 @@
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
 		(list "read-file"   (list 's) builtin-read-file)
 		(list "cmdline-args" '() (lambda (intr) (push intr NATIVE_CMDLINE_ARGS)))
+		(list "make-closure" (reverse (list 'L '*)) 
+					(lambda (intr llist state) (push intr (make-Closure llist state))))
+		(list "self"		'() builtin-self-get)
+		(list "self!"		'() builtin-self-set)
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

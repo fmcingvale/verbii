@@ -130,3 +130,9 @@
 => 
 >> "Testing errors" error
 *** Testing errors ***
+>> ( reference self when not in a closure )
+=> 
+>> [ 1 2 3 self ] call
+*** Attempting to reference unbound self ***
+>> [ 1 2 3 self! ] call
+*** Attempting to set unbound self ***

@@ -79,15 +79,17 @@ class Interpreter {
 
 	Object nextSymbolOrFail(const char *failmsg);
 
-	void code_call(ObjList *new_code);
+	void code_call(ObjList *new_code, Closure *new_closure=NULL);
 	bool havePushedFrames();
 	void code_return();
 	
 	// current running code & callstack of previous frames
 	ObjList *code; // NULL if not code loaded
 	size_t codepos;
+	Closure *closure; // current closure running or NULL
 	std::vector<ObjList*> callstack_code;
 	std::vector<size_t> callstack_pos;
+	std::vector<Closure*> callstack_closure;
 
 	// stats
 	void print_stats();

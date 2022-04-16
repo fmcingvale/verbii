@@ -29,6 +29,14 @@ class LangLambda(object):
 	def __str__(self):
 		return "<lambda>"
 
+class LangClosure(object):
+	def __init__(self, objlist, state):
+		self.objlist = objlist
+		self.state = state
+
+	def __str__(self):
+		pass
+
 def fmtDisplay(obj):
 	"see c++ comments for display vs. stack format"
 	if obj is None:
@@ -44,6 +52,8 @@ def fmtDisplay(obj):
 		return "false"
 	elif isinstance(obj, LangLambda):
 		return "<lambda>"
+	elif isinstance(obj, LangClosure):
+		return fmtStackPrint(obj)
 	elif isinstance(obj, LangString):
 		return obj.s
 	elif type(obj) is str:
@@ -53,6 +63,14 @@ def fmtDisplay(obj):
 		return fmtStackPrint(obj) # use stack format for both
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))
+
+def fmtStackPrintObjlist(objlist, open_delim, close_delim):
+	rlist = [open_delim]
+	for o in objlist:
+		rlist.append(fmtStackPrint(o))
+
+	rlist.append(close_delim)
+	return ' '.join(rlist)
 
 def fmtStackPrint(obj):
 	"see c++ comments for display vs. stack format"
@@ -69,6 +87,8 @@ def fmtStackPrint(obj):
 		return "<false>"
 	elif isinstance(obj, LangLambda):
 		return "<lambda>"
+	elif isinstance(obj, LangClosure):
+		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + " :: " + fmtStackPrint(obj.state) + ">"
 	elif isinstance(obj, LangString):
 		# in a stack display, strings get " ... "
 		return '"' + obj.s + '"'
@@ -76,11 +96,6 @@ def fmtStackPrint(obj):
 		# ... and symbols do not get ' here
 		return obj
 	elif type(obj) == list:
-		rlist = ['[']
-		for o in obj:
-			rlist.append(fmtStackPrint(o))
-
-		rlist.append(']')
-		return ' '.join(rlist)
+		return fmtStackPrintObjlist(obj, '[', ']')
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))

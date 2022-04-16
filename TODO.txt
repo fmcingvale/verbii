@@ -32,3 +32,22 @@ never visible from verbii code
 * add open-input-file, open-output-file, open-string, read-line, read-char, write-string, write-char ... basically I/O with ports concept like scheme
 
 * why does chicken port report more userwords when running same code as other ports?
+
+* accept [ ... ] as literal (unevaluated) list
+
+* think str & repr need to change so that symbols get ' for repr (i.e. 'stack display') and are
+  printed without ' for str ('print format'). this matches i.e. scheme when printing symbols
+  and fits with the "the stack display should identify the data-type" idea.
+  
+* the L0,L1, etc should become:
+	: L3 LP 3 + ref ;
+	: L3! LP 3 + set! ;
+
+* var X should generate:
+	: X addr ref ;
+	: X! addr set! ;
+
+* then 'delvar X' deletes X and X!
+
+* chicken: replace Lang* with * 
+		main interpreter loop -- use while instead having to place recursive calls everywhere

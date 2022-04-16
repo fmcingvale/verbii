@@ -10,7 +10,7 @@ from xml.dom.minidom import ReadOnlySequentialNamedNodeMap
 from errors import LangError
 from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
-				isNumeric
+				isNumeric, LangClosure
 
 # has to be set externally
 NATIVE_CMDLINE_ARGS = []
@@ -357,6 +357,20 @@ def builtin_append(I):
 	_list.append(obj)
 	I.push(_list)
 
+def builtin_make_closure(I):
+	state = I.pop()
+	objlist = I.pop()
+	if not type(objlist) == list: raise LangError("make-closure expecting list but got:" + fmtStackPrint(objlist))
+	I.push(LangClosure(objlist,state))
+
+def builtin_self_get(I):
+	if I.closure is None: raise LangError("Attempting to reference unbound self")
+	I.push(I.closure.state)
+
+def builtin_self_set(I):
+	if I.closure is None: raise LangError("Attempting to set unbound self")
+	I.closure.state = I.pop()
+	
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -414,5 +428,8 @@ BUILTINS = {
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 	'.dumpword': ([], lambda I: I.push(I.lookupWordOrFail(popSymbol(I)))),
 	'read-file': ([], builtin_readfile),
+	'make-closure': ([], builtin_make_closure),
+	'self': ([], builtin_self_get),
+	'self!': ([], builtin_self_set),
 }
 

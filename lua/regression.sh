@@ -12,5 +12,8 @@ echo "Errors ..."
 lua repl.lua -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/lua/actual_unittest_errors.txt
 
 # demos are full programs, so run without -test
+echo "Demo ..."
+lua repl.lua ../unittests/unittest_demo.verb > ../unittests/RESULTS/lua/actual_unittest_demo.txt
+
 echo "Math ..."
 lua repl.lua ../unittests/demo_math.verb > ../unittests/RESULTS/lua/actual_demo_math.txt

@@ -462,6 +462,29 @@ function builtin_readfile(intr)
 	intr:push(new_String(buf))
 end
 
+function builtin_make_closure(intr)
+	local state = intr:pop()
+	local objlist = intr:pop()
+	if not isList(objlist) then
+		error(">>>make-closure expecting list but got: " .. fmtStackPrint(objlist))
+	end
+	intr:push(new_Closure(objlist,state))
+end
+
+function builtin_self_get(intr)
+	if intr.closure == nil then
+		error(">>>Attempting to reference unbound self")
+	end
+	intr:push(intr.closure.state)
+end
+
+function builtin_self_set(intr)
+	if intr.closure == nil then
+		error(">>>Attempting to set unbound self")
+	end
+	intr.closure.state = intr:pop()
+end
+
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
 	["-"] = { {"any","any" }, builtin_sub },
@@ -510,4 +533,7 @@ BUILTINS = {
 	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},
 
 	["read-file"] = { {}, builtin_readfile},
+	["make-closure"] = { {}, builtin_make_closure},
+	["self"] = { {}, builtin_self_get},
+	["self!"] = { {}, builtin_self_set},
 }

@@ -18,6 +18,17 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 )
 
+( ------ init ----------- )
+: repeat ( func N -- ; run func N times )
+	@loop ( func N )
+		dup 0 == if >>done
+		swap dup call swap
+		1 - <<loop
+	@done
+		2drop
+	;
+	
+( ------ compiler ------- )
 : syntax-lambda ( assumes { was just read & dropped )
 	0 make-list 
 	@loop

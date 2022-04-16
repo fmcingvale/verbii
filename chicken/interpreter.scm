@@ -56,6 +56,7 @@
 
 	(code intr-code intr-code-set!) ; currently running code (LangList)
 	(codepos intr-codepos intr-codepos-set!) ; next obj to run as index into code
+	(closure intr-closure intr-closure-set!) ; current closure or '()
 	(callstack intr-callstack intr-callstack-set!) ; frame pushed here on call (pushed to head), as (code,codepos)
 
 	; stats
@@ -83,6 +84,7 @@
 
 		(intr-code-set! intr '())
 		(intr-codepos-set! intr 0)
+		(intr-closure-set! intr '())
 		(intr-callstack-set! intr '())
 
 		; stats
@@ -163,12 +165,14 @@
 
 (define (_WORDS intr) (intr-WORDS intr))
 
-(define (code-call intr objlist)		
+(define (code-call intr objlist new-closure)		
 	(if (not (null? (intr-code intr)))
 		(begin
-			(intr-callstack-set! intr (cons (list (intr-code intr) (intr-codepos intr)) (intr-callstack intr)))
+			(intr-callstack-set! intr 
+				(cons (list (intr-code intr) (intr-codepos intr) (intr-closure intr)) (intr-callstack intr)))
 			(intr-code-set! intr objlist)
 			(intr-codepos-set! intr 0)
+			(intr-closure-set! intr new-closure)
 			; stats
 			(callstack-depth-set! intr (+ 1 (callstack-depth intr)))
 			(max-callstack-set! intr (max (max-callstack intr) (callstack-depth intr))))
@@ -182,6 +186,7 @@
 			;(print "POS: " (cadar (slot intr 'callstack)))
 			(intr-code-set! intr (caar (intr-callstack intr)))
 			(intr-codepos-set! intr (cadar (intr-callstack intr)))
+			(intr-closure-set! intr (caddar (intr-callstack intr)))
 			(intr-callstack-set! intr (cdr (intr-callstack intr)))
 			; stats
 			(callstack-depth-set! intr (- (callstack-depth intr) 1)))
@@ -315,6 +320,7 @@
 		(lang-error 'intepreter "Interpreter called recursively!"))
 	(intr-code-set! intr objlist)
 	(intr-codepos-set! intr 0)
+	(intr-closure-set! intr '())
 	(let run-loop ((obj (nextObj intr)))
 		;(print "RUN OBJ: " (fmtStackPrint obj))
 		(cond
@@ -386,10 +392,13 @@
 							(cond
 								((LangLambda? L)
 									; TODO - tail call elimination??
-									(code-call intr (lambda-llist L))
+									(code-call intr (lambda-llist L) '())
 									(run-loop (nextObj intr)))
 								((LangList? L)
-									(code-call intr L)
+									(code-call intr L '())
+									(run-loop (nextObj intr)))
+								((Closure? L)
+									(code-call intr (Closure-llist L) L)
 									(run-loop (nextObj intr)))
 								(else
 									(lang-error 'call "Expecting lambda or list but got:" L)))))
@@ -417,7 +426,7 @@
 									(begin
 										(code-return intr)
 										(nr-tail-calls-set! intr (+ 1 (nr-tail-calls intr)))))))
-						(code-call intr (hash-table-ref (_WORDS intr) obj))
+						(code-call intr (hash-table-ref (_WORDS intr) obj) '())
 						(run-loop (nextObj intr)))
 					
 					; <<NAME and >>NAME

@@ -181,13 +181,17 @@ public class LangList : LangObject {
 		return fmtStackPrint(); // match c++ port behavior and use stack format for both
 	}
 
-	public override string fmtStackPrint() {
-		string s = "[";
+	public static string fmtStackPrintObjlist(List<LangObject> objlist, string open_delim, string close_delim) {
+		string s = open_delim;
 		foreach(var obj in objlist) {
 			s += " " + obj.fmtStackPrint();
 		}
-		s += " ]";
+		s += " " + close_delim;
 		return s;
+	}
+
+	public override string fmtStackPrint() {
+		return fmtStackPrintObjlist(objlist, "[", "]");
 	}
 
 	public override bool hasLength() { return true; }
@@ -197,5 +201,21 @@ public class LangList : LangObject {
 		var list = new LangList();
 		list.objlist = objlist.GetRange(index,nr);
 		return list;
+	}
+}
+
+public class LangClosure : LangObject {
+	public LangClosure(List<LangObject> runlist, LangObject state) {
+		this.objlist = runlist;
+		this.state = state;
+	}
+
+	public List<LangObject> objlist;
+	public LangObject state;
+	public override string typename() { return "closure"; }
+	public override string fmtDisplay() { return fmtStackPrint(); }
+	public override string fmtStackPrint() {
+		return "<" + LangList.fmtStackPrintObjlist(objlist,"{","}") +
+			" :: " + state.fmtStackPrint() + ">";
 	}
 }

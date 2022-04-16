@@ -13,6 +13,8 @@ TEST_SRC = test_reader.cpp
 GC_FLAGS = -DUSE_GCMALLOC
 GC_LIBS = -lgc -lgccpp
 
+# uncomment one CFLAGS
+# safe, slow, debugging build
 #CFLAGS = -g $(GC_FLAGS)
 #CFLAGS = -pg $(GC_FLAGS)
 # max optimization that works under mingw-x64 (gcc 11)

@@ -12,5 +12,8 @@ echo "Errors ..."
 python repl.py -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/python/actual_unittest_errors.txt
 
 # demos are full programs, so run without -test
+echo "Demo ..."
+python repl.py ../unittests/unittest_demo.verb > ../unittests/RESULTS/python/actual_unittest_demo.txt
+
 echo "Math ..."
 python repl.py ../unittests/demo_math.verb > ../unittests/RESULTS/python/actual_demo_math.txt

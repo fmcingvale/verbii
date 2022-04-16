@@ -337,6 +337,26 @@ static void builtin_cmdline_args(Interpreter *intr) {
 	intr->push(native_cmdline_args);
 }
 
+static void builtin_make_closure(Interpreter *intr) {
+	Object state = intr->pop();
+	Object objlist = popList(intr, "make-closure expecting list");
+	intr->push(newClosure(objlist.data.objlist, state));
+}
+	
+static void builtin_self_get(Interpreter *intr) {
+	if(!intr->closure)
+		throw LangError("Attempting to reference unbound self");
+	
+	intr->push(intr->closure->state);
+}
+
+static void builtin_self_set(Interpreter *intr) {
+	if(!intr->closure)
+		throw LangError("Attempting to set unbound self");
+	
+	intr->closure->state = intr->pop();
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -397,4 +417,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"cmdline-args", builtin_cmdline_args},
 
 	{"read-file", builtin_readfile},
+	{"make-closure", builtin_make_closure},
+	{"self", builtin_self_get},
+	{"self!", builtin_self_set},
 };

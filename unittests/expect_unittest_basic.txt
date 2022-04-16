@@ -414,6 +414,38 @@ The ocean is blue
 >> t33 ref . CR
 1445 
 => 
+>> clear
+=> 
+>> ( line comments )
+=> 
+>> "Expect 1 2 3 4: 1 2" . ( make sure \ inside a comment is ignored ) "3 4" . CR
+Expect 1 2 3 4: 1 2 3 4 
+=> 
+>> "Expect 5 6 7 8: 5 6 7 8" . CR \ ( this comment should be ignored ) "9 10 11 12" . CR
+Expect 5 6 7 8: 5 6 7 8 
+=> 
+>> clear
+=> 
+>> 11
+=> 11 
+>> \ a line comment
+=> 11 
+>> 22
+=> 11 22 
+>> \ another line comment
+=> 11 22 
+>> 33 \ yet another line comment
+=> 11 22 33 
+>> 44
+=> 11 22 33 44 
+>> "Stack should be: 11 22 33 44" . CR
+Stack should be: 11 22 33 44 
+=> 11 22 33 44 
+>> clear
+=> 
+>> "Expect A B C D: A B" . ( make sure these are ignored \n \r \t \b ) "C D" . CR
+Expect A B C D: A B C D 
+=> 
 >> ( make sure saving lambdas to vars works )
 => 
 >> clear
@@ -760,3 +792,32 @@ and		now		with			tabs
 => <false> 
 >> clear "1234567" dup { "0" >= } all swap { "9" <= } all and
 => <true> 
+>> clear
+=> 
+>> ( closures )
+=> 
+>> [ 11 22 33 ] "hello world" make-closure
+=> <{ 11 22 33 } :: "hello world"> 
+>> clear
+=> 
+>> [ 11 self 22 self 33 self ] 7654 make-closure
+=> <{ 11 self 22 self 33 self } :: 7654> 
+>> call
+=> 11 7654 22 7654 33 7654 
+>> clear
+=> 
+>> \ bind list in closure, modify list in closure and show that
+=> 
+>> \ the changes are visible afterwards in var
+=> 
+>> var MYSTATE 1
+=> 
+>> 0 make-list MYSTATE set!
+=> 
+>> [ self 99 append drop self 88 append drop self 77 append drop ] MYSTATE ref make-closure
+=> <{ self 99 append drop self 88 append drop self 77 append drop } :: [ ]> 
+>> call
+=> 
+>> "Expect [ 99 88 77 ]:" . MYSTATE ref . CR
+Expect [ 99 88 77 ]: [ 99 88 77 ] 
+=> 

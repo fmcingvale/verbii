@@ -6,7 +6,7 @@
 # run the regression.sh/regression.bat scripts in each port before running this.
 
 declare -a Ports=("c++" "csharp" "lua" "python" "chicken" )
-declare -a Tests=("core" "basic" "errors" )
+declare -a Tests=("core" "basic" "errors" "demo")
 
 for lang in ${Ports[@]}; 
 do

@@ -246,6 +246,21 @@ var ( hello ) t33 ( there ) 1
 1445 t33 set! 
 t33 ref . CR
 
+clear
+( line comments )
+"Expect 1 2 3 4: 1 2" . ( make sure \ inside a comment is ignored ) "3 4" . CR
+"Expect 5 6 7 8: 5 6 7 8" . CR \ ( this comment should be ignored ) "9 10 11 12" . CR
+clear
+11
+\ a line comment
+22
+\ another line comment
+33 \ yet another line comment
+44
+"Stack should be: 11 22 33 44" . CR
+clear
+
+"Expect A B C D: A B" . ( make sure these are ignored \n \r \t \b ) "C D" . CR
 ( make sure saving lambdas to vars works )
 clear
 { 133 244 355 } t33 set!
@@ -438,3 +453,21 @@ clear 10 20 30 40 4 make-list { 0 <  } any
 clear "mnopqr" dup { "m" >= } all swap { "r" <= } all and
 clear "1234.567" dup { "0" >= } all swap { "9" <= } all and
 clear "1234567" dup { "0" >= } all swap { "9" <= } all and
+
+clear
+( closures )
+[ 11 22 33 ] "hello world" make-closure
+clear
+[ 11 self 22 self 33 self ] 7654 make-closure
+call
+clear
+
+\ bind list in closure, modify list in closure and show that
+\ the changes are visible afterwards in var
+var MYSTATE 1
+0 make-list MYSTATE set!
+[ self 99 append drop self 88 append drop self 77 append drop ] MYSTATE ref make-closure
+call
+"Expect [ 99 88 77 ]:" . MYSTATE ref . CR
+
+

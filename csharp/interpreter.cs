@@ -34,9 +34,10 @@ public class Interpreter {
 
 	// code currently running
 	public List<LangObject>? code;
-	int codepos;
+	public int codepos;
+	public LangClosure? closure; // the currently running closure or null
 	// stack of previous frames (code,codepos for each)
-	public List<Tuple<List<LangObject>,int>> callstack;
+	public List<Tuple<List<LangObject>,int,LangClosure?>> callstack;
 
 	// stats
 	public int max_callstack;
@@ -69,7 +70,8 @@ public class Interpreter {
 
 		code = null;
 		codepos = -1;
-		callstack = new List<Tuple<List<LangObject>,int>>();
+		closure = null;
+		callstack = new List<Tuple<List<LangObject>,int,LangClosure?>>();
 
 		// stats
 		max_callstack = 0;
@@ -219,14 +221,15 @@ public class Interpreter {
 		}
 	}
 
-	public void code_call(List<LangObject> objlist) {
+	public void code_call(List<LangObject> objlist, LangClosure? new_closure=null) {
 		//Console.WriteLine("CALLING");
 		if(code == null) {
 			throw new LangError("call while not running");
 		}
-		callstack.Add(Tuple.Create(code,codepos));
+		callstack.Add(Tuple.Create(code,codepos,closure));
 		code = objlist;
 		codepos = 0;
+		closure = new_closure;
 		// stats
 		max_callstack = Math.Max(max_callstack,callstack.Count);
 	}
@@ -243,6 +246,7 @@ public class Interpreter {
 		var tup = callstack[callstack.Count-1];
 		code = tup.Item1;
 		codepos = tup.Item2;
+		closure = tup.Item3;
 		callstack.RemoveAt(callstack.Count-1);
 	}
 
@@ -288,6 +292,7 @@ public class Interpreter {
 
 		code = objlist;
 		codepos = 0;
+		closure = null;
 
 		//Console.WriteLine("RUNNING LIST:");
 		//foreach(var obj in objlist) {
@@ -321,7 +326,7 @@ public class Interpreter {
 
 			// check for immediates that get pushed
 			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
-					obj is LangList) {
+					obj is LangList || obj is LangClosure) {
 				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
 				push(obj);
 				continue;
@@ -403,6 +408,7 @@ public class Interpreter {
 					var val = pop();
 					var lambda = val as LangLambda;
 					var list = val as LangList;
+					var closure = val as LangClosure;
 					if(lambda != null) {
 						// now this is just like calling a userword, below
 						// TODO -- tail call elimination??
@@ -411,6 +417,10 @@ public class Interpreter {
 					else if(list != null) {
 						// call list like lambda
 						code_call(list.objlist);
+					}
+					else if(closure != null) {
+						// like above but sets closure
+						code_call(closure.objlist, closure);
 					}
 					else {			
 						throw new LangError("call expects a lambda, but got: " + val.fmtStackPrint());

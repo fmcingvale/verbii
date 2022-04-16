@@ -173,11 +173,12 @@ function Interpreter:havePrevFrames()
 	return #self.callstack > 0
 end
 
-function Interpreter:code_call(objlist)
-	table.insert(self.callstack, {self.code,self.codepos})
+function Interpreter:code_call(objlist,new_closure)
+	table.insert(self.callstack, {self.code,self.codepos,self.closure})
 	--print("CALL - DEPTH NOW: " .. tostring(#self.callstack))
 	self.code = objlist
 	self.codepos = 1
+	self.closure = new_closure
 	-- stats
 	self.max_callstack = math.max(self.max_callstack, #self.callstack)
 end
@@ -188,6 +189,7 @@ function Interpreter:code_return()
 		--print("RETURN - DEPTH NOW: " .. tostring(#self.callstack))
 		self.code = entry[1]
 		self.codepos = entry[2]
+		self.closure = entry[3]
 	else
 		error(">>>Trying to return without call")
 	end
@@ -234,6 +236,7 @@ function Interpreter:run(objlist, stephook)
 
 	self.code = objlist
 	self.codepos = 1
+	self.closure = nil
 	
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
@@ -265,7 +268,7 @@ function Interpreter:run(objlist, stephook)
 
 		-- see if its a literal to push
 		if type(obj) == "number" or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isList(obj) then
+			isList(obj) or isClosure(obj) then
 			self:push(obj)
 			goto MAINLOOP
 		end
@@ -346,6 +349,8 @@ function Interpreter:run(objlist, stephook)
 					self:code_call(obj.wordlist)
 				elseif isList(obj) then
 					self:code_call(obj)
+				elseif isClosure(obj) then
+					self:code_call(obj.objlist,obj)
 				else
 					error(">>>call expects a lambda, but got: " .. fmtStackPrint(obj))
 				end
@@ -429,6 +434,7 @@ function Interpreter:new(obj)
 	-- code currently being run or nil for not running
 	obj.code = nil
 	obj.codepos = 1 -- index into code list
+	obj.closure = nil -- current Closure or nil
 
 	-- stack of previous frames to return to
 	obj.callstack = {}

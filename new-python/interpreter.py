@@ -1,5 +1,6 @@
 from __future__ import annotations
-from langtypes import LangLambda, LangString, fmtStackPrint, MAX_INT_31, MIN_INT_31
+from langtypes import LangLambda, LangString, fmtStackPrint, MAX_INT_31, MIN_INT_31, \
+			LangClosure
 """
 	Interpreter - runs code deserialized from bytecode.
 
@@ -41,6 +42,7 @@ class Interpreter(object):
 
 		self.code = None
 		self.codepos = 0
+		self.closure = None # currently running Closure or None
 		self.callstack = []
 
 		# stats
@@ -71,11 +73,12 @@ class Interpreter(object):
 		self.HEAP_NEXTFREE += nr
 		return addr
 
-	def code_call(self, code):
+	def code_call(self, code, new_closure=None):
 		#print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
-		self.callstack.append((self.code,self.codepos))
+		self.callstack.append((self.code,self.codepos,self.closure))
 		self.code = code
 		self.codepos = 0
+		self.closure = new_closure
 		# stats
 		self.max_callstack = max(self.max_callstack,len(self.callstack))
 
@@ -83,7 +86,7 @@ class Interpreter(object):
 		return len(self.callstack) > 0
 
 	def code_return(self):
-		self.code,self.codepos = self.callstack.pop()
+		self.code,self.codepos,self.closure = self.callstack.pop()
 		#print("CODE RETURN (POS={0}): {1}".format(self.codepos, fmtStackPrint(self.code)))
 
 	def push(self, obj):
@@ -205,6 +208,7 @@ class Interpreter(object):
 		#self.code_call(objlist)
 		self.code = objlist
 		self.codepos = 0
+		self.closure = None
 
 		from native import BUILTINS
 		# run one object at a time in a loop	
@@ -230,7 +234,8 @@ class Interpreter(object):
 								
 			# literals that get pushed
 			if type(word) == int or type(word) == float or isinstance(word,LangString) or \
-				isinstance(word, LangLambda) or type(word) == list:
+				isinstance(word, LangLambda) or type(word) == list or \
+					isinstance(word, LangClosure):
 				self.push(word)
 				continue
 
@@ -306,6 +311,9 @@ class Interpreter(object):
 				elif type(obj) == list:
 					# call list like lambda
 					self.code_call(obj)
+				elif isinstance(obj, LangClosure):
+					# like above but sets closure
+					self.code_call(obj.objlist, obj)
 				else:				
 					raise LangError("call expects a lambda or list, but got: " + fmtStackPrint(obj))
 

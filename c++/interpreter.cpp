@@ -39,6 +39,13 @@ Interpreter::Interpreter() {
 	// allocate stack+locals+heap
 	OBJMEM = (Object*)x_malloc((HEAP_END+1) * sizeof(Object));
 
+	// not running
+	code = NULL;
+
+	// init to "not set" -- NOTE I have to remember the Closure, NOT just the state data,
+	// so that I can update the Closure correctly in self!
+	closure = NULL;
+
 	// init stats
 	max_callstack = 0;
 	min_run_SP = SP;
@@ -203,14 +210,16 @@ ObjList* Interpreter::lookup_word(const char *name) {
 		return NULL;
 }
 
-void Interpreter::code_call(ObjList *new_code) {
+void Interpreter::code_call(ObjList *new_code, Closure *new_closure) {
 	if(!code) {
 		throw LangError("code_call but no code is running");
 	}
 	callstack_code.push_back(code);
 	callstack_pos.push_back(codepos);
+	callstack_closure.push_back(closure);
 	code = new_code;
 	codepos = 0;
+	closure = new_closure;
 	// stats
 	max_callstack = max(max_callstack,(int)callstack_code.size());
 }
@@ -232,6 +241,8 @@ void Interpreter::code_return() {
 	callstack_code.pop_back();
 	codepos = callstack_pos.back();
 	callstack_pos.pop_back();
+	closure = callstack_closure.back();
+	callstack_closure.pop_back();
 }
 
 bool Interpreter::hasWord(const char *name) {
@@ -270,6 +281,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 
 	code = to_run;
 	codepos = 0;
+	closure = NULL; // "not set"
 
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
@@ -304,7 +316,8 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		}
 		
 		// check for literal objects that just get pushed
-		if(obj.isInt() || obj.isLambda() || obj.isList() || obj.isString() || obj.isFloat()) {
+		if(obj.isInt() || obj.isLambda() || obj.isList() || obj.isString() || obj.isFloat() ||
+			obj.isClosure()) {
 			push(obj);
 			continue;
 		}
@@ -399,6 +412,10 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			else if(val.isList()) {
 				// same as above
 				code_call(val.asList());
+			}
+			else if(val.isClosure()) {
+				// as above but with self
+				code_call(val.asClosureFunc(), val.data.closure);
 			}
 			else {
 				throw LangError("call expects a lambda, but got: " + val.fmtStackPrint());

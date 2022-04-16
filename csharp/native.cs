@@ -472,6 +472,30 @@ class Builtins {
 			intr.push(new LangList(list));
 	}
 
+	public static void make_closure(Interpreter intr) {
+		var state = intr.pop();
+		var listarg = intr.pop();
+		var objlist = listarg as LangList;
+		if(objlist == null)
+			throw new LangError("Expected list in make-closure, got: " + listarg.fmtStackPrint());
+
+		intr.push(new LangClosure(objlist.objlist, state));
+	}
+
+	public static void self_get(Interpreter intr) {
+		if(intr.closure == null)
+			throw new LangError("Attempting to reference unbound self");
+		else
+			intr.push(intr.closure.state);
+	}
+
+	public static void self_set(Interpreter intr) {
+		if(intr.closure == null)
+			throw new LangError("Attempting to set unbound self");
+		else
+			intr.closure.state = intr.pop();
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -520,5 +544,8 @@ class Builtins {
 		{"error", intr => throw new LangError(popString(intr,"error")) },
 		{"cmdline-args", intr => intr.push(NATIVE_CMDLINE_ARGS)},
 		{"read-file", read_file},
+		{"make-closure", make_closure},
+		{"self", self_get},
+		{"self!", self_set},
 	};
 }

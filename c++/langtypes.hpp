@@ -21,12 +21,18 @@ const unsigned char TYPE_FLOAT = 4;
 const unsigned char TYPE_STRING = 5;
 const unsigned char TYPE_SYMBOL = 6;
 const unsigned char TYPE_LIST = 7;
+// verbii's idea of a closure is little different that in other languages -- mainly
+// that it does not capture by name (since verbii functions do not have named args)
+// and doesn't capture any outer scope (since, again, there are no names to capture).
+// instead it binds an object and a function together, thereby giving the function
+// a state. instead of inventing a new word for "function with state", i'm calling
+// them closures since they are at least similar in concept.
+const unsigned char TYPE_CLOSURE = 8;
 // unlike TYPE_NULL, which gets pushed as an immediate when encountered,
 // type VOID is never pushed and it is an error in most cases to pass
 // it as a value. it is only used internally for a return type meaning
 // "nothing, not even null"
-const unsigned char TYPE_VOID = 8;
-
+const unsigned char TYPE_VOID = 9;
 class Object;
 
 typedef std::vector<Object> ObjList;
@@ -34,6 +40,8 @@ typedef std::vector<Object> ObjList;
 // set this to control how many digits are printed (max is 17)
 // (this is TOTAL digits, not digits after the decimal ... so 'g' format for printf)
 extern int FLOAT_PRECISION;
+
+class Closure;
 
 // this is intended to be a POD type, so no non-default constructors, destructors, base classes,
 // and small enough to pass as value -- any large parts will be stored in pointers
@@ -52,6 +60,7 @@ class Object {
 	bool isFloat() const { return type == TYPE_FLOAT; }
 	bool isString() const { return type == TYPE_STRING; }
 	bool isSymbol() const { return type == TYPE_SYMBOL; }
+	bool isClosure() const { return type == TYPE_CLOSURE; }
 	// convenience -- test if symbol AND equal to given string
 	// if n>0 then only require that many chars to match
 	bool isSymbol(const char *s, int n=0) const 
@@ -69,6 +78,10 @@ class Object {
 	 
 	const char *asString() const { return data.str; }
 	const char *asSymbol() const { return data.str; }
+
+	ObjList *asClosureFunc() const;
+	Object asClosureState() const;
+
 	// no as* function for Void since it is never supposed to be used
 
 	// setters to change value of object, i.e. for reusing object
@@ -114,11 +127,21 @@ class Object {
 		ObjList *objlist; // for lambdas & lists
 		double d;
 		const char *str; // strings & symbols, immutable
+		Closure *closure;
 	} data;
 };
 
+class Closure {
+	public:
+	ObjList *objlist; // the function
+	Object state; // the bound state
+};
+
+
 // single NULL object
 extern Object NULLOBJ;
+// single Void object
+extern Object VOIDOBJ;
 
 // these return Null objects on parsing error
 Object parseInt(const std::string &);
@@ -140,3 +163,5 @@ Object newSymbol(const std::string& );
 
 Object newList(); // always makes empty list
 Object newList(ObjList *); // wraps existing list, does NOT copy
+
+Object newClosure(ObjList *, Object);

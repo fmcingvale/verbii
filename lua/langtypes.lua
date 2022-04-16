@@ -120,6 +120,25 @@ function new_Lambda(wordlist)
 	return Lambda:new({},wordlist)
 end
 
+-- closure
+Closure = {}
+function Closure:new(obj, objlist, state)
+	setmetatable(obj, self)
+	self.__index = self
+	obj.__class__ = "Closure"
+	obj.objlist = objlist
+	obj.state = state
+	return obj
+end
+
+function new_Closure(objlist, state)
+	return Closure:new({},objlist,state)
+end
+
+function isClosure(obj)
+	return type(obj) == "table" and obj.__class__ == "Closure"
+end
+
 -- normal lua strings are used as symbols
 function isSymbol(obj)
 	return type(obj) == "string"
@@ -150,9 +169,22 @@ function fmtDisplay(obj)
 	elseif isSymbol(obj) then
 		-- strings are symbols, they get ' here to differentiate from strings
 		return "'" .. obj
+	elseif isList(obj) then
+		return fmtStackPrint(obj)
+	elseif isClosure(obj) then
+		return fmtStackPrint(obj)
 	else
 		error(">>>Don't know how to print object: " .. tostring(obj))
 	end
+end
+
+function fmtStackPrintObjlist(objlist,open_delim,close_delim)
+	local s = open_delim
+	for i=1,#objlist do
+		s = s .. " " .. fmtStackPrint(objlist[i])
+	end
+	s = s .. " " .. close_delim
+	return s
 end
 
 -- see c++ comments for display vs. stack format
@@ -174,6 +206,9 @@ function fmtStackPrint(obj)
 		end
 	elseif isLambda(obj) then
 		return "<lambda>"
+	elseif isClosure(obj) then
+		return "<" .. fmtStackPrintObjlist(obj.objlist,"{","}") .. " :: " ..
+				fmtStackPrint(obj.state) .. ">"
 	elseif isString(obj) then
 		-- in stack display, strings get " .. "
 		return '"' .. obj.value .. '"'
@@ -181,12 +216,7 @@ function fmtStackPrint(obj)
 		-- strings are symbols, in stack display they don't get '
 		return obj
 	elseif isList(obj) then
-		local s = "["
-		for i=1,#obj do
-			s = s .. " " .. fmtStackPrint(obj[i])
-		end
-		s = s .. " ]"
-		return s
+		return fmtStackPrintObjlist(obj, "[", "]")
 	else
 		error(">>>Don't know how to print object: " .. tostring(obj))
 	end
