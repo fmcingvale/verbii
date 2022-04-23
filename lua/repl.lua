@@ -46,26 +46,6 @@ function deserialize_and_run(intr, filename)
 	intr:deleteWord('__main__')
 end
 
-function make_interpreter(verbose)
-	local intr = new_Interpreter()
-	
-	-- load bootstrap libraries so compiler works
-	deserialize_and_run(intr, INITLIB)
-	deserialize_and_run(intr, COMPILERLIB)
-	
-	-- allow patches to overwrite existing words
-	local buf = readfile(PATCHESLIB)
-	-- if this will take a bit, print a message
-	if verbose and #buf > 1000 then print("Patching ...") end
-	compile_and_load(intr, readfile(PATCHESLIB), true)
-
-	-- remove __main__ so i don't try to run it again later (i.e. should another
-	-- byte-compilation fail, I don't want this __main__ to still be here)
-	intr:deleteWord('__main__')
-	
-	return intr
-end
-
 function debug_hook(intr, word)
 	print("=> " .. intr:reprStack())
 	print("Run: " .. word)
@@ -75,8 +55,10 @@ function debug_hook(intr, word)
 end
 
 -- use safe_ version instead - this has no error checking
-function compile_and_run(intr, text, singlestep)
-	compile_and_load(intr, text, false)
+function compile_and_run(intr, text, singlestep, allow_overwrite)
+	if allow_overwrite == null then allow_overwrite = false end
+
+	compile_and_load(intr, text, allow_overwrite)
 	
 	-- now run the __main__ that was compiled
 	code = intr:lookupWordOrFail('__main__')
@@ -91,9 +73,25 @@ function compile_and_run(intr, text, singlestep)
 	intr:deleteWord('__main__')
 end
 
+function make_interpreter(verbose)
+	local intr = new_Interpreter()
+	
+	-- load bootstrap libraries so compiler works
+	deserialize_and_run(intr, INITLIB)
+	deserialize_and_run(intr, COMPILERLIB)
+	
+	-- load & run patches -- allow patches to overwrite existing words
+	local buf = readfile(PATCHESLIB)
+	-- if this will take a bit, print a message
+	if verbose and #buf > 1000 then print("Patching ...") end
+	compile_and_run(intr, readfile(PATCHESLIB), false, true)
+
+	return intr
+end
+
 -- returns error string or nil if no error
 function safe_compile_and_run(intr, text, singlestep, backtrace_on_error)
-	local result,error = pcall(compile_and_run, intr, text, singlestep)
+	local result,error = pcall(compile_and_run, intr, text, singlestep, false)
 	if result == false then
 		-- match sequence >>> to strip out filename from error message that lua added
 		match = string.match(error, "^.+>>>")

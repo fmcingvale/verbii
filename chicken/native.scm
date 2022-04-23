@@ -246,8 +246,12 @@
 			(dynvector-for-each (lambda (i o) (push intr o)) (LangList-objlist obj))
 			(push-int intr (len obj)))
 		((LangLambda? obj)
-			; like other ports, push a copy
-			(push intr (make-LangList (dynvector-copy (LangList-objlist (lambda-llist obj))))))
+			; like other ports, push a deepcopy of objlist
+			(push intr (deepcopy (lambda-llist obj))))
+		; same with closures
+		((Closure? obj)
+			(push intr (deepcopy (Closure-llist obj)))
+			(push intr (Closure-state obj)))
 		(else (lang-error 'unmake "Don't know how to unmake object: " obj))))
 
 ; pop N objects and return as list in stack order
@@ -303,6 +307,13 @@
 		(lang-error 'self "Attempting to set unbound self")
 		(Closure-state-set! (intr-closure intr) (pop intr))))
 
+(define (builtin-put intr alist index obj)
+	(if (or (< index 0) (>= index (len alist)))
+		(lang-error 'put "Index out of range in put")
+		(begin
+			(dynvector-set! (LangList-objlist alist) index obj)
+			(push intr alist))))
+
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
 	(list
@@ -315,6 +326,7 @@
 		(list "string?" (list '*)  (lambda (intr obj) (push intr (LangString? obj))))
 		(list "symbol?" (list '*)  (lambda (intr obj) (push intr (string? obj))))
 		(list "lambda?" (list '*)  (lambda (intr obj) (push intr (LangLambda? obj))))
+		(list "closure?" (list '*)  (lambda (intr obj) (push intr (Closure? obj))))
 		(list "null" 	'() (lambda (intr) (push intr (make-LangNull))))
 		(list "make-list" (list 'i) builtin-make-list)
 		(list "set!" 	(reverse (list '* 'i)) builtin-set)
@@ -352,17 +364,20 @@
 		(list "repr" 		(list '*)  (lambda (intr obj) (push intr (make-LangString (fmtStackPrint obj)))))
 		(list "puts" 		(list 's) (lambda (intr obj) (display (value obj))))
 		(list ".c" 			(list 'i) (lambda (intr obj) (display (integer->char obj))))
-		(list "make-lambda" (list 'L) (lambda (intr llist) (push intr (make-LangLambda llist))))
+		; must deepcopy list - see DESIGN-NOTES.md
+		(list "make-lambda" (list 'L) (lambda (intr llist) (push intr (make-LangLambda (deepcopy llist)))))
 		(list "make-symbol" (list 'i) builtin-make-symbol)
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
 		(list "read-file"   (list 's) builtin-read-file)
 		(list "cmdline-args" '() (lambda (intr) (push intr NATIVE_CMDLINE_ARGS)))
+		; as above, must deepcopy list
 		(list "make-closure" (reverse (list 'L '*)) 
-					(lambda (intr llist state) (push intr (make-Closure llist state))))
+					(lambda (intr llist state) (push intr (make-Closure (deepcopy llist) state))))
 		(list "self"		'() builtin-self-get)
 		(list "self!"		'() builtin-self-set)
+		(list "put" (reverse (list 'L 'i '*)) builtin-put)
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

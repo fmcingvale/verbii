@@ -1,0 +1,130 @@
+   here is
+   a multiline
+   string of
+   testing 
+
+
+   joy
+
+
+   the
+
+   \ oh and this is not a comment
+
+   end
+   .
+ 
+
+
+	here is a
+	" triple " quoted "
+	string so I can have other random "" quotes "" within it
+
+	lets hope "" that " worked
+
+	\ and this should not be
+	\ a comment
+	\ here either
+
+	the
+	end
+	.
+
+	p.s. this
+	
+	string contains
+
+	leading tabs as
+
+	well
+ 
+Counting down from 10: 10 9 8 7 6 5 4 3 2 1 
+Counting down from 20: 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 
+First 20 fibonacci numbers: 0 1 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 6765 
+Sum digits: 6982 (25) -- 25 
+Sum digits: 48395019 (39) -- 39 
+Sum digits: 1073741823 (36) -- 36 
+Proper divisors of 100: 1 2 4 5 10 20 25 50 
+Proper divisors of 256: 1 2 4 8 16 32 64 128 
+* Anonymous Recursion * 
+Print 20 .. 1: 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 
+* Factors * 
+Factors of 200: 1 2 4 5 8 10 20 25 40 50 100 200 
+Factors of 1000: 1 2 4 5 8 10 20 25 40 50 100 125 200 250 500 1000 
+Factors of 41*107: 1 41 107 4387 
+* Mutual recursion * 
+Expect true true false false: true true false false 
+Expect false false true true: false false true true 
+* Countdown by testing * 
+Count by 1: 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 
+Count by evens: 40 38 36 34 32 30 28 26 24 22 20 18 16 14 12 10 8 6 4 2 0 
+Count by odds: 39 37 35 33 31 29 27 25 23 21 19 17 15 13 11 9 7 5 3 1 
+Count by 5s: 100 95 90 85 80 75 70 65 60 55 50 45 40 35 30 25 20 15 10 5 0 
+Expect 50: 50 
+* For-While * 
+Count 1 .. 10: 1 2 3 4 5 6 7 8 9 10 
+Count 20 .. 0, by 4's: 20 16 12 8 4 0 
+Upper triangle of stars ... 
+* * * * * * * * * * * * * * * 
+* * * * * * * * * * * * * * 
+* * * * * * * * * * * * * 
+* * * * * * * * * * * * 
+* * * * * * * * * * * 
+* * * * * * * * * * 
+* * * * * * * * * 
+* * * * * * * * 
+* * * * * * * 
+* * * * * * 
+* * * * * 
+* * * * 
+* * * 
+* * 
+* 
+Multiplication table ... 
+1    1    2    3    4    5    6    7    8    9 
+2         4    6    8   10   12   14   16   18 
+3              9   12   15   18   21   24   27 
+4                  16   20   24   28   32   36 
+5                       25   30   35   40   45 
+6                            36   42   48   54 
+7                                 49   56   63 
+8                                      64   72 
+9                                           81 
+* 100 Doors * 
+Opened doors ... 1 4 9 16 25 36 49 64 81 100 
+Expect 160: 160 
+Expect fedcba: fedcba 
+Expect [ 99 88 77 66 ]: [ 99 88 77 66 ] 
+Expect [ 6 7 8 9 ]: [ 6 7 8 9 ] 
+Expect [ 0 10 30 50 70 ]: [ 0 10 30 50 70 ] 
+Expect [ 0 10 30 50 70 ]: [ 0 10 30 50 70 ] 
+Expect lmnop: lmnop 
+Expect lmnop: lmnop 
+Expect [ 3 9 15 21 27 ]: [ 3 9 15 21 27 ] 
+Expect aaabbbcccdddeeefff: aaabbbcccdddeeefff 
+Expect a-ab-bc-cd-de-ef-f a-ab-bc-cd-de-ef-f 
+Expect 1 .. 10: 1 2 3 4 5 6 7 8 9 10 
+Expect 10 .. 1: 10 9 8 7 6 5 4 3 2 1 
+Expect "XYZ 123 ABC !@$ DEF: XYZ 123 ABC !@$ DEF 
+Expect "abc 432 xyz &%# def: abc 432 xyz &%# def 
+* Partial function application * 
+Expect [ 0 2 4 6 ]: [ 0 2 4 6 ] 
+Expect [ 0 1 4 9 ]: [ 0 1 4 9 ] 
+Expect [ 4 8 12 16 ]: [ 4 8 12 16 ] 
+Expect [ 4 16 36 64 ]: [ 4 16 36 64 ] 
+* check for list literal bug 
+Expect [ 1 2 3 4 ]: [ 1 2 3 4 ] 
+Expect [ 1 2 3 4 ]: [ 1 2 3 4 ] 
+Expect [ 1 2 3 4 ]: [ 1 2 3 4 ] 
+Expect [ 10 20 30 "hello" 50 ] x 4: 
+[ 10 20 30 "hello" 50 ] [ 10 20 30 "hello" 50 ] [ 10 20 30 "hello" 50 ] [ 10 20 30 "hello" 50 ] 
+* unmake lambda 
+Expect <{ 11 22 33 44 }> [ 11 22 88888 44 ] ==> <{ 11 22 33 44 }> [ 11 22 88888 44 ] 
+* make-lambda 
+Expect <{ 11 22 33 44 }> [ 11 22 977 44 ] ==> <{ 11 22 33 44 }> [ 11 22 977 44 ] 
+* make-closure 
+Expect <{ 11 22 33 44 } :: 999> [ 11 22 777 44 ] ==> <{ 11 22 33 44 } :: 999> [ 11 22 777 44 ] 
+* unmake closure 
+Expect <{ 77 66 55 44 } :: 543> ==> <{ 77 66 55 44 } :: 543> 
+END STACK: => 
+

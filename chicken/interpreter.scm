@@ -280,16 +280,16 @@
 (define (do-jump intr target)
 	(let ((movefn '()))
 		(cond 
-			((is-forward-jump? target) (set! movefn nextObjOrFail))
-			((is-backward-jump? target) (set! movefn prevObjOrFail))
+			((is-forward-jump? target) (set! movefn nextObj))
+			((is-backward-jump? target) (set! movefn prevObj))
 			(else (lang-error 'do-jump "Not a valid jump target: " target)))
-		(let loop ((obj (movefn intr 'do-jump)))
+		(let loop ((obj (movefn intr)))
 			(cond
-				((LangVoid? obj) (lang-error 'do-jump "End of input looking for: " target))
+				((LangVoid? obj) (lang-error 'do-jump "No such jump: " target))
 				((and (LangSymbol? obj) (string=? (string-drop target 2) (string-drop obj 1)))
 					; found it, stop
 				)
-				(else (loop (movefn intr 'do-jump)))))))
+				(else (loop (movefn intr)))))))
 
 (define (intr-has-word intr name)
 	(hash-table-exists? (_WORDS intr) name))
@@ -336,9 +336,15 @@
 				))
 			; literals get pushed
 			((integer? obj) (push-int intr obj) (run-loop (nextObj intr)))
-			((or (LangFloat? obj) (LangString? obj) (LangLambda? obj) (LangList? obj))
+			((or (LangFloat? obj) (LangString? obj) (LangLambda? obj))
 				(push intr obj)
 				(run-loop (nextObj intr)))
+
+			; list literals are deepcopied (see DESIGN-NOTES.txt)
+			((LangList? obj)
+				(push intr (deepcopy obj))
+				(run-loop (nextObj intr)))
+
 			; symbols do the most stuff ...
 			((LangSymbol? obj) ; obj is a string
 				(cond

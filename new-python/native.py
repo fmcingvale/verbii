@@ -10,7 +10,7 @@ from xml.dom.minidom import ReadOnlySequentialNamedNodeMap
 from errors import LangError
 from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
-				isNumeric, LangClosure
+				isNumeric, LangClosure, deepcopy
 
 # has to be set externally
 NATIVE_CMDLINE_ARGS = []
@@ -132,6 +132,13 @@ def popStringOrSymbol(I,where):
 	if type(obj) == str: return obj
 	elif isinstance(obj, LangString): return obj.s
 	else: raise LangError("Expecting string or symbol (in {0}) but got: {1}".format(where,fmtStackPrint(obj)))
+
+def popList(I):
+	obj = I.pop()
+	if type(obj) == list:
+		return obj
+	else:
+		raise LangError("Expecting list but got: " + fmtStackPrint(obj))
 
 def builtin_add(I):
 	b = I.pop()
@@ -295,13 +302,14 @@ def builtin_unmake(I, obj):
 		fn = lambda x: ord(x)
 	elif type(obj) == list: seq = obj
 	elif isinstance(obj, LangLambda): 
-		# like C++ version, make into a new list
-		out = []
-		for o in obj.objlist:
-			out.append(o)
-
-		I.push(out)
-		return out
+		# must deepcopy, see DESIGN-NOTES.md
+		I.push(deepcopy(obj.objlist))
+		return
+	elif isinstance(obj, LangClosure):
+		# as above, must deepcopy list -- state is meant to be modified, so it stays as-is
+		I.push(deepcopy(obj.objlist))
+		I.push(obj.state)
+		return
 	else:
 		raise LangError("Don't know how to unmake object: " + fmtStackPrint(obj))
 
@@ -325,11 +333,9 @@ def builtin_make_symbol(I, nr):
 	I.push(s)
 
 def builtin_make_lambda(I):
-	_list = I.pop()
-	if type(_list) != list:
-		raise LangError("make-lambda expecting list but got: {0}".format(fmtStackPrint(_list)))
-
-	I.push(LangLambda(_list))
+	_list = popList(I)
+	# must deepcopy, see DESIGN-NOTES.txt
+	I.push(LangLambda(deepcopy(_list)))
 
 def builtin_length(I, obj):
 	if type(obj) == str: I.pushInt(len(obj))
@@ -359,9 +365,9 @@ def builtin_append(I):
 
 def builtin_make_closure(I):
 	state = I.pop()
-	objlist = I.pop()
-	if not type(objlist) == list: raise LangError("make-closure expecting list but got:" + fmtStackPrint(objlist))
-	I.push(LangClosure(objlist,state))
+	objlist = popList(I)
+	# as with lambda, deepcopy objlist
+	I.push(LangClosure(deepcopy(objlist),state))
 
 def builtin_self_get(I):
 	if I.closure is None: raise LangError("Attempting to reference unbound self")
@@ -371,6 +377,14 @@ def builtin_self_set(I):
 	if I.closure is None: raise LangError("Attempting to set unbound self")
 	I.closure.state = I.pop()
 	
+def builtin_put(I):
+	obj = I.pop()
+	index = popInt(I)
+	_list = popList(I)
+	if index < 0 or index >= len(_list): raise LangError("Index out of range in put")
+	_list[index] = obj
+	I.push(_list)
+
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -398,6 +412,7 @@ BUILTINS = {
 	'symbol?': ([object], lambda I,o: I.push(type(o) == str)),
 	'null?': ([], lambda I: I.push(I.pop() is None)),
 	'lambda?': ([object], lambda I,o: I.push(isinstance(o,LangLambda))),
+	'closure?': ([object], lambda I,o: I.push(isinstance(o,LangClosure))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
 	'ref': ([int], builtin_ref),
@@ -431,5 +446,6 @@ BUILTINS = {
 	'make-closure': ([], builtin_make_closure),
 	'self': ([], builtin_self_get),
 	'self!': ([], builtin_self_set),
+	'put': ([], builtin_put),
 }
 

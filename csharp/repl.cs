@@ -33,23 +33,7 @@ public class Repl {
 		Builtins.ALLOW_OVERWRITING_WORDS = false;
 	}
 
-	public static Interpreter make_interpreter() {
-		var intr = new Interpreter();
-		// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
-		deserialize_and_run(intr, INITLIB);
-		deserialize_and_run(intr, COMPILERLIB);
-
-		// compile & load patches lib, allowing it to overwrite existing words so that
-		// init/compiler can be patched without affecting their .b files
-		var text = System.IO.File.ReadAllText(PATCHESLIB);
-		compile_and_load(intr, text, true);
-
-		intr.deleteWord("__main__");
-
-		return intr;
-	}
-
-	public int debug_hook(Interpreter intr, LangObject obj) {
+	public static int debug_hook(Interpreter intr, LangObject obj) {
 		Console.WriteLine("=> " + intr.reprStack());
 		Console.WriteLine("Run: " + obj.fmtStackPrint());
 		Console.Write("press ENTER to continue ...");
@@ -58,8 +42,8 @@ public class Repl {
 	}
 
 	// use safe_ version below
-	public void compile_and_run(Interpreter intr, string text, bool singlestep) {
-		compile_and_load(intr, text, false);
+	public static void compile_and_run(Interpreter intr, string text, bool singlestep, bool allow_overwrite=false) {
+		compile_and_load(intr, text, allow_overwrite);
 		
 		// run __main__
 		var code = intr.lookupWordOrFail("__main__");
@@ -71,6 +55,20 @@ public class Repl {
 
 		// as above, delete __main__ when done
 		intr.deleteWord("__main__");
+	}
+
+	public static Interpreter make_interpreter() {
+		var intr = new Interpreter();
+		// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
+		deserialize_and_run(intr, INITLIB);
+		deserialize_and_run(intr, COMPILERLIB);
+
+		// compile & run patches, allowing it to overwrite existing words so that
+		// init/compiler can be patched without affecting their .b files
+		var text = System.IO.File.ReadAllText(PATCHESLIB);
+		compile_and_run(intr, text, false, true);
+		
+		return intr;
 	}
 
 	void backtrace_curframe(Interpreter intr) {

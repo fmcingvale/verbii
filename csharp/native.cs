@@ -405,12 +405,13 @@ class Builtins {
 			intr.push(new LangInt(obj.getLength()));
 		}
 		else if(obj is LangLambda) {
-			// like c++ implementation, create a new list here to avoid side effects
-			var newlist = new LangList();
-			foreach(var o in (obj as LangLambda)!.objlist) {
-				newlist.objlist.Add(o);
-			}
-			intr.push(newlist);
+			// push a deepcopy - see DESIGN-NOTES.md
+			intr.push(new LangList(LangList.deepcopyObjlist((obj as LangLambda)!.objlist)));
+		}
+		else if(obj is LangClosure) {
+			// as above, deepcopy list. state is mutable, so do not deepcopy it
+			intr.push(new LangList(LangList.deepcopyObjlist((obj as LangClosure)!.objlist)));
+			intr.push((obj as LangClosure)!.state);
 		}
 		else {
 			throw new LangError("Object cannot be unmade: " + obj.fmtStackPrint());
@@ -460,7 +461,8 @@ class Builtins {
 		
 	public static void make_lambda(Interpreter intr) {
 		var list = popList(intr, "make-lambda");
-		intr.push(new LangLambda(list.objlist));
+		// deepcopy list - see DESIGN-NOTES.md
+		intr.push(new LangLambda(LangList.deepcopyObjlist(list.objlist)));
 	}
 	
 	public static void dumpword(Interpreter intr) {
@@ -474,12 +476,9 @@ class Builtins {
 
 	public static void make_closure(Interpreter intr) {
 		var state = intr.pop();
-		var listarg = intr.pop();
-		var objlist = listarg as LangList;
-		if(objlist == null)
-			throw new LangError("Expected list in make-closure, got: " + listarg.fmtStackPrint());
-
-		intr.push(new LangClosure(objlist.objlist, state));
+		var objlist = popList(intr,"make-closure");
+		// as above, deepcopy list
+		intr.push(new LangClosure(LangList.deepcopyObjlist(objlist.objlist), state));
 	}
 
 	public static void self_get(Interpreter intr) {
@@ -496,6 +495,16 @@ class Builtins {
 			intr.closure.state = intr.pop();
 	}
 
+	public static void self_put(Interpreter intr) {
+		var obj = intr.pop();
+		var index = popInt(intr,"put");
+		var list = popList(intr,"put");
+		if(index < 0 || index >= list!.objlist.Count)
+			throw new LangError("Index out of bounds in put");
+		list.objlist[index] = obj;
+		intr.push(list);
+	}
+	
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -547,5 +556,6 @@ class Builtins {
 		{"make-closure", make_closure},
 		{"self", self_get},
 		{"self!", self_set},
+		{"put", self_put},
 	};
 }

@@ -179,6 +179,8 @@ void Interpreter::do_jump(const char *jumpword) {
 		// forward jump, find word (>>NAME -> @NAME)
 		while(true) {
 			auto obj = nextCodeObj();
+			if(obj.isNull())
+				throw LangError("No such jump: " + string(jumpword));
 			//cout << "NEXT-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
 				//cout << "FOUND" << endl;
@@ -190,6 +192,8 @@ void Interpreter::do_jump(const char *jumpword) {
 		// backward jump
 		while(true) {
 			auto obj = prevCodeObj();
+			if(obj.isNull())
+				throw LangError("No such jump: " + string(jumpword));
 			//cout << "PREV-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
 				//cout << "FOUND" << endl;
@@ -316,12 +320,19 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		}
 		
 		// check for literal objects that just get pushed
-		if(obj.isInt() || obj.isLambda() || obj.isList() || obj.isString() || obj.isFloat() ||
+		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() ||
 			obj.isClosure()) {
 			push(obj);
 			continue;
 		}
 
+		// if object was created from a list literal ( [ ... ] ), then it must be deepcopied
+		// (see DESIGN-NOTES.md)
+		if(obj.isList()) {
+			push(obj.deepcopy());
+			continue;
+		}
+		
 		if(obj.isSymbol("'",1)) {
 			// quoted symbol - remove one level of quoting and push
 			push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));

@@ -129,14 +129,16 @@ class Interpreter(object):
 		if jumpword[:2] == ">>":
 			# forward jump, find word (>>NAME -> @NAME)
 			while True:
-				word = self.nextCodeObjOrFail()
-				if type(word) == str and word[1:] == jumpword[2:]:
+				word = self.nextCodeObj()
+				if word is None: raise LangError("No such jump: " + jumpword)
+				elif type(word) == str and word[1:] == jumpword[2:]:
 					return # found word, stop
 		elif jumpword[:2] == "<<":
 			# backward jump
 			while True:
-				word = self.prevCodeObjectOrFail()
-				if type(word) == str and word[1:] == jumpword[2:]:
+				word = self.prevCodeObject()
+				if word is None: raise LangError("No such jump: " + jumpword)
+				elif type(word) == str and word[1:] == jumpword[2:]:
 					return # found word, stop
 		else:
 			raise LangError("Bad jumpword " + jumpword)
@@ -201,6 +203,7 @@ class Interpreter(object):
 			raise LangError("Trying to delete non-existent name: " + name)
 		
 	def run(self, objlist, stephook=None) -> None:
+		from langtypes import deepcopy
 		#if len(self.callstack):
 		if self.code is not None:
 			raise LangError("Attempting to call Interpreter.run() recursively")
@@ -234,9 +237,13 @@ class Interpreter(object):
 								
 			# literals that get pushed
 			if type(word) == int or type(word) == float or isinstance(word,LangString) or \
-				isinstance(word, LangLambda) or type(word) == list or \
-					isinstance(word, LangClosure):
+				isinstance(word, LangLambda) or	isinstance(word, LangClosure):
 				self.push(word)
+				continue
+
+			# list literals are deepcopied (see DESIGN-NOTES.txt)
+			if type(word) == list:
+				self.push(deepcopy(word))
 				continue
 
 			# quoted symbols - remove one level of quoting and push symbol

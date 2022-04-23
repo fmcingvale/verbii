@@ -35,26 +35,6 @@ def deserialize_and_run(intr, filename):
 	# always delete __main__ after running, else it will prevent other code from loading
 	intr.deleteWord("__main__")
 	
-def new_interpreter(verbose=False):
-	"convenience to start interpreter and optionally load init lib"
-	intr = Interpreter()
-
-	# load serialized versions of init.verb and compiler.verb (required
-	# to bootstrap interpreter)
-	deserialize_and_run(intr, INITLIB)
-	deserialize_and_run(intr, COMPILERLIB)
-	
-	# allow patches to overwrite existing words
-	buf = open(PATCHESLIB,'r').read()
-	# if this is likely to take a bit, print a message
-	if verbose and len(buf) > 1000: print("Patching ...")
-	compile_and_load(intr, buf, True)
-
-	# like above, always delete __main__
-	intr.deleteWord("__main__")
-
-	return intr
-
 def debug_hook(intr: Interpreter, word: str):
 	print("=> " + intr.reprStack())
 	print("Run: " + str(word))
@@ -62,9 +42,9 @@ def debug_hook(intr: Interpreter, word: str):
 	sys.stdout.flush()
 	sys.stdin.readline()
 
-def compile_and_run(intr, text, singlestep):
+def compile_and_run(intr, text, singlestep, allow_overwrite=False):
 	# push code, compile and load into interpreter
-	compile_and_load(intr, text, False)
+	compile_and_load(intr, text, allow_overwrite)
 	
 	# run __main__
 	code = intr.lookupWordOrFail('__main__')
@@ -76,6 +56,25 @@ def compile_and_run(intr, text, singlestep):
 
 	# as above, delete __main__ to avoid inadvertent reuse
 	intr.deleteWord("__main__")
+
+def new_interpreter(verbose=False):
+	"convenience to start interpreter and optionally load init lib"
+	intr = Interpreter()
+
+	# load serialized versions of init.verb and compiler.verb (required
+	# to bootstrap interpreter)
+	deserialize_and_run(intr, INITLIB)
+	deserialize_and_run(intr, COMPILERLIB)
+	
+	# now load & run patches, allowing them to overwrite existing words
+	# (this is the only place this is allowed)
+	buf = open(PATCHESLIB,'r').read()
+	# if this is likely to take a bit, print a message
+	if verbose and len(buf) > 1000: print("Patching ...")
+	
+	compile_and_run(intr, buf, False, True)
+
+	return intr
 
 # returns string on error, None on success	
 def safe_compile_and_run(intr, text, singlestep, backtrace_on_error):

@@ -108,16 +108,16 @@ end
 
 -- lambda type
 Lambda = {}
-function Lambda:new(obj, wordlist)
+function Lambda:new(obj, objlist)
 	setmetatable(obj, self)
 	self.__index = self
 	obj.__class__ = "Lambda"
-	obj.wordlist = wordlist
+	obj.objlist = objlist
 	return obj
 end
 
-function new_Lambda(wordlist)
-	return Lambda:new({},wordlist)
+function new_Lambda(objlist)
+	return Lambda:new({},objlist)
 end
 
 -- closure
@@ -163,7 +163,7 @@ function fmtDisplay(obj)
 			return "false"
 		end
 	elseif isLambda(obj) then
-		return "<lambda>"
+		return fmtStackPrint(obj)
 	elseif isString(obj) then
 		return obj.value
 	elseif isSymbol(obj) then
@@ -205,7 +205,7 @@ function fmtStackPrint(obj)
 			return "<false>"
 		end
 	elseif isLambda(obj) then
-		return "<lambda>"
+		return "<" .. fmtStackPrintObjlist(obj.objlist,"{","}") .. ">"
 	elseif isClosure(obj) then
 		return "<" .. fmtStackPrintObjlist(obj.objlist,"{","}") .. " :: " ..
 				fmtStackPrint(obj.state) .. ">"
@@ -219,5 +219,26 @@ function fmtStackPrint(obj)
 		return fmtStackPrintObjlist(obj, "[", "]")
 	else
 		error(">>>Don't know how to print object: " .. tostring(obj))
+	end
+end
+
+-- see c++ & DESIGN-NOTES.md
+function deepcopyObjlist(objlist)
+	local newlist = {}
+	for i=1,#objlist do
+		table.insert(newlist, objlist[i])
+	end
+	return newlist
+end
+
+function deepcopy(obj)
+	if obj == nil or isNone(obj) or type(obj) == "number" or isFloat(obj) or
+		type(obj) == "boolean" or isLambda(obj) or isClosure(obj) or
+		isString(obj) or isSymbol(obj) then
+		return obj
+	elseif isList(obj) then
+		return deepcopyObjlist(obj)
+	else
+		error(">>>Don't know how to deepcopy object: " .. tostring(obj))
 	end
 end

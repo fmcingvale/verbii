@@ -104,18 +104,22 @@ function Interpreter:do_jump(jumpword)
 	if string.sub(jumpword,1,2) == ">>" then
 		-- forward jump, find word (>>NAME -> @NAME)
 		while true do
-			local word = self:nextObjOrFail()
+			local word = self:nextObj()
 			--print("WORD " .. fmtStackPrint(word))
-			if isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
+			if word == nil then
+				error(">>>No such jump: " .. jumpword)
+			elseif isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
 			end
 		end
 	elseif string.sub(jumpword,1,2) == "<<" then
 		-- backward jump
 		while true do
-			local word = self:prevObjOrFail()
+			local word = self:prevObj()
 			--print("FIND BACKWARD: " .. jumpword .. ", " .. word)
-			if isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
+			if word == nil then
+				error(">>>No such jump: " .. jumpword)
+			elseif isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
 			end
 		end
@@ -268,8 +272,14 @@ function Interpreter:run(objlist, stephook)
 
 		-- see if its a literal to push
 		if type(obj) == "number" or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isList(obj) or isClosure(obj) then
+			isClosure(obj) then
 			self:push(obj)
+			goto MAINLOOP
+		end
+
+		-- list literals are deepcopied (see DESIGN-NOTES.md)
+		if isList(obj) then
+			self:push(deepcopy(obj))
 			goto MAINLOOP
 		end
 
@@ -346,7 +356,7 @@ function Interpreter:run(objlist, stephook)
 				if isLambda(obj) then
 					-- now this is just like calling a userword, below
 					-- TODO -- tail call elimination??
-					self:code_call(obj.wordlist)
+					self:code_call(obj.objlist)
 				elseif isList(obj) then
 					self:code_call(obj)
 				elseif isClosure(obj) then

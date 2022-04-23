@@ -36,6 +36,11 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 
 4. Bootstrap new init/compiler:
 
+	#===============================================================================================
+	# MAKE A BACKUP OF lib/init.verb.b and lib/compiler.verb.b -- if something below breaks, copy
+	# those backups over the lib/*.b files to restore system to a working state.
+	#===============================================================================================
+
 	$ cd bootstrap
 	$ ./make-bootstrap.sh
 	$ ./make-bootstrap.sh 
@@ -53,8 +58,3 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 		-- ensure ALL diffs are ZERO before continuing.
 
 Your new compiler/init should be working now.
-
-
-
-
-

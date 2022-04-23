@@ -50,17 +50,14 @@ def fmtDisplay(obj):
 		return "true"
 	elif obj is False:
 		return "false"
-	elif isinstance(obj, LangLambda):
-		return "<lambda>"
-	elif isinstance(obj, LangClosure):
+	elif isinstance(obj, LangLambda) or isinstance(obj, LangClosure) or type(obj) == list:
+		# use stack format for the above
 		return fmtStackPrint(obj)
 	elif isinstance(obj, LangString):
 		return obj.s
 	elif type(obj) is str:
 		# strings are symbols - not normally printed, so they get a ' to differentiate from strings
 		return "'" + obj
-	elif type(obj) == list:
-		return fmtStackPrint(obj) # use stack format for both
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))
 
@@ -86,7 +83,7 @@ def fmtStackPrint(obj):
 	elif obj is False:
 		return "<false>"
 	elif isinstance(obj, LangLambda):
-		return "<lambda>"
+		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + ">"
 	elif isinstance(obj, LangClosure):
 		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + " :: " + fmtStackPrint(obj.state) + ">"
 	elif isinstance(obj, LangString):
@@ -99,3 +96,21 @@ def fmtStackPrint(obj):
 		return fmtStackPrintObjlist(obj, '[', ']')
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))
+
+def deepcopyObjlist(objlist):
+	newlist = []
+	for obj in objlist:
+		newlist.append(deepcopy(obj))
+
+	return newlist
+
+# see c++ implementation & DESIGN-NOTES.md
+def deepcopy(obj):
+	if obj is None or type(obj) is int or type(obj) is float or obj is True or \
+		obj is False or isinstance(obj, LangLambda) or isinstance(obj, LangClosure) or \
+		isinstance(obj, LangString) or type(obj) is str:
+		return obj
+	elif type(obj) == list:
+		return deepcopyObjlist(obj)
+	else:
+		raise LangError("Don't know how to deepcopy: " + str(obj))

@@ -119,9 +119,11 @@
 		((LangFloat? obj) (LangFloat-value obj))
 		((LangString? obj) (LangString-value obj))))
 
+; holds a LangList as llist
 (define-record LangLambda llist)
 (define (lambda-llist obj) (LangLambda-llist obj))
 
+; holds a LangList and an arbitrary object
 (define-record Closure llist state)
 
 ;(define-class LangLambda ()
@@ -210,7 +212,10 @@
 				" :: " (fmtStackPrint (Closure-state obj)) ">"))
 		((LangNull? obj) "<null>")
 		((LangVoid? obj) "<VOID>")
-		((LangLambda? obj) "<lambda>")
+		((LangLambda? obj)
+			(string-append "<"
+				(fmtStackPrintObjlist (LangList-objlist (lambda-llist obj)) "{" "}")
+				">"))
 		; for sanity, don't use lang-error (or langtype-error) just in case they switch to
 		; using fmtStackPrint. this would be an obvious bug that needs to be fixed, so just
 		; print message and exit
@@ -229,18 +234,39 @@
 		((boolean? obj) (if obj "true" "false"))
 		((LangSymbol? obj) (string-append "'" obj)) ; obj is a string
 		((LangString? obj) (value obj))
-		; OTHER PORTS USE fmtStackPrint here ... trying this out to see if i like it better ...
 		((LangList? obj)
 			(string-append 
-				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtDisplay obj))) "[" 
+				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtStackPrint obj))) "[" 
 					(LangList-objlist obj)) " ]"))
 		((Closure? obj) (fmtStackPrint obj))
 		((LangNull? obj) "<null>")
 		((LangVoid? obj) "<VOID>")
-		((LangLambda? obj) "<lambda>")
+		((LangLambda? obj) (fmtStackPrint obj))
 		; like above, but lang-error/langtype-error DOES us this so it would be a loop to
 		; use those here
 		(else 
 			(print "FATAL ERROR: Unknown object in fmtDisplay: " obj) (exit 1))))
+
+; see c++ & DESIGN-NOTES.txt
+(define (deepcopy obj)
+	(cond
+		((or (integer? obj)
+			(LangFloat? obj)
+			(boolean? obj)
+			(LangSymbol? obj)
+			(LangString? obj)
+			(Closure? obj)
+			(LangNull? obj)
+			(LangVoid? obj)
+			(LangLambda? obj))
+			obj)
+		((LangList? obj)
+			(let ((newlist (new-lang-list)))
+				(dynvector-for-each 
+					(lambda (i elem) (dynvector-set! (LangList-objlist newlist) i elem))
+						(LangList-objlist obj))
+				newlist))
+		(else 
+			(print "Don't know how to deepcopy object:" (fmtStackPrint obj) ) (exit 1))))
 
 ) ; end of module

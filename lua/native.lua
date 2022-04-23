@@ -175,6 +175,15 @@ function popStringOrSymbol(intr)
 	end
 end
 
+function popList(intr)
+	local obj = intr:pop()
+	if isList(obj) then
+		return obj
+	else
+		error(">>>Expecting list but got: " .. fmtStackPrint(obj))
+	end
+end
+
 function builtin_add(intr, a, b)
 	if isInt(a) and isInt(b) then
 		intr:pushInt(a+b)
@@ -388,12 +397,12 @@ function builtin_unmake(intr, obj)
 		end
 		intr:pushInt(#obj)
 	elseif isLambda(obj) then
-		-- as in c++, make a new list so caller can modify
-		local newlist = {}
-		for i=1,#obj.wordlist do
-			table.insert(newlist, obj.wordlist[i])
-		end
-		intr:push(newlist)
+		-- make deepcopy - see DESIGN-NOTES.md
+		intr:push(deepcopy(obj.objlist))
+	elseif isClosure(obj) then
+		-- as above, deepcopy list
+		intr:push(deepcopy(obj.objlist))
+		intr:push(obj.state) -- state is mutable so do NOT deepcopy
 	end
 end
 
@@ -443,12 +452,9 @@ function builtin_length(intr, obj)
 end
 
 function builtin_make_lambda(intr)
-	local list = intr:pop()
-	if isList(list) then
-		intr:push(new_Lambda(list))
-	else
-		error(">>>make-lambda expecting list but got: " .. fmtStackPrint(list))
-	end
+	local list = popList(intr)
+	-- must deepcopy list - see DESIGN-NOTES.md
+	intr:push(new_Lambda(deepcopy(list)))
 end
 
 function builtin_readfile(intr)
@@ -464,11 +470,9 @@ end
 
 function builtin_make_closure(intr)
 	local state = intr:pop()
-	local objlist = intr:pop()
-	if not isList(objlist) then
-		error(">>>make-closure expecting list but got: " .. fmtStackPrint(objlist))
-	end
-	intr:push(new_Closure(objlist,state))
+	local objlist = popList(intr)
+	-- as above, must deepcopy list
+	intr:push(new_Closure(deepcopy(objlist),state))
 end
 
 function builtin_self_get(intr)
@@ -483,6 +487,18 @@ function builtin_self_set(intr)
 		error(">>>Attempting to set unbound self")
 	end
 	intr.closure.state = intr:pop()
+end
+
+function builtin_put(intr)
+	local obj = intr:pop()
+	local index = popInt(intr)
+	local list = popList(intr)
+	if index < 0 or index >= #list then
+		error(">>>Index out of range in put")
+	else
+		list[index+1] = obj
+		intr:push(list)
+	end
 end
 
 BUILTINS = {
@@ -502,6 +518,7 @@ BUILTINS = {
 	["string?"] = { {"any"}, function(intr,o) intr:push(isString(o)) end},
 	["symbol?"] = { {"any"}, function(intr,o) intr:push(isSymbol(o)) end},
 	["lambda?"] = { {"any"}, function(intr,o) intr:push(isLambda(o)) end},
+	["closure?"] = { {"any"}, function(intr,o) intr:push(isClosure(o)) end},
 	["repr"] = { {}, builtin_repr },
 	["str"] = { {}, builtin_str },
 	["puts"] = { {}, builtin_puts },
@@ -536,4 +553,5 @@ BUILTINS = {
 	["make-closure"] = { {}, builtin_make_closure},
 	["self"] = { {}, builtin_self_get},
 	["self!"] = { {}, builtin_self_set},
+	["put"] = { {}, builtin_put},
 }

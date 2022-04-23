@@ -49,28 +49,6 @@ void compile_and_load(Interpreter *intr, string &text, bool allowOverwrite) {
 	ALLOW_OVERWRITING_WORDS = false;
 }
 
-Interpreter* newInterpreter() {
-	auto intr = new Interpreter();
-	
-	//cout << "Starting interpreter ..." << endl;
-
-	// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
-	deserialize_and_run(intr, INITLIB);
-	deserialize_and_run(intr, COMPILERLIB);
-
-	// now that those are loaded, I can load & compile the patches file
-	string text = readfile(PATCHESLIB);
-	// compile & load words, allowing overwriting of existing words
-	compile_and_load(intr, text, true);
-	// delete __main__ now
-	intr->deleteWord("__main__");
-
-	// GC after loading large file
-	x_mem_gcollect();
-
-	return intr;
-}
-
 void debug_hook(Interpreter *intr, Object obj) {
 	std::cout << "=> " << intr->reprStack() << endl;
 	std::cout << "Run: " << obj.fmtStackPrint() << endl;
@@ -81,8 +59,8 @@ void debug_hook(Interpreter *intr, Object obj) {
 }
 
 // use safe_ version below
-void compile_and_run(Interpreter *intr, string text, bool singlestep) {
-	compile_and_load(intr, text, false);
+void compile_and_run(Interpreter *intr, string text, bool singlestep, bool allowOverwrite=false) {
+	compile_and_load(intr, text, allowOverwrite);
 	
 	// run __main__
 	auto code = intr->lookup_word("__main__");
@@ -128,9 +106,10 @@ void print_backtrace(Interpreter *intr) {
 }
 
 // return empty string if OK, error message on error
-string safe_compile_and_run(Interpreter *intr, string text, bool singlestep, bool backtrace_on_error) {
+string safe_compile_and_run(Interpreter *intr, string text, bool singlestep, bool backtrace_on_error,
+							bool allowOverwrite=false) {
 	try {
-		compile_and_run(intr, text, singlestep);
+		compile_and_run(intr, text, singlestep, allowOverwrite);
 		return "";
 	}
 	catch (LangError &err) {
@@ -140,6 +119,25 @@ string safe_compile_and_run(Interpreter *intr, string text, bool singlestep, boo
 		}
 		return errstr;
 	}
+}
+
+Interpreter* newInterpreter() {
+	auto intr = new Interpreter();
+	
+	//cout << "Starting interpreter ..." << endl;
+
+	// load byte-compiled init.verb and compiler.verb to bootstrap interpreter
+	deserialize_and_run(intr, INITLIB);
+	deserialize_and_run(intr, COMPILERLIB);
+
+	// now that those are loaded, load & run the patches file like any other
+	// source file (this is the only file that is allowed to overwrite existing words)
+	safe_compile_and_run(intr, readfile(PATCHESLIB), false, true, true);
+	
+	// GC after loading init files
+	x_mem_gcollect();
+
+	return intr;
 }
 
 void repl(bool singlestep) {

@@ -1,0 +1,524 @@
+\
+\ more involved unittests -- run as a whole file instead of as lines in -test mode
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+
+( cannot do multiline strings with -test so do a check here ... )
+"   here is
+   a multiline
+   string of
+   testing 
+
+
+   joy
+
+
+   the
+
+   \ oh and this is not a comment
+
+   end
+   .
+" . CR
+
+"""
+
+	here is a
+	" triple " quoted "
+	string so I can have other random "" quotes "" within it
+
+	lets hope "" that " worked
+
+	\ and this should not be
+	\ a comment
+	\ here either
+
+	the
+	end
+	.
+
+	p.s. this
+	
+	string contains
+
+	leading tabs as
+
+	well
+""" . CR
+
+( create a counter function that remembers its current count )
+: make-countdown ( N -- closure )
+	[ self . self 1 - self! ] swap make-closure
+	;
+
+"Counting down from 10:" .
+10 make-countdown
+10 repeat
+CR
+
+\ create a counter object that accepts messages:
+\	'get - return current counter value
+\	'tick - decrement counter
+\
+\ message is passed on top of stack when calling closure
+: make-counter-obj ( N -- closure )
+	\ a nice thing with verbii lists -- putting code inside a list looks
+	\ exactly like writing it anywhere else -- no funky quoting required
+	[
+		( takes message from top of stack )
+		dup 'get == if >>get
+		dup 'tick == if >>tick
+		"Bad command in counter: " swap str + error
+		@get
+			drop self return
+		@tick
+			drop self 1 - self!
+	] swap make-closure
+	;
+
+"Counting down from 20:" .
+20 make-counter-obj
+\ make another closure bound to this counter.
+\ in it, print then decrement counter
+[ 'get self call . 'tick self call ] swap make-closure
+\ print & decrement 20 times
+20 repeat
+CR
+
+\ ==============================================================================================
+\ 	
+\	demos based on rosetta code tasks -- not necessarily the complete solutions for each, just
+\	the parts I found interesting 
+\
+\ ===============================================================================================
+
+( https://rosettacode.org/wiki/Fibonacci_sequence )
+
+: fibonacci ( nr -- ; print first nr numbers of fibonacci sequence )
+	0 . 1 . 1 - ( print 0 1 first )
+	0 1 ( N 0 1 )
+	@loop ( N a b )
+		2dup + rot drop dup . ( N b a+b )
+		rot 1 - dup 0 == if >>end ( b a+b N-1 )
+		-rot <<loop 
+	@end drop drop drop 
+	;
+
+"First 20 fibonacci numbers:" .
+20 fibonacci CR
+
+( https://rosettacode.org/wiki/Sum_digits_of_an_integer )
+
+: sumDigits ( nr -- sum of digits )
+	0 swap
+	@loop ( sum nr )
+		dup 10 /mod >L rot + swap drop L> ( rem+sum quot )
+		dup? 0 == if >>end <<loop
+	@end 
+	;
+
+"Sum digits: 6982 (25) --" . 6982 sumDigits . CR
+"Sum digits: 48395019 (39) --" . 48395019 sumDigits . CR
+"Sum digits: 1073741823 (36) --" . 1073741823 sumDigits . CR
+
+( https://rosettacode.org/wiki/Proper_divisors )
+
+: printProperDivisors ( n -- ; prints proper divisors of n )
+	( special case ) dup 1 == if >>eq1
+	( start divisor at 1 )
+	1 ( n d )
+	@loop
+		2dup mod 0 == if >>proper >>recur ( n d )
+	@proper ( n d ) 
+		dup .
+	@recur
+		1 + 2dup swap 2 / > ( n d+1 d+1>n/2 ) ( can stop at n/2 )
+		if >>done <<loop
+	@done drop drop
+	@eq1 
+	;
+
+"Proper divisors of 100:" . 100 printProperDivisors CR
+"Proper divisors of 256:" . 256 printProperDivisors CR
+
+( https://rosettacode.org/wiki/Anonymous_recursion )
+
+\ this is true anonymous recursion, no names are defined ... 
+\ done in Y-combinator-ish fashion where the lambda passes itself as 
+\ an argument to itself
+\
+\ the rosetta code task prints the fibonacci sequence, but since i already
+\ did that, i'm doing a countdown instead
+		
+"* Anonymous Recursion *" . CR
+"Print 20 .. 1:" .
+{ ( lambda N -- ) dup? 0 == if >>done dup . 1 - over call @done }
+20 over call CR
+
+( ===== some random demos, not for specific rosetta tasks ==== )
+
+( calculate all factors of an integer )
+	
+: factors ( N -- ; print factors )
+	1 ( N i )
+	@loop
+	2dup >= ( N i N>=i )
+	if >>check >>done
+		@check 2dup mod 0 == ( N i N%i==0 )
+			if >>isfactor >>recur 
+			@isfactor
+				dup . 
+			@recur ( N i )
+			1 + <<loop
+	@done 
+	;
+
+"* Factors *" . CR
+"Factors of 200:" . 200 factors CR
+"Factors of 1000:" . 1000 factors CR
+"Factors of 41*107:" . 41 107 * factors CR
+
+( -- mutually recursive functions -- )
+: even? ( n -- is even? )
+	dup? 0 == 
+	if >>even 1 - odd? return 
+	@even true ;
+
+: odd? ( n -- is odd? )
+	dup? 0 == if >>even 1 - even? return @even false ;
+
+"* Mutual recursion *" . CR
+"Expect true true false false:" . 100 even? . 64 even? . 31 even? . 151 even? . CR
+"Expect false false true true:" . 200 odd? . 44 odd? . 181 odd? . 211 odd? . CR
+
+( -- countdown that only prints numbers that pass a test -- )
+: countdown-test ( N test -- ; print countdown of N where test is true )
+	@loop
+		over 0 < if >>done
+		2dup call if >>true >>recur
+		@true
+			over .
+		@recur
+			swap 1 - swap <<loop @done ;
+
+"* Countdown by testing *" . CR
+"Count by 1:" . 20 { drop true } countdown-test CR
+"Count by evens:" . 40 { even? } countdown-test CR
+"Count by odds:" . 40 { odd? } countdown-test CR
+"Count by 5s:" . 100 { 5 mod 0 == } countdown-test CR
+
+: nmax ( xn ... x1 NR -- max of NR numbers from stack )
+	{ max } swap 1 - repeat ; ( call 'max' NR-1 times )
+
+"Expect 50:" .
+5 10 50 30 -20 8 19 41 0 12 10 nmax . CR
+
+\ there are no builtin control structures in verbii, other than >> and <<,
+\ so you can invent whichever ones you like.
+\
+\ this is like a combination of a (for ..) and a (while ..)
+
+\ for-while: loop that begins at start, increments by given value each time,
+\			 and stops when cond-while evaluates to false. cond-while and lambda
+\			 are called with current counter on top of stack.
+\ 			 cond-while is checked at the START of each loop.
+"* For-While *" . CR
+: for-while ( start increment cond-while lambda )
+	>L >L >L >L ( L3: lambda, L2: cond-while, L1: increment, L0: current )
+	@loop
+		L0 ref L2 ref call if >>continue >>end ( cond-end true|false for current counter? )
+	@continue
+		L0 ref L3 ref call ( call lambda with current value )
+		L0 ref L1 ref + L0 set! ( current += increment )
+		<<loop
+	@end
+		LP 4 + LP! ( clean up locals )
+	;
+
+"Count 1 .. 10:" . 1 1 { 10 <= } { . } for-while CR
+"Count 20 .. 0, by 4's:" . 20 -4 { 0 >= } { . } for-while CR
+
+"Upper triangle of stars ..." . CR 
+15 -1 { 0 > } { { 42 .c 32 .c } swap repeat CR } for-while 
+
+( https://rosettacode.org/wiki/Multiplication_tables )
+
+: .cn ( c n -- ; print char n times )
+	@loop
+		dup? 0 == if >>done
+		swap dup .c swap 1 - <<loop
+	@done drop 
+	;
+
+: spaces ( n -- ; print n spaces ) 32 swap .cn ;
+
+: .w ( obj width -- ; print obj with minimum width, left padded )
+	swap str dup length rot swap - ( str width-len )
+	dup 0 > if >>dopad
+	drop >>done
+	@dopad spaces
+	@done . 
+	;
+
+"Multiplication table ..." . CR
+1 1 { 10 < } { 
+	dup . ( print row label )
+	1 1 { 10 < } {
+		( stack is: outer-counter inner-counter -- i can't destroy outer counter
+		  because it is only refreshed after all inner loops are finished, so copy
+		  it over to multiply ) 
+		over ( outer inner outer )
+		2dup <  if >>skip ( only print upper triangle )
+		* 4 .w >>done ( print width=4 ) 
+		@skip drop drop 5 spaces @done
+		} for-while CR
+} for-while
+
+( https://rosettacode.org/wiki/100_doors )
+
+"* 100 Doors *" . CR
+
+var DOORS 101 ( numbering these 1..100 since 0 as increment would infinite loop )
+( -- set all to zero (closed) -- )
+1 1 { 100  <= } { 0 swap DOORS + set! } for-while
+
+: toggle ( n=1,0 -- 0,1 )
+	1 == if >>zero 1 return @zero 0 ;
+
+( -- for i={1..100} visit in loop with increment=i, toggling doors )
+1 1 { 100 <= } {
+	( outer-count )
+	dup { 100 <= } ( outer outer .. -- start at outer with increment of outer )
+	{
+		( inner )
+		dup DOORS + ref ( inner DOORS[inner] )
+		toggle swap DOORS + set! ( DOORS[inner] = toggled )
+	} for-while
+} for-while
+
+"Opened doors ..." .
+1 1 { 100 <= } { 
+	( outer )
+	dup DOORS + ref ( outer DOORS[outer] )
+	0 == if >>skip
+	. @skip } for-while CR
+	
+del DOORS 
+clear
+
+\ fold - left fold
+\	func: called with stack [ accum elem ] where accum is the accumulated value and
+\		  elem is the next element to be added to the accumulator
+\	init: initial value for accumulator
+\
+\ 	pseudocode:
+\		acc = func(acc, seq[0])
+\		acc = func(acc, seq[1])
+\		.
+\		acc = func(acc, seq[n-1])
+: fold ( seq func init )
+	\ build closure to run for each element
+	\ make func into list
+	swap 1 make-list
+	\ FUNC will be append to left side of this
+	[ self -rot ( now: acc elem FUNC )
+		call self! ( make new acc and store )
+	]
+	+ ( [ FUNC ] + [ above ] )
+	\ make into closure & keep a copy
+	swap :: dup >L
+	for-each
+	\ leave end state on stack
+	L0 ref unmake nip
+	;
+
+"Expect 160:" .
+[ 10 21 32 43 54 ] [ + ] 0 fold . CR
+( reverse string )
+"Expect fedcba:" . 
+"abcdef" [ swap + ] "" fold . CR
+( reverse list )
+"Expect [ 99 88 77 66 ]:" .
+[ 66 77 88 99 ] [ 1 make-list swap + ] [ ] fold . CR
+
+\
+\ filter: make new sequence of only elements where func[elem] is true
+\
+: filter ( seq func ; calls func[seq[i]] for each element )
+	over list? if >>filter-list
+	over string? if >>filter-string
+	str "Bad sequence in filter: " swap + error	
+
+	@filter-string
+		\ string concatenation operator & initval
+		'+ >L "" >L >>run
+	@filter-list
+		\ list concatentation operator & initval
+		'append >L 0 make-list >L
+
+	@run ( seq func )
+		\ function to pass to fold
+		[ dup FUNC call if >>keep drop return 
+			@keep CONCAT ]
+		\ replace FUNC with function
+		1 rot put
+		\ replace CONCAT with correct operator from above
+		8 L1 ref put
+		\ initval
+		L0 ref fold \ as above don't use [ ] here
+		\ clean up locals
+		LP 2 + LP!
+		return \ leave filtered list on stack
+	;
+
+\
+\ map - make new sequence of func[elem] for each elem in sequence
+\
+: map ( seq func )
+	over list? if >>map-list
+	over string? if >>map-string
+	str "Bad sequence in filter: " swap + error	
+
+	@map-string
+		\ string concatenation operator & initval
+		'+ >L "" >L >>run
+	@map-list
+		\ list concatentation operator & initval
+		'append >L 0 make-list >L
+
+	@run ( seq func )
+		\ function to pass to fold
+		[ FUNC call CONCAT ]
+		\ replace FUNC with function
+		0 rot put
+		\ replace CONCAT with correct operator from above
+		2 L1 ref put
+		\ initval
+		L0 ref fold \ as above don't use [ ] here
+		\ clean up locals
+		LP 2 + LP!
+		return \ leave filtered list on stack
+	;
+
+"Expect [ 6 7 8 9 ]:" . [ 1 2 3 4 5 6 7 8 9 ] [ 5 > ] filter . CR
+"Expect [ 0 10 30 50 70 ]:" . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
+"Expect [ 0 10 30 50 70 ]:" . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
+"Expect lmnop:" . "ablcdmenfgohipjk" [ "l" >= ] filter . CR
+"Expect lmnop:" . "ablcdmenfgohipjk" [ "l" >= ] filter . CR
+
+"Expect [ 3 9 15 21 27 ]:" . 
+\ make new sequence of 3x each value
+[ 1 3 5 7 9 ] [ 3 * ] map . CR
+
+\ triple each char in string
+"Expect aaabbbcccdddeeefff:" . 
+"abcdef" [ dup dup + + ] map . CR
+\ chars doubled with - between
+"Expect a-ab-bc-cd-de-ef-f" .
+"abcdef" [ dup "-" swap + + ] map . CR
+
+"Expect 1 .. 10:" .
+[ 1 2 3 4 5 6 7 8 9 10 ] [ . ] for-each CR
+
+"Expect 10 .. 1:" .
+[ 1 2 3 4 5 6 7 8 9 10 ] [ . ] for-each-reverse CR
+
+: to-upper ( string -- first char of string as uppercase [unchanged if not alphabetic] )
+	ord
+	dup 97 < if >>not-lower
+	dup 122 > if >>not-lower
+	32 - chr return
+	@not-lower chr
+	;
+
+: to-lower ( string -- first char of string as uppercase [unchanged if not alphabetic] )
+	ord
+	dup 65 < if >>not-upper
+	dup 90 > if >>not-upper
+	32 + chr return
+	@not-upper chr
+	;
+
+"Expect "XYZ 123 ABC !@$ DEF:" .
+"Xyz 123 abC !@$ dEf" [ to-upper ] map . CR
+
+"Expect "abc 432 xyz &%# def:" .
+"AbC 432 xYZ &%# DEf" [ to-lower ] map . CR
+
+( https://rosettacode.org/wiki/Partial_function_application )
+
+"* Partial function application *" . CR
+\ for function fs, use map (since map is written in verbii, above, that
+\ seems to OK per the rules of this task)
+: fs map ;
+\ f1 = value*2
+: f1 2 * ;
+\ f2 = value squared
+: f2 dup * ;
+\ partially apply f1 to fs to make fsf1
+\ (doing it as a variable seems more in the spirit of the task than
+\ making it a word)
+var fsf1 1
+[ [ f1 ] map ] fsf1 set!
+\ partially apply f2 to fs to make fsf2
+var fsf2 1
+[ [ f2 ] map ] fsf2 set!
+
+\ test cases
+"Expect [ 0 2 4 6 ]:" . [ 0 1 2 3 ] fsf1 ref call . CR
+"Expect [ 0 1 4 9 ]:" . [ 0 1 2 3 ] fsf2 ref call . CR
+
+"Expect [ 4 8 12 16 ]:" . [ 2 4 6 8 ] fsf1 ref call . CR
+"Expect [ 4 16 36 64 ]:" . [ 2 4 6 8 ] fsf2 ref call . CR
+
+\ cleanup namespace
+del fs del f1 del f2 del fsf1 del fsf2
+
+( ****** TODO LIST ******* )
+
+\ https://rosettacode.org/wiki/Primality_by_trial_division
+
+"* check for list literal bug" . CR
+( ** unintended behavior -- the list grows on each call ** )
+: oops ( make a list of 1 2 3 4 ?? )
+	[ ] 1 append 2 append 3 append 4 append
+	\ the [ ] is created ONCE and is being reused on each call, growing infinitely
+	;
+
+"Expect [ 1 2 3 4 ]:" .
+oops . CR 
+"Expect [ 1 2 3 4 ]:" .
+oops . CR 
+"Expect [ 1 2 3 4 ]:" .
+oops . CR 
+
+( -- test that dup'd lists correctly show changes -- )
+"""Expect [ 10 20 30 "hello" 50 ] x 4:""" . CR
+10 20 30 40 50 5 make-list
+dup dup dup
+3 "hello" put
+. . . . CR
+
+( -- unmake must create new list on unmaking lambdas to prevent modification --- )
+"* unmake lambda" . CR
+"Expect <{ 11 22 33 44 }> [ 11 22 88888 44 ] ==>" .
+{ 11 22 33 44 } dup unmake 2 88888 put swap . . CR
+clear 
+
+( -- make-lambda must deepcopy list -- )
+"* make-lambda" . CR
+"Expect <{ 11 22 33 44 }> [ 11 22 977 44 ] ==>" . 
+\ make lambda then modify input list to ensure it doesn't affect lambda
+11 22 33 44 4 make-list dup make-lambda swap 2 977 put swap . . CR
+
+( -- same with make-closue -- )
+"* make-closure" . CR
+"Expect <{ 11 22 33 44 } :: 999> [ 11 22 777 44 ] ==>" . 
+[  11 22 33 44 ] dup 999 make-closure swap 2 777 put swap . .  CR
+
+( -- same with unmake - should not be able to edit closure -- )
+"* unmake closure" . CR
+"Expect <{ 77 66 55 44 } :: 543> ==>" .
+[ 77 66 55 44 ] 543 make-closure dup unmake drop 2 3333 put drop . CR
+
+"END STACK:" . .S CR

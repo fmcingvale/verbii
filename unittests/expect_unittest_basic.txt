@@ -326,35 +326,35 @@ Hello world!
 >> ( -- lambdas -- )
 => 
 >> { 4 5 6 }
-=> <lambda> 
+=> <{ 4 5 6 }> 
 >> call
 => 4 5 6 
 >> clear
 => 
 >> { 1 2 3 { 7 8 9 } 4 5 6 }
-=> <lambda> 
+=> <{ 1 2 3 <{ 7 8 9 }> 4 5 6 }> 
 >> call
-=> 1 2 3 <lambda> 4 5 6 
+=> 1 2 3 <{ 7 8 9 }> 4 5 6 
 >> 3 ndrop
-=> 1 2 3 <lambda> 
+=> 1 2 3 <{ 7 8 9 }> 
 >> call
 => 1 2 3 7 8 9 
 >> clear
 => 
 >> { 111 222 333 }
-=> <lambda> 
+=> <{ 111 222 333 }> 
 >> dup
-=> <lambda> <lambda> 
+=> <{ 111 222 333 }> <{ 111 222 333 }> 
 >> dup
-=> <lambda> <lambda> <lambda> 
+=> <{ 111 222 333 }> <{ 111 222 333 }> <{ 111 222 333 }> 
 >> call
-=> <lambda> <lambda> 111 222 333 
+=> <{ 111 222 333 }> <{ 111 222 333 }> 111 222 333 
 >> 3 ndrop
-=> <lambda> <lambda> 
+=> <{ 111 222 333 }> <{ 111 222 333 }> 
 >> call
-=> <lambda> 111 222 333 
+=> <{ 111 222 333 }> 111 222 333 
 >> 3 ndrop
-=> <lambda> 
+=> <{ 111 222 333 }> 
 >> call
 => 111 222 333 
 >> clear
@@ -366,17 +366,17 @@ Hello world!
 >> ( called with cmd on TOS )
 => 
 >> { 1 == if >>one "blue" . return @one "ocean" . }
-=> <lambda> 
+=> <{ 1 == if >>one "blue" . return @one "ocean" . }> 
 >> { 1 == if >>one "green" . return @one "grass" . }
-=> <lambda> <lambda> 
+=> <{ 1 == if >>one "blue" . return @one "ocean" . }> <{ 1 == if >>one "green" . return @one "grass" . }> 
 >> { 1 == if >>one "red" . return @one "rose" . }
-=> <lambda> <lambda> <lambda> 
+=> <{ 1 == if >>one "blue" . return @one "ocean" . }> <{ 1 == if >>one "green" . return @one "grass" . }> <{ 1 == if >>one "red" . return @one "rose" . }> 
 >> saything
 The rose is red 
-=> <lambda> <lambda> 
+=> <{ 1 == if >>one "blue" . return @one "ocean" . }> <{ 1 == if >>one "green" . return @one "grass" . }> 
 >> saything
 The grass is green 
-=> <lambda> 
+=> <{ 1 == if >>one "blue" . return @one "ocean" . }> 
 >> saything
 The ocean is blue 
 => 
@@ -480,9 +480,9 @@ hello world here
 oneword 
 => 
 >> """and some embedded"quote"chars << here"""
-=> """and some embedded"quote"chars << here""" 
+=> "and some embedded"quote"chars << here" 
 >> . CR
-""and some embedded"quote"chars << here"" 
+and some embedded"quote"chars << here 
 => 
 >> "|.......|.......|....|.........|....." . CR
 |.......|.......|....|.........|..... 
@@ -616,6 +616,18 @@ and		now		with			tabs
 => <true> <false> <false> <false> <true> <false> 
 >> clear
 => 
+>> ( list put )
+=> 
+>> [ 10 20 30 40 50 ] 
+=> [ 10 20 30 40 50 ] 
+>> 2 "abc" put
+=> [ 10 20 "abc" 40 50 ] 
+>> 0 'xyz put
+=> [ xyz 20 "abc" 40 50 ] 
+>> 4 false put
+=> [ xyz 20 "abc" 40 <false> ] 
+>> clear
+=> 
 >> ( slicing )
 => 
 >> "abcdefghijklmnop" 4 5 slice
@@ -701,15 +713,15 @@ and		now		with			tabs
 >> 10 20 30 40 4 make-list repr
 => "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" 
 >> { 1 2 3 } repr
-=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<lambda>" 
+=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<{ 1 2 3 }>" 
 >> 'a-long-symbol repr
-=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" 
+=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<{ 1 2 3 }>" "a-long-symbol" 
 >> "hello there world" repr
-=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<lambda>" "a-long-symbol" ""hello there world"" 
+=> "1234" "#3.75" "<true>" "<false>" "[ 10 20 30 40 ]" "<{ 1 2 3 }>" "a-long-symbol" ""hello there world"" 
 >> clear
 => 
 >> { 10 20 30 40 }
-=> <lambda> 
+=> <{ 10 20 30 40 }> 
 >> unmake
 => [ 10 20 30 40 ] 
 >> unmake
@@ -747,7 +759,7 @@ and		now		with			tabs
 >> 10 'word #13.125 3 4 5 3 make-list "end" 5 make-list
 => [ 10 word #13.125 [ 3 4 5 ] "end" ] 
 >> make-lambda
-=> <lambda> 
+=> <{ 10 word #13.125 [ 3 4 5 ] "end" }> 
 >> unmake
 => [ 10 word #13.125 [ 3 4 5 ] "end" ] 
 >> unmake
@@ -804,6 +816,12 @@ and		now		with			tabs
 => <{ 11 self 22 self 33 self } :: 7654> 
 >> call
 => 11 7654 22 7654 33 7654 
+>> clear
+=> 
+>> [ 111 222 333 ] [ "hello" 4321 "world!" false ] make-closure
+=> <{ 111 222 333 } :: [ "hello" 4321 "world!" false ]> 
+>> unmake
+=> [ 111 222 333 ] [ "hello" 4321 "world!" false ] 
 >> clear
 => 
 >> \ bind list in closure, modify list in closure and show that

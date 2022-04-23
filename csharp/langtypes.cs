@@ -30,6 +30,9 @@ public abstract class LangObject {
 	//	- only called on objects where hasLength() == true
 	//	- index and index+nr will be valid indexes
 	public virtual LangObject getSlice(int index, int nr) { return new LangVoid(); }
+
+	// see c++ & DESIGN-NOTES.md
+	public virtual LangObject deepcopy() { return this; } // MOST classes just return self
 }
 
 // void is differentiated from null since null can be a valid language object.
@@ -162,8 +165,10 @@ public class LangLambda : LangObject {
 
 	public List<LangObject> objlist;
 	public override string typename() { return "lambda"; }
-	public override string fmtDisplay() { return "<lambda>"; }
-	public override string fmtStackPrint() { return fmtDisplay(); }
+	public override string fmtDisplay() { return fmtStackPrint(); }
+	public override string fmtStackPrint() {
+		return "<" + LangList.fmtStackPrintObjlist(objlist,"{","}") + ">";
+	}
 }
 
 public class LangList : LangObject {
@@ -201,6 +206,18 @@ public class LangList : LangObject {
 		var list = new LangList();
 		list.objlist = objlist.GetRange(index,nr);
 		return list;
+	}
+
+	public static List<LangObject> deepcopyObjlist(List<LangObject> objlist) {
+		var newlist = new List<LangObject>();
+		foreach(var obj in objlist) {
+			newlist.Add(obj.deepcopy());
+		}
+		return newlist;
+	}
+
+	public override LangObject deepcopy() {
+		return new LangList(deepcopyObjlist(objlist));
 	}
 }
 

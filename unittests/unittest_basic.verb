@@ -353,6 +353,13 @@ clear
 ==
 clear
 
+( list put )
+[ 10 20 30 40 50 ] 
+2 "abc" put
+0 'xyz put
+4 false put
+clear
+
 ( slicing )
 "abcdefghijklmnop" 4 5 slice
 "abcdefghijklmnop" -5 3 slice
@@ -460,6 +467,9 @@ clear
 clear
 [ 11 self 22 self 33 self ] 7654 make-closure
 call
+clear
+[ 111 222 333 ] [ "hello" 4321 "world!" false ] make-closure
+unmake
 clear
 
 \ bind list in closure, modify list in closure and show that

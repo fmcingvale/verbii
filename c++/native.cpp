@@ -228,6 +228,17 @@ static void builtin_slice(Interpreter *intr) {
 	intr->push(obj.opSlice(index, nr));
 }
 
+// ( list i obj -- new-list ; puts obj at list[i] )
+static void builtin_put(Interpreter *intr) {
+	auto obj = intr->pop();
+	int index = popInt(intr, "put expects integer index");
+	auto list = popList(intr, "put expects list");
+	if(index < 0 || index >= (int)list.asList()->size())
+		throw LangError("index out of range in put");
+	list.asList()->at(index) = obj;
+	intr->push(list);
+}
+
 // append modifies original object
 static void builtin_append(Interpreter *intr) {
 	Object add = intr->pop();
@@ -238,7 +249,9 @@ static void builtin_append(Interpreter *intr) {
 
 static void builtin_make_lambda(Interpreter *intr) {
 	Object list = popList(intr, "Bad arg to make-lambda");
-	intr->push(newLambda(list.data.objlist));
+	// must deepcopy list so that external changes to original list cannot
+	// affect lambda (see DESIGN-NOTES.md)
+	intr->push(newLambda(list.deepcopy().data.objlist));
 }
 
 static void builtin_greater(Interpreter *intr) {
@@ -265,6 +278,8 @@ static bool popBool(Interpreter *intr) {
 	return o.asBool();
 }
 
+// 'unmake' works such that an immediate 'make-type' would give the 
+// unmade object back
 static void builtin_unmake(Interpreter *intr) {
 	Object obj = intr->pop();
 	// strings & symbols are unmade into ASCII values
@@ -282,15 +297,15 @@ static void builtin_unmake(Interpreter *intr) {
 		intr->push(newInt((int)(obj.data.objlist->size())));
 	}
 	else if(obj.isLambda()) {
-		// turn lambda back into a list so make-lambda would work.
-		//
-		// would be nice to just change type to TYPE_LIST, but probably best
-		// to create new list to avoid side effects ...
-		Object outlist = newList();
-		for(auto obj : *obj.data.objlist) {
-			outlist.data.objlist->push_back(obj);
-		}
-		intr->push(outlist);
+		// push deepcopy of list so it can't be used to modify the lambda 
+		// -- see DESIGN-NOTES.md
+		intr->push(newList(deepcopy(obj.data.objlist)));
+	}
+	else if(obj.isClosure()) {
+		// break into ( list state ) so make-closure would work
+		// as above, push a deepcopy of list so it can't be used to modify the closure
+		intr->push(newList(deepcopy(obj.asClosureFunc())));
+		intr->push(obj.asClosureState());
 	}
 	else
 		throw LangError("Object cannot be unmade: " + obj.fmtStackPrint());
@@ -340,7 +355,9 @@ static void builtin_cmdline_args(Interpreter *intr) {
 static void builtin_make_closure(Interpreter *intr) {
 	Object state = intr->pop();
 	Object objlist = popList(intr, "make-closure expecting list");
-	intr->push(newClosure(objlist.data.objlist, state));
+	// must deepcopy lists so future changes to original list do not affect
+
+	intr->push(newClosure(objlist.deepcopy().data.objlist, state));
 }
 	
 static void builtin_self_get(Interpreter *intr) {
@@ -386,6 +403,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"string?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isString()));}},
 	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
 	{"lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isLambda()));}},
+	{"closure?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isClosure()));}},
 
 	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
 	{"SP", [](Interpreter *intr){intr->push(newInt(intr->SP));}},
@@ -420,4 +438,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"make-closure", builtin_make_closure},
 	{"self", builtin_self_get},
 	{"self!", builtin_self_set},
+	{"put", builtin_put},
 };

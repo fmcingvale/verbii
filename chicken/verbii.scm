@@ -61,6 +61,14 @@
 	(intr-run intr (intr-lookup-word-or-fail intr "compile-and-load-string"))
 	(set! ALLOW_OVERWRITING_WORDS #f))
 
+; compile & run, with NO exception handling
+(define (compile-and-run intr text allow_overwrite)
+	(compile-and-load intr text allow_overwrite)
+	(intr-run intr (intr-lookup-word-or-fail intr "__main__"))
+	; delete __main__ once run
+	(intr-delete-word intr "__main__")
+	'())
+
 ; load and run precompiled (.b) file
 (define (deserialize-and-run intr filename)
 	(let ((fileIn (open-input-file filename)))
@@ -80,8 +88,8 @@
 			; if file is large, print a message since this will take a bit ...
 			(if (and (> (string-length buf) 1000) verbose)
 				(print "Patching ..."))
-			(compile-and-load intr buf #t) ; allowed to overwrite words
-			(intr-delete-word intr "__main__"))
+			(compile-and-run intr buf #t) ; allow overwriting words
+			)
 		
 		intr))
 		
@@ -97,26 +105,12 @@
 			; re-raise the error to show the full traceback)
 			(else (abort exn)))
 		;(print "Compile ...")
-		(compile-and-load intr text #f)
-		;(print "Run ...")
-		(intr-run intr (intr-lookup-word-or-fail intr "__main__"))
-		; delete __main__ once run
-		(intr-delete-word intr "__main__")
+		(compile-and-run intr text #f)
 		; ran OK if we made it here, return null
 		'()))
 
-; for debugging - does same as safe-compile-and-run but doesn't catch exceptions
-(define (unsafe-compile-and-run intr text)
-	(byte-compile-and-load intr text)
-	(intr-run intr (intr-lookup-word-or-fail intr "__main__"))
-	; delete __main__ once run
-	(intr-delete-word intr "__main__")
-	'())
-
 ; normally this should be set to the safe version, but to get tracebacks on scheme
 ; errors, set it to the unsafe version instead
-(define compile-and-run safe-compile-and-run)
-;(define compile-and-run unsafe-compile-and-run)
 
 (define (repl)
 	(print "Verbii running on Chicken " (chicken-version))
@@ -129,7 +123,7 @@
 						(string=? line ",q"))
 						(if SHOW_RUNTIME_STATS (print-stats intr)))
 					(else
-						(let ((result (compile-and-run intr line)))
+						(let ((result (safe-compile-and-run intr line)))
 							(if (null? result)
 								; no errors, print stack and continue
 								(begin
@@ -145,7 +139,7 @@
 	(let* ((intr (make-loaded-interpreter #f))
 			(text (readfile filename)))
 		;(print "READ FILE: " text)
-		(let ((result (compile-and-run intr text)))
+		(let ((result (safe-compile-and-run intr text)))
 			(if (not (null? result))
 				(print result))
 			(if SHOW_RUNTIME_STATS (print-stats intr)))))
@@ -166,7 +160,7 @@
 					(begin
 			
 						(print ">> " line)
-						(let ((result (compile-and-run intr line)))
+						(let ((result (safe-compile-and-run intr line)))
 							(if (null? result)
 								; no errors, print stack and continue
 								(begin

@@ -57,7 +57,7 @@
 >> : aaa 123 456
 *** Unexpected end of input looking for ';' ***
 >> ( bad comment
-*** Unexpected end of input inside comment ***
+*** Unexpected end of input inside comment:  bad comment ***
 >> ( interpreter errors )
 => 
 >> foobarbadword
@@ -136,3 +136,13 @@
 *** Attempting to reference unbound self ***
 >> [ 1 2 3 self! ] call
 *** Attempting to set unbound self ***
+>> ( bad jumps )
+=> 
+>> : foo1 123 456 + drop >>badlabel 789 10 11 - + ;
+=> 
+>> foo1
+*** No such jump: >>badlabel ***
+>> : foo2 123 456 + drop <<badlabel 98 76 - ;
+=> 
+>> foo2
+*** No such jump: <<badlabel ***

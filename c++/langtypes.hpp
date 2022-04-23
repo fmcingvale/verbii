@@ -112,6 +112,15 @@ class Object {
 	// use unmake when you need the contents in the original type.
 	Object opSlice(int index, int nr);
 
+	// create a deepcopy of object
+	// semantics: modifying a deepcopy of an object cannot change the original object.
+	// implications: lists are the only modifiable object in verbii. therefore they
+	//               are the only object that has to be deepcopied. references to immutable
+	//               objects to not have to be deepcopied
+	//
+	// this is safe to call on ANY object, but any object except a list will just return itself
+	Object deepcopy();
+	
 	// get string representation of object for printing to output
 	// (like would be displayed in normal program output)
 	std::string fmtDisplay() const;
@@ -165,3 +174,6 @@ Object newList(); // always makes empty list
 Object newList(ObjList *); // wraps existing list, does NOT copy
 
 Object newClosure(ObjList *, Object);
+
+// to deepcopy just the ObjList portion of a Object
+ObjList *deepcopy(ObjList *objlist);

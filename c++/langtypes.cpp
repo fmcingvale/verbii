@@ -292,7 +292,7 @@ Object Object::opMul(const Object &other) {
 	else if(isNumber(*this) && isNumber(other)) {
 		return newFloat(castFloat(*this) * castFloat(other));
 	}
-	throw LangError("Bad operands for -: " + this->fmtDisplay() + " & " + other.fmtDisplay());
+	throw LangError("Bad operands for *: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
 Object Object::opDivide(const Object &other) {
@@ -394,8 +394,8 @@ string Object::fmtDisplay() const {
 		}
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		// these two are not meant to be printed, but can be shown in stack
-		case TYPE_LAMBDA: throw LangError("Lambdas are not printable");
-		case TYPE_CLOSURE: throw LangError("Closures are not printable");
+		case TYPE_LAMBDA: return fmtStackPrint();
+		case TYPE_CLOSURE: return fmtStackPrint();
 		case TYPE_STRING: return string(data.str);
 		// symbols should not normally be printed by programs, so they get
 		// a ' to differentiate them from strings
@@ -437,7 +437,8 @@ string Object::fmtStackPrint() const {
 			return string(buf);
 		}
 		case TYPE_BOOL: return data.b ? "<true>" : "<false>";
-		case TYPE_LAMBDA: return "<lambda>";
+		case TYPE_LAMBDA:
+			return "<" + fmtStackPrintObjList(data.objlist, "{", "}") + ">";
 		case TYPE_CLOSURE:
 			return "<" + fmtStackPrintObjList(data.closure->objlist, "{", "}") +
 				" :: " + data.closure->state.fmtStackPrint() + ">";
@@ -447,5 +448,33 @@ string Object::fmtStackPrint() const {
 		case TYPE_SYMBOL: return data.str;
 		case TYPE_LIST: return fmtStackPrintObjList(data.objlist, "[", "]");
 		default: throw LangError("repr not implemented for object type " + to_string(type));
+	}
+}
+
+ObjList *deepcopy(ObjList *objlist) {
+	ObjList *newlist = new ObjList();
+	for(auto obj : *objlist)
+		newlist->push_back(obj.deepcopy());
+
+	return newlist;
+}
+
+Object Object::deepcopy() {
+	switch(type) {
+		case TYPE_NULL:
+		case TYPE_VOID:
+		case TYPE_INT:
+		case TYPE_FLOAT: 
+		case TYPE_BOOL:
+		case TYPE_LAMBDA:
+		case TYPE_CLOSURE:
+		case TYPE_STRING:
+		case TYPE_SYMBOL:
+			return *this;
+
+		case TYPE_LIST:
+			return newList(::deepcopy(data.objlist));
+			
+		default: throw LangError("deepcopy not implemented for object type " + to_string(type));
 	}
 }

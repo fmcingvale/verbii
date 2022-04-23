@@ -25,15 +25,11 @@ never visible from verbii code
 
 * 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count var and 'NAME del so they can be implemented outside of interpreter correctly
 
-* ensure consistent behavior between ports on when lists are copied -- prime example is .dumpword - it should create a copy of the objlist because it is not safe for programs to try and edit words directly -- the compiler is allowed to transform the objlist so cannot assume the source code matches 1:1 with the compiled objlist
-
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
 * add open-input-file, open-output-file, open-string, read-line, read-char, write-string, write-char ... basically I/O with ports concept like scheme
 
 * why does chicken port report more userwords when running same code as other ports?
-
-* accept [ ... ] as literal (unevaluated) list
 
 * think str & repr need to change so that symbols get ' for repr (i.e. 'stack display') and are
   printed without ' for str ('print format'). this matches i.e. scheme when printing symbols
@@ -43,11 +39,21 @@ never visible from verbii code
 	: L3 LP 3 + ref ;
 	: L3! LP 3 + set! ;
 
-* var X should generate:
-	: X addr ref ;
-	: X! addr set! ;
-
-* then 'delvar X' deletes X and X!
-
 * chicken: replace Lang* with * 
 		main interpreter loop -- use while instead having to place recursive calls everywhere
+
+* pick should be 0-based for consistency with other 0-indexed functions
+
+* in native.* the pop* functions should take a 'where' argument like chicken
+
+** A potential reason to keep lambdas ( { ... } ) and lists ...
+	-- when parsing a literal list, it needs to be translated into 
+	 series of pushes + make-list. if the list object is embedded into the 
+	 code stream, this causes subtle (or not) side effects of the list
+	 being able to be modified while the program runs.
+	 : oops
+	 	[ ] 10 append 20 append 30 append  		
+
+* Do more deep list testing with/without deepcopy
+
+* .dumpword needs to be fixed to deepcopy as well

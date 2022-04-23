@@ -197,7 +197,11 @@ public class Interpreter {
 		if(jumpsym.match(">>",2)) {
 			// forward jump, find word (>>NAME -> @NAME)
 			while(true) {
-				var sym = nextObjOrFail("do_jump") as LangSymbol;
+				var obj = nextObj();
+				if(obj is LangVoid)
+					throw new LangError("No such jump: " + jumpsym.value);
+
+				var sym = obj as LangSymbol;
 				//cout << "NEXT-WORD: " << word << endl;
 				if(sym != null && (sym.value.Substring(1) == jumpsym.value.Substring(2))) {
 					//cout << "FOUND" << endl;
@@ -208,7 +212,11 @@ public class Interpreter {
 		else if(jumpsym.match("<<",2)) {
 			// backward jump
 			while(true) {
-				var sym = prevObjOrFail("do_jump") as LangSymbol;
+				var obj = prevObj();
+				if(obj is LangVoid)
+					throw new LangError("No such jump: " + jumpsym.value);
+
+				var sym = obj as LangSymbol;
 				//cout << "PREV-WORD: " << word << endl;
 				if(sym != null && sym.value.Substring(1) == jumpsym.value.Substring(2)) {
 					//cout << "FOUND" << endl;
@@ -326,9 +334,15 @@ public class Interpreter {
 
 			// check for immediates that get pushed
 			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
-					obj is LangList || obj is LangClosure) {
+					obj is LangClosure) {
 				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
 				push(obj);
+				continue;
+			}
+
+			// list literals are deepcopied (see DESIGN-NOTES.md)
+			if(obj is LangList) {
+				push(obj.deepcopy());
 				continue;
 			}
 
