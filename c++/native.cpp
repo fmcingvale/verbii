@@ -374,6 +374,10 @@ static void builtin_self_set(Interpreter *intr) {
 	intr->closure->state = intr->pop();
 }
 
+static void builtin_deepcopy(Interpreter *intr) {
+	intr->push(intr->pop().deepcopy());
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -439,4 +443,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"self", builtin_self_get},
 	{"self!", builtin_self_set},
 	{"put", builtin_put},
+	{"deepcopy", builtin_deepcopy},
 };

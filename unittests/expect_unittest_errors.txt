@@ -34,17 +34,17 @@
 *** Stack underflow ***
 >> ( integer overflows )
 => 
->> 1073741824
+>> 4503599627370496
 *** Integer overflow ***
->> -1073741824
+>> -4503599627370496
 *** Integer overflow ***
->> 1073741823 1 +
+>> 4503599627370495 1 +
 *** Integer overflow ***
->> -1073741823 1 -
+>> -4503599627370495 1 -
 *** Integer overflow ***
->> 583923 1839 *
+>> 59328353 75909737 *
 *** Integer overflow ***
->> 583923 -1839 *
+>> -59328353 75909737 *
 *** Integer overflow ***
 >> ( divide by zero )
 => 

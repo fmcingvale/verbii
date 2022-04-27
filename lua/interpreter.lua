@@ -70,7 +70,7 @@ end
 
 function Interpreter:pushInt(val)
 	-- like push but checks for valid integer range
-	if val > MAX_INT_31 or val < MIN_INT_31 then
+	if val > MAX_VINT or val < MIN_VINT then
 		error(">>>Integer overflow")
 	end
 

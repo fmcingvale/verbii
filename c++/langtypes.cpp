@@ -10,22 +10,26 @@
 using namespace std;
 
 // integers only allowed to use 31 bits, to be portable across host languages
-const int MAX_INT_31 = (1<<30) - 1;
-const int MIN_INT_31 = -MAX_INT_31;
+//const int MAX_INT_31 = (1<<30) - 1;
+//const int MIN_INT_31 = -MAX_INT_31;
+
+// max portable integer width is 53 bits, so 52 usable (1 sign bit)
+const VINT MAX_VINT = (1LL<<52) - 1;
+const VINT MIN_VINT = -MAX_VINT;
 
 Object NULLOBJ; // default constructor creates the null object
 Object VOIDOBJ = newVoid();
 
 // check that int is valid or throw exception
-void checkIntOrFail(int i) {
-	if(i > MAX_INT_31 || i < MIN_INT_31) {
+void checkIntOrFail(VINT i) {
+	if(i > MAX_VINT || i < MIN_VINT) {
 		throw LangError("Integer overflow");
 	}
 }
 
 Object parseInt(const std::string &text) {
 	try {
-		return newInt(stoi(text));
+		return newInt(stoll(text));
 	}
 	catch (const invalid_argument&) {
 		return NULLOBJ;
@@ -41,18 +45,12 @@ Object parseFloat(const std::string &text) {
 	}
 }
 
-Object newInt(int i) {
+Object newInt(VINT i) {
 	checkIntOrFail(i);
 	Object obj;
 	obj.type = TYPE_INT;
 	obj.data.i = i;
 	return obj;
-}
-
-void Object::setInt(int i) { 
-	checkIntOrFail(i);
-	type = TYPE_INT; 
-	data.i = i; 
 }
 
 Object newNull() {
@@ -146,7 +144,6 @@ Object newClosure(ObjList *objlist, Object state) {
 
 ObjList *Object::asClosureFunc() const { return data.closure->objlist; }
 Object Object::asClosureState() const { return data.closure->state; }
-
 
 bool Object::opEqual(const Object &other) {
 	switch(type) {
@@ -317,7 +314,7 @@ Object Object::opLength() {
 	throw LangError("'length' not supported for object: " + fmtStackPrint());
 }
 
-Object Object::opSlice(int index, int nr) {
+Object Object::opSlice(VINT index, VINT nr) {
 	int objsize;
 	switch(type) {
 		case TYPE_STRING:

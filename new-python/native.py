@@ -447,5 +447,6 @@ BUILTINS = {
 	'self': ([], builtin_self_get),
 	'self!': ([], builtin_self_set),
 	'put': ([], builtin_put),
+	'deepcopy': ([object], lambda I,o: I.push(deepcopy(o))),
 }
 

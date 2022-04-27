@@ -8,8 +8,9 @@ from __future__ import annotations
 from errors import LangError
 
 FLOAT_PRECISION = 17
-MAX_INT_31 = (1<<30) - 1
-MIN_INT_31 = -MAX_INT_31
+# max 53 bit integer (52 + 1 sign bit)
+MAX_VINT = (1<<52) - 1
+MIN_VINT = -MAX_VINT
 
 def isNumeric(obj):
 	return type(obj) == int or type(obj) == float

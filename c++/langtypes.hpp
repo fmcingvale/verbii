@@ -41,6 +41,9 @@ typedef std::vector<Object> ObjList;
 // (this is TOTAL digits, not digits after the decimal ... so 'g' format for printf)
 extern int FLOAT_PRECISION;
 
+// verbii's integer type
+typedef int64_t VINT;
+
 class Closure;
 
 // this is intended to be a POD type, so no non-default constructors, destructors, base classes,
@@ -70,7 +73,7 @@ class Object {
 	bool isList() const { return type == TYPE_LIST; }
 			
 	// get value (make sure to check first)
-	unsigned int asInt() const { return data.i; }
+	VINT asInt() const { return data.i; }
 	bool asBool() const { return data.b; }
 	ObjList* asLambda() const { return data.objlist; };
 	double asFloat() const { return data.d; }
@@ -83,9 +86,6 @@ class Object {
 	Object asClosureState() const;
 
 	// no as* function for Void since it is never supposed to be used
-
-	// setters to change value of object, i.e. for reusing object
-	void setInt(int i);
 
 	// '==' builtin (exact match except allows for int==float)
 	bool opEqual(const Object &other);
@@ -110,7 +110,7 @@ class Object {
 	//
 	// NOTE: slice are the same type as the original object -- so a 1-length slice of a list is still a list.
 	// use unmake when you need the contents in the original type.
-	Object opSlice(int index, int nr);
+	Object opSlice(VINT index, VINT nr);
 
 	// create a deepcopy of object
 	// semantics: modifying a deepcopy of an object cannot change the original object.
@@ -131,7 +131,7 @@ class Object {
 	// do NOT read/write directly, always use functions above
 	unsigned char type;
 	union {
-		int i; // ints and lamda (index into LAMBDAS)
+		VINT i; // ints
 		bool b;
 		ObjList *objlist; // for lambdas & lists
 		double d;
@@ -158,7 +158,7 @@ Object parseFloat(const std::string &);
 
 Object newNull();
 Object newVoid();
-Object newInt(int i);
+Object newInt(VINT i);
 Object newBool(bool b);
 Object newLambda(ObjList *objlist);
 Object newFloat(double d);

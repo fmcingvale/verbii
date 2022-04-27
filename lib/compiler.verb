@@ -49,7 +49,7 @@ var READER_POS 1
 		null
 	;
 
-: reader-next ( -- word ; get next word from reader stream, or null on eof )
+: reader-next ( -- symbol ; get next word from reader stream, or null on eof )
 	"" ( word )
 	@skipws ( skip leading whitespace )
 		reader-peek-char

@@ -554,4 +554,5 @@ BUILTINS = {
 	["self"] = { {}, builtin_self_get},
 	["self!"] = { {}, builtin_self_set},
 	["put"] = { {}, builtin_put},
+	["deepcopy"] = { {"any"}, function(intr,obj) intr:push(deepcopy(obj)) end},
 }

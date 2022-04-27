@@ -1,5 +1,5 @@
 from __future__ import annotations
-from langtypes import LangLambda, LangString, fmtStackPrint, MAX_INT_31, MIN_INT_31, \
+from langtypes import LangLambda, LangString, fmtStackPrint, MAX_VINT, MIN_VINT, \
 			LangClosure
 """
 	Interpreter - runs code deserialized from bytecode.
@@ -102,7 +102,7 @@ class Interpreter(object):
 
 	def pushInt(self, a):
 		"like push but checks for valid integer range"
-		if a > MAX_INT_31 or a < MIN_INT_31:
+		if a > MAX_VINT or a < MIN_VINT:
 			raise LangError("Integer overflow")
 
 		self.push(a)

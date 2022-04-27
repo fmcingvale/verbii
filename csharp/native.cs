@@ -12,7 +12,7 @@ class Builtins {
 	public static LangList NATIVE_CMDLINE_ARGS = new LangList();
 	public static bool ALLOW_OVERWRITING_WORDS = false;
 
-	public static int popInt(Interpreter intr, string where) {
+	public static long popInt(Interpreter intr, string where) {
 		var obj = intr.pop();
 		var i = obj as LangInt;
 		if(i == null) {
@@ -168,10 +168,10 @@ class Builtins {
 		if(b == 0) {
 			throw new LangError("Divide by zero");
 		}
-		int quot = (int)Math.Floor(((double)(Math.Abs(a))) / ((double)(Math.Abs(b))));
+		long quot = (int)Math.Floor(((double)(Math.Abs(a))) / ((double)(Math.Abs(b))));
 
 		bool samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
-		int mod;
+		long mod;
 		if(samesign) {
 			mod = a - quot*b;
 		}
@@ -185,7 +185,7 @@ class Builtins {
 	}
 
 	public static void printchar(Interpreter intr) {
-		int c = popInt(intr,"printchar");
+		long c = popInt(intr,"printchar");
 		char ch = (char)c;
 		Console.Write(ch);
 		if(c == 10 || c == 13) {
@@ -196,11 +196,12 @@ class Builtins {
 	// set stack pointer from addr on stack
 	// (SP values must be integers)
 	public static void setsp(Interpreter intr) {
-		int addr = popInt(intr,"SP!");
+		long addr = popInt(intr,"SP!");
 		if(addr < intr.SP_MIN || addr > intr.SP_EMPTY) {
 			throw new LangError("Bad address in SP!: " + addr.ToString());
 		}
-		intr.SP = addr;
+		// since the above test passed, I know this conversion is ok
+		intr.SP = (int)addr;
 		// stats
 		intr.min_run_SP = Math.Min(intr.min_run_SP,intr.SP);
 	}
@@ -208,11 +209,12 @@ class Builtins {
 	// set locals pointer from addr on stack
 	// (LP values must be integers)
 	public static void setlp(Interpreter intr) {
-		int addr = popInt(intr,"LP!");
+		long addr = popInt(intr,"LP!");
 		if(addr < intr.LP_MIN || addr > intr.LP_EMPTY) {
 			throw new LangError("Bad address in LP!: " + addr.ToString());
 		}
-		intr.LP = addr;
+		// since the above test passed, I know this conversion is ok
+		intr.LP = (int)addr;
 		// stats
 		intr.min_run_LP = Math.Min(intr.min_run_LP,intr.LP);
 	}
@@ -247,7 +249,8 @@ class Builtins {
 			if(addr_i.value < 0 || addr_i.value >= intr.OBJMEM.Count) {
 				throw new LangError("Bad address in set!: " + addr_i.value.ToString());
 			}
-			intr.OBJMEM[addr_i.value] = obj;
+			// i know this cast is safe due to test above
+			intr.OBJMEM[(int)addr_i.value] = obj;
 		}
 		else {
 			throw new LangError("NOT IMPLEMENTED IN set!");
@@ -264,7 +267,8 @@ class Builtins {
 			if(addr_i.value < 0 || addr_i.value >= intr.OBJMEM.Count) {
 				throw new LangError("Bad address in ref: " + addr_i.value.ToString());
 			}
-			intr.push(intr.OBJMEM[addr_i.value]);
+			// (int) is safe due to above check
+			intr.push(intr.OBJMEM[(int)addr_i.value]);
 		}
 		else {
 			throw new LangError("NOT IMPLEMENTED IN ref");
@@ -290,9 +294,9 @@ class Builtins {
 	}
 
 	public static void make_list(Interpreter intr) {
-		int nr = popInt(intr,"make-list");
+		long nr = popInt(intr,"make-list");
 		var list = new LangList();
-		for(int i=0; i<nr; ++i) {
+		for(long i=0; i<nr; ++i) {
 			list.objlist.Insert(0, intr.pop());
 		}
 		intr.push(list);
@@ -362,8 +366,8 @@ class Builtins {
 	}
 	
 	public static void slice(Interpreter intr) {
-		int nr = popInt(intr,"slice");
-		int index = popInt(intr,"slice");
+		long nr = popInt(intr,"slice");
+		long index = popInt(intr,"slice");
 		var obj = intr.pop();
 		if(!obj.hasLength()) {
 			throw new LangError("Object does not support slicing: " + obj.fmtStackPrint());
@@ -386,7 +390,8 @@ class Builtins {
 		if((index+nr) > objsize) { // past end of object, truncate
 			nr = objsize - index;
 		}
-		intr.push(obj.getSlice(index,nr));
+		// object sizes are limited to 32-bits
+		intr.push(obj.getSlice((int)index,(int)nr));
 	}
 		
 	public static void unmake(Interpreter intr) {
@@ -419,16 +424,16 @@ class Builtins {
 	}
 
 	public static void make_string(Interpreter intr) {
-		int nr = popInt(intr,"make-string");
+		long nr = popInt(intr,"make-string");
 		string s = "";
-		for(int i=0; i<nr; ++i) {
+		for(long i=0; i<nr; ++i) {
 			s = (char)(popInt(intr,"make-string")) + s;
 		}
 		intr.push(new LangString(s));
 	}
 
 	public static void make_symbol(Interpreter intr) {
-		int nr = popInt(intr,"make-symbol");
+		long nr = popInt(intr,"make-symbol");
 		string s = "";
 		for(int i=0; i<nr; ++i) {
 			s = (char)(popInt(intr,"make-symbol")) + s;
@@ -501,7 +506,8 @@ class Builtins {
 		var list = popList(intr,"put");
 		if(index < 0 || index >= list!.objlist.Count)
 			throw new LangError("Index out of bounds in put");
-		list.objlist[index] = obj;
+		// note list sizes are limited to 32-bits
+		list.objlist[(int)index] = obj;
 		intr.push(list);
 	}
 	
@@ -511,7 +517,7 @@ class Builtins {
 		{"-", subtract},
 		{"*", multiply},
 		{"/", divide},
-		{"f.setprec", intr => LangFloat.FLOAT_PRECISION = popInt(intr,"f.setprec")},
+		{"f.setprec", intr => LangFloat.FLOAT_PRECISION = (int)popInt(intr,"f.setprec")},
 		{"/mod", int_divmod},
 		{"==", equal},
 		{">", greater},
@@ -545,7 +551,7 @@ class Builtins {
 		{"length", length},
 		{"make-word", make_word},
 		{"append", append},
-		{"parse-int", intr => intr.push(new LangInt(int.Parse(popStringOrSymbol(intr,"parse-int"))))},
+		{"parse-int", intr => intr.push(new LangInt(long.Parse(popStringOrSymbol(intr,"parse-int"))))},
 		{"parse-float", intr => intr.push(new LangFloat(double.Parse(popStringOrSymbol(intr,"parse-float"))))},
 		{"make-lambda", make_lambda},
 		{"make-symbol", make_symbol},
@@ -557,5 +563,6 @@ class Builtins {
 		{"self", self_get},
 		{"self!", self_set},
 		{"put", self_put},
+		{"deepcopy", intr => intr.push(intr.pop().deepcopy())},
 	};
 }

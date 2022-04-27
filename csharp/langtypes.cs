@@ -54,18 +54,18 @@ public class LangNull : LangObject {
 }
 
 public class LangInt : LangObject {
-	// integers only allowed to use 31 bits, to be portable across host languages
-	const int MAX_INT_31 = (1<<30) - 1;
-	const int MIN_INT_31 = -MAX_INT_31;
+	// integers only allowed to use 53 bits (52+sign), to be portable across host languages
+	const long MAX_VINT = (((long)1)<<52) - 1;
+	const long MIN_VINT = -MAX_VINT;
 
-	public LangInt(int i) {
-		if(i > MAX_INT_31 || i < MIN_INT_31) {
+	public LangInt(long i) {
+		if(i > MAX_VINT || i < MIN_VINT) {
 			throw new LangError("Integer overflow");
 		}
 		value = i;
 	}
 
-	public int value;
+	public long value;
 
 	public override string typename() { return "int"; }
 	public override string fmtDisplay() { return value.ToString(); }
@@ -121,6 +121,7 @@ public class LangString : LangObject {
 	public override string fmtStackPrint() { return "\"" + value + "\""; }
 
 	public override bool hasLength() { return true; }
+	// NOTE: string size limited to 32-bits
 	public override int getLength() { return value.Length; }
 	public override LangObject getSlice(int index, int nr) { return new LangString(value.Substring(index, nr)); }
 

@@ -145,7 +145,7 @@
 	(min-run-SP-set! intr (min (intr-SP intr) (min-run-SP intr))))
 	
 (define (push-int intr i)
-	(if (or (> i MAX_INT_31) (< i MIN_INT_31))
+	(if (or (> i MAX_VINT) (< i MIN_VINT))
 		(lang-error 'push-int "Integer overflow")
 		(push intr i)))
 

@@ -42,8 +42,8 @@ end
 -- lua doesn't differentiate between int and float, so need a class ...
 Float = {}
 FLOAT_PRECISION = 17
-MAX_INT_31 = (1<<30) - 1
-MIN_INT_31 = -MAX_INT_31
+MAX_VINT = (1<<52) - 1
+MIN_VINT = -MAX_VINT
 
 function isInt(obj)
 	return type(obj) == "number"

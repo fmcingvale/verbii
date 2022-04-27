@@ -19,6 +19,9 @@ public class Interpreter {
 	// definition of following are similar to C++ version, so see comments there for more detail.
 	// as in C++ version, everything is public here so builtins can change anything.
 
+	// NOTE: Many places assume that these are integers (32-bit) so don't change these to long
+	// without searching for (int) casts to change as well.
+
 	public const int STACK_SIZE = (1<<10);
 	public const int LOCALS_SIZE = (1<<10);
 	public const int HEAP_STARTSIZE = (1<<16);
@@ -404,7 +407,8 @@ public class Interpreter {
 						throw new LangError("Trying to redefine name: " + name.value);
 					}
 					// make new word that returns address
-					int addr = heapAllocate((count as LangInt)!.value);
+					// (note addresses are limited to 32-bits)
+					int addr = heapAllocate((int)((count as LangInt)!.value));
 					var newlist = new List<LangObject>();
 					newlist.Add(new LangInt(addr));
 					WORDS[name.value] = newlist;
