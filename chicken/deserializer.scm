@@ -52,11 +52,11 @@
 				(case (string-ref line 0)
 					((#\i) (string->number (string-drop line 2)))
 					((#\f) (make-lang-float (string->number (string-drop line 2))))
-					((#\n) (make-LangNull))
+					((#\n) (make-Null))
 					((#\s) 
 						(if (>= (string-length line) 2) ; watch for empty string
-							(make-LangString (replace-escapes (string-drop line 2)))
-							(make-LangString "")))
+							(make-String (replace-escapes (string-drop line 2)))
+							(make-String "")))
 					((#\y) (string-drop line 2)) ; verbii symbols are scheme strings
 					((#\b)
 						(if (string=? (string-drop line 2) "true")
@@ -67,28 +67,28 @@
 								(read-list (- nr 1) (append lst (list (deserialize-stream intr fileIn))))
 								(begin
 									; other ports don't do this (yet?!) -- remove VOIDs from list
-									(set! lst (filter (lambda (obj) (not (LangVoid? obj))) lst))
-									(list->LangList lst)))))
+									(set! lst (filter (lambda (obj) (not (Void? obj))) lst))
+									(list->List lst)))))
 					((#\F) ; lambda - read list
 						(let ((llist (deserialize-stream intr fileIn)))
-							(if (LangList? llist)
-								(make-LangLambda llist)
+							(if (List? llist)
+								(make-Lambda llist)
 								(lang-error 'deserializer-list 
 									"Expecting list after 'F' but got: " llist))))
 					((#\W) ; W name followed by list
 						(let ((name (string-drop line 2))
 								(llist (deserialize-stream intr fileIn)))
-							(if (LangList? llist)
+							(if (List? llist)
 								(begin
 									;(print "DESERIALIZED WORD: " llist)
 									(intr-define-word intr name llist #f)
-									(make-LangVoid))
+									(make-Void))
 								(lang-error 'deserializer-word 
 									"Expecting list after 'W' but got: " llist))))
 					(else
 						(print "Unknown char: " (string-ref line 0))))
 			)
-			(make-LangVoid) ; eof
+			(make-Void) ; eof
 		)
 	)
 )

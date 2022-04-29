@@ -41,7 +41,7 @@
 	(let loop ((nr N) (lst '()))
 		(if (> nr 0)
 			(loop (- nr 1) (cons (pop intr) lst))
-			(push intr (list->LangList lst)))))
+			(push intr (list->List lst)))))
 
 ; ( obj addr -- store obj @ addr)
 (define (builtin-set intr obj addr)
@@ -68,37 +68,37 @@
 
 (define (test-equal-lists A B)
 	(let loop ((i 0))
-		(if (>= i (dynvector-length (LangList-objlist A)))
+		(if (>= i (dynvector-length (List-objlist A)))
 			#t
-			(if (not (test-equal (dynvector-ref (LangList-objlist A) i)
-								(dynvector-ref (LangList-objlist B) i)))
+			(if (not (test-equal (dynvector-ref (List-objlist A) i)
+								(dynvector-ref (List-objlist B) i)))
 				#f 
 				(loop (+ i 1))))))
 
 (define (test-equal A B)
 	(cond
-		((LangNull? A) (LangNull? B))
+		((Null? A) (Null? B))
 		((integer? A)
 			(cond
 				((integer? B) (= A B))
-				((LangFloat? B) (= A (value B)))
+				((Float? B) (= A (value B)))
 				(else #f)))
-		((LangFloat? A)
+		((Float? A)
 			(cond
 				((integer? B) (= (value A) B))
-				((LangFloat? B) (= (value A) (value B)))
+				((Float? B) (= (value A) (value B)))
 				(else #f)))
-		((LangString? A)
-			(and (LangString? B) (string=? (value A) (value B))))
+		((String? A)
+			(and (String? B) (string=? (value A) (value B))))
 		((string? A)
 			(and (string? B) (string=? A B)))
 		((boolean? A)
 			(and (boolean? B) (eq? A B)))
-		((LangLambda? A) #f) ; lambdas never equal to anything else even themselves
-		((LangList? A)
+		((Lambda? A) #f) ; lambdas never equal to anything else even themselves
+		((List? A)
 			(cond
-				((not (LangList? B)) #f)
-				((not (= (dynvector-length (LangList-objlist A)) (dynvector-length (LangList-objlist B)))) #f)
+				((not (List? B)) #f)
+				((not (= (dynvector-length (List-objlist A)) (dynvector-length (List-objlist B)))) #f)
 				(else (test-equal-lists A B))))
 
 		(else (lang-error '== "Don't know how to compare " A " and " B))))
@@ -110,8 +110,8 @@
 	; unlike above, both A and B have to be same (or comparable) types
 	(cond
 		((and (is-numeric? A) (is-numeric? B)) (push intr (> (value A) (value B))))
-		((and (LangString? A) (LangString? B)) (push intr (string> (value A) (value B))))
-		((and (LangSymbol? A) (LangSymbol? B)) (push intr (string> A B)))
+		((and (String? A) (String? B)) (push intr (string> (value A) (value B))))
+		((and (Symbol? A) (Symbol? B)) (push intr (string> A B)))
 		(else (lang-error '> "Don't know how to compare " A " and " B))))
 
 (define (builtin-add intr A B)
@@ -119,25 +119,25 @@
 		((integer? A)
 			(cond
 				((integer? B) (push-int intr (+ A B)))
-				((LangFloat? B) (push intr (make-lang-float (+ A (value B)))))
+				((Float? B) (push intr (make-lang-float (+ A (value B)))))
 				(else (lang-error '+ "Don't know how to add " A " and " B))))
-		((LangFloat? A)
+		((Float? A)
 			(cond
 				((integer? B) (push intr (make-lang-float (+ (value A) B))))
-				((LangFloat? B) (push intr (make-lang-float (+ (value A) (value B)))))
+				((Float? B) (push intr (make-lang-float (+ (value A) (value B)))))
 				(else (lang-error '+ "Don't know how to add " A " and " B))))
-		((LangString? A)
-			(if (LangString? B)
-				(push intr (make-LangString (string-append (value A) (value B))))
+		((String? A)
+			(if (String? B)
+				(push intr (make-String (string-append (value A) (value B))))
 				(lang-error '+ "Don't know how to add " A " and " B)))
 		((string? A)
 			(if (string? B)
 				(push intr (string-append A B))
 				(lang-error '+ "Don't know how to add " A " and " B)))
-		((LangList? A)
-			(if (LangList? B)
-				(push intr (make-LangList 
-					(list->dynvector (append (dynvector->list (LangList-objlist A)) (dynvector->list (LangList-objlist B))))))
+		((List? A)
+			(if (List? B)
+				(push intr (make-List 
+					(list->dynvector (append (dynvector->list (List-objlist A)) (dynvector->list (List-objlist B))))))
 				(lang-error '+ "Don't know how to add " A " and " B)))
 		(else (lang-error '+ "Don't know how to add " A " and " B))))
 
@@ -147,12 +147,12 @@
 		((integer? A)
 			(cond
 				((integer? B) (push-int intr (- A B)))
-				((LangFloat? B) (push intr (make-lang-float (- A (value B)))))
+				((Float? B) (push intr (make-lang-float (- A (value B)))))
 				(else (lang-error '- "Don't know how to subtract " A " and " B))))
-		((LangFloat? A)
+		((Float? A)
 			(cond
 				((integer? B) (push intr (make-lang-float (- (value A) B))))
-				((LangFloat? B) (push intr (make-lang-float (- (value A) (value B)))))
+				((Float? B) (push intr (make-lang-float (- (value A) (value B)))))
 				(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		(else (lang-error '- "Don't know how to subtract " A " and " B))))
 		
@@ -162,12 +162,12 @@
 		((integer? A)
 			(cond
 				((integer? B) (push-int intr (* A B)))
-				((LangFloat? B) (push intr (make-lang-float (* A (value B)))))
+				((Float? B) (push intr (make-lang-float (* A (value B)))))
 				(else (lang-error '* "Don't know how to multiply " A " and " B))))
-		((LangFloat? A)
+		((Float? A)
 			(cond
 				((integer? B) (push intr (make-lang-float (* (value A) B))))
-				((LangFloat? B) (push intr (make-lang-float (* (value A) (value B)))))
+				((Float? B) (push intr (make-lang-float (* (value A) (value B)))))
 				(else (lang-error '* "Don't know how to multiply " A " and " B))))
 		(else (lang-error '* "Don't know how to multiply " A " and " B))))
 		
@@ -196,7 +196,7 @@
 		(push-int intr quot)))
 
 (define (is-sequence? obj)
-	(or (LangString? obj) (LangSymbol? obj) (LangList? obj)))
+	(or (String? obj) (Symbol? obj) (List? obj)))
 
 (define (builtin-length intr obj)
 	(if (is-sequence? obj)
@@ -213,9 +213,9 @@
 		(if (< index 0) (set! index (+ objsize index))) ; count from end
 		(if (or (< index 0) (>= index objsize)) ; out of bounds - return empty object
 			(cond
-				((LangString? obj) (push intr (make-LangString "")))
-				((LangSymbol? obj) (push intr "")) ; another reason not to use builtin symbols!
-				((LangList? obj) (push intr (new-lang-list))))
+				((String? obj) (push intr (make-String "")))
+				((Symbol? obj) (push intr "")) ; another reason not to use builtin symbols!
+				((List? obj) (push intr (new-lang-list))))
 			; else, i can make a valid slice - adjust nr as needed
 			(begin
 				; nr < 0 means "copy all, starting at index"
@@ -224,28 +224,28 @@
 				(if (> (+ index nr) objsize) (set! nr (- objsize index)))
 				; make slice
 				(cond
-					((LangString? obj) 
-						(push intr (make-LangString (string-copy (value obj) index (+ index nr)))))
-					((LangSymbol? obj)
+					((String? obj) 
+						(push intr (make-String (string-copy (value obj) index (+ index nr)))))
+					((Symbol? obj)
 						(push intr (string-copy obj index (+ index nr))))
-					((LangList? obj)
+					((List? obj)
 						(let ((newlist (new-lang-list)))
 							(let loop ((i index) (n nr))
 								(if (> n 0)
 									(begin
-										(llist-push-back newlist (dynvector-ref (LangList-objlist obj) i))
+										(llist-push-back newlist (dynvector-ref (List-objlist obj) i))
 										(loop (+ i 1) (- n 1)))))
 							(push intr newlist))))))))
 
 (define (builtin-unmake intr obj)
 	(cond
-		((or (LangString? obj) (LangSymbol? obj))
+		((or (String? obj) (Symbol? obj))
 			(string-for-each (lambda (c) (push-int intr (char->integer c))) (value obj))
 			(push-int intr (len obj)))
-		((LangList? obj)
-			(dynvector-for-each (lambda (i o) (push intr o)) (LangList-objlist obj))
+		((List? obj)
+			(dynvector-for-each (lambda (i o) (push intr o)) (List-objlist obj))
 			(push-int intr (len obj)))
-		((LangLambda? obj)
+		((Lambda? obj)
 			; like other ports, push a deepcopy of objlist
 			(push intr (deepcopy (lambda-llist obj))))
 		; same with closures
@@ -263,14 +263,14 @@
 
 (define (builtin-make-string intr NR)
 	; pop list of integers into lst and make string
-	(push intr (make-LangString (apply string (map integer->char (pop-nr-objs intr NR))))))
+	(push intr (make-String (apply string (map integer->char (pop-nr-objs intr NR))))))
 
 (define (builtin-make-symbol intr NR)
 	; pop list of integers into lst and make symbol
 	(push intr (apply string (map integer->char (pop-nr-objs intr NR)))))
 
 (define (builtin-make-word intr name)
-	(let ((llist (popTypeOrFail intr LangList? "symbol" "make-word")))
+	(let ((llist (popTypeOrFail intr List? "symbol" "make-word")))
 		(intr-define-word intr name llist ALLOW_OVERWRITING_WORDS)))
 		
 (define (builtin-append intr llist obj)
@@ -278,7 +278,7 @@
 	(llist-push-back llist obj)
 	(push intr llist))
 
-(define (LangString-or-Symbol? o) (or (LangString? o) (LangSymbol? o)))
+(define (String-or-Symbol? o) (or (String? o) (Symbol? o)))
 
 (define (builtin-dumpword intr name)
 	(if (not (intr-has-word intr name))
@@ -287,7 +287,7 @@
 	(let ((newlist (new-lang-list)))
 		(dynvector-for-each 
 			(lambda (i o) (llist-push-back newlist o)) 
-				(LangList-objlist (intr-lookup-word intr name)))
+				(List-objlist (intr-lookup-word intr name)))
 		(push intr newlist)))
 
 (import (chicken file posix))
@@ -295,7 +295,7 @@
 (define (builtin-read-file intr filename)
 	(let* ((fileIn (file-open filename open/rdonly))
 			(text (car (file-read fileIn (file-size fileIn)))))
-		(push intr (make-LangString text))))
+		(push intr (make-String text))))
 
 (define (builtin-self-get intr)
 	(if (null? (intr-closure intr))
@@ -311,7 +311,7 @@
 	(if (or (< index 0) (>= index (len alist)))
 		(lang-error 'put "Index out of range in put")
 		(begin
-			(dynvector-set! (LangList-objlist alist) index obj)
+			(dynvector-set! (List-objlist alist) index obj)
 			(push intr alist))))
 
 ; TODO -- some of the above can be lambdas here instead
@@ -319,15 +319,15 @@
 	(list
 		; each as: <function-name> <arg-list-typestr> <function>
 		(list "int?" 	(list '*) (lambda (intr obj) (push intr (integer? obj))))
-		(list "float?" 	(list '*)  (lambda (intr obj) (push intr (LangFloat? obj))))
-		(list "null?" 	(list '*)  (lambda (intr obj) (push intr (LangNull? obj))))
+		(list "float?" 	(list '*)  (lambda (intr obj) (push intr (Float? obj))))
+		(list "null?" 	(list '*)  (lambda (intr obj) (push intr (Null? obj))))
 		(list "bool?" 	(list '*)  (lambda (intr obj) (push intr (boolean? obj))))
-		(list "list?" 	(list '*)  (lambda (intr obj) (push intr (LangList? obj))))
-		(list "string?" (list '*)  (lambda (intr obj) (push intr (LangString? obj))))
+		(list "list?" 	(list '*)  (lambda (intr obj) (push intr (List? obj))))
+		(list "string?" (list '*)  (lambda (intr obj) (push intr (String? obj))))
 		(list "symbol?" (list '*)  (lambda (intr obj) (push intr (string? obj))))
-		(list "lambda?" (list '*)  (lambda (intr obj) (push intr (LangLambda? obj))))
+		(list "lambda?" (list '*)  (lambda (intr obj) (push intr (Lambda? obj))))
 		(list "closure?" (list '*)  (lambda (intr obj) (push intr (Closure? obj))))
-		(list "null" 	'() (lambda (intr) (push intr (make-LangNull))))
+		(list "null" 	'() (lambda (intr) (push intr (make-Null))))
 		(list "make-list" (list 'i) builtin-make-list)
 		(list "set!" 	(reverse (list '* 'i)) builtin-set)
 		(list "SP" 		'() (lambda (intr) (push-int intr (intr-SP intr))))
@@ -356,16 +356,16 @@
 		(list "append"	 	(reverse (list 'L '*)) builtin-append)
 		(list "parse-int"	'() (lambda (intr) 
 			(push-int intr (string->number (value 
-				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-int"))))))
+				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-int"))))))
 		(list "parse-float" '() (lambda (intr) 
 			(push intr (make-lang-float (string->number (value 
-				(popTypeOrFail intr LangString-or-Symbol? "string|symbol" "parse-float")))))))
-		(list "str" 		(list '*)  (lambda (intr obj) (push intr (make-LangString (fmtDisplay obj)))))
-		(list "repr" 		(list '*)  (lambda (intr obj) (push intr (make-LangString (fmtStackPrint obj)))))
+				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-float")))))))
+		(list "str" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtDisplay obj)))))
+		(list "repr" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtStackPrint obj)))))
 		(list "puts" 		(list 's) (lambda (intr obj) (display (value obj))))
 		(list ".c" 			(list 'i) (lambda (intr obj) (display (integer->char obj))))
 		; must deepcopy list - see DESIGN-NOTES.md
-		(list "make-lambda" (list 'L) (lambda (intr llist) (push intr (make-LangLambda (deepcopy llist)))))
+		(list "make-lambda" (list 'L) (lambda (intr llist) (push intr (make-Lambda (deepcopy llist)))))
 		(list "make-symbol" (list 'i) builtin-make-symbol)
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))

@@ -7,14 +7,14 @@
 ;;;
 ;;;	verbii		Lua
 ;;;	------		---
-;;;	null		LangNull (class) ** maybe change this to '() ?? **
-;;; void		LangVoid (class)
+;;;	null		Null (class) ** maybe change this to '() ?? **
+;;; void		Void (class)
 ;;;	int			integer
-;;;	float		LangFloat (class)
+;;;	float		Float (class)
 ;;;	boolean		boolean
 ;;;	symbol		string	** like Python & Lua ports, also see below **
-;;;	string		LangString (class)
-;;;	lambda		LangLambda
+;;;	string		String (class)
+;;;	lambda		Lambda
 ;;;==================================================================================
 
 ;; optimization settings (these are supposed to be global but not sure how they are
@@ -51,7 +51,7 @@
 		(string-append "[" (symbol->string wheresym) "] " 
 			(string-join (map fmtDisplay args) " ")) 'lang-error) 'lang-error))))
 
-; like the Python port, plain strings are used as symbols, and LangString is used
+; like the Python port, plain strings are used as symbols, and String is used
 ; for strings. i think this will be better to avoid at least two corner cases: (1) symbols
 ; starting with ' are treated specially by scheme and (2) i'm not sure it is possible to
 ; create empty symbols in scheme, which are needed in places. i also don't see a fast
@@ -61,21 +61,21 @@
 ;(define-method (len (str <string>)) (string-length str))
 ;(define-method (get (str <string>) index) (string-ref str index))
 ;(define-method (value (str <string>)) str)
-(define LangSymbol? string?)
+(define Symbol? string?)
 
 ; need a null type that is distinct from '() so that '() can be the empty list
-; ---- ugh ... that's obsolete since I have LangList, but I still prefer LangNull to '()
+; ---- ugh ... that's obsolete since I have List, but I still prefer Null to '()
 
-(define-record LangNull)
-;(define-class LangNull ())
+(define-record Null)
+;(define-class Null ())
 	
-;	(define (LangNull? obj) (subclass? (class-of obj) LangNull))
+;	(define (Null? obj) (subclass? (class-of obj) Null))
 
 ; and a void type distinct from null & '()
-;(define-class LangVoid ())
+;(define-class Void ())
 	
-	;(define (LangVoid? obj) (subclass? (class-of obj) LangVoid))
-(define-record LangVoid)
+	;(define (Void? obj) (subclass? (class-of obj) Void))
+(define-record Void)
 
 ; (define-method (value (i <integer>)) i)
 
@@ -85,24 +85,24 @@
 
 ; in scheme a number like 123.0 tests true as an integer; in verbii it is a float, so cannot
 ; use scheme floats directly (at least I haven't figured out a way)
-(define-record LangFloat value)
-;(define-class LangFloat ()
+(define-record Float value)
+;(define-class Float ()
 ;	((value accessor: value initform: 0)))
 	
-	;(define (LangFloat? obj) (subclass? (class-of obj) LangFloat))
+	;(define (Float? obj) (subclass? (class-of obj) Float))
 
-; NOTE - use this factory function to make LangFloats instead of calling 'make' directly
+; NOTE - use this factory function to make Floats instead of calling 'make' directly
 (define (make-lang-float value) 
 	; ensure i really have a float value
-	;(make LangFloat 'value (exact->inexact value)))
-	(make-LangFloat (exact->inexact value)))
+	;(make Float 'value (exact->inexact value)))
+	(make-Float (exact->inexact value)))
 
 ; for code that doesn't care if its int or float and will just use (value obj)
-(define (is-numeric? obj) (or (integer? obj) (LangFloat? obj)))
+(define (is-numeric? obj) (or (integer? obj) (Float? obj)))
 (define (as-numeric obj)
 	(cond
 		((integer? obj) obj)
-		((LangFloat? obj) (LangFloat-value obj))
+		((Float? obj) (Float-value obj))
 		; can't use lang-error here, but this is an internal error anyways
 		(else
 			(error "FATAL ERROR: Not a numeric value in as-numeric")
@@ -116,72 +116,72 @@
 	(cond
 		((integer? obj) obj)
 		((string? obj) obj)
-		((LangFloat? obj) (LangFloat-value obj))
-		((LangString? obj) (LangString-value obj))))
+		((Float? obj) (Float-value obj))
+		((String? obj) (String-value obj))))
 
-; holds a LangList as llist
-(define-record LangLambda llist)
-(define (lambda-llist obj) (LangLambda-llist obj))
+; holds a List as llist
+(define-record Lambda llist)
+(define (lambda-llist obj) (Lambda-llist obj))
 
-; holds a LangList and an arbitrary object
+; holds a List and an arbitrary object
 (define-record Closure llist state)
 
-;(define-class LangLambda ()
-;	((llist accessor: llist initform: (make LangList))))
+;(define-class Lambda ()
+;	((llist accessor: llist initform: (make List))))
 
-;	(define (LangLambda? obj) (subclass? (class-of obj) LangLambda))
+;	(define (Lambda? obj) (subclass? (class-of obj) Lambda))
 
 ; verbii string type
-(define-record LangString value)
-;(define-class LangString ()
+(define-record String value)
+;(define-class String ()
 ;	((value initform: "" accessor: value)))
 
-;	(define (LangString? obj) (subclass? (class-of obj) LangString))
+;	(define (String? obj) (subclass? (class-of obj) String))
 
 	; get i'th char
-	;(define-method (get (str LangString) index) 
+	;(define-method (get (str String) index) 
 	;	(string-ref (value str) index)) 
 	; sequences get 'len'
-	;(define-method (len (str LangString)) 
+	;(define-method (len (str String)) 
 	;	(string-length (value str)))
 
 ; verbii lists are really arrays, so use a vector
-(define-record LangList objlist)
+(define-record List objlist)
 
-(define (new-lang-list) (make-LangList (make-dynvector 0 0)))
+(define (new-lang-list) (make-List (make-dynvector 0 0)))
 
-;(define-class LangList () (
+;(define-class List () (
 ;		(objlist accessor: objlist initform: (make-dynvector 0 0)) ))
 
 ; get i'th object
 (define (llist-get llist index)
-	(if (or (< index 0) (>= index (dynvector-length (LangList-objlist llist))))
-		(langtype-error 'LangList-get "Out of bounds in LangList")
-		(dynvector-ref (LangList-objlist llist) index)))
+	(if (or (< index 0) (>= index (dynvector-length (List-objlist llist))))
+		(langtype-error 'List-get "Out of bounds in List")
+		(dynvector-ref (List-objlist llist) index)))
 
 ; append an object
 (define (llist-push-back llist obj)
-	(dynvector-set! (LangList-objlist llist) (dynvector-length (LangList-objlist llist)) obj))
+	(dynvector-set! (List-objlist llist) (dynvector-length (List-objlist llist)) obj))
 
 	; sequences get len
-	;(define-method (len (llist LangList))
+	;(define-method (len (llist List))
 	;	(dynvector-length (objlist llist)))
 
-	;(define (LangList? obj) (subclass? (class-of obj) LangList))
+	;(define (List? obj) (subclass? (class-of obj) List))
 
-	(define (list->LangList lst) 
+	(define (list->List lst) 
 		;(print "LANGLIST FROM LIST: " lst)
-		;(make LangList 'objlist (list->dynvector lst)))
-		(make-LangList (list->dynvector lst)))
+		;(make List 'objlist (list->dynvector lst)))
+		(make-List (list->dynvector lst)))
 
-;(define (LangNull? obj) (subclass? (class-of obj) LangNull))
+;(define (Null? obj) (subclass? (class-of obj) Null))
 
 ; a generic "length" operator, but better to use type-specific when possible
 (define (len obj)
 	(cond
 		((string? obj) (string-length obj))
-		((LangString? obj) (string-length (LangString-value obj)))
-		((LangList? obj) (dynvector-length (LangList-objlist obj)))
+		((String? obj) (string-length (String-value obj)))
+		((List? obj) (dynvector-length (List-objlist obj)))
 		(else
 			(error "Bad object in len")
 			(exit 1))))
@@ -196,25 +196,25 @@
 	;(print "FMT_STACK_PRINT:" obj)
 	(cond
 		((integer? obj) (number->string obj))
-		((LangFloat? obj) 
+		((Float? obj) 
 			(let ((s (string-append "#" (number->string (value obj)))))
 				(if (and (> (string-length s) 2) (string=? (string-take-right s 2) ".0"))
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "<true>" "<false>"))
-		((LangSymbol? obj) obj) ; obj is a string
-		((LangString? obj) (string-append "\"" (value obj) "\""))
-		((LangList? obj)
-			(fmtStackPrintObjlist (LangList-objlist obj) "[" "]"))
+		((Symbol? obj) obj) ; obj is a string
+		((String? obj) (string-append "\"" (value obj) "\""))
+		((List? obj)
+			(fmtStackPrintObjlist (List-objlist obj) "[" "]"))
 		((Closure? obj)
 			(string-append "<" 
-				(fmtStackPrintObjlist (LangList-objlist (Closure-llist obj)) "{" "}")
+				(fmtStackPrintObjlist (List-objlist (Closure-llist obj)) "{" "}")
 				" :: " (fmtStackPrint (Closure-state obj)) ">"))
-		((LangNull? obj) "<null>")
-		((LangVoid? obj) "<VOID>")
-		((LangLambda? obj)
+		((Null? obj) "<null>")
+		((Void? obj) "<VOID>")
+		((Lambda? obj)
 			(string-append "<"
-				(fmtStackPrintObjlist (LangList-objlist (lambda-llist obj)) "{" "}")
+				(fmtStackPrintObjlist (List-objlist (lambda-llist obj)) "{" "}")
 				">"))
 		; for sanity, don't use lang-error (or langtype-error) just in case they switch to
 		; using fmtStackPrint. this would be an obvious bug that needs to be fixed, so just
@@ -225,23 +225,23 @@
 (define (fmtDisplay obj)
 	(cond
 		((integer? obj) (number->string obj))
-		((LangFloat? obj) 
+		((Float? obj) 
 			; for consistency with other ports, if number string ends with ".0", remove it
 			(let ((s (number->string (value obj))))
 				(if (and (> (string-length s) 2) (string=? (string-take-right s 2) ".0"))
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "true" "false"))
-		((LangSymbol? obj) (string-append "'" obj)) ; obj is a string
-		((LangString? obj) (value obj))
-		((LangList? obj)
+		((Symbol? obj) (string-append "'" obj)) ; obj is a string
+		((String? obj) (value obj))
+		((List? obj)
 			(string-append 
 				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtStackPrint obj))) "[" 
-					(LangList-objlist obj)) " ]"))
+					(List-objlist obj)) " ]"))
 		((Closure? obj) (fmtStackPrint obj))
-		((LangNull? obj) "<null>")
-		((LangVoid? obj) "<VOID>")
-		((LangLambda? obj) (fmtStackPrint obj))
+		((Null? obj) "<null>")
+		((Void? obj) "<VOID>")
+		((Lambda? obj) (fmtStackPrint obj))
 		; like above, but lang-error/langtype-error DOES us this so it would be a loop to
 		; use those here
 		(else 
@@ -251,20 +251,20 @@
 (define (deepcopy obj)
 	(cond
 		((or (integer? obj)
-			(LangFloat? obj)
+			(Float? obj)
 			(boolean? obj)
-			(LangSymbol? obj)
-			(LangString? obj)
+			(Symbol? obj)
+			(String? obj)
 			(Closure? obj)
-			(LangNull? obj)
-			(LangVoid? obj)
-			(LangLambda? obj))
+			(Null? obj)
+			(Void? obj)
+			(Lambda? obj))
 			obj)
-		((LangList? obj)
+		((List? obj)
 			(let ((newlist (new-lang-list)))
 				(dynvector-for-each 
-					(lambda (i elem) (dynvector-set! (LangList-objlist newlist) i (deepcopy elem)))
-						(LangList-objlist obj))
+					(lambda (i elem) (dynvector-set! (List-objlist newlist) i (deepcopy elem)))
+						(List-objlist obj))
 				newlist))
 		(else 
 			(print "Don't know how to deepcopy object:" (fmtStackPrint obj) ) (exit 1))))

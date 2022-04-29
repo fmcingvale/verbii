@@ -57,7 +57,7 @@
 
 (define (compile-and-load intr text allow_overwrite)
 	(set! ALLOW_OVERWRITING_WORDS allow_overwrite)
-	(push intr (make-LangString text))
+	(push intr (make-String text))
 	(intr-run intr (intr-lookup-word-or-fail intr "compile-and-load-string"))
 	(set! ALLOW_OVERWRITING_WORDS #f))
 
@@ -185,7 +185,7 @@
 		(for-each (lambda (arg)
 			; once i get '--' all the remaining args go to NATIVE_CMDLINE_ARGS
 			(if (not (null? NATIVE_CMDLINE_ARGS))
-				(llist-push-back NATIVE_CMDLINE_ARGS (make-LangString arg))
+				(llist-push-back NATIVE_CMDLINE_ARGS (make-String arg))
 				; else process as normal
 				(cond
 					((string=? arg "-test") (set! test-mode #t))

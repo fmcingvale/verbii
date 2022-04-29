@@ -51,10 +51,10 @@
 	(LP intr-LP intr-LP-set!)
 	; heap will grow as needed, thanks to dynvector
 	(HEAP_NEXTFREE intr-HEAP_NEXTFREE intr-HEAP_NEXTFREE-set!)
-	; WORDS[name: string] = LangList
+	; WORDS[name: string] = List
 	(_WORDS intr-WORDS intr-WORDS-set!)
 
-	(code intr-code intr-code-set!) ; currently running code (LangList)
+	(code intr-code intr-code-set!) ; currently running code (List)
 	(codepos intr-codepos intr-codepos-set!) ; next obj to run as index into code
 	(closure intr-closure intr-closure-set!) ; current closure or '()
 	(callstack intr-callstack intr-callstack-set!) ; frame pushed here on call (pushed to head), as (code,codepos)
@@ -97,7 +97,7 @@
 		intr))
 
 ; shorthand since usually i want the vector
-(define (intr-code-list intr) (LangList-objlist (intr-code intr)))
+(define (intr-code-list intr) (List-objlist (intr-code intr)))
 
 (define (print-stats intr)
 	(print "\n==== Runtime Stats ====")
@@ -194,32 +194,32 @@
 
 (define (nextObj intr)
 	(if (>= (intr-codepos intr) (dynvector-length (intr-code-list intr)))
-		(make-LangVoid)
+		(make-Void)
 		(begin
 			(intr-codepos-set! intr (+ (intr-codepos intr) 1))
 			(dynvector-ref (intr-code-list intr) (- (intr-codepos intr) 1)))))
 
 (define (nextObjOrFail intr wheresym)
 	(let ((obj (nextObj intr)))
-		(if (LangVoid? obj)
+		(if (Void? obj)
 			(lang-error wheresym "Unexpected end of input")
 			obj)))
 
 (define (peekObj intr)
 	(if (>= (intr-codepos intr) (dynvector-length (intr-code-list intr)))
-		(make-LangVoid)
+		(make-Void)
 		(dynvector-ref (intr-code-list intr) (intr-codepos intr))))
 
 (define (prevObj intr)
 	(if (= (intr-codepos intr) 0)
-		(make-LangVoid)
+		(make-Void)
 		(begin
 			(intr-codepos-set! intr (- (intr-codepos intr) 1))
 			(dynvector-ref (intr-code-list intr) (intr-codepos intr)))))
 
 (define (prevObjOrFail intr wheresym)
 	(let ((obj (prevObj intr)))
-		(if (LangVoid? obj)
+		(if (Void? obj)
 			(lang-error wheresym "Failed to find previous object")
 			obj)))
 	
@@ -238,13 +238,13 @@
 	;(define-method (popInt (intr <Interpreter>) wheresym)
 	;	(popTypeOrFail intr integer? "integer" wheresym))
 
-	; pop a LangString (as string) or fail
+	; pop a String (as string) or fail
 	;(define-method (popString (intr <Interpreter>) wheresym)
-	;	(value (popTypeOrFail intr LangString? "string" wheresym)))
+	;	(value (popTypeOrFail intr String? "string" wheresym)))
 
 (define (nextSymbolOrFail intr wheresym)
 	(let ((obj (nextObjOrFail intr wheresym)))
-		(if (LangSymbol? obj)
+		(if (Symbol? obj)
 			obj
 			(lang-error wheresym "Expecting symbol but got " (fmtStackPrint obj)))))
 
@@ -261,10 +261,10 @@
 			(loop (cdr argtypes) (cons 
 				(case (car argtypes)
 					((i) (popTypeOrFail intr integer? "integer" wheresym))
-					((f) (value (popTypeOrFail intr LangFloat? "float" wheresym)))
-					((s) (value (popTypeOrFail intr LangString? "string" wheresym)))
+					((f) (value (popTypeOrFail intr Float? "float" wheresym)))
+					((s) (value (popTypeOrFail intr String? "string" wheresym)))
 					((y) (popTypeOrFail intr string? "symbol" wheresym))
-					((L) (popTypeOrFail intr LangList? "list" wheresym))
+					((L) (popTypeOrFail intr List? "list" wheresym))
 					((*) (pop intr))
 					(else 
 						(lang-error wheresym "Unknown argtype: " argtypes)))
@@ -285,8 +285,8 @@
 			(else (lang-error 'do-jump "Not a valid jump target: " target)))
 		(let loop ((obj (movefn intr)))
 			(cond
-				((LangVoid? obj) (lang-error 'do-jump "No such jump: " target))
-				((and (LangSymbol? obj) (string=? (string-drop target 2) (string-drop obj 1)))
+				((Void? obj) (lang-error 'do-jump "No such jump: " target))
+				((and (Symbol? obj) (string=? (string-drop target 2) (string-drop obj 1)))
 					; found it, stop
 				)
 				(else (loop (movefn intr)))))))
@@ -324,7 +324,7 @@
 	(let run-loop ((obj (nextObj intr)))
 		;(print "RUN OBJ: " (fmtStackPrint obj))
 		(cond
-			((LangVoid? obj)
+			((Void? obj)
 				;(print "RETURN OR EXIT:")
 				; either return or exit
 				(if (havePushedFrames intr)
@@ -336,17 +336,17 @@
 				))
 			; literals get pushed
 			((integer? obj) (push-int intr obj) (run-loop (nextObj intr)))
-			((or (LangFloat? obj) (LangString? obj) (LangLambda? obj))
+			((or (Float? obj) (String? obj) (Lambda? obj))
 				(push intr obj)
 				(run-loop (nextObj intr)))
 
 			; list literals are deepcopied (see DESIGN-NOTES.txt)
-			((LangList? obj)
+			((List? obj)
 				(push intr (deepcopy obj))
 				(run-loop (nextObj intr)))
 
 			; symbols do the most stuff ...
-			((LangSymbol? obj) ; obj is a string
+			((Symbol? obj) ; obj is a string
 				(cond
 					((char=? (string-ref obj 0) #\')
 						; remove one level of quoting and push
@@ -383,7 +383,7 @@
 							; returns the start address -- doing it this way should allow this
 							; code to eventually move to init.verb
 							(hash-table-set! (_WORDS intr) name 
-									(list->LangList (list (allocate intr count))))
+									(list->List (list (allocate intr count))))
 							(run-loop (nextObj intr))))
 					; del
 					; TODO -- this should pop symbol from stack instead of being syntax "del NAME"
@@ -396,11 +396,11 @@
 						; pop lambda or list and call
 						(let ((L (pop intr)))
 							(cond
-								((LangLambda? L)
+								((Lambda? L)
 									; TODO - tail call elimination??
 									(code-call intr (lambda-llist L) '())
 									(run-loop (nextObj intr)))
-								((LangList? L)
+								((List? L)
 									(code-call intr L '())
 									(run-loop (nextObj intr)))
 								((Closure? L)
@@ -425,8 +425,8 @@
 						;(print "CALL USERWORD: " obj)
 						; tail-call elimination
 						(let ((next (peekObj intr)))
-							(if (or (LangVoid? next) 
-									(and (LangSymbol? next) (string=? next "return")))
+							(if (or (Void? next) 
+									(and (Symbol? next) (string=? next "return")))
 								; end of list or return - don't need to come back here
 								(if (havePushedFrames intr)
 									(begin
