@@ -19,7 +19,7 @@ echo "** Lua ..."
 
 # python
 echo "** Python ..."
-( cd new-python; ./regression.sh )
+( cd python; ./regression.sh )
 
 # chicken
 echo "** Chicken ..."

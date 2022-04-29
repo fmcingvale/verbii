@@ -32,7 +32,7 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 2. Test your changes as throughly as possible. By putting changes ONLY in patches.verb your system is
    safe since the .b files are not touched. *** DO NOT RUN make-bootstrap.sh ***
    
-3. Once you are sure your changes are OK, copy & paste them back into compiler.verb or init.verb.
+3. Once you are sure your changes are OK, copy & paste them back into compiler.verb and/or init.verb.
 
 4. Bootstrap new init/compiler:
 
@@ -57,4 +57,4 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 	$ ./makediffs.sh
 		-- ensure ALL diffs are ZERO before continuing.
 
-Your new compiler/init should be working now.
+Your new compiler/init should be working now; safe to commit changes.

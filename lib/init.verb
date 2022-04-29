@@ -57,6 +57,8 @@ SP SP_EMPTY set!
 : // ( a b -- quotient a/b ) /mod swap drop ;
 : mod ( a b -- remainder a/b ) /mod drop ;
 
+: :: make-closure ;
+
 ( .S - print stack without affecting it - good for debugging )
 : .S "=>" . depth 
 @LOOP 
@@ -150,5 +152,16 @@ SP SP_EMPTY set!
 : chr ( ASCII -- string ; turn ASCII character value into single-character string )
 	1 make-string
 	;
+
+: repeat ( lambda NR -- call lambda NR times )
+	\ lambda is allowed to use stack, but not locals, so store my
+	\ parameters in locals
+	>L >L ( L1 = NR, L0 = lambda )
+	@loop
+	L1 ref 0 == if >>done ( NR == 0? )
+	L0 ref call ( call lambda, now with access to any args that were below it )
+	L1 ref 1 - L1 set! ( NR -= 1 ) <<loop
+	@done LP 2 + LP! ; ( remove locals )
+
 
 

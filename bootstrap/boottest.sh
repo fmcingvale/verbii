@@ -18,8 +18,8 @@ echo "C++ ..."
 
 echo "Python ..."
 # check with python port running compiler.verb
-python ../new-python/repl.py $COMPILER -- ../lib/init.verb > test-output/init-c-PY.txt
-python ../new-python/repl.py $COMPILER -- ../lib/compiler.verb > test-output/compiler-c-PY.txt
+python ../python/repl.py $COMPILER -- ../lib/init.verb > test-output/init-c-PY.txt
+python ../python/repl.py $COMPILER -- ../lib/compiler.verb > test-output/compiler-c-PY.txt
 
 diff -u -b -B test-output/init-c-PY.txt test-output/init-c-CPP.txt
 diff -u -b -B test-output/compiler-c-PY.txt test-output/compiler-c-CPP.txt

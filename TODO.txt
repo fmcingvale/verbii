@@ -2,9 +2,6 @@ Global TODO
 
 * More error checking of input types in library/tests/demos
 
-* 63-bit integers
-	* or ... maybe 52 since some host languages use floats for ints??
-
 * add bit level operations -- limit to 32 bits
 	* add random number generator (pcg32)
 
@@ -20,8 +17,6 @@ never visible from verbii code
 	* actually not -- 'null' has no literal form so cannot be serialized nor found in a source file.
 		so returning null is fine.
 	* update serializer/deserialize to remove null handling since it should never be possible
-
-* why do we need a list AND a lambda? why not just call lists? there needs to be something different about lambdas to justify the separate type (like closures?) .. binding a list of values to lambdas that are pushed on call?
 
 * 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count var and 'NAME del so they can be implemented outside of interpreter correctly
 
@@ -45,15 +40,5 @@ never visible from verbii code
 * pick should be 0-based for consistency with other 0-indexed functions
 
 * in native.* the pop* functions should take a 'where' argument like chicken
-
-** A potential reason to keep lambdas ( { ... } ) and lists ...
-	-- when parsing a literal list, it needs to be translated into 
-	 series of pushes + make-list. if the list object is embedded into the 
-	 code stream, this causes subtle (or not) side effects of the list
-	 being able to be modified while the program runs.
-	 : oops
-	 	[ ] 10 append 20 append 30 append  		
-
-* Do more deep list testing with/without deepcopy
 
 * .dumpword needs to be fixed to deepcopy as well
