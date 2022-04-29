@@ -180,16 +180,18 @@ CR
 
 ( -- mutually recursive functions -- )
 : even? ( n -- is even? )
-	dup? 0 == 
+	abs dup? 0 == 
 	if >>even 1 - odd? return 
 	@even true ;
 
 : odd? ( n -- is odd? )
-	dup? 0 == if >>even 1 - even? return @even false ;
+	abs dup? 0 == if >>even 1 - even? return @even false ;
 
 "* Mutual recursion *" . CR
-"Expect true true false false:" . 100 even? . 64 even? . 31 even? . 151 even? . CR
-"Expect false false true true:" . 200 odd? . 44 odd? . 181 odd? . 211 odd? . CR
+"Expect true true false false:" . CR
+"      " . 100 even? . 64 even? . 31 even? . 151 even? . CR
+"Expect false false true true:" . CR
+"      " . 200 odd? . 44 odd? . 181 odd? . 211 odd? . CR
 
 ( -- countdown that only prints numbers that pass a test -- )
 : countdown-test ( N test -- ; print countdown of N where test is true )
@@ -330,6 +332,8 @@ clear
 	for-each
 	\ leave end state on stack
 	L0 ref unmake nip
+	\ clean up locals
+	LP 1 + LP!
 	;
 
 "Expect 160:" .
@@ -338,8 +342,8 @@ clear
 "Expect fedcba:" . 
 "abcdef" [ swap + ] "" fold . CR
 ( reverse list )
-"Expect [ 99 88 77 66 ]:" .
-[ 66 77 88 99 ] [ 1 make-list swap + ] [ ] fold . CR
+"Expect [ 99 88 77 66 ]:" . CR
+"      " . [ 66 77 88 99 ] [ 1 make-list swap + ] [ ] fold . CR
 
 \
 \ filter: make new sequence of only elements where func[elem] is true
@@ -377,7 +381,7 @@ clear
 : map ( seq func )
 	over list? if >>map-list
 	over string? if >>map-string
-	str "Bad sequence in filter: " swap + error	
+	str "Bad sequence in map: " swap + error	
 
 	@map-string
 		\ string concatenation operator & initval
@@ -400,15 +404,18 @@ clear
 		return \ leave filtered list on stack
 	;
 
-"Expect [ 6 7 8 9 ]:" . [ 1 2 3 4 5 6 7 8 9 ] [ 5 > ] filter . CR
-"Expect [ 0 10 30 50 70 ]:" . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
-"Expect [ 0 10 30 50 70 ]:" . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
+"Expect [ 6 7 8 9 ]:" . CR  
+"      " . [ 1 2 3 4 5 6 7 8 9 ] [ 5 > ] filter . CR
+"Expect [ 0 10 30 50 70 ]:" . CR 
+"      " . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
+"Expect [ 0 10 30 50 70 ]:" . CR 
+"      " . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
 "Expect lmnop:" . "ablcdmenfgohipjk" [ "l" >= ] filter . CR
 "Expect lmnop:" . "ablcdmenfgohipjk" [ "l" >= ] filter . CR
 
-"Expect [ 3 9 15 21 27 ]:" . 
+"Expect [ 3 9 15 21 27 ]:" . CR
 \ make new sequence of 3x each value
-[ 1 3 5 7 9 ] [ 3 * ] map . CR
+"      " . [ 1 3 5 7 9 ] [ 3 * ] map . CR
 
 \ triple each char in string
 "Expect aaabbbcccdddeeefff:" . 
@@ -439,11 +446,11 @@ clear
 	@not-upper chr
 	;
 
-"Expect "XYZ 123 ABC !@$ DEF:" .
-"Xyz 123 abC !@$ dEf" [ to-upper ] map . CR
+"Expect XYZ 123 ABC !@$ DEF:" . CR
+"      " . "Xyz 123 abC !@$ dEf" [ to-upper ] map . CR
 
-"Expect "abc 432 xyz &%# def:" .
-"AbC 432 xYZ &%# DEf" [ to-lower ] map . CR
+"Expect abc 432 xyz &%# def:" . CR
+"      " . "AbC 432 xYZ &%# DEf" [ to-lower ] map . CR
 
 ( https://rosettacode.org/wiki/Partial_function_application )
 
@@ -465,18 +472,20 @@ var fsf2 1
 [ [ f2 ] map ] fsf2 set!
 
 \ test cases
-"Expect [ 0 2 4 6 ]:" . [ 0 1 2 3 ] fsf1 ref call . CR
-"Expect [ 0 1 4 9 ]:" . [ 0 1 2 3 ] fsf2 ref call . CR
+"Expect [ 0 2 4 6 ]:" . CR 
+"      " . [ 0 1 2 3 ] fsf1 ref call . CR
+"Expect [ 0 1 4 9 ]:" . CR 
+"      " . [ 0 1 2 3 ] fsf2 ref call . CR
 
-"Expect [ 4 8 12 16 ]:" . [ 2 4 6 8 ] fsf1 ref call . CR
-"Expect [ 4 16 36 64 ]:" . [ 2 4 6 8 ] fsf2 ref call . CR
+"Expect [ 4 8 12 16 ]:" . CR
+"      " . [ 2 4 6 8 ] fsf1 ref call . CR
+"Expect [ 4 16 36 64 ]:" . CR
+"      " . [ 2 4 6 8 ] fsf2 ref call . CR
 
 \ cleanup namespace
 del fs del f1 del f2 del fsf1 del fsf2
 
-( ****** TODO LIST ******* )
-
-\ https://rosettacode.org/wiki/Primality_by_trial_division
+( --- some more non-rosetta tasks --- )
 
 "* check for list literal bug" . CR
 ( ** unintended behavior -- the list grows on each call ** )
@@ -501,24 +510,155 @@ dup dup dup
 
 ( -- unmake must create new list on unmaking lambdas to prevent modification --- )
 "* unmake lambda" . CR
-"Expect <{ 11 22 33 44 }> [ 11 22 88888 44 ] ==>" .
-{ 11 22 33 44 } dup unmake 2 88888 put swap . . CR
+"Expect <{ 11 22 33 44 }> [ 11 22 88888 44 ]" . CR
+"      " . { 11 22 33 44 } dup unmake 2 88888 put swap . . CR
 clear 
 
 ( -- make-lambda must deepcopy list -- )
 "* make-lambda" . CR
-"Expect <{ 11 22 33 44 }> [ 11 22 977 44 ] ==>" . 
+"Expect <{ 11 22 33 44 }> [ 11 22 977 44 ]" . CR
+"      " . 
 \ make lambda then modify input list to ensure it doesn't affect lambda
 11 22 33 44 4 make-list dup make-lambda swap 2 977 put swap . . CR
 
 ( -- same with make-closue -- )
 "* make-closure" . CR
-"Expect <{ 11 22 33 44 } :: 999> [ 11 22 777 44 ] ==>" . 
-[  11 22 33 44 ] dup 999 make-closure swap 2 777 put swap . .  CR
+"Expect <{ 11 22 33 44 } :: 999> [ 11 22 777 44 ]" . CR
+"      " . [  11 22 33 44 ] dup 999 make-closure swap 2 777 put swap . .  CR
 
 ( -- same with unmake - should not be able to edit closure -- )
 "* unmake closure" . CR
-"Expect <{ 77 66 55 44 } :: 543> ==>" .
-[ 77 66 55 44 ] 543 make-closure dup unmake drop 2 3333 put drop . CR
+"Expect <{ 77 66 55 44 } :: 543>" . CR
+"      " . [ 77 66 55 44 ] 543 make-closure dup unmake drop 2 3333 put drop . CR
+
+( -- now with some deeper lists -- )
+"Expect [ 1 2 [ 3 888 [ 5 777 ] 7 8 ] 9 555 ] [ 1 2 [ 3 888 [ 5 777 ] 7 8 ] 9 555 ]:" . CR
+"      " . 
+[ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] dup
+dup 2 get 1 888 put drop
+dup 2 get 2 get 1 777 put drop
+dup 4 555 put drop
+swap . . CR
+
+( -- now with deepcopy of the first list -- )
+"Expect [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 888 [ 5 777 ] 7 8 ] 9 555 ]:" . CR
+"      " . 
+[ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] dup deepcopy
+dup 2 get 1 888 put drop
+dup 2 get 2 get 1 777 put drop
+dup 4 555 put drop
+swap . . CR
+
+"Count to 5:" . 
+[ 1 2 3 4 5 ] [ . ] for-each CR
+
+( - nested for-each - )
+"Count to 9:" . 
+[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] [ [ . ] for-each ] for-each CR
+
+( - more fold tests - )
+"Expect ABCDE:" . 
+[ "A" "B" "C" "D" "E" ] [ + ] "" fold . CR
+
+( - nested fold - )
+"Expect ABcDEfGHi:" . 
+[ [ "A" "B" "c" ] [ "D" "E" "f" ] [ "G" "H" "i" ] ] [ [ + ] "" fold + ] "" fold . CR
+
+( - nested map - )
+"Expect [ [ 2 4 6 8 ] [ 10 12 14 16 ] ]:" . CR
+"      " . 
+[ [ 1 2 3 4 ] [ 5 6 7 8 ] ] [ [ 2 * ] map ] map . CR
+
+( - nested filter - )
+( keep lists with at least 2 elements > 0 )
+"Expect [ [ -32 -8 0 4 12 ] [ 10 20 30 ] ]:" . CR
+"      " . 
+[ [ -32 -8 0 4 12 ] [ -4 -3 -2 -1 0 ] [ 10 20 30 ] ] [ [ 0 > ] filter length 2 >= ] filter . CR
+
+( - map nested in repeat - )
+"Expect [ 2 4 6 ] [ 4 8 12 ] [ 8 16 24 ] [ 16 32 48 ]:" . CR
+"      " . 
+[ 1 2 3 ]
+[
+	{ 2 * } map dup . 
+] 4 repeat drop CR
+
+: int-range ( start end -- list ; makes list of integers from start to end [inclusive] by +1 )
+	[ ] -rot 1 swap '<= 2 make-list ( [ ] start 1 [ end != ] ) 
+	[ append ] for-while
+	;
+
+"Expect [ 0 .. 10 ]:" . 0 10 int-range . CR
+"Expect [ -10 .. 10, evens ]:" . -10 10 int-range [ even? ] filter . CR
+"Expect [ -10 .. 10, odds ]:" . -10 10 int-range [ odd? ] filter . CR
+
+( - https://rosettacode.org/wiki/Primality_by_trial_division - )
+
+: prime? ( n -- true|false )
+	dup 1 <= if >>below2
+	dup 2 == if >>is2
+
+	dup 2 / 2 swap ( n i=2 stop=n/2 )
+	@loop ( n i stop )
+			\ "LOOP:" . .S CR
+		-rot 2dup mod 0 == if >>notprime
+		1 + rot ( n i+1 stop )
+		2dup >= if >>isprime
+		<<loop
+	@notprime ( stop n i )
+		drop drop drop false return
+	@isprime ( n i stop )
+		drop drop drop true return
+	@below2 
+		drop false return
+	@is2
+		drop true return
+	;
+
+"* primes *" . CR
+"Expect [ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]:" . CR
+"      " .
+-100 108 int-range [ prime? ] filter . CR
+
+( https://rosettacode.org/wiki/Rot-13 )
+
+: rot13-char ( string -- rot13 of first char of string )
+	ord
+	dup 65 >=
+	over 90 <=
+	and if >>upper 
+
+	dup 97 >=
+	over 122 <=
+	and if >>lower
+
+	( not alphabetic, return as is )
+	chr return
+
+	@upper ( ord )
+		13 + dup 90 <= if >>done
+		26 - >>done ( wrap around )
+	@lower ( ord )
+		13 + dup 122 <= if >>done
+		26 - >>done ( wrap )
+	@done chr return
+	;
+
+"Expect: 789 Gur dhvpx oebja sbk whzcf bire gur ynml qbt *#%" . CR
+"       " .
+"789 The quick brown fox jumps over the lazy dog *#&" [ rot13-char ] map dup . CR
+
+"Expect: 789 The quick brown fox jumps over the lazy dog *#&" . CR
+"       " .
+[ rot13-char ] map . CR
+
+"Expect: 789 Gur DHVPX oebja SBK whzcf bire gur YNML qbt *#%" . CR
+"       " .
+"789 The QUICK brown FOX jumps over the LAZY dog *#&" [ rot13-char ] map dup . CR
+
+"Expect: 789 The QUICK brown FOX jumps over the LAZY dog *#&" . CR
+"       " .
+[ rot13-char ] map . CR
 
 "END STACK:" . .S CR
+

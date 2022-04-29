@@ -226,7 +226,7 @@ end
 function deepcopyObjlist(objlist)
 	local newlist = {}
 	for i=1,#objlist do
-		table.insert(newlist, objlist[i])
+		table.insert(newlist, deepcopy(objlist[i]))
 	end
 	return newlist
 end

@@ -263,7 +263,7 @@
 		((LangList? obj)
 			(let ((newlist (new-lang-list)))
 				(dynvector-for-each 
-					(lambda (i elem) (dynvector-set! (LangList-objlist newlist) i elem))
+					(lambda (i elem) (dynvector-set! (LangList-objlist newlist) i (deepcopy elem)))
 						(LangList-objlist obj))
 				newlist))
 		(else 
