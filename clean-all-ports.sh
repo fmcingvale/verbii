@@ -9,7 +9,7 @@
 ( cd csharp; ./mono-clean.sh )
 
 # python
-( cd new-python; rm -rf __pycache__ )
+( cd python; rm -rf __pycache__ )
 
 # chicken
 ( cd chicken; make clean )
