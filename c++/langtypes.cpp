@@ -9,13 +9,11 @@
 #include <sstream>
 using namespace std;
 
-// integers only allowed to use 31 bits, to be portable across host languages
-//const int MAX_INT_31 = (1<<30) - 1;
-//const int MIN_INT_31 = -MAX_INT_31;
-
-// max portable integer width is 53 bits, so 52 usable (1 sign bit)
-const VINT MAX_VINT = (1LL<<52) - 1;
-const VINT MIN_VINT = -MAX_VINT;
+// set maximum portable integer size based on lowest common denominator
+// among host languages. currently (even though the port doesn't exist yet)
+// this is javascript (not counting bignum, only native numeric types)
+const VINT MAX_VINT = (1LL<<53) - 1; // 9007199254740991
+const VINT MIN_VINT = -MAX_VINT;     // -9007199254740991
 
 Object NULLOBJ; // default constructor creates the null object
 Object VOIDOBJ = newVoid();

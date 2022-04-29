@@ -3,7 +3,7 @@ Global TODO
 * More error checking of input types in library/tests/demos
 
 * add bit level operations -- limit to 32 bits
-	* add random number generator (pcg32)
+	* add random number generator
 
 * improve exp by reducing x like dividing by 100,1000,1e6,etc. and adjusting
   at end since values for powers of 10 can be in a table (exp algorithm seems
@@ -17,8 +17,13 @@ never visible from verbii code
 	* actually not -- 'null' has no literal form so cannot be serialized nor found in a source file.
 		so returning null is fine.
 	* update serializer/deserialize to remove null handling since it should never be possible
+		* OR raise exception if null found in stream
+	* also true and false are words and not values so shouldn't need bools in serialized file
 
-* 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count var and 'NAME del so they can be implemented outside of interpreter correctly
+* 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count ,,var and 'NAME ,,del 
+so they can be implemented outside of interpreter correctly
+
+* parse floats without requiring #
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
@@ -26,7 +31,7 @@ never visible from verbii code
 
 * why does chicken port report more userwords when running same code as other ports?
 
-* think str & repr need to change so that symbols get ' for repr (i.e. 'stack display') and are
+* i think str & repr need to change so that symbols get ' for repr (i.e. 'stack display') and are
   printed without ' for str ('print format'). this matches i.e. scheme when printing symbols
   and fits with the "the stack display should identify the data-type" idea.
   
@@ -34,11 +39,16 @@ never visible from verbii code
 	: L3 LP 3 + ref ;
 	: L3! LP 3 + set! ;
 
-* chicken: replace Lang* with * 
-		main interpreter loop -- use while instead having to place recursive calls everywhere
+* chicken: main interpreter loop -- use while instead having to place recursive calls everywhere
 
 * pick should be 0-based for consistency with other 0-indexed functions
 
 * in native.* the pop* functions should take a 'where' argument like chicken
 
 * .dumpword needs to be fixed to deepcopy as well
+
+* lua: Add local decls everywhere for better lua style
+
+* add load or import word (in verbii if possible)
+
+* more repl pieces in verbii

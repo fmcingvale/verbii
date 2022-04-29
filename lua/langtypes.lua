@@ -42,7 +42,8 @@ end
 -- lua doesn't differentiate between int and float, so need a class ...
 Float = {}
 FLOAT_PRECISION = 17
-MAX_VINT = (1<<52) - 1
+-- see c++ notes on limits
+MAX_VINT = (1<<53) - 1
 MIN_VINT = -MAX_VINT
 
 function isInt(obj)

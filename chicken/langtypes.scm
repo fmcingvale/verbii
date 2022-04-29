@@ -79,9 +79,9 @@
 
 ; (define-method (value (i <integer>)) i)
 
-; 53-bit integer limits
-(define MAX_VINT 4503599627370495)
-(define MIN_VINT -4503599627370495)
+; see c++ notes on integer limits
+(define MAX_VINT 9007199254740991)
+(define MIN_VINT -9007199254740991)
 
 ; in scheme a number like 123.0 tests true as an integer; in verbii it is a float, so cannot
 ; use scheme floats directly (at least I haven't figured out a way)

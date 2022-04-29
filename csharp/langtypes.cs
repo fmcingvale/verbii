@@ -54,8 +54,8 @@ public class LangNull : LangObject {
 }
 
 public class LangInt : LangObject {
-	// integers only allowed to use 53 bits (52+sign), to be portable across host languages
-	const long MAX_VINT = (((long)1)<<52) - 1;
+	// see c++ notes
+	const long MAX_VINT = (((long)1)<<53) - 1;
 	const long MIN_VINT = -MAX_VINT;
 
 	public LangInt(long i) {

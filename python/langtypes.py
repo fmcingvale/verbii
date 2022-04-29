@@ -8,8 +8,8 @@ from __future__ import annotations
 from errors import LangError
 
 FLOAT_PRECISION = 17
-# max 53 bit integer (52 + 1 sign bit)
-MAX_VINT = (1<<52) - 1
+# see c++ notes
+MAX_VINT = (1<<53) - 1
 MIN_VINT = -MAX_VINT
 
 def isNumeric(obj):
