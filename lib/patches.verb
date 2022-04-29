@@ -21,3 +21,51 @@
 ( ------ init ----------- )
 	
 ( ------ compiler ------- )
+
+: syntax-next ( convert next word from input to runnable object )
+	reader-next
+		\ "syntax-next:" . dup . CR
+	dup null? if >>null
+	dup '( == if >>comment
+	dup '\ == if >>line-comment
+	dup '{ == if >>lambda
+	dup '[ == if >>list
+	dup ': == if >>worddef
+	dup 'def == if >>worddef ( synonym for ':' )
+	( look for triple-quoted string first )
+	dup 0 3 slice TRIPLEQUOTE ref == if >>triplestring
+	( now single quoted string )
+	dup 0 get '" == if >>string ( "... )
+	( test for correct format before passing to parse-int or parse-float since those functions
+	  will happily parse something like "123abc" as 123 )
+	dup int-symbol? if >>integer
+	dup float-symbol? if >>float
+	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
+	@nomatch
+		( leave unprocessed word on stack )
+		return
+	@null
+		return ( leave null on stack )
+	@worddef
+		drop syntax-define-word return
+	@comment
+		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
+	@line-comment
+		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
+	@lambda
+		drop syntax-lambda return
+	@list
+		drop syntax-list return
+	@triplestring
+		( call syntax-triple-string with first piece on stack )
+		syntax-triple-string return
+	@string
+		( call syntax-string with first piece on stack )
+		syntax-string return
+	@integer
+		parse-int return
+	@float
+		parse-float return
+	@float-literal ( #NN.NN form )
+		1 -1 slice parse-float return
+	;

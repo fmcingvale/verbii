@@ -123,6 +123,12 @@
 => <true> <true> 
 >> #45.125 #35.125 ==
 => <true> <true> <false> 
+>> 123.125 #123.125 ==
+=> <true> <true> <false> <true> 
+>> -4.5 #-4.5 ==
+=> <true> <true> <false> <true> <true> 
+>> 45.125 #35.125 ==
+=> <true> <true> <false> <true> <true> <false> 
 >> clear
 => 
 >> 123 #123 ==
