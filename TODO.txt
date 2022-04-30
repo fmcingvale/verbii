@@ -26,10 +26,6 @@ never visible from verbii code
 
 * why does chicken port report more userwords when running same code as other ports?
 
-* i think str & repr need to change so that symbols get ' for repr (i.e. 'stack display') and are
-  printed without ' for str ('print format'). this matches i.e. scheme when printing symbols
-  and fits with the "the stack display should identify the data-type" idea.
-  
 * the L0,L1, etc should become:
 	: L3 LP 3 + ref ;
 	: L3! LP 3 + set! ;
@@ -56,3 +52,9 @@ never visible from verbii code
 if/when verbii starts using full width integers on any platform. still worth enforcing max
 width integers on platforms where integer width > verbii int width so behavior remains consistent
 across languages.
+
+* no need to serialize: bool (no literal ['source'] form), null (same), floats (not needed to compile
+  the compiler)
+
+* math demo needs to be a unittest -- rework it to print TESTNAME: OK, or something like that, instead
+of printing all the numeric values which will not match between platforms

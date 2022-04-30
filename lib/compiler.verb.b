@@ -465,7 +465,7 @@ y if
 y >>endword
 y <<loop
 y @badname
-y repr
+y str
 s Invalid%32name%32after%32':'%32:%32
 y swap
 y +
@@ -1031,7 +1031,7 @@ y return
 y @symbol
 s y
 y .
-y repr
+y str
 y puts
 y CR
 y return
@@ -1135,7 +1135,7 @@ y .
 y dup
 i 0
 y get
-y repr
+y str
 y puts
 y CR
 i 1

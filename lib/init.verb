@@ -139,12 +139,6 @@ SP SP_EMPTY set!
 		drop LP 3 + LP! true return
 	;
 
-: tostring ( obj -- obj as string -- same as repr except strings don't get double quotes )
-	dup string? if >>string
-	repr
-	@string
-	;
-
 : string->symbol ( string -- symbol )
 	unmake make-symbol
 	;

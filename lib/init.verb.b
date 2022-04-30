@@ -1,4 +1,4 @@
-L 59
+L 58
 W depth
 L 6
 y SP_EMPTY
@@ -506,14 +506,6 @@ y +
 y LP!
 y true
 y return
-W tostring
-L 6
-y dup
-y string?
-y if
-y >>string
-y repr
-y @string
 W string->symbol
 L 2
 y unmake

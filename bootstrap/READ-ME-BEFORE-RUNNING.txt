@@ -19,6 +19,13 @@ Verbii startup sequence:
 	   
 	4. lib/patches.verb is compiled and loaded (this is important, see below)
 
+	** NOTE that compiler.verb and init.verb are not read as part of startup! Any 
+	** changes made to those files have no effect until after the system is bootstrapped
+	** again. This is why it is so important to test changes via patches first.
+	**
+	** Avoid the temptation to put "obviously correct" changes directly into those files
+	** without testing via patches first.
+
 The chicken-and-egg problem is how to compile the .b files since a working compiler
 is required to create them.
 
@@ -41,6 +48,9 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 	# those backups over the lib/*.b files to restore system to a working state.
 	#===============================================================================================
 
+	$ cp lib/init.verb.b lib/init.verb.b.WORKING 
+	$ cp lib/compiler.verb.b lib/compiler.verb.b.WORKING 
+	
 	$ cd bootstrap
 	$ ./make-bootstrap.sh
 	$ ./make-bootstrap.sh 

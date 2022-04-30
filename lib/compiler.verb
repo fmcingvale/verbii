@@ -252,7 +252,7 @@ var TRIPLEQUOTE 1
 	dup null? if >>eof
 	dup '; == if >>endword
 	<<loop
-	@badname repr "Invalid name after ':' : " swap + error
+	@badname str "Invalid name after ':' : " swap + error
 	@eof "Unexpected end of input looking for ';'" error
 	@endword
 	drop ( drop ; )
@@ -511,7 +511,7 @@ var TRIPLEQUOTE 1
 	@string ( s SSS )
 		"s" . serialize-escape-string puts CR return
 	@symbol ( y SSS - symbols cannot contains spaces, \n, etc. so no escaping needed )
-		"y" . repr puts CR return
+		"y" . str puts CR return
 	@list ( "L length" then serialized items )
 		"L" . dup length str puts CR
 		{ serialize-object } for-each ( items )
@@ -532,7 +532,7 @@ var COMPILED_NAMELISTS 1
 	( do NOT store compiled words into interpreter since that would prevent compiling
 	  any code that contained a name that was already defined -- for example when
 	  compiling this file
-
+	
 	  instead, store as a list of [name,wordlist]
 	)
 	\ var COMPILED_NAMELISTS 1
@@ -578,7 +578,7 @@ var COMPILED_NAMELISTS 1
 	( take output of byte-compile-* and serialize to stdout )
 
 	( each obj is [ name wordlist ] )
-	{ "W" . dup 0 get repr puts CR 1 get serialize-object } for-each 
+	{ "W" . dup 0 get str puts CR 1 get serialize-object } for-each 
 	;
 
 ( compiles filename and writes serialized form to stdout. does NOT alter interpreter words )
