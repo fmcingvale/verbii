@@ -20,6 +20,14 @@
 
 ( ------ init ----------- )
 	
+\ compiler turns "var NAME COUNT" into ( name count ,,var )
+: ,,var ( name count -- ; creates new variable )
+	alloc ( name addr )
+	( make word that pushes addr onto stack )
+	1 make-list ( name [ addr ] )
+	swap make-word
+	;
+
 ( ------ compiler ------- )
 
 : syntax-next ( convert next word from input to runnable object )
@@ -32,6 +40,8 @@
 	dup '[ == if >>list
 	dup ': == if >>worddef
 	dup 'def == if >>worddef ( synonym for ':' )
+	dup 'var == if >>var
+	dup 'del == if >>del
 	( look for triple-quoted string first )
 	dup 0 3 slice TRIPLEQUOTE ref == if >>triplestring
 	( now single quoted string )
@@ -48,6 +58,10 @@
 		return ( leave null on stack )
 	@worddef
 		drop syntax-define-word return
+	@var
+		drop syntax-var return
+	@del
+		drop syntax-del return
 	@comment
 		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
 	@line-comment
@@ -69,3 +83,75 @@
 	@float-literal ( #NN.NN form )
 		1 -1 slice parse-float return
 	;
+
+\ var NAME COUNT -- 'var' was already read
+: syntax-var
+	syntax-next ( name should be next )
+	dup symbol? not if >>badname
+	'' swap + ( make quoted name )
+	syntax-next ( count should be next )
+	dup int? not if >>badcount
+
+	',,inline -rot ( ,,inline name count )
+	',,var ( ,,inline ,,var name count ,,var )
+	4 make-list
+	 \ "SYNTAX VAR MADE:" . .S CR
+	return
+
+	@badname str "Bad name in var: " swap + error
+	@badcount str "Bad count in var: " swap + error
+	;
+
+\ del NAME -- 'del' was already read
+: syntax-del
+	syntax-next ( name must be next )
+	dup symbol? not if >>badname
+	'' swap + ( make quoted name )
+	\ as with var, i need to return multiple words, so return 
+	\ [ ,,inline name ,,del ]
+	',,inline swap ( ,,inline name )
+	',,del ( ,,inline name ,,del )
+	3 make-list 
+	return
+
+	@badname str "Bad name in del: " swap + error
+	;
+
+: byte-compile ( -- names wordlists ; byte-compile source from current reader stream )
+	( do NOT store compiled words into interpreter since that would prevent compiling
+	  any code that contained a name that was already defined -- for example when
+	  compiling this file
+
+	  instead, store as a list of [name,wordlist]
+	)
+	var COMPILED_NAMELISTS 1
+	0 make-list COMPILED_NAMELISTS set!
+
+	( i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
+	  save starting SP so I can count at the end )
+	SP >L ( L0=SP at start )
+	@loop
+	( read all parsed objects then make into a list )
+	syntax-next
+	dup null? if >>done 
+	dup list? if >>list
+	<<loop
+	@list
+	\ check for [ ,,inline ... ] and flatten
+	dup length 0 == if <<loop
+	dup 0 get ',,inline == if >>flatten
+	<<loop
+	@flatten
+		1 -1 slice unmake drop <<loop
+	@done
+	drop
+	( count # items added to stack and make list )
+	L> SP - 1 - make-list
+	( save this code under __main__ )
+	'__main__ save-defined-word
+	( leave list of [ name list ] on stack )
+	COMPILED_NAMELISTS ref
+	( remove vars so compiler can be run again )
+	del COMPILED_NAMELISTS
+	;
+

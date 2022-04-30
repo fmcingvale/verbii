@@ -102,7 +102,7 @@ public class Interpreter {
 	}
 
 	// allocate space for nr objects, returning starting index
-	public int heapAllocate(int nr) {
+	public int heapAllocate(long nr) {
 		int addr = HEAP_NEXTFREE;
 		while((HEAP_NEXTFREE + nr) >= OBJMEM.Count) {
 			// double memory when out of space
@@ -111,7 +111,7 @@ public class Interpreter {
 				OBJMEM.Add(new LangInt(0));
 			}
 		}
-		HEAP_NEXTFREE += nr;
+		HEAP_NEXTFREE += (int)nr;
 		return addr;
 	}
 

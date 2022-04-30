@@ -564,5 +564,7 @@ class Builtins {
 		{"self!", self_set},
 		{"put", self_put},
 		{"deepcopy", intr => intr.push(intr.pop().deepcopy())},
+		{"alloc", intr => intr.push(new LangInt(intr.heapAllocate(popInt(intr,"alloc"))))},
+		{",,del", intr => intr.deleteWord(popSymbol(intr,",,del"))},
 	};
 }

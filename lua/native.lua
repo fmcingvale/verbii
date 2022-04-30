@@ -555,4 +555,6 @@ BUILTINS = {
 	["self!"] = { {}, builtin_self_set},
 	["put"] = { {}, builtin_put},
 	["deepcopy"] = { {"any"}, function(intr,obj) intr:push(deepcopy(obj)) end},
+	["alloc"] = { {"number"}, function(intr,nr) intr:push(intr:heap_alloc(nr)) end},
+	[",,del"] = { {}, function(intr) intr:deleteWord(popSymbol(intr)) end},
 }

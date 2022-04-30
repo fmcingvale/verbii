@@ -379,6 +379,8 @@
 		(list "self!"		'() builtin-self-set)
 		(list "put" (reverse (list 'L 'i '*)) builtin-put)
 		(list "deepcopy" (list '*) (lambda (intr obj) (push intr (deepcopy obj))))
+		(list "alloc" (list 'i) (lambda (intr nr) (push intr (allocate intr nr))))
+		(list ",,del" (list 'y) (lambda (intr name) (intr-delete-word intr name)))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

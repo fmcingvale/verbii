@@ -378,6 +378,16 @@ static void builtin_deepcopy(Interpreter *intr) {
 	intr->push(intr->pop().deepcopy());
 }
 
+static void builtin_alloc(Interpreter *intr) {
+	auto count = popInt(intr, "bad count in alloc");
+	intr->push(newInt(intr->heap_alloc(count)));
+}
+
+static void builtin_del(Interpreter *intr) {
+	auto name = popSymbol(intr, "bad name in del");
+	intr->deleteWord(name);
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -444,4 +454,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"self!", builtin_self_set},
 	{"put", builtin_put},
 	{"deepcopy", builtin_deepcopy},
+	{"alloc", builtin_alloc},
+	{",,del", builtin_del},
 };

@@ -448,5 +448,7 @@ BUILTINS = {
 	'self!': ([], builtin_self_set),
 	'put': ([], builtin_put),
 	'deepcopy': ([object], lambda I,o: I.push(deepcopy(o))),
+	'alloc': ([int], lambda I,nr: I.push(I.heap_alloc(nr))),
+	',,del': ([], lambda I: I.deleteWord(popSymbol(I))),
 }
 
