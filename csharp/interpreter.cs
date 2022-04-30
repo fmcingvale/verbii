@@ -396,31 +396,6 @@ public class Interpreter {
 					continue;
 				}
 
-				if(sym!.match("var")) {
-					var name = nextSymbolOrFail("var, name");
-					var count = nextObjOrFail("var, count");
-					if(!(count is LangInt)) {
-						throw new LangError("Count must be integer but got: " + count.fmtStackPrint());
-					}
-					// must be unique userword
-					if(hasWord(name.value)) {
-						throw new LangError("Trying to redefine name: " + name.value);
-					}
-					// make new word that returns address
-					// (note addresses are limited to 32-bits)
-					int addr = heapAllocate((int)((count as LangInt)!.value));
-					var newlist = new List<LangObject>();
-					newlist.Add(new LangInt(addr));
-					WORDS[name.value] = newlist;
-					continue;
-				}
-
-				if(sym!.match("del")) {
-					var name = nextSymbolOrFail("del, name");
-					deleteWord(name.value);
-					continue;
-				}
-				
 				if(sym!.match("call")) {
 					// top of stack must be a lambda
 					var val = pop();

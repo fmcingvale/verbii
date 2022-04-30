@@ -287,26 +287,6 @@ class Interpreter(object):
 				# jump target -- ignore
 				continue
 
-			if word == "var":
-				name = self.nextCodeObjOrFail()
-				count = self.nextCodeObjOrFail()
-				if type(count) != int:
-					raise LangError("Expecting int after var but got: " + fmtStackPrint(count))
-				# must be unique userword
-				if self.hasWord(name):
-					raise LangError("Trying to redefine name: " + name)
-			
-				# alloc memory for var
-				addr = self.heap_alloc(count)
-				# make new word that returns addr
-				self._WORDS[name] = [addr]
-				continue
-		
-			if word == "del":
-				name = self.nextCodeObjOrFail()
-				self.deleteWord(name)
-				continue
-		
 			if word == "call":
 				# see if top of stack is Lambda or list
 				obj = self.pop()

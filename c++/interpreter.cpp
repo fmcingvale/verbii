@@ -382,35 +382,6 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			continue;
 		}
 
-		// TODO -- this should be syntax, rewritten to '[name size] var' so that this
-		// can be in native.cpp
-
-		if(obj.isSymbol("var")) {
-			auto name = nextSymbolOrFail("expecting symbol after 'var'");
-			auto count = nextCodeObjOrFail("expecting count after 'var'");
-			if(!count.isInt()) {
-				throw LangError("Count must be int, got: " + count.fmtStackPrint());
-			}
-			// must be unique userword
-			if(hasWord(name.asSymbol())) {
-				throw LangError("Trying to redefine name: " + name.fmtStackPrint());
-			}
-			int addr = heap_alloc(count.asInt());
-			// make a new word that pushes this address to the stack
-			auto newlist = newList();
-			newlist.data.objlist->push_back(newInt(addr));
-			WORDS[name.asSymbol()] = newlist.data.objlist;
-			// add to VARS so name lookup works (below) 
-			//VARS[name.asSymbol()] = heap_alloc(count.asInt());
-			continue;
-		}
-
-		if(obj.isSymbol("del")) {
-			auto name = nextSymbolOrFail("expecting symbol after 'del'");
-			deleteWord(name.asSymbol());
-			continue;
-		}
-
 		if(obj.isSymbol("call")) {
 			// top of stack must be a lambda OR a list
 			auto val = pop();

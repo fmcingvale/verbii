@@ -369,28 +369,6 @@
 							(if bval (do-jump intr target))
 							; else - keep running with next object
 							(run-loop (nextObj intr))))
-					; var
-					; TODO -- this should pop count from stack instead of being syntax "var count"
-					((string=? obj "var")
-						(let* ((name (nextSymbolOrFail intr "var"))
-								(count (nextObjOrFail intr 'var)))
-							(if not (integer? count)
-								(lang-error 'var "Expecting int for count but got: " count))
-							(if (intr-has-word intr name)
-								(lang-error 'var "Trying to redefine name: " name))
-
-							; NOTE different from other ports -- create WORD with name that
-							; returns the start address -- doing it this way should allow this
-							; code to eventually move to init.verb
-							(hash-table-set! (_WORDS intr) name 
-									(list->List (list (allocate intr count))))
-							(run-loop (nextObj intr))))
-					; del
-					; TODO -- this should pop symbol from stack instead of being syntax "del NAME"
-					((string=? obj "del")
-						(let ((name (nextSymbolOrFail intr "del")))
-							(intr-delete-word intr name)
-							(run-loop (nextObj intr))))
 					; call
 					((string=? obj "call")
 						; pop lambda or list and call

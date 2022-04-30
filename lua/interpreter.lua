@@ -326,30 +326,7 @@ function Interpreter:run(objlist, stephook)
 				-- jump target -- ignore
 				goto MAINLOOP
 			end
-
-			if obj == "var" then
-				local name = self:nextObjOrFail()
-				local count = self:nextObjOrFail()
-				if not type(count) == "number" then
-					error(">>>Expected int after var name but got " .. fmtStackPrint(count))
-				end
-				-- must be unique name
-				if self:hasWord(name) then
-					error(">>>Trying to redefine name: "  .. name)
-				end
-				-- alloc space
-				local addr = self:heap_alloc(count)
-				-- make a new word that returns this address
-				self._WORDS[name] = {addr}
-				goto MAINLOOP
-			end
-				
-			if obj == "del" then
-				local name = self:nextObjOrFail()
-				self:deleteWord(name)
-				goto MAINLOOP
-			end
-				
+	
 			if obj == "call" then
 				-- top of stack must be a Lambda
 				obj = self:pop()

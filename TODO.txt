@@ -20,11 +20,6 @@ never visible from verbii code
 		* OR raise exception if null found in stream
 	* also true and false are words and not values so shouldn't need bools in serialized file
 
-* 'var NAME' and 'del NAME' should be syntax in compiler, rewritten to 'NAME count ,,var and 'NAME ,,del 
-so they can be implemented outside of interpreter correctly
-
-* parse floats without requiring #
-
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
 * add open-input-file, open-output-file, open-string, read-line, read-char, write-string, write-char ... basically I/O with ports concept like scheme
@@ -52,3 +47,5 @@ so they can be implemented outside of interpreter correctly
 * add load or import word (in verbii if possible)
 
 * more repl pieces in verbii
+
+* add compiler pass to convert jumps into offsets so no searching is required at runtime
