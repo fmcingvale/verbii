@@ -151,10 +151,21 @@ function isList(obj)
 	return type(obj) == "table" and obj.__class__ == nil
 end
 
+function fmtDisplayObjlist(objlist,open_delim,close_delim)
+	local s = open_delim
+	for i=1,#objlist do
+		s = s .. " " .. fmtDisplay(objlist[i])
+	end
+	s = s .. " " .. close_delim
+	return s
+end
+
 -- see c++ comments for display vs. stack format
 function fmtDisplay(obj)
 	if type(obj) == "number" then
 		return tostring(obj)
+	elseif isNone(obj) then
+		return "<null>"
 	elseif isFloat(obj) then
 		local fmt = "%." .. tostring(FLOAT_PRECISION) .. "g"
 		return string.format(fmt, obj.value)
@@ -165,16 +176,16 @@ function fmtDisplay(obj)
 			return "false"
 		end
 	elseif isLambda(obj) then
-		return fmtStackPrint(obj)
+		return "<" .. fmtDisplayObjlist(obj.objlist,"{","}") .. ">"
 	elseif isString(obj) then
 		return obj.value
 	elseif isSymbol(obj) then
-		-- strings are symbols, they get ' here to differentiate from strings
-		return "'" .. obj
+		return obj
 	elseif isList(obj) then
-		return fmtStackPrint(obj)
+		return fmtDisplayObjlist(obj, "[", "]")
 	elseif isClosure(obj) then
-		return fmtStackPrint(obj)
+		return "<" .. fmtDisplayObjlist(obj.objlist,"{","}") .. " :: " ..
+				fmtDisplay(obj.state) .. ">"
 	else
 		error(">>>Don't know how to print object: " .. tostring(obj))
 	end
@@ -215,8 +226,7 @@ function fmtStackPrint(obj)
 		-- in stack display, strings get " .. "
 		return '"' .. obj.value .. '"'
 	elseif isSymbol(obj) then
-		-- strings are symbols, in stack display they don't get '
-		return obj
+		return "'" .. obj
 	elseif isList(obj) then
 		return fmtStackPrintObjlist(obj, "[", "]")
 	else

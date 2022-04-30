@@ -404,17 +404,32 @@ unmake
 make-string
 
 clear
-( test that repr makes expected strings )
-1234 repr
-#3.75 repr
-true repr
-false repr
-10 20 30 40 4 make-list repr
-{ 1 2 3 } repr
-'a-long-symbol repr
-"hello there world" repr
+( test that repr makes expected strings for all types )
+1234 repr . CR
+#3.75 repr . CR
+4.125 repr . CR
+true repr . CR
+false repr . CR
+10 20 'hello 11.5 4 make-list repr . CR
+{ 1 2 3 a b c } repr . CR
+[ 10 20 30 x y z ] 'abc :: repr . CR
+'a-long-symbol repr . CR
+"hello there world" repr . CR
+null repr . CR
 
-clear
+( repeat for str )
+1234 str . CR
+#3.75 str . CR
+4.125 str . CR
+true str . CR
+false str . CR
+10 20 'hello 11.5 4 make-list str . CR
+{ 1 2 3 a b c } str . CR
+[ 10 20 30 x y z ] 'abc :: str . CR
+'a-long-symbol str . CR
+"hello there world" str . CR
+null str . CR
+
 { 10 20 30 40 }
 unmake
 unmake

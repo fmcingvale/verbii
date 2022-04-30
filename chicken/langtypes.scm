@@ -202,7 +202,7 @@
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "<true>" "<false>"))
-		((Symbol? obj) obj) ; obj is a string
+		((Symbol? obj) (string-append "'" obj)) ; obj is a string
 		((String? obj) (string-append "\"" (value obj) "\""))
 		((List? obj)
 			(fmtStackPrintObjlist (List-objlist obj) "[" "]"))
@@ -222,6 +222,11 @@
 		(else (print "FATAL ERROR: Unknown object in fmtStackPrint: " obj) (exit 1))))
 
 ;; see c++ comments for display vs. stack format
+(define (fmtDisplayObjlist objlist open-delim close-delim)
+	(string-append 
+		(dynvector-fold (lambda (i str obj) (string-append str " " (fmtDisplay obj))) open-delim
+			objlist) " " close-delim))
+
 (define (fmtDisplay obj)
 	(cond
 		((integer? obj) (number->string obj))
@@ -232,16 +237,22 @@
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "true" "false"))
-		((Symbol? obj) (string-append "'" obj)) ; obj is a string
+		((Symbol? obj) obj) ; obj is a string
 		((String? obj) (value obj))
 		((List? obj)
 			(string-append 
-				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtStackPrint obj))) "[" 
+				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtDisplay obj))) "[" 
 					(List-objlist obj)) " ]"))
-		((Closure? obj) (fmtStackPrint obj))
+		((Closure? obj)
+			(string-append "<" 
+				(fmtDisplayObjlist (List-objlist (Closure-llist obj)) "{" "}")
+				" :: " (fmtDisplay (Closure-state obj)) ">"))
 		((Null? obj) "<null>")
 		((Void? obj) "<VOID>")
-		((Lambda? obj) (fmtStackPrint obj))
+		((Lambda? obj)
+			(string-append "<"
+				(fmtDisplayObjlist (List-objlist (lambda-llist obj)) "{" "}")
+				">"))
 		; like above, but lang-error/langtype-error DOES us this so it would be a loop to
 		; use those here
 		(else 

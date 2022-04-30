@@ -372,10 +372,18 @@ int FLOAT_PRECISION = 17;
 	with stack-printing:
 		- floats DO NOT get a '#' prefix
 		- strings are shown WITHOUT quotes
-		- symbols get a ' since they are not meant to be used as string
-		  values, so printing is probably being used for debugging, so show as symbol
+		- symbols are shown as strings
 		- true/false do not get < .. >
 */
+static string fmtDisplayObjList(ObjList *objlist, string open_delim, string close_delim) {
+	string s = open_delim + " ";
+	for(auto obj : *objlist) {
+		s += obj.fmtDisplay() + " ";
+	}
+	s += close_delim;
+	return s;
+}
+
 string Object::fmtDisplay() const {
 	switch(type) {
 		case TYPE_NULL: return "<null>";
@@ -389,13 +397,14 @@ string Object::fmtDisplay() const {
 		}
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		// these two are not meant to be printed, but can be shown in stack
-		case TYPE_LAMBDA: return fmtStackPrint();
-		case TYPE_CLOSURE: return fmtStackPrint();
+		case TYPE_LAMBDA:
+			return "<" + fmtDisplayObjList(data.objlist, "{", "}") + ">";
+		case TYPE_CLOSURE:
+			return "<" + fmtDisplayObjList(data.closure->objlist, "{", "}") +
+				" :: " + data.closure->state.fmtDisplay() + ">";
 		case TYPE_STRING: return string(data.str);
-		// symbols should not normally be printed by programs, so they get
-		// a ' to differentiate them from strings
-		case TYPE_SYMBOL: return "'" + string(data.str);
-		case TYPE_LIST: return fmtStackPrint(); // use stack format for inner objects for both types of printing
+		case TYPE_SYMBOL: return string(data.str);
+		case TYPE_LIST: return fmtDisplayObjList(data.objlist, "[", "]");
 
 		default: throw LangError("str not implemented for this object type" + to_string(type));
 	}
@@ -403,11 +412,13 @@ string Object::fmtDisplay() const {
 
 /*
  	"stack printing" shows objects in a way that their type can be deduced.
+	 a common use for stack printing is debugging, so being able to easily 
+	 distinguish types is important.
+	 
  	specifically this means:
 		- floats get a '#' prefix to distinguish them from integers
 		- strings are shown as "..."
-		- symbols do NOT get ' since they can be distinguised from strings
-		  by lack of " .. "
+		- symbols get a ' prefix
 		- true/false become <true>, <false> to distinguish them from symbols
 */
 static string fmtStackPrintObjList(ObjList *objlist, string open_delim, string close_delim) {
@@ -440,7 +451,7 @@ string Object::fmtStackPrint() const {
 		// add " .. " so its clear on stack that it is a string
 		case TYPE_STRING: return "\"" + string(data.str) + "\"";
 		// opposite of above -- since strings get " .. " then i don't get a ' here
-		case TYPE_SYMBOL: return data.str;
+		case TYPE_SYMBOL: return "'" + string(data.str);
 		case TYPE_LIST: return fmtStackPrintObjList(data.objlist, "[", "]");
 		default: throw LangError("repr not implemented for object type " + to_string(type));
 	}

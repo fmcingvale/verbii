@@ -446,7 +446,7 @@ public class Interpreter {
 					continue;
 				}
 			}
-			throw new LangError("Unknown word " + obj.fmtStackPrint());
+			throw new LangError("Unknown word " + obj.fmtDisplay());
 		}
 	}
 }

@@ -385,7 +385,7 @@ function Interpreter:run(objlist, stephook)
 			end
 		end
 
-		error(">>>Unknown word " .. fmtStackPrint(obj))
+		error(">>>Unknown word " .. fmtDisplay(obj))
 	end
 end
 

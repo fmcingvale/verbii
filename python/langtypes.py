@@ -38,6 +38,14 @@ class LangClosure(object):
 	def __str__(self):
 		pass
 
+def fmtDisplayObjlist(objlist, open_delim, close_delim):
+	rlist = [open_delim]
+	for o in objlist:
+		rlist.append(fmtDisplay(o))
+
+	rlist.append(close_delim)
+	return ' '.join(rlist)
+
 def fmtDisplay(obj):
 	"see c++ comments for display vs. stack format"
 	if obj is None:
@@ -51,14 +59,16 @@ def fmtDisplay(obj):
 		return "true"
 	elif obj is False:
 		return "false"
-	elif isinstance(obj, LangLambda) or isinstance(obj, LangClosure) or type(obj) == list:
-		# use stack format for the above
-		return fmtStackPrint(obj)
+	elif isinstance(obj, LangLambda):
+		return "<" + fmtDisplayObjlist(obj.objlist,"{","}") + ">"
+	elif isinstance(obj, LangClosure):
+		return "<" + fmtDisplayObjlist(obj.objlist,"{","}") + " :: " + fmtDisplay(obj.state) + ">"
+	elif type(obj) == list:
+		return fmtDisplayObjlist(obj, '[', ']')
 	elif isinstance(obj, LangString):
 		return obj.s
 	elif type(obj) is str:
-		# strings are symbols - not normally printed, so they get a ' to differentiate from strings
-		return "'" + obj
+		return obj
 	else:
 		raise LangError("Don't know how to print object: " + str(obj))
 
@@ -91,8 +101,7 @@ def fmtStackPrint(obj):
 		# in a stack display, strings get " ... "
 		return '"' + obj.s + '"'
 	elif type(obj) is str:
-		# ... and symbols do not get ' here
-		return obj
+		return "'" + obj
 	elif type(obj) == list:
 		return fmtStackPrintObjlist(obj, '[', ']')
 	else:

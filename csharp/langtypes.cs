@@ -147,8 +147,8 @@ public class LangSymbol : LangObject {
 	}
 
 	public override string typename() { return "symbol"; }
-	public override string fmtDisplay() { return "'" + value; }
-	public override string fmtStackPrint() { return value; }
+	public override string fmtDisplay() { return value; }
+	public override string fmtStackPrint() { return "'" + value; }
 
 	public override bool hasLength() { return true; }
 	public override int getLength() { return value.Length; }
@@ -166,7 +166,9 @@ public class LangLambda : LangObject {
 
 	public List<LangObject> objlist;
 	public override string typename() { return "lambda"; }
-	public override string fmtDisplay() { return fmtStackPrint(); }
+	public override string fmtDisplay() { 
+		return "<" + LangList.fmtDisplayObjlist(objlist,"{","}") + ">";
+	 }
 	public override string fmtStackPrint() {
 		return "<" + LangList.fmtStackPrintObjlist(objlist,"{","}") + ">";
 	}
@@ -183,8 +185,18 @@ public class LangList : LangObject {
 	
 	public List<LangObject> objlist;
 	public override string typename() { return "list"; }
+
+	public static string fmtDisplayObjlist(List<LangObject> objlist, string open_delim, string close_delim) {
+		string s = open_delim;
+		foreach(var obj in objlist) {
+			s += " " + obj.fmtDisplay();
+		}
+		s += " " + close_delim;
+		return s;
+	}
+
 	public override string fmtDisplay() {
-		return fmtStackPrint(); // match c++ port behavior and use stack format for both
+		return fmtDisplayObjlist(objlist, "[", "]");
 	}
 
 	public static string fmtStackPrintObjlist(List<LangObject> objlist, string open_delim, string close_delim) {
@@ -231,7 +243,10 @@ public class LangClosure : LangObject {
 	public List<LangObject> objlist;
 	public LangObject state;
 	public override string typename() { return "closure"; }
-	public override string fmtDisplay() { return fmtStackPrint(); }
+	public override string fmtDisplay() { 
+		return "<" + LangList.fmtDisplayObjlist(objlist,"{","}") +
+			" :: " + state.fmtDisplay() + ">";
+	 }
 	public override string fmtStackPrint() {
 		return "<" + LangList.fmtStackPrintObjlist(objlist,"{","}") +
 			" :: " + state.fmtStackPrint() + ">";

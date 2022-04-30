@@ -502,7 +502,7 @@ oops . CR
 oops . CR 
 
 ( -- test that dup'd lists correctly show changes -- )
-"""Expect [ 10 20 30 "hello" 50 ] x 4:""" . CR
+"""Expect [ 10 20 30 hello 50 ] x 4:""" . CR
 10 20 30 40 50 5 make-list
 dup dup dup
 3 "hello" put

@@ -129,8 +129,8 @@ Expect [ 4 16 36 64 ]:
 Expect [ 1 2 3 4 ]: [ 1 2 3 4 ] 
 Expect [ 1 2 3 4 ]: [ 1 2 3 4 ] 
 Expect [ 1 2 3 4 ]: [ 1 2 3 4 ] 
-Expect [ 10 20 30 "hello" 50 ] x 4: 
-[ 10 20 30 "hello" 50 ] [ 10 20 30 "hello" 50 ] [ 10 20 30 "hello" 50 ] [ 10 20 30 "hello" 50 ] 
+Expect [ 10 20 30 hello 50 ] x 4: 
+[ 10 20 30 hello 50 ] [ 10 20 30 hello 50 ] [ 10 20 30 hello 50 ] [ 10 20 30 hello 50 ] 
 * unmake lambda 
 Expect <{ 11 22 33 44 }> [ 11 22 88888 44 ] 
        <{ 11 22 33 44 }> [ 11 22 88888 44 ] 

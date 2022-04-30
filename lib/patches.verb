@@ -20,4 +20,69 @@
 
 ( ------ init ----------- )
 	
+\ scheduled for removal from init.verb
+: tostring
+	"THIS SHOULD NEVER BE CALLED" error
+	;
+
 ( ------ compiler ------- )
+
+: syntax-define-word
+	syntax-next ( name should be next )
+	dup symbol? not if >>badname
+	>L SP >L   ( L0=starting SP, L1=name )
+	@loop
+	syntax-next ( get next processed object - assume it can be more than 1 object )
+	dup null? if >>eof
+	dup '; == if >>endword
+	<<loop
+	@badname str "Invalid name after ':' : " swap + error
+	@eof "Unexpected end of input looking for ';'" error
+	@endword
+	drop ( drop ; )
+	L> SP - 1 - ( calc number of items )
+	make-list
+	L> 
+	( save names & compiled words )
+	save-defined-word
+	syntax-next ( save-defined-word has no return value, so return NEXT object )
+	;
+
+: serialize-object ( obj -- ; serialize obj to stdout )
+	dup null? if >>null
+	dup int? if >>int
+	dup float? if >>float
+	dup bool? if >>bool
+	dup string? if >>string
+	dup symbol? if >>symbol
+	dup list? if >>list
+	dup lambda? if >>lambda
+	repr "Unknown obj in serialize-object:" swap + error
+	@null ( n )
+		"n" puts CR return
+	@int ( i NNN )
+		"i" . str puts CR return
+	@float ( f NN.NNN )
+		"f" . str puts CR return
+	@bool ( b true|false )
+		"b" . str puts CR return
+	@string ( s SSS )
+		"s" . serialize-escape-string puts CR return
+	@symbol ( y SSS - symbols cannot contains spaces, \n, etc. so no escaping needed )
+		"y" . str puts CR return
+	@list ( "L length" then serialized items )
+		"L" . dup length str puts CR
+		{ serialize-object } for-each ( items )
+		return
+	@lambda ( "F" then list serialized )
+		"F" puts CR
+		unmake serialize-object ( serialize list )
+		return
+		;
+
+: serialize-compiled-output
+	( take output of byte-compile-* and serialize to stdout )
+
+	( each obj is [ name wordlist ] )
+	{ "W" . dup 0 get str puts CR 1 get serialize-object } for-each 
+	;
