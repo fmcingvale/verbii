@@ -17,8 +17,6 @@ def deserialize_stream(intr, fileIn):
 	line = line.rstrip() # remove \n
 	if line[0] == 'i': return int(line[2:])
 	elif line[0] == 'f': return float(line[2:])
-	elif line[0] == 'n': return None
-	elif line[0] == 'b': return True if line[2:] == 'true' else False
 	elif line[0] == 's':
 		s = line[2:]
 		s = s.replace("%32"," ").replace("%09","\t").replace("%10","\n").replace("%13","\r").replace("%37","%")

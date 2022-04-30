@@ -16,6 +16,9 @@ static void string_replace(string &s, const char *from, const char *to) {
 
 // FYI -- stream from compiler will be a single list containing word definitions
 
+// see compiler.verb:serialize-object, but briefly, I only have to deserialize the
+// format that the compiler produces, not ANY arbitrary verbii object
+
 // deserialize & return next object from stream
 Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 	string line;
@@ -23,8 +26,6 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 		switch(line[0]) {
 			case 'i': return parseInt(line.substr(2));
 			case 'f': return parseFloat(line.substr(2));
-			case 'n': return newNull();
-			case 'b': return (line.substr(2) == "true") ? newBool(true) : newBool(false);
 			case 's':
 				string_replace(line, "%32", " ");
 				string_replace(line, "%09", "\t");

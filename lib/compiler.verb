@@ -490,24 +490,33 @@ var TRIPLEQUOTE 1
 	} for-each
 	;
 
+\ general note: the following is NOT intended to be a general-purpose serialization format.
+\ 				it's only purpose is to be able to serialize byte-compiled verbii source.
+\				primarily it is for compiler.verb and init.verb, but is general enough to
+\				serialize any verbii source file.
+\
+\				as a consequence, there is no need to serialize anything that cannot exist
+\				in source form. this includes:
+\					* null - no source format (null is a word)
+\					* boolean - no source format (true and false are words)
+\					* closure - no source format - requires :: at runtime
+\
+\				technically floats are not needed in compiler.verb nor init.verb, however,
+\				to allow this to be used for ANY verbii source (i.e. to cache compilations)
+\				they are allowed here.
+
 : serialize-object ( obj -- ; serialize obj to stdout )
-	dup null? if >>null
 	dup int? if >>int
 	dup float? if >>float
-	dup bool? if >>bool
 	dup string? if >>string
 	dup symbol? if >>symbol
 	dup list? if >>list
 	dup lambda? if >>lambda
 	repr "Unknown obj in serialize-object:" swap + error
-	@null ( n )
-		"n" puts CR return
 	@int ( i NNN )
 		"i" . str puts CR return
 	@float ( f NN.NNN )
 		"f" . str puts CR return
-	@bool ( b true|false )
-		"b" . str puts CR return
 	@string ( s SSS )
 		"s" . serialize-escape-string puts CR return
 	@symbol ( y SSS - symbols cannot contains spaces, \n, etc. so no escaping needed )

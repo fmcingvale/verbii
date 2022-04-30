@@ -53,8 +53,5 @@ if/when verbii starts using full width integers on any platform. still worth enf
 width integers on platforms where integer width > verbii int width so behavior remains consistent
 across languages.
 
-* no need to serialize: bool (no literal ['source'] form), null (same), floats (not needed to compile
-  the compiler)
-
 * math demo needs to be a unittest -- rework it to print TESTNAME: OK, or something like that, instead
 of printing all the numeric values which will not match between platforms

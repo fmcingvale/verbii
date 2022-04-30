@@ -52,15 +52,11 @@
 				(case (string-ref line 0)
 					((#\i) (string->number (string-drop line 2)))
 					((#\f) (make-lang-float (string->number (string-drop line 2))))
-					((#\n) (make-Null))
 					((#\s) 
 						(if (>= (string-length line) 2) ; watch for empty string
 							(make-String (replace-escapes (string-drop line 2)))
 							(make-String "")))
 					((#\y) (string-drop line 2)) ; verbii symbols are scheme strings
-					((#\b)
-						(if (string=? (string-drop line 2) "true")
-							#t #f))
 					((#\L)
 						(let read-list ((nr (string->number (string-drop line 2))) (lst '()))
 							(if (> nr 0) 
