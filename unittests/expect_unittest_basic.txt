@@ -321,6 +321,12 @@ Hello world!
 => 10 20 30 40 
 >> 'foobar .dumpword
 => 10 20 30 40 [ 11 22 33 44 ] 
+>> ( ensure i can't modify word from dumped list )
+=> 10 20 30 40 [ 11 22 33 44 ] 
+>> 2 777 put
+=> 10 20 30 40 [ 11 22 777 44 ] 
+>> 'foobar .dumpword
+=> 10 20 30 40 [ 11 22 777 44 ] [ 11 22 33 44 ] 
 >> clear
 => 
 >> ( -- lambdas -- )

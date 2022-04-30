@@ -441,7 +441,7 @@ BUILTINS = {
 	'append': ([], builtin_append),
 	'null': ([], lambda I: I.push(None)),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
-	'.dumpword': ([], lambda I: I.push(I.lookupWordOrFail(popSymbol(I)))),
+	'.dumpword': ([], lambda I: I.push(deepcopy(I.lookupWordOrFail(popSymbol(I))))),
 	'read-file': ([], builtin_readfile),
 	'make-closure': ([], builtin_make_closure),
 	'self': ([], builtin_self_get),

@@ -40,8 +40,6 @@ never visible from verbii code
 
 * in native.* the pop* functions should take a 'where' argument like chicken
 
-* .dumpword needs to be fixed to deepcopy as well
-
 * lua: Add local decls everywhere for better lua style
 
 * add load or import word (in verbii if possible)
@@ -49,3 +47,5 @@ never visible from verbii code
 * more repl pieces in verbii
 
 * add compiler pass to convert jumps into offsets so no searching is required at runtime
+
+* chicken: cleanout old comments

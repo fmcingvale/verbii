@@ -284,11 +284,12 @@
 	(if (not (intr-has-word intr name))
 		(lang-error '.dumpword "No such word: " name))
 	; like other ports, make a copy of list
-	(let ((newlist (new-lang-list)))
-		(dynvector-for-each 
-			(lambda (i o) (llist-push-back newlist o)) 
-				(List-objlist (intr-lookup-word intr name)))
-		(push intr newlist)))
+	;(let ((newlist (new-lang-list)))
+	;	(dynvector-for-each 
+	;		(lambda (i o) (llist-push-back newlist o)) 
+	;			(List-objlist (intr-lookup-word intr name)))
+	;	(push intr newlist)))
+	(push intr (deepcopy (intr-lookup-word intr name))))
 
 (import (chicken file posix))
 

@@ -337,7 +337,7 @@ static void builtin_dumpword(Interpreter *intr) {
 	if(!wordlist) {
 		throw LangError("No such word in .dumpword: " + string(symbol));
 	}
-	intr->push(newList(wordlist));
+	intr->push(newList(deepcopy(wordlist)));
 }
 
 #include "deserialize.hpp"

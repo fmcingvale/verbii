@@ -195,6 +195,9 @@ clear
 
 : foobar 11 22 33 44 ;
 'foobar .dumpword
+( ensure i can't modify word from dumped list )
+2 777 put
+'foobar .dumpword
 
 clear
 ( -- lambdas -- )

@@ -476,7 +476,7 @@ class Builtins {
 		if(list == null)
 			throw new LangError("No such word in .dumpword: " + symbol);
 		else
-			intr.push(new LangList(list));
+			intr.push(new LangList(LangList.deepcopyObjlist(list)));
 	}
 
 	public static void make_closure(Interpreter intr) {
