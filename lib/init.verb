@@ -75,6 +75,14 @@ SP SP_EMPTY set!
 	@done 2drop
 	;
 
+\ compiler turns "var NAME COUNT" into ( name count ,,var )
+: ,,var ( name count -- ; creates new variable )
+	alloc ( name addr )
+	( make word that pushes addr onto stack )
+	1 make-list ( name [ addr ] )
+	swap make-word
+	;
+	
 ( shortcuts for addresses of first 10 locals )
 : L0 LP ;
 : L1 LP 1 + ;

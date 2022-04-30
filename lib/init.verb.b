@@ -1,4 +1,4 @@
-L 58
+L 59
 W depth
 L 6
 y SP_EMPTY
@@ -324,6 +324,13 @@ y +
 y <<loop
 y @done
 y 2drop
+W ,,var
+L 5
+y alloc
+i 1
+y make-list
+y swap
+y make-word
 W L0
 L 1
 y LP
@@ -553,9 +560,9 @@ y +
 y LP!
 W __main__
 L 6
-y var
-y SP_EMPTY
+y 'SP_EMPTY
 i 1
+y ,,var
 y SP
 y SP_EMPTY
 y set!

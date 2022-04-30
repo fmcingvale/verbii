@@ -199,6 +199,8 @@ var TRIPLEQUOTE 1
 	dup '[ == if >>list
 	dup ': == if >>worddef
 	dup 'def == if >>worddef ( synonym for ':' )
+	dup 'var == if >>var
+	dup 'del == if >>del
 	( look for triple-quoted string first )
 	dup 0 3 slice TRIPLEQUOTE ref == if >>triplestring
 	( now single quoted string )
@@ -206,7 +208,8 @@ var TRIPLEQUOTE 1
 	( test for correct format before passing to parse-int or parse-float since those functions
 	  will happily parse something like "123abc" as 123 )
 	dup int-symbol? if >>integer
-	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float
+	dup float-symbol? if >>float
+	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
 	@nomatch
 		( leave unprocessed word on stack )
 		return
@@ -214,6 +217,10 @@ var TRIPLEQUOTE 1
 		return ( leave null on stack )
 	@worddef
 		drop syntax-define-word return
+	@var
+		drop syntax-var return
+	@del
+		drop syntax-del return
 	@comment
 		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
 	@line-comment
@@ -231,6 +238,8 @@ var TRIPLEQUOTE 1
 	@integer
 		parse-int return
 	@float
+		parse-float return
+	@float-literal ( #NN.NN form )
 		1 -1 slice parse-float return
 	;
 
@@ -253,6 +262,39 @@ var TRIPLEQUOTE 1
 	( save names & compiled words )
 	save-defined-word
 	syntax-next ( save-defined-word has no return value, so return NEXT object )
+	;
+
+\ var NAME COUNT -- 'var' was already read
+: syntax-var
+	syntax-next ( name should be next )
+	dup symbol? not if >>badname
+	'' swap + ( make quoted name )
+	syntax-next ( count should be next )
+	dup int? not if >>badcount
+
+	',,inline -rot ( ,,inline name count )
+	',,var ( ,,inline ,,var name count ,,var )
+	4 make-list
+	 \ "SYNTAX VAR MADE:" . .S CR
+	return
+
+	@badname str "Bad name in var: " swap + error
+	@badcount str "Bad count in var: " swap + error
+	;
+
+\ del NAME -- 'del' was already read
+: syntax-del
+	syntax-next ( name must be next )
+	dup symbol? not if >>badname
+	'' swap + ( make quoted name )
+	\ as with var, i need to return multiple words, so return 
+	\ [ ,,inline name ,,del ]
+	',,inline swap ( ,,inline name )
+	',,del ( ,,inline name ,,del )
+	3 make-list 
+	return
+
+	@badname str "Bad name in del: " swap + error
 	;
 
 : syntax-string ( first string part already on stack *as symbol* )
@@ -485,6 +527,7 @@ var TRIPLEQUOTE 1
 	COMPILED_NAMELISTS ref swap append drop
 	;
 
+var COMPILED_NAMELISTS 1
 : byte-compile ( -- names wordlists ; byte-compile source from current reader stream )
 	( do NOT store compiled words into interpreter since that would prevent compiling
 	  any code that contained a name that was already defined -- for example when
@@ -492,7 +535,7 @@ var TRIPLEQUOTE 1
 
 	  instead, store as a list of [name,wordlist]
 	)
-	var COMPILED_NAMELISTS 1
+	\ var COMPILED_NAMELISTS 1
 	0 make-list COMPILED_NAMELISTS set!
 
 	( i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
@@ -501,7 +544,16 @@ var TRIPLEQUOTE 1
 	@loop
 	( read all parsed objects then make into a list )
 	syntax-next
-	dup null? if >>done <<loop
+	dup null? if >>done 
+	dup list? if >>list
+	<<loop
+	@list
+	\ check for [ ,,inline ... ] and flatten
+	dup length 0 == if <<loop
+	dup 0 get ',,inline == if >>flatten
+	<<loop
+	@flatten
+		1 -1 slice unmake drop <<loop
 	@done
 	drop
 	( count # items added to stack and make list )
@@ -511,7 +563,7 @@ var TRIPLEQUOTE 1
 	( leave list of [ name list ] on stack )
 	COMPILED_NAMELISTS ref
 	( remove vars so compiler can be run again )
-	del COMPILED_NAMELISTS
+	\ del COMPILED_NAMELISTS
 	;
 
 : byte-compile-file ( filename -- list of [ name list ] ; byte-compile filename and leave outputs on stack )
