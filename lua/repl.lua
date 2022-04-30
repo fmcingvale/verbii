@@ -11,11 +11,11 @@ require("interpreter")
 require("langtypes")
 require("native")
 
-INITLIB = "../lib/init.verb.b"
-COMPILERLIB = "../lib/compiler.verb.b"
-PATCHESLIB = "../lib/patches.verb"
+local INITLIB = "../lib/init.verb.b"
+local COMPILERLIB = "../lib/compiler.verb.b"
+local PATCHESLIB = "../lib/patches.verb"
 
-SHOW_RUNTIME_STATS = false
+local SHOW_RUNTIME_STATS = false
 
 function readfile(filename)
 	local f = io.open(filename, "r")
@@ -61,7 +61,7 @@ function compile_and_run(intr, text, singlestep, allow_overwrite)
 	compile_and_load(intr, text, allow_overwrite)
 	
 	-- now run the __main__ that was compiled
-	code = intr:lookupWordOrFail('__main__')
+	local code = intr:lookupWordOrFail('__main__')
 	
 	if singlestep then
 		intr:run(code,debug_hook)
@@ -94,13 +94,13 @@ function safe_compile_and_run(intr, text, singlestep, backtrace_on_error)
 	local result,error = pcall(compile_and_run, intr, text, singlestep, false)
 	if result == false then
 		-- match sequence >>> to strip out filename from error message that lua added
-		match = string.match(error, "^.+>>>")
+		local match = string.match(error, "^.+>>>")
 		if match == nil then
 			-- didn't get expected error format, so print raw error to show something at least
-			errstr = "*** " .. error .. " ***"
+			local errstr = "*** " .. error .. " ***"
 			return errstr
 		else
-			errstr = "*** " .. string.sub(error, #match+1) .. " ***"
+			local errstr = "*** " .. string.sub(error, #match+1) .. " ***"
 			if backtrace_on_error then
 				print_backtrace(intr)
 			end
@@ -114,12 +114,12 @@ end
 function repl(singlestep)
 	-- Run interactively
 	print("Verbii running on " .. _VERSION)
-	intr = make_interpreter(true)
+	local intr = make_interpreter(true)
 
 	while true do
 		io.write(">> ")
 		io.flush()
-		line = io.read()
+		local line = io.read()
 		if line == nil then
 			return -- eof
 		elseif line == "quit" or line == ",q" then
@@ -148,7 +148,7 @@ function run_test_mode(filename)
 	local fileIn = io.open(filename,"r")
 	while true do
 		::LOOP::
-		line = fileIn:read("l") -- discard \n at end of line
+		local line = fileIn:read("l") -- discard \n at end of line
 		if not line then
 			break
 		end
@@ -213,11 +213,11 @@ function run_file(intr, filename, singlestep)
 	end
 end
 
-filename = nil
-noinit = false
-test_mode = false
-singlestep = false
-args_to_script = {}
+local filename = nil
+local noinit = false
+local test_mode = false
+local singlestep = false
+local args_to_script = {}
 
 for i=1,#arg do
 	if arg[i] == "-noinit" then

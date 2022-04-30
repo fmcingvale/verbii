@@ -19,7 +19,7 @@
 --]]
 
 -- make a "none" class that is differentiated from nil
-None = {}
+local None = {}
 function None:new(obj, value)
 	setmetatable(obj, self)
 	self.__index = self
@@ -40,7 +40,8 @@ function isBool(obj)
 end
 
 -- lua doesn't differentiate between int and float, so need a class ...
-Float = {}
+local Float = {}
+-- next 3 are meant to be global
 FLOAT_PRECISION = 17
 -- see c++ notes on limits
 MAX_VINT = (1<<53) - 1
@@ -85,7 +86,7 @@ end
 
 -- as in the Python port, regular Lua strings as used as symbols,
 -- and strings get their own type
-String = {}
+local String = {}
 
 function String:new(obj, str)
 	setmetatable(obj, self)
@@ -108,7 +109,7 @@ function isLambda(obj)
 end
 
 -- lambda type
-Lambda = {}
+local Lambda = {}
 function Lambda:new(obj, objlist)
 	setmetatable(obj, self)
 	self.__index = self
@@ -122,7 +123,7 @@ function new_Lambda(objlist)
 end
 
 -- closure
-Closure = {}
+local Closure = {}
 function Closure:new(obj, objlist, state)
 	setmetatable(obj, self)
 	self.__index = self

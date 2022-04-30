@@ -7,6 +7,7 @@
 ]]
 require("langtypes")
 
+-- these are globals
 NATIVE_CMDLINE_ARGS = {}
 ALLOW_OVERWRITING_WORDS = false
 
@@ -21,8 +22,10 @@ function int_divmod(a, b)
 		error(">>>Divide by zero")
 	end
 		
-	quot = math.floor(math.abs(a) / math.abs(b))
-		
+	local quot = math.floor(math.abs(a) / math.abs(b))
+	local samesign = nil
+	local mod = nil
+
 	if (a < 0 and b < 0) or (a >=0 and b >= 0) then
 		samesign = true
 	else
@@ -39,23 +42,23 @@ function int_divmod(a, b)
 end
 
 function builtin_divmod(intr, a, b)
-	quot,mod = int_divmod(a,b)
+	local quot,mod = int_divmod(a,b)
 	intr:pushInt(mod)
 	intr:pushInt(quot)
 end
 
 function builtin_repr(intr)
-	obj = intr:pop()
+	local obj = intr:pop()
 	intr:push(new_String(fmtStackPrint(obj)))
 end
 
 function builtin_str(intr)
-	obj = intr:pop()
+	local obj = intr:pop()
 	intr:push(new_String(fmtDisplay(obj)))
 end
 
 function builtin_puts(intr)
-	obj = intr:pop()
+	local obj = intr:pop()
 	if not isString(obj) then
 		error(">>>puts requires string but got " .. fmtStackPrint(obj))
 	end
@@ -136,7 +139,7 @@ end
 
 -- always returns a Float
 function popFloatOrInt(intr)
-	obj = intr:pop()
+	local obj = intr:pop()
 	if type(obj) == "number" then
 		return obj
 	elseif isFloat(obj) then
@@ -147,7 +150,7 @@ function popFloatOrInt(intr)
 end
 
 function popString(intr)
-	obj = intr:pop()
+	local obj = intr:pop()
 	if isString(obj) then
 		return obj.value
 	else
@@ -156,7 +159,7 @@ function popString(intr)
 end
 
 function popSymbol(intr)
-	obj = intr:pop()
+	local obj = intr:pop()
 	if type(obj) == "string" then
 		return obj
 	else
@@ -165,7 +168,7 @@ function popSymbol(intr)
 end
 
 function popStringOrSymbol(intr)
-	obj = intr:pop()
+	local obj = intr:pop()
 	if isString(obj) then
 		return obj.value
 	elseif type(obj) == "string" then
@@ -501,6 +504,7 @@ function builtin_put(intr)
 	end
 end
 
+-- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
 	["-"] = { {"any","any" }, builtin_sub },

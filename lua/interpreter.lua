@@ -9,7 +9,7 @@
 require("native")
 require("langtypes")
 
-Interpreter = {}
+local Interpreter = {}
 
 -- '#' doesn't work on tables with non-contiguous entries, like when used as a hash table
 function tableSize(t) 
@@ -88,8 +88,8 @@ function Interpreter:pop()
 end
 
 function Interpreter:reprStack()
-	s = ""
-	i = self.SP_EMPTY-1
+	local s = ""
+	local i = self.SP_EMPTY-1
 	while i >= self.SP do
 		s = s .. fmtStackPrint(self.OBJMEM[i]) .. " "
 		i = i - 1
@@ -245,7 +245,7 @@ function Interpreter:run(objlist, stephook)
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
 		::MAINLOOP::
-		-- see C++ notes on why certain words are here vs in native.py .. short story, it's pretty arbitrary
+		-- see C++ notes
 
 		local obj = self:nextObj()
 		
@@ -349,11 +349,11 @@ function Interpreter:run(objlist, stephook)
 
 			if BUILTINS[obj] ~= nil then
 				--print("BUILTIN: " .. obj)
-				argtypes = BUILTINS[obj][1]
-				args = {}
+				local argtypes = BUILTINS[obj][1]
+				local args = {}
 				--print("POP " .. tostring(#argtypes) .. " args")
 				for i=#argtypes,1,-1 do
-					val = self:pop()
+					local val = self:pop()
 					if (type(val) ~= argtypes[i]) and (argtypes[i] ~= "any") then
 						error(">>>builtin '" .. obj .. "' expecting type " .. argtypes[i] .. " but got " .. type(val))
 					end

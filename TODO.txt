@@ -40,8 +40,6 @@ never visible from verbii code
 
 * in native.* the pop* functions should take a 'where' argument like chicken
 
-* lua: Add local decls everywhere for better lua style
-
 * add load or import word (in verbii if possible)
 
 * more repl pieces in verbii
@@ -49,3 +47,12 @@ never visible from verbii code
 * add compiler pass to convert jumps into offsets so no searching is required at runtime
 
 * chicken: cleanout old comments
+
+* 'get' should be a builtin, both for efficiency and for symmetry now that 'put' exists
+
+* should have builtin dictionaries that work with get and put
+
+* probably should remove integer overflow detection -- not a portable way to test for that
+if/when verbii starts using full width integers on any platform. still worth enforcing max
+width integers on platforms where integer width > verbii int width so behavior remains consistent
+across languages.
