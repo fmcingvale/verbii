@@ -1,14 +1,73 @@
 Global TODO
 
-* More error checking of input types in library/tests/demos
+---[    Ports    ]------------------------------------------------------
+
+* node.js
+
+* scala
+
+* swift
+
+---[    Demos    ]------------------------------------------------------
+
+* Chess engine
+
+* (mini) scheme -> verbii translator
+
+* more rosettacode tasks:
+	* https://rosettacode.org/wiki/Parsing/RPN_calculator_algorithm
+	* https://rosettacode.org/wiki/Heronian_triangles
+	* https://rosettacode.org/wiki/Additive_primes
+	* https://rosettacode.org/wiki/Anti-primes
+	* https://rosettacode.org/wiki/S-expressions
+	* https://rosettacode.org/wiki/Bulls_and_cows
+	* https://rosettacode.org/wiki/Prime_decomposition
+
+
+
+
+---[  Libraries  ]------------------------------------------------------
+
+* JSON import/export
+
+* math: gcd, sqrt
+
+---[   Features   ]------------------------------------------------------
 
 * add bit level operations -- limit to 32 bits
 	* add random number generator
 
-* improve exp by reducing x like dividing by 100,1000,1e6,etc. and adjusting
-  at end since values for powers of 10 can be in a table (exp algorithm seems
-  to have trouble with larger values)
-  
+* the L0,L1, etc should become:
+	: L3 LP 3 + ref ;
+	: L3! LP 3 + set! ;
+
+* add open-input-file, open-output-file, open-string, read-line, read-char, 
+write-string, write-char ... basically I/O with ports concept like scheme
+
+* pick should be 0-based for consistency with other 0-indexed functions
+
+* add load or import word (in verbii if possible)
+
+* more repl pieces in verbii
+
+* should have builtin dictionaries that work with get and put
+
+---[    Tests     ]------------------------------------------------------
+
+* math demo needs to be a unittest -- rework it to print TESTNAME: OK, or something like that, instead
+of printing all the numeric values which will not match between platforms
+
+* probably should remove integer overflow detection -- not a portable way to test for that
+if/when verbii starts using full width integers on any platform. still worth enforcing max
+width integers on platforms where integer width > verbii int width so behavior remains consistent
+across languages.
+
+---[   Clean-up   ]------------------------------------------------------
+
+* chicken: main interpreter loop -- use while instead having to place recursive calls everywhere
+
+* More error checking of input types in library/tests/demos
+
 * sort out usage of null/NULL/'void' in ports for consistency. add some unittests
 that include null to make sure it is handled correctly. also make sure voids are 
 never visible from verbii code
@@ -22,36 +81,25 @@ never visible from verbii code
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
-* add open-input-file, open-output-file, open-string, read-line, read-char, write-string, write-char ... basically I/O with ports concept like scheme
-
 * why does chicken port report more userwords when running same code as other ports?
-
-* the L0,L1, etc should become:
-	: L3 LP 3 + ref ;
-	: L3! LP 3 + set! ;
-
-* chicken: main interpreter loop -- use while instead having to place recursive calls everywhere
-
-* pick should be 0-based for consistency with other 0-indexed functions
 
 * in native.* the pop* functions should take a 'where' argument like chicken
 
-* add load or import word (in verbii if possible)
+* chicken: cleanout old comments
 
-* more repl pieces in verbii
+---[ Optimization ]------------------------------------------------------
 
 * add compiler pass to convert jumps into offsets so no searching is required at runtime
 
-* chicken: cleanout old comments
-
+* add compiler pass to convert words into indexes so they can be called without lookup at runtime
+	* WORDS in interpreter would then be a list
+	
 * 'get' should be a builtin, both for efficiency and for symmetry now that 'put' exists
 
-* should have builtin dictionaries that work with get and put
+* improve exp by reducing x like dividing by 100,1000,1e6,etc. and adjusting
+  at end since values for powers of 10 can be in a table (exp algorithm seems
+  to have trouble with larger values)
 
-* probably should remove integer overflow detection -- not a portable way to test for that
-if/when verbii starts using full width integers on any platform. still worth enforcing max
-width integers on platforms where integer width > verbii int width so behavior remains consistent
-across languages.
+---[   Unsorted   ]------------------------------------------------------
 
-* math demo needs to be a unittest -- rework it to print TESTNAME: OK, or something like that, instead
-of printing all the numeric values which will not match between platforms
+
