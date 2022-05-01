@@ -93,8 +93,16 @@
 => 403 -403 6 -6 31 
 >> -403 62 mod
 => 403 -403 6 -6 31 -31 
+>> clear
+=> 
+>> ( this was a c++ & c# bug case with # > 32 bits )
+=> 
+>> 11501398638 2 /mod
+=> 0 5750699319 
+>> clear
+=> 
 >> ( numerical limits -- non-error cases )
-=> 403 -403 6 -6 31 -31 
+=> 
 >> clear
 => 
 >> 9007199254740991

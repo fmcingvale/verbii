@@ -168,7 +168,7 @@ class Builtins {
 		if(b == 0) {
 			throw new LangError("Divide by zero");
 		}
-		long quot = (int)Math.Floor(((double)(Math.Abs(a))) / ((double)(Math.Abs(b))));
+		long quot = (long)Math.Floor(((double)(Math.Abs(a))) / ((double)(Math.Abs(b))));
 
 		bool samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
 		long mod;

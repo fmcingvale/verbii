@@ -19,7 +19,7 @@ Object native_cmdline_args;
 // whether make-word is allowed to overwrite existing words
 bool ALLOW_OVERWRITING_WORDS = false;
 
-static int popInt(Interpreter *intr, const char *errmsg) {
+static VINT popInt(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isInt()) {
 		throw LangError(string(errmsg) + " (requires integer, got: " + obj.fmtStackPrint() + ")");
@@ -51,7 +51,7 @@ static Object popList(Interpreter *intr, const char *errmsg) {
 	return obj;
 }
 
-static void pushInt(Interpreter *intr, int i) {
+static void pushInt(Interpreter *intr, VINT i) {
 	intr->push(newInt(i));
 }
 
@@ -71,14 +71,14 @@ static void pushBool(Interpreter *intr, bool b) {
 	consistent behavior regardless of signs
 */
 static void builtin_divmod(Interpreter *intr) {
-	int b = popInt(intr, "Bad divmod denominator");
-	int a = popInt(intr, "Bad divmod numerator");
-	int mod;
+	VINT b = popInt(intr, "Bad divmod denominator");
+	VINT a = popInt(intr, "Bad divmod numerator");
+	VINT mod;
 
 	if(b == 0) {
 		throw LangError("Divide by zero");
 	}
-	int quot = (int)floor(((double)(abs(a))) / ((double)(abs(b))));
+	VINT quot = (VINT)floor(((double)(abs(a))) / ((double)(abs(b))));
 
 	bool samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
 	if(samesign) {
@@ -102,7 +102,7 @@ static void builtin_make_word(Interpreter *intr) {
 }
 
 static void builtin_printchar(Interpreter *intr) {
-	int c = popInt(intr, "Bad printchar arg");
+	int c = (int)popInt(intr, "Bad printchar arg");
 	putc(c, stdout);
 	if(c == 10 || c == 13) {
 		fflush(stdout);
@@ -115,7 +115,7 @@ static void builtin_set(Interpreter *intr) {
 	Object obj = intr->pop();
 	if(addr.isInt()) {
 		// SP or LP index
-		int index = addr.asInt();
+		int index = (int)addr.asInt();
 		if(index < 0 || index > intr->HEAP_END) {
 			throw LangError("Bad address in set!: " + to_string(index));
 		}
@@ -130,7 +130,7 @@ static void builtin_set(Interpreter *intr) {
 static void builtin_ref(Interpreter *intr) {
 	Object addr = intr->pop();
 	if(addr.isInt()) {
-		int index = addr.asInt();
+		int index = (int)addr.asInt();
 		if(index < 0 || index > intr->HEAP_END) {
 			throw LangError("Bad address in ref: " + to_string(index));
 		}
@@ -144,7 +144,7 @@ static void builtin_ref(Interpreter *intr) {
 // set stack pointer from addr on stack
 // (SP values must be integers)
 static void builtin_setsp(Interpreter *intr) {
-	int addr = popInt(intr, "Bad SP! arg");
+	int addr = (int)popInt(intr, "Bad SP! arg");
 	if(addr < intr->SP_MIN || addr > intr->SP_EMPTY) {
 		throw LangError("Bad address in SP!: " + to_string(addr));
 	}
@@ -156,7 +156,7 @@ static void builtin_setsp(Interpreter *intr) {
 // set locals pointer from addr on stack
 // (LP values must be integers)
 static void builtin_setlp(Interpreter *intr) {
-	int addr = popInt(intr, "Bad LP! arg");
+	int addr = (int)popInt(intr, "Bad LP! arg");
 	if(addr < intr->LP_MIN || addr > intr->LP_EMPTY) {
 		throw LangError("Bad address in LP!: " + to_string(addr));
 	}
@@ -214,7 +214,7 @@ static void builtin_readfile(Interpreter *intr) {
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
 static void builtin_make_list(Interpreter *intr) {
 	Object list = newList();
-	int nr = popInt(intr, "Bad make-list number of items");
+	int nr = (int)popInt(intr, "Bad make-list number of items");
 	for(int i=0; i<nr; ++i) {
 		list.data.objlist->insert(list.data.objlist->begin(), intr->pop());
 	}
@@ -222,8 +222,8 @@ static void builtin_make_list(Interpreter *intr) {
 }
 
 static void builtin_slice(Interpreter *intr) {
-	int nr = popInt(intr, "Bad slice count");
-	int index = popInt(intr, "Bad slice index" );
+	int nr = (int)popInt(intr, "Bad slice count");
+	int index = (int)popInt(intr, "Bad slice index" );
 	Object obj = intr->pop();
 	intr->push(obj.opSlice(index, nr));
 }
@@ -231,7 +231,7 @@ static void builtin_slice(Interpreter *intr) {
 // ( list i obj -- new-list ; puts obj at list[i] )
 static void builtin_put(Interpreter *intr) {
 	auto obj = intr->pop();
-	int index = popInt(intr, "put expects integer index");
+	int index = (int)popInt(intr, "put expects integer index");
 	auto list = popList(intr, "put expects list");
 	if(index < 0 || index >= (int)list.asList()->size())
 		throw LangError("index out of range in put");
@@ -313,7 +313,7 @@ static void builtin_unmake(Interpreter *intr) {
 
 /* ( cn .. c1 N -- string of N chars ) */
 static void builtin_make_string(Interpreter *intr) {
-	int nr = popInt(intr, "Bad count in make-string");
+	int nr = (int)popInt(intr, "Bad count in make-string");
 	string s = "";
 	for(int i=0; i<nr; ++i) {
 		s.insert(s.begin(),(char)popInt(intr, "Bad char in make-string"));
@@ -323,7 +323,7 @@ static void builtin_make_string(Interpreter *intr) {
 
 /* ( cn .. c1 N -- symbol of N chars ) */
 static void builtin_make_symbol(Interpreter *intr) {
-	int nr = popInt(intr, "Bad count in make-symbol");
+	int nr = (int)popInt(intr, "Bad count in make-symbol");
 	string s = "";
 	for(int i=0; i<nr; ++i) {
 		s.insert(s.begin(),(char)popInt(intr, "Bad char in make-symbol"));
@@ -379,7 +379,7 @@ static void builtin_deepcopy(Interpreter *intr) {
 }
 
 static void builtin_alloc(Interpreter *intr) {
-	auto count = popInt(intr, "bad count in alloc");
+	auto count = (int)popInt(intr, "bad count in alloc");
 	intr->push(newInt(intr->heap_alloc(count)));
 }
 
