@@ -20,9 +20,11 @@ Object VOIDOBJ = newVoid();
 
 // check that int is valid or throw exception
 void checkIntOrFail(VINT i) {
+	#if 0
 	if(i > MAX_VINT || i < MIN_VINT) {
 		throw LangError("Integer overflow");
 	}
+	#endif
 }
 
 Object parseInt(const std::string &text) {

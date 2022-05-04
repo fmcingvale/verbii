@@ -27,6 +27,14 @@ static VINT popInt(Interpreter *intr, const char *errmsg) {
 	return obj.asInt();
 }
 
+static double popFloat(Interpreter *intr, const char *errmsg) {
+	Object obj = intr->pop();
+	if(!obj.isFloat()) {
+		throw LangError(string(errmsg) + " (requires integer, got: " + obj.fmtStackPrint() + ")");
+	}
+	return obj.asFloat();
+}
+
 static const char *popString(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isString()) {
@@ -388,6 +396,43 @@ static void builtin_del(Interpreter *intr) {
 	intr->deleteWord(name);
 }
 
+const VINT MASK32 = 0x00000000ffffffff;
+
+static void builtin_bit_and(Interpreter *intr) {
+	auto b = popInt(intr,"bit-and");
+	auto a = popInt(intr,"bit-and");
+	intr->push(newInt((a&b) & MASK32));
+}
+
+static void builtin_bit_or(Interpreter *intr) {
+	auto b = popInt(intr,"bit-or");
+	auto a = popInt(intr,"bit-or");
+	intr->push(newInt((a|b) & MASK32));
+}
+
+static void builtin_bit_xor(Interpreter *intr) {
+	auto b = popInt(intr,"bit-xor");
+	auto a = popInt(intr,"bit-xor");
+	intr->push(newInt((a^b) & MASK32));
+}
+
+static void builtin_bit_not(Interpreter *intr) {
+	auto a = popInt(intr,"bit-not");
+	intr->push(newInt((~a) & MASK32));
+}
+
+static void builtin_bit_shr(Interpreter *intr) {
+	auto nr = popInt(intr,"bit-shr");
+	auto a = popInt(intr,"bit-shr");
+	intr->push(newInt((((unsigned long)a)>>nr) & MASK32));
+}
+
+static void builtin_bit_shl(Interpreter *intr) {
+	auto nr = popInt(intr,"bit-shl");
+	auto a = popInt(intr,"bit-shl");
+	intr->push(newInt((((unsigned long)a)<<nr) & MASK32));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -456,4 +501,15 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"deepcopy", builtin_deepcopy},
 	{"alloc", builtin_alloc},
 	{",,del", builtin_del},
+
+	// bitops - defined with long names so user can pick their own shorthand
+	{"bit-and", builtin_bit_and},
+	{"bit-or", builtin_bit_or},
+	{"bit-not", builtin_bit_not},
+	{"bit-xor", builtin_bit_xor},
+	{"bit-shr", builtin_bit_shr},
+	{"bit-shl", builtin_bit_shl},
+
+	{"floor", [](Interpreter *intr){intr->push(newInt((VINT)floor(popFloat(intr,"floor"))));}},
+	
 };

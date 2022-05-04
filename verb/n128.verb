@@ -1,0 +1,272 @@
+\ 128-bit signed numbers.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+\ Since verbii provides 32-bit unsigned values, I break the 128-bit number up
+\ into 16-bit chunks. This allows for a 16x16 multiply without overflow.
+\
+\ Unlike normal 2's compliment where the 128th bit would be the sign bit, 
+\ here I prepend an additional 16-bit value for the sign. This allows for
+\ full 2^128 +/- range instead of +/- 2^127 as with normal 2's compliment.
+\ (e.g. normally an unsigned 128-bit value would be [0..2^128] and a signed
+\ value would be +/- 2^127. Here there is no difference in range for signed
+\ vs unsigned ... essentially this is 129 bit math)
+
+: n128-new ( -- obj ; create a 128 bit number, set to zero )
+	[ 0 0 0 0 0 0 0 0 0 ] \ 8 x 16-bit values + 1 extra for sign
+	;
+
+: hex-char-to-int ( h -- i ; convert first char of string h from hex to int )
+	0 get ( c )
+	dup "0" >= 
+	over "9" <=
+	and if >>digit 
+
+	dup "a" >=
+	over "h" <=
+	and if >>hexlower 
+
+	dup "A" >= 
+	over "H" <=
+	and if >>hexupper
+
+	"Bad hex digit: " swap + error
+
+	@digit ord "0" ord - return
+	@hexlower ord "a" ord - 10 + return
+	@hexupper ord "A" ord - 10 +
+	;
+
+: hex-to-int ( s -- i ; parse hex string to integer )
+	{ hex-char-to-int swap 16 * + } 0 fold
+	;
+
+: n128-add ( a b -- r ; add two 128 bit numbers, producing 128 bit result )
+	n128-new >L ( L0 = result )
+	8 0
+	@addloop ( a b i carry )
+		over 0 < if >>done ( stop on i<0 )
+		4 pick 3 pick get ( a b i c a[i] )
+		4 pick 4 pick get ( a b i c a[i] b[i] )
+		+ + ( a b i a[i]+b[i]+c )
+		65536 /mod ( a b i sum% sum// )
+		-rot ( a b sum// i sum% ; sum// is new carry )
+		L0 ref 3 pick rot ( a b sum// i r i sum% )
+		put drop ( a b sum// i )
+		1 - swap <<addloop ( a b i+1 sum// )
+	@done ( a b i c )
+		SP 4 + SP! L> ( clear stack and leave r )
+		;
+
+"0123456789abcdefABCDEF" { "char:" . dup . "value:" . hex-char-to-int . CR } for-each
+
+"Test hex-to-int ..." . CR
+[ 	[ "1234" 4660 ]
+	[ "a5b6d3" 10860243 ] 
+	[ "E8B3C1A7" 3904094631 ]
+	[ "FFFFFFFF" 4294967295 ]
+]
+	{ unmake drop "Expect:" . . CR "       " . hex-to-int . CR } for-each
+
+: ddd . .S CR ;
+
+: n128-from-hex ( hex -- n ; parse hex into n128 value )
+	\ each digit is 16 bits -- 4 hex chars -- so make sure length is a multiple of 4
+	@pad
+	dup length 4 mod 0 == if >>ready
+	"0" swap + \ prepend "0" until correct
+	<<pad
+	@ready
+		\ "ready" ddd
+	[ ] swap ( N hex )
+	@loop ( N hex )
+		\ "loop" ddd
+		dup length 0 == if >>done
+		\ "A" ddd
+		dup 0 get hex-char-to-int 16 * ( N h h[0]*16 )
+		over 1 get hex-char-to-int + 16 * ( N h h[0]*256+h[1]*16 )
+		over 2 get hex-char-to-int + 16 * ( N h h[0]*4096+h[1]*256+h[2]*16 )
+		over 3 get hex-char-to-int + ( N h h[0]*4096+h[1]*256+h[2]*16+h[3] )
+		rot swap append swap ( N h )
+		4 -1 slice ( N h[4:] )
+		<<loop
+	@done ( N hex )
+		drop
+		\ front-pad to 9 16-bit digits
+		[ 0 0 0 0 0 0 0 0 ] swap + -9 -1 slice
+		;
+
+[ 	[ "1234abcd5678cdef" [ 0 0 0 0 0 4660 43981 22136 52719 ] ]
+	[ "1234abcd5678cd" [ 0 0 0 0 0 18 13483 52566 30925 ] ]
+	[ "1234abcd5678cdef8765DCBA4321FEDC" [ 0 4660 43981 22136 52719 34661 56506 17185 65244 ] ]
+	[ "d" [ 0 0 0 0 0 0 0 0 13 ] ]
+]
+	{ unmake drop "Expect:" . . CR "       " . n128-from-hex . CR } for-each
+
+: int4-to-hex ( n -- h ; 4-bit value to hex digit )
+	dup 9 <= if >>digit 
+	dup 16 < if >>hex 
+	"Bad value in int4-to-hex:" swap str + error
+
+	@digit "0" ord + chr return
+	@hex 10 - "a" ord + chr
+	;
+
+: int8-to-hex ( n -- h ; 8-bit value to 2 hex digits )
+	16 /mod int4-to-hex swap int4-to-hex +
+	;
+
+: int16-to-hex ( n -- h ; 16-bit value to 4 hex digits )
+	256 /mod int8-to-hex swap int8-to-hex +
+	;
+
+\ get hex string for n128 value:
+\	* assumes value is positive and prints as-is
+\	* does NOT include leading sign value
+: n128-to-hex-raw ( n -- hex )
+	1 -1 slice { swap "." + swap int16-to-hex + } "" fold \ put dots between each 16-bits for readability
+	1 -1 slice ( remove leading . )
+	;
+
+\ nice printing of n128 values with raw value included for debugging
+: n128-to-hex ( n -- hex )
+		\ "n128-to-hex" ddd
+	\ first print as +/- value
+	dup 0 get 0 == if >>positive
+	n128-negate dup n128-to-hex-raw "-" swap + over n128-negate drop >>next ( n "-h" )
+		\ "after -" ddd
+	@positive
+	dup n128-to-hex-raw "+" swap + ( n "+h" )
+		\ "after +" ddd
+	@next
+	" [ " + ( n "+h [ " )
+		\ "[" ddd
+	over 0 get int16-to-hex + "|" + ( n "h|" )
+		\ "|" ddd
+	over n128-to-hex-raw + " ]" +
+		\ "EXIT" ddd
+	nip
+	;
+
+
+[ 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 ]
+	{ "Value:" . dup . "hex:" . int4-to-hex . CR } for-each
+
+[ [ 104 "68" ] [ 143 "8f" ] [ 12 "0c" ] ]
+	{ unmake drop "Expect:" . . CR "       " . int8-to-hex . CR } for-each
+
+[ [ 41412 "a1c4" ] [ 36515 "8ea3" ] ]
+	{ unmake drop "Expect:" . . CR "       " . int16-to-hex . CR } for-each
+
+[ "abcDEf" "1234abcd5678cdef" "1234abcd5678cdef3210DCBA9876FEDC" ]
+	{ dup . CR n128-from-hex n128-to-hex . CR } for-each
+ 
+ \ test adding
+ \ checked in python
+ [ 	[ "12345678" "abcdef98" "0000|0000.0000.0000.0000.0000.0000.be02.4610" ] 
+	[ "a58d3c2f52bedf65" "83bcda51a4ebf987" "0000|0000.0000.0000.0001.294a.1680.f7aa.d8ec" ] 
+	[ "0a91b7703990df1f6847c0c0fe054e2a" "0ee9071bca817da22d26d97aa4cb54d0" "0000|197a.be8c.0412.5cc1.956e.9a3b.a2d0.a2fa" ]
+	]
+	{ unmake drop "Expect:" . . CR "       " . n128-from-hex swap n128-from-hex n128-add n128-to-hex . CR }
+	for-each
+
+\ left shift *IN PLACE* in multiples of 16-bits
+\
+\ assumes that n is unsigned and leaves sign value as 0000, so caller should only pass
+\ positive values
+: n128-shl-x16! ( n i -- n<<(i*16) )
+	tuck
+	@loop ( i n i )
+		dup 0 == if >>slice
+		swap 0 append swap ( i n i )
+		1 - <<loop
+	@slice ( i n 0 )
+		drop swap -1 slice
+	;
+
+
+"*** Test Left-Shift ********************" . CR
+
+"abcd" n128-from-hex 0 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 1 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 2 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 3 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 4 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 5 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 6 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 7 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 8 n128-shl-x16! n128-to-hex . CR
+
+\ : n128-mul-16 ( a b - n ; multiply n128 * 16-bit integer => n128 )
+
+\ negate n128 value *IN PLACE*
+: n128-negate ( n -- n )
+	\ invert all bits first (including sign value)
+		\ "Inverting" ddd
+	8
+	@notloop ( n i )
+		dup 0 < if >>add1 ( loop until i<0 )
+		2dup 2dup get bit-not 65535 bit-and put drop ( n i )
+		1 - <<notloop
+	@add1
+	drop ( n )
+	\ "ready add 1" ddd
+	\ add 1 in-place (do it here instead of modifying main add function)
+	8 1
+	@addloop ( n i carry )
+			\ "addloop" ddd
+		over 0 < if >>done
+		3 pick 3 pick get + ( n i c+n[i] )
+			\ "n i c+n[i]" ddd
+		65536 /mod ( n i c+n[i]%65536 c+n[i]//65536 )
+			\ "n i sum% sum//" ddd
+		>L ( n i sum% ; L0=carry )
+			\ "n i sum%" ddd
+		3 pick 3 pick rot put drop ( n i )
+			\ "n i" ddd
+		1 - L> <<addloop ( n i-1 sum// )
+	@done ( n i carry )
+		drop drop
+		;
+
+"*** Test Negate ****************************" . CR
+
+: testNegate ( ASTR )
+	"ASTR = " . dup . CR
+	dup n128-from-hex ( ASTR a )
+	swap n128-from-hex ( a a )
+	n128-negate ( a -a )
+	"  A = " . swap dup n128-to-hex . CR ( -a a )
+	" -A = " . swap dup n128-to-hex . CR ( a -a )
+	"SUM = " . n128-add n128-to-hex . CR
+	;
+
+[ "a" "1" "90000000000000000000000000000000" "12345678abcdef01" 
+	"9876543210abcdef9876543210abcdef" ]
+	{ testNegate } for-each
+	
+: n128-subtract ( a b - a-b )
+	tuck n128-negate ( -b a -b )
+	n128-add ( -b sum )
+	swap n128-negate drop ( restore b since caller probably has a reference )
+	;
+
+: testSubtract ( ASTR BSTR )
+	" ASTR = " . over . CR
+	" BSTR = " . dup . CR
+	n128-from-hex swap n128-from-hex ( b a )
+	"    A = " . dup n128-to-hex . CR ( b a )
+	"    B = " . over n128-to-hex . CR ( b a )
+	over n128-subtract ( b a-b )
+	"  A-B = " . dup n128-to-hex . CR ( b a-b )
+	"A-B+B = " . n128-add n128-to-hex . CR 
+	;
+
+"**** Test Subtract **************************" . CR
+[ [ "128" "96" ] 
+	[ "abcdef0123456789ABCDEF" "88776655443322" ] 
+	[ "1122334455" "abcdefABCDEF0123456789" ]
+
+	]
+	{ unmake drop testSubtract } for-each
+
