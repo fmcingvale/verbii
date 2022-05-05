@@ -385,4 +385,47 @@
 	{ unmake drop "Expect " . . CR "      " . n128-from-hex swap n128-from-hex swap 
 		n128-mul n128-to-hex . CR } for-each
 		
+\
+\ FNV-1a 128-bit hash function
+\
+\ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+var FNV128-PRIME 1
+var FNV128-OFFSET 1
+"6c62272e07bb014262b821756295c58d" n128-from-hex FNV128-OFFSET set!
+"0000000001000000000000000000013B" n128-from-hex FNV128-PRIME set!
 
+: fnv-128 ( text -- hash, as n128 )
+	\ for each byte:
+	\	hash = hash XOR byte (i.e. XOR against low word of n128 only)
+	\	hash = hash * FNV128-PRIME
+
+	\ called with stack: [ hash char ]
+	[ 
+		ord over 8 get ( hash c hash[8] )
+		bit-xor ( hash c^hash[8] )
+		8 swap put ( hash )
+		FNV128-PRIME ref n128-mul ( hash*prime )
+	]
+	\ init hash = FNV128-OFFSET
+	FNV128-OFFSET ref deepcopy \ deepcopy, otherwise FNV128-OFFSET would be modified
+	fold
+	;
+
+"*** FNV hashing ..." . CR 
+[
+	\ test cases generated at: https://www.toolkitbay.com/tkb/tool/FNV-1
+	[ "The quick brown fox jumped over the lazy dog."
+		"0689.f441.3f88.2750.6b0b.00b3.c261.159a" ]
+	[ "The quick brown fOX jumpeD over the lAzy doG!"
+		"6aff.893c.2a2c.dc86.c696.3d5e.89f8.fefb" ]
+	[ "Hello world!"
+		"3c94.fff9.ede8.7203.1d95.566a.4577.0eb2" ]
+	[ "Hello World!"
+		"d2d4.2892.ede8.7203.1d25.9336.6229.c2d2" ]
+	\ https://lipsum.com/feed/html
+	[ "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec ac libero eu orci efficitur ultricies."
+		"09f5.c1ae.a03c.ee13.7c76.3a31.881f.e3f7" ]
+]
+{ unmake drop "Text:   " . over . CR "Expect: " . . CR "       " . 
+	fnv-128 n128-to-hex . CR } for-each
+	
