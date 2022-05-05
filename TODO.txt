@@ -89,10 +89,24 @@ never visible from verbii code
 
 ---[ Optimization ]------------------------------------------------------
 
-* add compiler pass to convert jumps into offsets so no searching is required at runtime
+* I think the native make-word should be renamed to something like set-word and 
+  make-word should be implemented in verbii and perform optimizations at creation time
+  examples:
+	* convert jumps into offsets so no searching is required at runtime
 
-* add compiler pass to convert words into indexes so they can be called without lookup at runtime
-	* WORDS in interpreter would then be a list
+	* convert words into indexes so they can be called without lookup at runtime
+		* WORDS in interpreter would then be a list
+
+	* add syntax like:
+		: name args [ a b c ] vars [ d e f ]
+		where:
+			* a, b, c are pulled from the stack into locals
+			* d, e, f are added to locals, undefined
+			* names are created: a == 'LP i + ref', a! == 'LP i + set!'
+			* compiler converts names into LP/ref/set! at compile time so no
+			  overhead other than setting args up into locals
+			* compiler emits cleanup code (LP + n LP!) before 'return'
+				* need to add a return at end of all word lists for simplicity
 	
 * 'get' should be a builtin, both for efficiency and for symmetry now that 'put' exists
 
