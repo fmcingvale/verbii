@@ -53,7 +53,7 @@
 		-rot ( a b sum// i sum% ; sum// is new carry )
 		L0 ref 3 pick rot ( a b sum// i r i sum% )
 		put drop ( a b sum// i )
-		1 - swap <<addloop ( a b i+1 sum// )
+		1 - swap <<addloop ( a b i-1 sum// )
 	@done ( a b i c )
 		SP 4 + SP! L> ( clear stack and leave r )
 		;
@@ -68,7 +68,7 @@
 ]
 	{ unmake drop "Expect:" . . CR "       " . hex-to-int . CR } for-each
 
-: ddd . .S CR ;
+: ddd . .S CR  ;
 
 : n128-from-hex ( hex -- n ; parse hex into n128 value )
 	\ each digit is 16 bits -- 4 hex chars -- so make sure length is a multiple of 4
@@ -172,8 +172,8 @@
 
 \ left shift *IN PLACE* in multiples of 16-bits
 \
-\ assumes that n is unsigned and leaves sign value as 0000, so caller should only pass
-\ positive values
+\ assumes that n is unsigned and sets sign to 0000 (i.e. bits are NOT shifted out of
+\ MSB into sign), so caller should only pass positive values
 : n128-shl-x16! ( n i -- n<<(i*16) )
 	tuck
 	@loop ( i n i )
@@ -182,6 +182,7 @@
 		1 - <<loop
 	@slice ( i n 0 )
 		drop swap -1 slice
+		0 0 put \ set first word (sign) to 0
 	;
 
 
@@ -196,8 +197,6 @@
 "abcd" n128-from-hex 6 n128-shl-x16! n128-to-hex . CR
 "abcd" n128-from-hex 7 n128-shl-x16! n128-to-hex . CR
 "abcd" n128-from-hex 8 n128-shl-x16! n128-to-hex . CR
-
-\ : n128-mul-16 ( a b - n ; multiply n128 * 16-bit integer => n128 )
 
 \ negate n128 value *IN PLACE*
 : n128-negate ( n -- n )
@@ -269,4 +268,121 @@
 
 	]
 	{ unmake drop testSubtract } for-each
+
+\ n128 x 16-bit multiply
+\
+\ a is n128, b is 16-bit value - both are assumed to be positive so
+\ caller should negate if needed and adjust afterwards
+: n128-mul-16 ( a b -- a*b ; )
+	\ sanity check a
+	over 0 get 0 != if >>badA
+	\ sanity check b
+	dup dup 0 <
+	swap 65535 > 
+	or if >>badB
+
+		\ "e" ddd
+	\ to hold result
+	n128-new >L ( a b ; L0=result )
+
+	\ multiply b across all digits of a
+	8 0
+	@loop ( a b i carry )
+			\ "loop" ddd
+		over 0 < if >>done ( loop until i<0 )
+		4 pick 3 pick get ( a b i c a[i] )
+			\ "before mul" ddd
+		4 pick * + ( a b i a[i]*b+c )
+			\ "after * +" ddd
+		\ split into 16-bit digit + carry
+		65536 /mod ( a b i sum% sum// )
+			\ "split" ddd
+		-rot ( a b sum// i sum% )
+		2dup L0 ref -rot ( a b sum// i sum% r i sum% )
+			\ "before put" ddd
+		put 
+			\ "after put" ddd
+			drop drop ( a b sum// i )
+			\ "after drops" ddd
+		1 - swap ( a b i-1 sum// )
+		<<loop
+
+	@badA ( a b )
+		drop n128-to-hex
+		"Negative A not allowed in n128-mul-16: " swap + error
+
+	@badB ( a b )
+		"B is > 16-bits in n128-mul-16: " swap str + error
+
+	@done ( a b i c )
+		SP 4 + SP! \ clear stack
+		L> ( r )
+		;
+
+\ a*b where a & b are both n128. a & b are assumed to be positive, and result will always
+\ have sign word set to 0000
+: n128-mul ( a b -- a*b )
+	n128-new >L ( L0 = result )
+	8
+	\ multiply each 16-bit word of b against a, shifting and summing into result
+	@loop ( a b i )
+		dup 1 < if >>done ( only have to multiply b[1:8], not sign digit since assumed >0 )
+		2dup get ( a b i b[i] )
+		4 pick swap ( a b i a b[i] )
+		n128-mul-16 ( a b i a*b[i] )
+			\ "after mul-16" ddd
+		\ shift left by (8-i)*16-bits and add to result
+		8 3 pick - ( a b i a*b[i] 8-i )
+		n128-shl-x16! ( a b i (a*b[i])<<(8-i)*16 )
+			\ "after shift" ddd
+		L0 ref swap n128-add L0 set! ( a b i ) 
+			\ "@ 1-" ddd
+		1 - <<loop
+	@done ( a b i )
+		SP 3 + SP! ( clean stack )
+		L> ( get result )
+		0 0 put ( set sign to 0, per assumption at top )
+		;
+
+: testMul16 ( ASTR b )
+	"ASTR = " . over . CR
+	"b = " . dup . CR
+
+	swap n128-from-hex dup "A:" . n128-to-hex . CR swap ( a b )
+	n128-mul-16 ( r )
+	"a*b = " . n128-to-hex . CR
+	;
+
+\ "abc" 4 testMul16
+\ "abcdef0123456789ABC" 14563 testMul16
+
+"**** 128 x 16 multiply test ..." . CR
+
+[ [ "abcd" 78 "0034.5876" ] 
+	[ "8127bdce3841aff3" 14382 "1c57.e6a9.375c.7a4a.c5aa" ]
+	\ this overflows into the sign digit but thats ok for testing
+	[ "a74bc13e7f438129eeabcd3fa3847565" 61387 "9cb4.627b.955e.f01d.9212.a6da.2b1f.53a2.6217" ] ]
+	{ unmake drop "Expect " . . CR testMul16 } for-each
+		
+
+\ error cases - uncomment to test
+\
+\ [ 123 123 123 123 123 123 123 123 123 ] 123 n128-mul-16
+\
+\ [ 0 0 0 0 0 0 0 0 0 ] 128237 n128-mul-16
+
+"**** 128 x 128 multiply test ..." . CR
+
+[
+	[ "abcd" "1234" "0000.0000.0000.0000.0000.0000.0c37.4fa4" ]
+	[ "93be8ac3" "a37b1ced" "0000.0000.0000.0000.5e59.5f98.7344.ca87" ]
+	[ "9dbe5af3b127da9c73bd" "5bd7aecd" "0000.3897.90e8.b5e3.6abc.2a09.c8ae.2459" ]
+	[ "b1a7cd4fe8945e3c612a473b" "f48123bc" "a9ad.8e0b.073e.5010.1ee0.b7d2.4384.6054" ]
+	[ "f48123bc" "b1a7cd4fe8945e3c612a473b" "a9ad.8e0b.073e.5010.1ee0.b7d2.4384.6054" ]
+	\ overflow case
+	[ "730192be0a3ebcfac12398eb" "9012834ebfae3acb31809234" "baa2.bff6.e0b5.aa78.d577.477f.f8f1.15bc" ]
+]
+	{ unmake drop "Expect " . . CR "      " . n128-from-hex swap n128-from-hex swap 
+		n128-mul n128-to-hex . CR } for-each
+		
 
