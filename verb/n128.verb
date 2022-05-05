@@ -120,6 +120,10 @@
 	256 /mod int8-to-hex swap int8-to-hex +
 	;
 
+: int32-to-hex ( n -- h ; 32-bit value to 8 hex digits )
+	65536 /mod int16-to-hex swap int16-to-hex +
+	;
+
 \ get hex string for n128 value:
 \	* assumes value is positive and prints as-is
 \	* does NOT include leading sign value
@@ -358,6 +362,7 @@
 
 "**** 128 x 16 multiply test ..." . CR
 
+\ values checked in Python
 [ [ "abcd" 78 "0034.5876" ] 
 	[ "8127bdce3841aff3" 14382 "1c57.e6a9.375c.7a4a.c5aa" ]
 	\ this overflows into the sign digit but thats ok for testing
@@ -373,6 +378,7 @@
 
 "**** 128 x 128 multiply test ..." . CR
 
+\ values checked in Python
 [
 	[ "abcd" "1234" "0000.0000.0000.0000.0000.0000.0c37.4fa4" ]
 	[ "93be8ac3" "a37b1ced" "0000.0000.0000.0000.5e59.5f98.7344.ca87" ]
@@ -429,3 +435,42 @@ var FNV128-OFFSET 1
 { unmake drop "Text:   " . over . CR "Expect: " . . CR "       " . 
 	fnv-128 n128-to-hex . CR } for-each
 	
+\
+\ FNV-1a 32-bit hash function
+\
+\ This is much faster than fnv-128 since it uses native 32-bit integers.
+\
+\ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+var FNV32-PRIME 1
+var FNV32-OFFSET 1
+2166136261 FNV32-OFFSET set!
+16777619 FNV32-PRIME set!
+
+: fnv-32 ( text -- hash, as integer, 32-bits )
+	\ for each byte:
+	\	hash = hash XOR byte
+	\	hash = hash * FNV32-PRIME
+
+	\ called with stack: [ hash char ]
+	[ 
+		ord bit-xor ( hash^c )
+		FNV32-PRIME ref * ( hash*prime )
+	]
+	\ init hash = FNV32-OFFSET
+	FNV32-OFFSET ref
+	fold
+	\ keep 32-bits only
+	4294967295 bit-and ( (hash*prime)&0xffffffff )
+	;
+
+"*** FNV-32 tests ..." . CR
+[
+	[ "Hello world!" "7a78f512" ]
+	[ "Hello World!" "b1ea4872" ]
+	[ "The quick brown fox jumped over the lazy dog." "47998ae2" ]
+	[ "The quick brown fOX jumpeD over the lAzy doG!" "6827f8fb" ]
+	[ "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec ac libero eu orci efficitur ultricies."
+		"1ef89e37" ]
+]
+{ unmake drop "Text:   " . over . CR "Expect: " . . CR "        " . 
+	fnv-32 int32-to-hex . CR } for-each
