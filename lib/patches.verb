@@ -22,7 +22,8 @@
 
 \ fold - left fold
 \	func: called with stack [ accum elem ] where accum is the accumulated value and
-\		  elem is the next element to be added to the accumulator
+\		  elem is the next element to be added to the accumulator.
+\		  func must leave updated accum on stack
 \	init: initial value for accumulator
 \
 \ 	pseudocode:
