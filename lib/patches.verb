@@ -110,3 +110,5 @@
 	
 ( ------ compiler ------- )
 
+( ------ misc ------- )
+\ "System startup time: " . run-time str . CR

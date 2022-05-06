@@ -32,20 +32,6 @@
 => 
 >> +
 *** Stack underflow ***
->> ( integer overflows )
-=> 
->> 9007199254740992
-*** Integer overflow ***
->> -9007199254740992
-*** Integer overflow ***
->> 9007199254740991 1 +
-*** Integer overflow ***
->> -9007199254740991 1 -
-*** Integer overflow ***
->> 1234904 7293847853 *
-*** Integer overflow ***
->> -1234904 7293847853 *
-*** Integer overflow ***
 >> ( divide by zero )
 => 
 >> 4 0 /
