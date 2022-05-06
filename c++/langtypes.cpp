@@ -193,6 +193,24 @@ bool Object::opGreater(const Object &other) {
 		case TYPE_SYMBOL:
 			if (other.type == TYPE_SYMBOL) return strcmp(data.str, other.data.str) > 0;
 			break;
+		case TYPE_LIST:
+			if(other.type != TYPE_LIST)
+				break;
+
+			// like a string test, but on elements of list
+			// its an error for elements to not be of the same types
+			for(size_t i=0; i<data.objlist->size(); ++i) {
+				if(data.objlist->at(i).opGreater(other.data.objlist->at(i))) {
+					// found first element where self>other, so entire test is true
+					return true;
+				}
+				else if(!data.objlist->at(i).opEqual(other.data.objlist->at(i))) {
+					// !greater && !equal, so other[i] is less, so entire test is false
+					return false;
+				}
+			}
+			// all are equal
+			return false;
 	}
 	throw LangError("Cannot compare objects in >: " + fmtStackPrint() + " and " + other.fmtStackPrint());
 }

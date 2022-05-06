@@ -193,6 +193,42 @@
 => <true> <true> <false> <false> <true> <true> <false> <false> 
 >> clear
 => 
+>> "abcde" "abcde" >
+=> <false> 
+>> "abcdf" "abcde" >
+=> <false> <true> 
+>> "abcdc" "abcde" >
+=> <false> <true> <false> 
+>> "abbde" "abcde" >
+=> <false> <true> <false> <false> 
+>> "abdde" "abcde" >
+=> <false> <true> <false> <false> <true> 
+>> clear
+=> 
+>> 'abcde 'abcde >
+=> <false> 
+>> 'abcdf 'abcde >
+=> <false> <true> 
+>> 'abcdc 'abcde >
+=> <false> <true> <false> 
+>> 'aacde 'abcde >
+=> <false> <true> <false> <false> 
+>> 'adcde 'abcde >
+=> <false> <true> <false> <false> <true> 
+>> clear
+=> 
+>> [ 1 2 3 4 5 ] [ 1 2 3 4 5 ] >
+=> <false> 
+>> [ 1 2 3 4 3 ] [ 1 2 3 4 5 ] >
+=> <false> <false> 
+>> [ 1 2 3 4 6 ] [ 1 2 3 4 5 ] >
+=> <false> <false> <true> 
+>> [ 1 2 1 4 5 ] [ 1 2 3 4 5 ] >
+=> <false> <false> <true> <false> 
+>> [ 1 2 4 4 5 ] [ 1 2 3 4 5 ] >
+=> <false> <false> <true> <false> <true> 
+>> clear
+=> 
 >> ( make sure f.setprec is working )
 => 
 >> 4 f.setprec
