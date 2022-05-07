@@ -71,6 +71,20 @@
 : ddd . .S CR  ;
 
 : n128-from-hex ( hex -- n ; parse hex into n128 value )
+	\ see if there's a sign
+	dup 0 get "-" == if >>negative-sign
+	dup 0 get "+" == if >>positive-sign
+	\ else no sign == +
+	false >L ( L0 == true if negative )
+	>>pad
+	@negative-sign
+		true >L
+		1 -1 slice \ remove sign
+		>>pad
+	@positive-sign
+		false >L
+		1 -1 slice \ remove sign
+		
 	\ each digit is 16 bits -- 4 hex chars -- so make sure length is a multiple of 4
 	@pad
 	dup length 4 mod 0 == if >>ready
@@ -94,6 +108,10 @@
 		drop
 		\ front-pad to 9 16-bit digits
 		[ 0 0 0 0 0 0 0 0 ] swap + -9 -1 slice
+		\ if negative, negate
+		L> if >>negate
+		return
+		@negate n128-negate
 		;
 
 [ 	[ "1234abcd5678cdef" [ 0 0 0 0 0 4660 43981 22136 52719 ] ]
@@ -189,6 +207,12 @@
 		0 0 put \ set first word (sign) to 0
 	;
 
+\ shift n << i*16 and put v in low word of result
+: n128-shl-x16-in! ( n i v -- (n<<(i*16)) | v - IN PLACE )
+	-rot ( v n i )
+	n128-shl-x16! swap ( n<<i*16 v )
+	8 swap put ( put v into n[8] )
+	;
 
 "*** Test Left-Shift ********************" . CR
 
@@ -474,3 +498,218 @@ var FNV32-OFFSET 1
 ]
 { unmake drop "Text:   " . over . CR "Expect: " . . CR "        " . 
 	fnv-32 int32-to-hex . CR } for-each
+
+\ find: ( list test ) return index of first element of list that satisfies test.
+\       returns -1 if none found
+: find ( list test -- index )
+	0
+	@loop ( list test i )
+		dup 4 pick length >= if >>notfound ( loop until i >= len(list) )
+		3 pick 2 pick get ( list test i list[i] )
+		3 pick call ( list test i result )
+		if >>found
+		1 + <<loop ( list test i+1 )
+	@found ( list test i )
+		nip nip return
+	@notfound
+		drop drop drop -1
+		;
+
+"*** test find" . CR
+"Expect 7: " . 
+[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { 2 > } find . CR
+"Expect 0: " .
+[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { -3 < } find . CR
+"Expect 10: " .
+[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { 5 > } find . CR
+"Expect -1: " .
+[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { 10 > } find . CR
+
+: n128-compare ( a b -- -1,0 or 1 ; -1: a<b 0: a==b 1: a>b )
+		\ "cmp" ddd
+	2dup 0 get swap 0 get ( a b b[0] a[0] )
+		\ "B" ddd
+	2dup 0 == swap 0 != ( a b b[0] a[0] a[0]==0 b[0]!=0 )
+		\ "C" ddd
+	and if >>greater-sign ( true if a>=0 && b<0 )
+		\ "D" ddd
+	0 != swap 0 == ( a b a[0]!=0 b[0]==0 )
+		\ "E" ddd
+	and if >>less ( true if b>=0 && a<0 )
+	\ else signs are equal so test magnitudes
+		\ "test mag" ddd
+	2dup == if >>equal
+	> if >>greater
+		\ not greater and not equal, so ...
+		-1 return ( a<b )
+	@greater-sign ( a b b[0] a[0] )
+		SP 4 + SP! 1 return ( a>b )
+	@less ( a b )
+		drop drop -1 return ( a<b )
+	@equal ( a b )
+		drop drop 0 return ( a==b )
+	@greater (  )
+		1 return ( a>b )
+	;
+
+\ for readability ...
+: n128-greater? ( a b -- a>b )
+	n128-compare 1 ==
+	;
+
+: n128-equal? ( a b -- a==b )
+	n128-compare 0 == 
+	;
+
+: n128-less? ( a b -- a<b )
+	n128-compare -1 ==
+	;
+
+"** n128-equal" . CR
+"Expect <true>: " . "abcdef12" n128-from-hex "abcdef12" n128-from-hex n128-equal? . CR
+"Expect <false>: " . "abcdef12" n128-from-hex "abcde012" n128-from-hex n128-equal? . CR
+"Expect <false>: " . "abcdcf12" n128-from-hex "abcdef12" n128-from-hex n128-equal? . CR
+
+"** n128-greater, # >0" . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <true>: " . "12345678bbcd" n128-from-hex "12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "12345678bbcd" n128-from-hex n128-greater? . CR
+
+"** n128-greater, # < 0" . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <false>: " . "-12345678bbcd" n128-from-hex "-12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <true>: " . "-12345678abcd" n128-from-hex "-12345678bbcd" n128-from-hex n128-greater? . CR
+
+"** n128-greater, opposite signs" . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <true>: " . "12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-greater? . CR
+
+"** n128-less, # > 0" . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-less? . CR
+"Expect <false>: " . "12345678bbcd" n128-from-hex "12345678abcd" n128-from-hex n128-less? . CR
+"Expect <true>: " . "12345678abcd" n128-from-hex "12345678bbcd" n128-from-hex n128-less? . CR
+
+"** n128-less, # < 0" . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-less? . CR
+"Expect <true>: " . "-12345678bbcd" n128-from-hex "-12345678abcd" n128-from-hex n128-less? . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "-12345678bbcd" n128-from-hex n128-less? . CR
+
+"** n128-less, opposite signs" . CR
+"Expect <true>: " . "-12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-less? . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-less? . CR
+	
+"Expect ffff.ffff.ffff.ffff.ffff.5432.fedc.789b" . CR
+"-abcd01238765" n128-from-hex n128-to-hex "     " . . CR
+
+"-abcd01238765fedc6543dcba3210cdef" n128-from-hex n128-to-hex "     " . . CR
+
+"Expect 0:" . CR
+"83bd82abcde09076b31cabefd8493021" n128-from-hex 
+"-83bd82abcde09076b31cabefd8493021" n128-from-hex
+n128-add n128-to-hex . CR
+
+: n128-zero? ( a -- a==0? )
+	{ 0 != } find -1 == 
+	;
+
+"Expect true:" . CR
+"0" n128-from-hex n128-zero? . CR
+
+"Expect false:" . CR
+"1" n128-from-hex n128-zero? . CR
+
+\ get i'th most significant word from n128
+\ *assumes a is > 0*
+\ ex: [ 0 0 0 123 456 ] -- msw[0] == 123, msw[1] == 456
+: n128-get-msw ( a i -- get i'th most significant word )
+	\ find first nonzero word
+	over { 0 > } find
+	\ check for errors
+	dup 0 == if >>got-negative
+	dup -1 == if >>not-found
+	+ \ a msw+i
+	2dup over length >= ( a m+i a m+i>=len[a] )
+	if >>out-of-bounds
+	drop get return ( a[m+i] )
+
+	@got-negative "Negative value in n128-get-msw not allowed" error
+	@not-found "Zero not allowed in n128-get-msw" error
+	;
+
+"** n128-get-msw:" . CR
+"12345678abcd" n128-from-hex 
+"Expect 4660:" .
+dup 0 n128-get-msw . CR
+"Expect 22136:" . 
+dup 1 n128-get-msw . CR
+"Expect 43981:" .
+dup 2 n128-get-msw . CR
+drop
+
+\ 'significant' meaning the number of words starting at the first nonzero word from the left side
+\ 'a' must be > 0
+\ in this context, trailing zeros are still considered significant
+: n128-nr-sigwords ( a -- #significant words in a )
+	{ > 0 } find
+	dup -1 == >>not-found
+	9 swap - return ( 9-i )
+
+	@not-found "Zero not allowed in n128-nr-sigwords" error
+	;
+
+: n128-div ( a b ; a//b -- a & b must be positive )
+	n128-new ( a b n ) \ n == current partial numerator, shifted in from a
+	n128-new >L ( a b n ; L0=q ) \ q = current quotient sum
+
+	@loop ( a b n )
+		"@loop" ddd
+		\ done if a==0 (all words have been shifted out to n; n is remainder )
+		3 pick n128-zero? if >>done
+		\ shift high word of a out and into low word of n
+		3 pick 1 get 1 swap ( a b n 1 a[1] )
+		n128-shl-x16-in! ( a b n<<16|a[1] )
+		3 pick 1 n128-shl-x16! drop ( a<<16 b n<<16|a[1] )
+		\ is partial numerator > b?
+		2dup swap n128-greater? ( a<<16 b n<<16|a[1] [n<<16|a[1] > b] )
+		if >>do-divide-shift
+		\ is partial numerator = b?
+		2dup n128-equal?
+		if >>do-divide-shift
+		\ else numerator < b so can't divide yet, keep shifting
+		<<loop
+
+		@do-divide-shift ( a b n )
+			\ n will either be the same size as b (counting nonzero words from msw)
+			\ or 1 word larger. so i want to grab either 1 or 2 words from n and divide
+			\ by the high word of b (so either a 32-bit/16-bit or 16-bit/16-bit divide)
+			dup n128-nr-sigwords ( a b n #nwords )
+			3 pick n128-nr-sigwords ( a b n #nwords #bwords )
+			> if >>2words ( n is 1 word larger, so want to do 32/16 divide )
+			( a b n )
+			\ same size, get top word of each and divide
+			over 0 n128-get-msw over 0 n128-get-msw ( a b n b[msw0] n[msw0] )
+			\ divide to get next word of quotient
+			swap // ( a b n qi )
+			\ shift qi into quotient
+			dup L0 ref swap 1 swap ( a b n qi quot 1 qi )
+			n128-shl-x16-in! ( a b n qi quot<<16|qi )
+			L0 set! ( a b n qi )
+			\ remainder is: n = n - qi*b
+			3 pick n128-mul n128-subtract ( a b n-qi*b )
+			<<loop
+
+		@done ( a b n )
+			\ n is remainder; grab final quotient
+			\ leave on stack in same order as standard /mod -- (remainder quotient)
+			nip nip L> ( n q )
+
+	;
+
+"123" n128-from-hex
+"6" n128-from-hex
+
+|| TODO -- shl-x16 should return NEW OBJECT (is sometimes returning new from slice and sometimes returning same)
+
+n128-div
+
+n128-to-hex . CR
