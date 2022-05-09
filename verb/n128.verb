@@ -12,6 +12,24 @@
 \ value would be +/- 2^127. Here there is no difference in range for signed
 \ vs unsigned ... essentially this is 129 bit math)
 
+\ define shortcuts for direct stack access ... easier than 'pick' and
+\ also allows write access with Sn!
+\
+\ note that the Sn! are +1 more than the Sn to skip over the top of stack
+\ item which is the item being set to the stack ... i think this is more intuitive
+: S0 SP ref ;
+: S0! SP 1 + set! ;
+: S1 SP 1 + ref ;
+: S1! SP 2 + set! ;
+: S2 SP 2 + ref ;
+: S2! SP 3 + set! ;
+: S3 SP 3 + ref ;
+: S3! SP 4 + set! ;
+: S4 SP 4 + ref ;
+: S4! SP 5 + set! ;
+: S5 SP 5 + ref ;
+: S5! SP 6 + set! ;
+
 : n128-new ( -- obj ; create a 128 bit number, set to zero )
 	[ 0 0 0 0 0 0 0 0 0 ] \ 8 x 16-bit values + 1 extra for sign
 	;
@@ -192,11 +210,12 @@
 	{ unmake drop "Expect:" . . CR "       " . n128-from-hex swap n128-from-hex n128-add n128-to-hex . CR }
 	for-each
 
-\ left shift *IN PLACE* in multiples of 16-bits
+\ left shift in multiples of 16-bits
 \
 \ assumes that n is unsigned and sets sign to 0000 (i.e. bits are NOT shifted out of
 \ MSB into sign), so caller should only pass positive values
-: n128-shl-x16! ( n i -- n<<(i*16) )
+: n128-shl-x16 ( n i -- n<<(i*16) )
+	swap deepcopy swap \ shift a copy not original
 	tuck
 	@loop ( i n i )
 		dup 0 == if >>slice
@@ -208,23 +227,23 @@
 	;
 
 \ shift n << i*16 and put v in low word of result
-: n128-shl-x16-in! ( n i v -- (n<<(i*16)) | v - IN PLACE )
+: n128-shl-x16-in ( n i v -- (n<<(i*16)) | v - IN PLACE )
 	-rot ( v n i )
-	n128-shl-x16! swap ( n<<i*16 v )
+	n128-shl-x16 swap ( n<<i*16 v )
 	8 swap put ( put v into n[8] )
 	;
 
 "*** Test Left-Shift ********************" . CR
 
-"abcd" n128-from-hex 0 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 1 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 2 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 3 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 4 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 5 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 6 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 7 n128-shl-x16! n128-to-hex . CR
-"abcd" n128-from-hex 8 n128-shl-x16! n128-to-hex . CR
+"abcd" n128-from-hex 0 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 1 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 2 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 3 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 4 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 5 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 6 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 7 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 8 n128-shl-x16 n128-to-hex . CR
 
 \ negate n128 value *IN PLACE*
 : n128-negate ( n -- n )
@@ -361,7 +380,7 @@
 			\ "after mul-16" ddd
 		\ shift left by (8-i)*16-bits and add to result
 		8 3 pick - ( a b i a*b[i] 8-i )
-		n128-shl-x16! ( a b i (a*b[i])<<(8-i)*16 )
+		n128-shl-x16 ( a b i (a*b[i])<<(8-i)*16 )
 			\ "after shift" ddd
 		L0 ref swap n128-add L0 set! ( a b i ) 
 			\ "@ 1-" ddd
@@ -650,66 +669,20 @@ drop
 \ 'a' must be > 0
 \ in this context, trailing zeros are still considered significant
 : n128-nr-sigwords ( a -- #significant words in a )
-	{ > 0 } find
-	dup -1 == >>not-found
+		\ "count sigwords" ddd
+	{ 0 > } find
+		\ "find result" ddd
+	dup -1 == if >>not-found
 	9 swap - return ( 9-i )
 
 	@not-found "Zero not allowed in n128-nr-sigwords" error
 	;
 
-: n128-div ( a b ; a//b -- a & b must be positive )
-	n128-new ( a b n ) \ n == current partial numerator, shifted in from a
-	n128-new >L ( a b n ; L0=q ) \ q = current quotient sum
-
-	@loop ( a b n )
-		"@loop" ddd
-		\ done if a==0 (all words have been shifted out to n; n is remainder )
-		3 pick n128-zero? if >>done
-		\ shift high word of a out and into low word of n
-		3 pick 1 get 1 swap ( a b n 1 a[1] )
-		n128-shl-x16-in! ( a b n<<16|a[1] )
-		3 pick 1 n128-shl-x16! drop ( a<<16 b n<<16|a[1] )
-		\ is partial numerator > b?
-		2dup swap n128-greater? ( a<<16 b n<<16|a[1] [n<<16|a[1] > b] )
-		if >>do-divide-shift
-		\ is partial numerator = b?
-		2dup n128-equal?
-		if >>do-divide-shift
-		\ else numerator < b so can't divide yet, keep shifting
-		<<loop
-
-		@do-divide-shift ( a b n )
-			\ n will either be the same size as b (counting nonzero words from msw)
-			\ or 1 word larger. so i want to grab either 1 or 2 words from n and divide
-			\ by the high word of b (so either a 32-bit/16-bit or 16-bit/16-bit divide)
-			dup n128-nr-sigwords ( a b n #nwords )
-			3 pick n128-nr-sigwords ( a b n #nwords #bwords )
-			> if >>2words ( n is 1 word larger, so want to do 32/16 divide )
-			( a b n )
-			\ same size, get top word of each and divide
-			over 0 n128-get-msw over 0 n128-get-msw ( a b n b[msw0] n[msw0] )
-			\ divide to get next word of quotient
-			swap // ( a b n qi )
-			\ shift qi into quotient
-			dup L0 ref swap 1 swap ( a b n qi quot 1 qi )
-			n128-shl-x16-in! ( a b n qi quot<<16|qi )
-			L0 set! ( a b n qi )
-			\ remainder is: n = n - qi*b
-			3 pick n128-mul n128-subtract ( a b n-qi*b )
-			<<loop
-
-		@done ( a b n )
-			\ n is remainder; grab final quotient
-			\ leave on stack in same order as standard /mod -- (remainder quotient)
-			nip nip L> ( n q )
-
-	;
-
-"123" n128-from-hex
-"6" n128-from-hex
-
-|| TODO -- shl-x16 should return NEW OBJECT (is sometimes returning new from slice and sometimes returning same)
-
-n128-div
-
-n128-to-hex . CR
+"Expect 2:" . 
+"12345678" n128-from-hex n128-nr-sigwords . CR
+"Expect 3:" . 
+"123456780" n128-from-hex n128-nr-sigwords . CR
+"Expect 4:" .
+"abcd01234567cdef" n128-from-hex n128-nr-sigwords . CR
+"Expect 5:" .
+"abcd01234567cdef123" n128-from-hex n128-nr-sigwords . CR
