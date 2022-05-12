@@ -577,4 +577,11 @@ BUILTINS = {
 	["deepcopy"] = { {"any"}, function(intr,obj) intr:push(deepcopy(obj)) end},
 	["alloc"] = { {"number"}, function(intr,nr) intr:push(intr:heap_alloc(nr)) end},
 	[",,del"] = { {}, function(intr) intr:deleteWord(popSymbol(intr)) end},
+	["bit-and"] = { {"number","number"}, function(intr,a,b) intr:pushInt((a&b) & 0xffffffff) end},
+	["bit-or"] = { {"number","number"}, function(intr,a,b) intr:pushInt((a|b) & 0xffffffff) end},
+	["bit-xor"] = { {"number","number"}, function(intr,a,b) intr:pushInt((a~b) & 0xffffffff) end},
+	["bit-not"] ={ {"number"}, function(intr,a) intr:pushInt((~a) & 0xffffffff) end},
+	["bit-shl"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a<<n) & 0xffffffff) end},
+	["bit-shr"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a>>n) & 0xffffffff) end},
+	
 }

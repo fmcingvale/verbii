@@ -528,6 +528,20 @@ class Builtins {
 		intr.push(list);
 	}
 	
+	public static void bit_shl(Interpreter intr) {
+		int nr = (int)popInt(intr,"bit-shl");
+		var a = popInt(intr,"bit-shl");
+		
+		intr.push(new LangInt((a << nr) & 0xffffffff));
+	}
+
+	public static void bit_shr(Interpreter intr) {
+		int nr = (int)popInt(intr,"bit-shr");
+		var a = popInt(intr,"bit-shr");
+		
+		intr.push(new LangInt((a >> nr) & 0xffffffff));
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -583,5 +597,11 @@ class Builtins {
 		{"deepcopy", intr => intr.push(intr.pop().deepcopy())},
 		{"alloc", intr => intr.push(new LangInt(intr.heapAllocate(popInt(intr,"alloc"))))},
 		{",,del", intr => intr.deleteWord(popSymbol(intr,",,del"))},
+		{"bit-and", intr => intr.push(new LangInt((((uint)popInt(intr,"bit-and"))&((uint)popInt(intr,"bit-and"))) & 0xffffffff))},
+		{"bit-or", intr => intr.push(new LangInt((((uint)popInt(intr,"bit-or"))|((uint)popInt(intr,"bit-or"))) & 0xffffffff))},
+		{"bit-xor", intr => intr.push(new LangInt((((uint)popInt(intr,"bit-xor"))^((uint)popInt(intr,"bit-xor"))) & 0xffffffff))},
+		{"bit-not", intr => intr.push(new LangInt((~(uint)popInt(intr,"bit-not")) & 0xffffffff))},
+		{"bit-shl", bit_shl},
+		{"bit-shr", bit_shr},
 	};
 }

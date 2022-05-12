@@ -340,6 +340,8 @@
 			(dynvector-set! (List-objlist alist) index obj)
 			(push intr alist))))
 
+(import (chicken bitwise))
+
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
 	(list
@@ -407,6 +409,12 @@
 		(list "deepcopy" (list '*) (lambda (intr obj) (push intr (deepcopy obj))))
 		(list "alloc" (list 'i) (lambda (intr nr) (push intr (allocate intr nr))))
 		(list ",,del" (list 'y) (lambda (intr name) (intr-delete-word intr name)))
+		(list "bit-and" (list 'i 'i) (lambda (intr a b) (push intr (bitwise-and (bitwise-and a b) #xffffffff))))
+		(list "bit-or" (list 'i 'i) (lambda (intr a b) (push intr (bitwise-and (bitwise-ior a b) #xffffffff))))
+		(list "bit-xor" (list 'i 'i) (lambda (intr a b) (push intr (bitwise-and (bitwise-xor a b) #xffffffff))))
+		(list "bit-not" (list 'i) (lambda (intr a) (push intr (bitwise-and (bitwise-not a) #xffffffff))))
+		(list "bit-shl" (list 'i 'i) (lambda (intr a n) (push intr (bitwise-and (arithmetic-shift a n) #xffffffff))))
+		(list "bit-shr" (list 'i 'i) (lambda (intr a n) (push intr (bitwise-and (arithmetic-shift a (- 0 n)) #xffffffff))))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

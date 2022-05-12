@@ -401,6 +401,16 @@ def builtin_put(I):
 	_list[index] = obj
 	I.push(_list)
 
+def builtin_bit_shr(I):
+	nr = popInt(I)
+	a = popInt(I)
+	I.push((a>>nr) & 0xffffffff)
+
+def builtin_bit_shl(I):
+	nr = popInt(I)
+	a = popInt(I)
+	I.push((a<<nr) & 0xffffffff)
+
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -466,5 +476,15 @@ BUILTINS = {
 	'deepcopy': ([object], lambda I,o: I.push(deepcopy(o))),
 	'alloc': ([int], lambda I,nr: I.push(I.heap_alloc(nr))),
 	',,del': ([], lambda I: I.deleteWord(popSymbol(I))),
+
+	# note below -- the "& 0xffffffff" ensures I have an unsigned 32-bit value
+	'bit-not': ([], lambda I: I.push((~popInt(I)) & 0xffffffff)), 
+	'bit-and': ([], lambda I: I.push((popInt(I) & popInt(I)) & 0xffffffff)), 
+	'bit-or': ([], lambda I: I.push((popInt(I) | popInt(I)) & 0xffffffff)), 
+	'bit-xor': ([], lambda I: I.push((popInt(I) ^ popInt(I)) & 0xffffffff)), 
+	'bit-shr': ([], builtin_bit_shr),
+	'bit-shl': ([], builtin_bit_shl),
+	
+	
 }
 
