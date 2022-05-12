@@ -34,6 +34,9 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* I think 'true' and 'false' should be literals -- things like [ 1 2 3 true ] won't
+  give the expected result if true is a word since insides of lists are not evaluated
+
 * add bit level operations -- limit to 32 bits
 	* add random number generator
 
@@ -107,6 +110,8 @@ never visible from verbii code
 			  overhead other than setting args up into locals
 			* compiler emits cleanup code (LP + n LP!) before 'return'
 				* need to add a return at end of all word lists for simplicity
+	
+	* try inlining small functions
 	
 * 'get' should be a builtin, both for efficiency and for symmetry now that 'put' exists
 

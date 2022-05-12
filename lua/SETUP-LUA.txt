@@ -1,0 +1,10 @@
+
+I had to self-build Lua 5.4.x for Ubuntu ...
+
+1. Download and build lua source
+2. Install luarocks per: https://luarocks.org/#quick-start
+	NOTE: REMOVE built directory BEFORE running 'luarocks install', else
+	it will install to the built directory.
+3. sudo luarocks install luasocket
+
+(luasocket is required for high resolution gettime)
