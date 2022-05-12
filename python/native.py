@@ -233,7 +233,7 @@ def builtin_make_list(I):
 
 	I.push(objlist)
 
-def test_equals(a,b):
+def test_equal(a,b):
 	if a is None: return b is None
 	elif isNumeric(a): return isNumeric(b) and a==b
 	elif type(a) == bool: return type(b) == bool and a==b
@@ -244,24 +244,40 @@ def test_equals(a,b):
 		if type(b) != list: return False
 		if len(a) != len(b): return False
 		for i in range(len(a)):
-			if not test_equals(a[i],b[i]): return False
-
+			if not test_equal(a[i],b[i]): return False
 		return True
 	else:
 		raise LangError("Unable to compare objects (==) {0} and {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
-def builtin_equals(I):
+def builtin_equal(I):
 	b = I.pop()
 	a = I.pop()
-	I.push(test_equals(a,b))
+	I.push(test_equal(a,b))
 
 def builtin_greater(I):
 	b = I.pop()
 	a = I.pop()
+	I.push(test_greater(a,b))
 
+def test_greater(a,b):
 	if isNumeric(a) and isNumeric(b): return a>b
 	elif type(a) == str and type(b) == str: return a>b
 	elif isinstance(a,LangString) and isinstance(b,LangString): return a.s > b.s
+	elif type(a) == list and type(b) == list:
+		# see c++ comments - do it like a string test, still raise error on nonequal types	
+		# check up to max of common length
+		nr = min(len(a),len(b))
+		for i in range(nr):
+			if test_greater(a[i],b[i]):
+				# first a>b element --> entire result is greater
+				return True
+			elif not test_equal(a[i],b[i]):
+				# (a != b) and (a not > b) so: b < a --> entire result is less
+				return False
+			# else a==b, continue to next element
+
+		# first nr elements are equal, so length determines result
+		return len(a) > len(b)
 	else:
 		raise LangError("Unable to compare objects (>) {0} and {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
@@ -394,8 +410,8 @@ BUILTINS = {
 	'/': ([], builtin_div),
 	'/mod': ([int,int], builtin_divmod),
 	'f.setprec': ([int], builtin_fsetprec),
-	'==': ([], builtin_equals),
-	'>': ([], lambda I: I.push(builtin_greater(I))),
+	'==': ([], builtin_equal),
+	'>': ([], builtin_greater),
 	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
 	# object means any type
 	# format TOS for stack display and push string

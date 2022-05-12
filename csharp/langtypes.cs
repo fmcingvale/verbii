@@ -59,9 +59,9 @@ public class LangInt : LangObject {
 	const long MIN_VINT = -MAX_VINT;
 
 	public LangInt(long i) {
-		if(i > MAX_VINT || i < MIN_VINT) {
-			throw new LangError("Integer overflow");
-		}
+		//if(i > MAX_VINT || i < MIN_VINT) {
+		//	throw new LangError("Integer overflow");
+		//}
 		value = i;
 	}
 

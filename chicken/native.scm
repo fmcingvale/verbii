@@ -106,13 +106,38 @@
 (define (builtin-equal intr A B)
 	(push intr (test-equal A B)))
 
-(define (builtin-greater intr A B)
+(define (test-greater A B)
 	; unlike above, both A and B have to be same (or comparable) types
 	(cond
-		((and (is-numeric? A) (is-numeric? B)) (push intr (> (value A) (value B))))
-		((and (String? A) (String? B)) (push intr (string> (value A) (value B))))
-		((and (Symbol? A) (Symbol? B)) (push intr (string> A B)))
+		((and (is-numeric? A) (is-numeric? B)) (> (value A) (value B)))
+		((and (String? A) (String? B)) (string> (value A) (value B)))
+		((and (Symbol? A) (Symbol? B)) (string> A B))
+		((and (List? A) (List? B))
+			; see c++ notes
+			(let ((nr (max (len A) (len B))))
+				(let loop ((i 0))
+					(if (< i nr)
+						(cond
+							((test-greater (dynvector-ref (List-objlist A) i) (dynvector-ref (List-objlist B) i))
+								; A>B -> result is greater
+								#t)
+							((not (test-equal (dynvector-ref (List-objlist A) i) (dynvector-ref (List-objlist B) i)))
+								; ! A>B and !A==B, so A<B -> result is less
+								#f)
+							(else
+								; A==B so continue to next element
+								(loop (+ 1 i))))
+						; first nr elements are equal, determine result based on length:
+						(cond
+							((> (len A) (len B))
+								; elements up to here are equal, but A is longer, so is greater
+								#t)
+							(else
+								#f)))))) ; B is longer OR A==B, in either case, result is false
 		(else (lang-error '> "Don't know how to compare " A " and " B))))
+
+(define (builtin-greater intr A B)
+	(push intr (test-greater A B)))
 
 (define (builtin-add intr A B)
 	(cond

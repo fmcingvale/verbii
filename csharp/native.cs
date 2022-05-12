@@ -345,24 +345,41 @@ class Builtins {
 	}
 
 	// unlike ==, here comparing objects of different types in an error
+	public static bool test_greater(LangObject a, LangObject b) {
+		if(a.isNumeric() && b.isNumeric()) { return a.asFloat() > b.asFloat(); }
+		else if(a is LangString && b is LangString) { 
+			int v = String.CompareOrdinal((a as LangString)!.value, (b as LangString)!.value);
+			return v > 0;
+		}
+		else if(a is LangSymbol && b is LangSymbol) { 
+			int v = String.CompareOrdinal((a as LangSymbol)!.value, (b as LangSymbol)!.value);
+			return v > 0;
+		}
+		else if(a is LangList && b is LangList) {
+			// see c++ notes
+			var oa = (a as LangList)!;
+			var ob = (b as LangList)!;
+			var nr = Math.Min(oa.objlist.Count, ob.objlist.Count);
+			for(var i=0; i<nr; ++i) {
+				if(test_greater(oa.objlist[i], ob.objlist[i]))
+					return true;
+				else if(!test_equal(oa.objlist[i], ob.objlist[i]))
+					return false; // a[i] < b[i]
+			}
+			// nr elements are equal, so now check lengths
+			return oa.objlist.Count > ob.objlist.Count;
+		}
+		else {
+			throw new LangError("Cannot compare (>) objects: " + a.fmtStackPrint() + " and " + b.fmtStackPrint());
+		}
+	}
+
 	public static void greater(Interpreter intr) {
 		var b = intr.pop();
 		var a = intr.pop();
 
 		//Console.WriteLine("GREATER: " + a.fmtStackPrint() + " and " + b.fmtStackPrint());
-
-		if(a.isNumeric() && b.isNumeric()) { intr.push(new LangBool(a.asFloat() > b.asFloat())); }
-		else if(a is LangString && b is LangString) { 
-			int v = String.CompareOrdinal((a as LangString)!.value, (b as LangString)!.value);
-			intr.push(new LangBool(v > 0));
-		}
-		else if(a is LangSymbol && b is LangSymbol) { 
-			int v = String.CompareOrdinal((a as LangSymbol)!.value, (b as LangSymbol)!.value);
-			intr.push(new LangBool(v > 0));
-		}
-		else {
-			throw new LangError("Cannot compare (>) objects: " + a.fmtStackPrint() + " and " + b.fmtStackPrint());
-		}
+		intr.push(new LangBool(test_greater(a,b)));
 	}
 	
 	public static void slice(Interpreter intr) {

@@ -12,7 +12,7 @@
 => 1 2 3 
 >> 4 5 6 7
 => 1 2 3 4 5 6 7 
->> . . . . CR 
+>> . . . . CR
 7 6 5 4 
 => 1 2 3 
 >> 7 6 5 4
@@ -27,7 +27,7 @@
 => 10 20 30 90 
 >> -
 => 10 20 -60 
->> * 
+>> *
 => 10 -1200 
 >> +
 => -1190 
@@ -102,6 +102,8 @@
 >> clear
 => 
 >> ( numerical limits -- non-error cases )
+=> 
+>> ( ports are required to support UP TO these max values )
 => 
 >> clear
 => 
@@ -229,6 +231,14 @@
 => <false> <false> <true> <false> <true> 
 >> clear
 => 
+>> ( check with unequal length lists - again like a string test )
+=> 
+>> [ 1 2 3 4 5 ] [ 1 2 3 4 ] >
+=> <true> 
+>> [ 1 2 3 ] [ 1 2 3 4 ] >
+=> <true> <false> 
+>> clear
+=> 
 >> ( make sure f.setprec is working )
 => 
 >> 4 f.setprec
@@ -322,13 +332,13 @@
 => 
 >> 10 20 30 40
 => 10 20 30 40 
->> >L 
+>> >L
 => 10 20 30 
->> >L 
+>> >L
 => 10 20 
->> >L 
+>> >L
 => 10 
->> >L 
+>> >L
 => 
 >> L>
 => 10 
@@ -342,13 +352,13 @@
 => 
 >> 10 20 30 40
 => 10 20 30 40 
->> >L 
+>> >L
 => 10 20 30 
->> >L 
+>> >L
 => 10 20 
->> >L 
+>> >L
 => 10 
->> >L 
+>> >L
 => 
 >> 111 LP set!
 => 
@@ -405,7 +415,7 @@
 => 
 >> clear
 => 
->> del x   
+>> del x
 => 
 >> var x 1
 => 

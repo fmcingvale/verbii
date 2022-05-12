@@ -58,6 +58,7 @@ clear
 clear
 
 ( numerical limits -- non-error cases )
+( ports are required to support UP TO these max values )
 clear
 
 9007199254740991
@@ -133,6 +134,11 @@ clear
 [ 1 2 3 4 6 ] [ 1 2 3 4 5 ] >
 [ 1 2 1 4 5 ] [ 1 2 3 4 5 ] >
 [ 1 2 4 4 5 ] [ 1 2 3 4 5 ] >
+clear
+
+( check with unequal length lists - again like a string test )
+[ 1 2 3 4 5 ] [ 1 2 3 4 ] >
+[ 1 2 3 ] [ 1 2 3 4 ] >
 clear
 
 ( make sure f.setprec is working )

@@ -328,14 +328,30 @@ function builtin_equal(intr, a, b)
 	intr:push(test_equal(a,b))
 end
 
-function builtin_greater(intr, a, b)
+function test_greater(a, b)
 	-- unlike _equal(), here i can test both types intially since using > on non-comparable types is an error
-	if isNumeric(a) and isNumeric(b) then intr:push(asNumeric(a) > asNumeric(b))
-	elseif isString(a) and isString(b) then intr:push(a.value > b.value)
-	elseif isSymbol(a) and isSymbol(b) then intr:push(a > b)
+	if isNumeric(a) and isNumeric(b) then return asNumeric(a) > asNumeric(b)
+	elseif isString(a) and isString(b) then return a.value > b.value
+	elseif isSymbol(a) and isSymbol(b) then return a > b
+	elseif isList(a) and isList(b) then
+		-- see c++ notes
+		local nr = math.min(#a, #b)
+		for i=1,nr do
+			if test_greater(a[i],b[i]) then
+				return true
+			elseif not test_equal(a[i],b[i]) then
+				return false -- a<b
+			end
+		end
+		-- nr elements are equal, so longer list is greater
+		return #a > #b
 	else
 		error(">>>Don't know how to compare (>) objects: " .. fmtStackPrint(a) .. " and " .. fmtStackPrint(b))
 	end
+end
+
+function builtin_greater(intr, a, b)
+	intr:push(test_greater(a,b))
 end
 
 function builtin_slice(intr, obj, index, nr)

@@ -70,9 +70,9 @@ end
 
 function Interpreter:pushInt(val)
 	-- like push but checks for valid integer range
-	if val > MAX_VINT or val < MIN_VINT then
-		error(">>>Integer overflow")
-	end
+	--if val > MAX_VINT or val < MIN_VINT then
+	--	error(">>>Integer overflow")
+	--end
 
 	self:push(val)
 end

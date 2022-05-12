@@ -102,8 +102,10 @@ class Interpreter(object):
 
 	def pushInt(self, a):
 		"like push but checks for valid integer range"
-		if a > MAX_VINT or a < MIN_VINT:
-			raise LangError("Integer overflow")
+		# nope -- removed overflow checks
+		
+		#if a > MAX_VINT or a < MIN_VINT:
+		#	raise LangError("Integer overflow")
 
 		self.push(a)
 

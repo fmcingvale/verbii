@@ -145,9 +145,10 @@
 	(min-run-SP-set! intr (min (intr-SP intr) (min-run-SP intr))))
 	
 (define (push-int intr i)
-	(if (or (> i MAX_VINT) (< i MIN_VINT))
-		(lang-error 'push-int "Integer overflow")
-		(push intr i)))
+	;(if (or (> i MAX_VINT) (< i MIN_VINT))
+	;	(lang-error 'push-int "Integer overflow")
+	;	(push intr i)))
+	(push intr i))
 
 (define (pop intr)
 	(if (>= (intr-SP intr) (intr-SP_EMPTY intr))
