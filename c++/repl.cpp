@@ -223,6 +223,9 @@ bool file_exists(char* filename) {
 int main(int argc, char *argv[]) {
 	x_mem_init();
 
+	// measure absolute time from time I start running
+	STARTUP_TIME = chrono::steady_clock::now();
+
 	bool testMode = false;
 	string filename = "";
 	bool singlestep = false;

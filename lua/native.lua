@@ -6,10 +6,13 @@
 	Ported from Python version
 ]]
 require("langtypes")
+local SOCKET = require("socket") -- luasocket
 
 -- these are globals
 NATIVE_CMDLINE_ARGS = {}
 ALLOW_OVERWRITING_WORDS = false
+
+local STARTUP_TIME = SOCKET.gettime()
 
 function set_native_cmdline_args(args)
 	NATIVE_CMDLINE_ARGS = args
@@ -584,4 +587,5 @@ BUILTINS = {
 	["bit-shl"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a<<n) & 0xffffffff) end},
 	["bit-shr"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a>>n) & 0xffffffff) end},
 	
+	["run-time"] = { {}, function(intr) intr:push(new_Float(SOCKET:gettime()-STARTUP_TIME)) end},
 }

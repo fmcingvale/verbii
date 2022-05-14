@@ -19,6 +19,8 @@ Object native_cmdline_args;
 // whether make-word is allowed to overwrite existing words
 bool ALLOW_OVERWRITING_WORDS = false;
 
+std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
+
 static VINT popInt(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isInt()) {
@@ -433,6 +435,12 @@ static void builtin_bit_shl(Interpreter *intr) {
 	intr->push(newInt((((unsigned long)a)<<nr) & MASK32));
 }
 
+static void builtin_run_time(Interpreter *intr) {
+	auto current = chrono::steady_clock::now();
+	chrono::duration<double> diff = current - STARTUP_TIME;
+	intr->push(newFloat(diff.count()));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -511,5 +519,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"bit-shl", builtin_bit_shl},
 
 	{"floor", [](Interpreter *intr){intr->push(newInt((VINT)floor(popFloat(intr,"floor"))));}},
+
+	{"run-time", builtin_run_time},
 	
 };

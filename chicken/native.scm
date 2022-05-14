@@ -28,6 +28,7 @@
 (import miscmacros) ; inc! dec! 
 (import srfi-69) ; hash-tables
 (import (chicken flonum)) ; flonum-print-precision
+(import (chicken time)) ; current-process-milliseconds
 
 (import langtypes)
 (import errors)
@@ -35,6 +36,8 @@
 
 (define NATIVE_CMDLINE_ARGS (new-lang-list))
 (define ALLOW_OVERWRITING_WORDS #f)
+
+(define STARTUP_TIME (current-process-milliseconds))
 
 ; ( xn .. x1 N -- list of N items )
 (define (builtin-make-list intr N)
@@ -415,6 +418,9 @@
 		(list "bit-not" (list 'i) (lambda (intr a) (push intr (bitwise-and (bitwise-not a) #xffffffff))))
 		(list "bit-shl" (list 'i 'i) (lambda (intr a n) (push intr (bitwise-and (arithmetic-shift a n) #xffffffff))))
 		(list "bit-shr" (list 'i 'i) (lambda (intr a n) (push intr (bitwise-and (arithmetic-shift a (- 0 n)) #xffffffff))))
+
+		(list "run-time" '() 
+			(lambda (intr) (push intr (make-lang-float (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0)))))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

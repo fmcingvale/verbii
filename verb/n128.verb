@@ -12,6 +12,9 @@
 \ value would be +/- 2^127. Here there is no difference in range for signed
 \ vs unsigned ... essentially this is 129 bit math)
 
+var START_TIME 1
+run-time START_TIME set!
+
 \ define shortcuts for direct stack access ... easier than 'pick' and
 \ also allows write access with Sn!
 \
@@ -686,3 +689,11 @@ drop
 "abcd01234567cdef" n128-from-hex n128-nr-sigwords . CR
 "Expect 5:" .
 "abcd01234567cdef123" n128-from-hex n128-nr-sigwords . CR
+
+6 f.setprec
+
+"Script ran in" .
+run-time START_TIME ref - . "seconds" . CR
+
+"TOTAL system time" .
+run-time . "seconds" . CR

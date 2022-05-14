@@ -11,6 +11,7 @@ using System.Collections.Generic;
 class Builtins {
 	public static LangList NATIVE_CMDLINE_ARGS = new LangList();
 	public static bool ALLOW_OVERWRITING_WORDS = false;
+	public static long STARTUP_TIME_MSEC = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
 
 	public static long popInt(Interpreter intr, string where) {
 		var obj = intr.pop();
@@ -603,5 +604,9 @@ class Builtins {
 		{"bit-not", intr => intr.push(new LangInt((~(uint)popInt(intr,"bit-not")) & 0xffffffff))},
 		{"bit-shl", bit_shl},
 		{"bit-shr", bit_shr},
+
+		{"run-time",
+			intr => intr.push(new LangFloat(((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0))},
+			
 	};
 }

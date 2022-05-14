@@ -11,10 +11,13 @@ from errors import LangError
 from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric, LangClosure, deepcopy
+import time
 
 # has to be set externally
 NATIVE_CMDLINE_ARGS = []
 ALLOW_OVERWRITE_WORDS = False
+
+STARTUP_TIME = time.time()
 
 # see notes in C++ implementation of this function.
 # this returns (quotient,mod) instead of taking mod as a return param.
@@ -485,6 +488,6 @@ BUILTINS = {
 	'bit-shr': ([], builtin_bit_shr),
 	'bit-shl': ([], builtin_bit_shl),
 	
-	
+	'run-time': ([], lambda I: I.push(time.time()-STARTUP_TIME)),
 }
 
