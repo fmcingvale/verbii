@@ -290,9 +290,28 @@ clear
 "and		now		with			tabs" . CR
 "..." puts "...|......|......|.......|......|..........|.........." puts "..." puts CR
 ">>>" puts "   now    with   leading and    trailing   space      " puts "<<<" puts CR
+clear
+
+( string/symbol 'get' )
+"abcdefghi"
+dup 3 get
+drop dup 0 get
+drop dup 8 get
+drop dup -1 get
+drop dup -3 get
+drop dup -9 get
+clear
+
+'klmnopqrst
+dup 2 get
+drop dup 0 get
+drop dup 9 get
+drop dup -4 get
+drop dup -1 get
+drop dup -10 get
+clear
 
 ( length operator )
-clear
 "hello"
 length
 'bigsymbol

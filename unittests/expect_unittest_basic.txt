@@ -510,9 +510,43 @@ and		now		with			tabs
 >> ">>>" puts "   now    with   leading and    trailing   space      " puts "<<<" puts CR
 >>>   now    with   leading and    trailing   space      <<<
 => 
->> ( length operator )
-=> 
 >> clear
+=> 
+>> ( string/symbol 'get' )
+=> 
+>> "abcdefghi"
+=> "abcdefghi" 
+>> dup 3 get
+=> "abcdefghi" "d" 
+>> drop dup 0 get
+=> "abcdefghi" "a" 
+>> drop dup 8 get
+=> "abcdefghi" "i" 
+>> drop dup -1 get
+=> "abcdefghi" "i" 
+>> drop dup -3 get
+=> "abcdefghi" "g" 
+>> drop dup -9 get
+=> "abcdefghi" "a" 
+>> clear
+=> 
+>> 'klmnopqrst
+=> 'klmnopqrst 
+>> dup 2 get
+=> 'klmnopqrst 'm 
+>> drop dup 0 get
+=> 'klmnopqrst 'k 
+>> drop dup 9 get
+=> 'klmnopqrst 't 
+>> drop dup -4 get
+=> 'klmnopqrst 'q 
+>> drop dup -1 get
+=> 'klmnopqrst 't 
+>> drop dup -10 get
+=> 'klmnopqrst 'k 
+>> clear
+=> 
+>> ( length operator )
 => 
 >> "hello"
 => "hello" 
