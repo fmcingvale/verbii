@@ -20,6 +20,13 @@
 
 ( ------ init ----------- )
 
+\ this is what I should have named these ...
+: any? any ;
+: all? all ;
+
+'get ,,del  \ remove userword since this is a builtin now
+\ : get nget ;
+
 \ fold - left fold
 \	func: called with stack [ accum elem ] where accum is the accumulated value and
 \		  elem is the next element to be added to the accumulator.
@@ -49,8 +56,15 @@
 	LP 1 + LP!
 	;
 
+: make-dict ( list-of-pairs -- dict )
+	\ called as: ( dict [ key val ] )
+	{ unmake drop put } ,,new-dict fold
+	;
+
 \
 \ map - make new sequence of func[elem] for each elem in sequence
+\
+\ calls func with elem on top of stack; func must leave new element on stack
 \
 : map ( seq func )
 	over list? if >>map-list
@@ -81,6 +95,8 @@
 \
 \ filter: make new sequence of only elements where func[elem] is true
 \
+\ calls func with elem on top of stack; func must leave true or false on stack
+\
 : filter ( seq func ; calls func[seq[i]] for each element )
 	over list? if >>filter-list
 	over string? if >>filter-string
@@ -109,6 +125,25 @@
 	;
 	
 ( ------ compiler ------- )
+
+: ltrim-char ( string char -- if char (single-char string) is at front of string, remove it )
+	over length 0 != if >>do-trim
+	drop return \ 0-length string, nothing to do
+	@do-trim
+	>L 0 +get L> == if >>trim
+	return
+	@trim 1 -1 slice
+	;
+
+: ltrim-sign ( string -- string with leading "+" or "-" removed [max 1] )
+	dup length 0 != if >>do-trim
+	return \ 0-length string
+	@do-trim
+	0 +get "+" == if >>trim
+	0 +get "-" == if >>trim
+	return
+	@trim 1 -1 slice
+	;
 
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR

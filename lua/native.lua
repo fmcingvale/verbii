@@ -322,6 +322,19 @@ function test_equal(a, b)
 			end
 			return true
 		end
+	elseif isDict(a) then
+		if not isDict(b) then
+			return false
+		elseif dictSize(a) ~= dictSize(b) then
+			return false
+		else
+			for k,v in pairs(a.dict) do
+				if not test_equals(a.dict[k],b.dict[k]) then
+					return false
+				end
+			end
+			return true
+		end
 	else
 		error(">>>Don't know how to compare (==) objects: " .. fmtStackPrint(a) .. " and " .. fmtStackPrint(b))
 	end
@@ -469,6 +482,7 @@ function builtin_length(intr, obj)
 	if isString(obj) then intr:pushInt(#obj.value)
 	elseif isSymbol(obj) then intr:pushInt(#obj)
 	elseif isList(obj) then intr:pushInt(#obj)
+	elseif isDict(obj) then intr:pushInt(dictSize(obj))
 	else error(">>>Object does not support 'length': " .. fmtStackPrint(obj))
 	end
 end
@@ -511,15 +525,74 @@ function builtin_self_set(intr)
 	intr.closure.state = intr:pop()
 end
 
+function builtin_get(intr)
+	local index = intr:pop()
+	local obj = intr:pop()
+	if isString(obj) then
+		if not isInt(index) then
+			error(">>>get (string) expects integer index")
+		end
+		if index < 0 then index = index + #obj.value end -- negative index counts from end
+		if index < 0 or index >= #obj.value then
+			error(">>>Index out of range in get")
+		else
+			intr:push(new_String(string.sub(obj.value, index+1, index+1)))
+		end
+	elseif isSymbol(obj) then
+		if not isInt(index) then
+			error(">>>get (symbol) expects integer index")
+		end
+		if index < 0 then index = index + #obj end
+		if index < 0 or index >= #obj then
+			error(">>>Index out of range in get")
+		else
+			intr:push(string.sub(obj, index+1, index+1))
+		end
+	elseif isList(obj) then
+		if not isInt(index) then
+			error(">>>get (list) expects integer index")
+		end
+		if index < 0 then index = index + #obj end
+		if index < 0 or index >= #obj then
+			error(">>>Index out of range in get")
+		else
+			intr:push(obj[index+1])
+		end
+	elseif isDict(obj) then
+		if not isString(index) then
+			error(">>>get (dict) expects string key")
+		elseif obj.dict[index.value] == nil then
+			error(">>>No such key in dict: " .. fmtStackPrint(index))
+		else
+			intr:push(obj.dict[index.value])
+		end
+	else
+		error(">>>Object does not support get: " .. fmtStackPrint(obj))
+	end
+end
+
 function builtin_put(intr)
 	local obj = intr:pop()
-	local index = popInt(intr)
-	local list = popList(intr)
-	if index < 0 or index >= #list then
-		error(">>>Index out of range in put")
+	local index = intr:pop()
+	local dest = intr:pop()
+	if isList(dest) then
+		if not isInt(index) then
+			error(">>>put expects integer index")
+		elseif index < 0 or index >= #dest then
+			error(">>>Index out of range in put")
+		else
+			dest[index+1] = obj
+			intr:push(dest)
+		end
+	elseif isDict(dest) then
+		if not isString(index) then
+			error(">>>put expects string key")
+		else
+			dest.dict[index.value] = obj
+			intr:push(dest)
+		end
 	else
-		list[index+1] = obj
-		intr:push(list)
+		error(">>>Object does not support put: " .. fmtStackPrint(dest))
 	end
 end
 
@@ -577,6 +650,7 @@ BUILTINS = {
 	["self"] = { {}, builtin_self_get},
 	["self!"] = { {}, builtin_self_set},
 	["put"] = { {}, builtin_put},
+	["get"] = { {}, builtin_get},
 	["deepcopy"] = { {"any"}, function(intr,obj) intr:push(deepcopy(obj)) end},
 	["alloc"] = { {"number"}, function(intr,nr) intr:push(intr:heap_alloc(nr)) end},
 	[",,del"] = { {}, function(intr) intr:deleteWord(popSymbol(intr)) end},
@@ -588,4 +662,5 @@ BUILTINS = {
 	["bit-shr"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a>>n) & 0xffffffff) end},
 	
 	["run-time"] = { {}, function(intr) intr:push(new_Float(SOCKET:gettime()-STARTUP_TIME)) end},
+	[",,new-dict"] = { {}, function(intr) intr:push(new_Dict()) end},
 }

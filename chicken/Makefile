@@ -3,6 +3,7 @@ all: repl
 
 #CFLAGS=
 CFLAGS=-O3
+#CFLAGS=-O4
 #CFLAGS=-profile
 
 clean:

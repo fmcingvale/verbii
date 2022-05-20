@@ -80,7 +80,8 @@
 
 		(intr-HEAP_NEXTFREE-set! intr (+ STACK_SIZE LOCALS_SIZE))
 
-		(intr-WORDS-set! intr (make-hash-table #:test string=?))
+		;(intr-WORDS-set! intr (make-hash-table #:test string=?))
+		(intr-WORDS-set! intr (make-hash-table))
 
 		(intr-code-set! intr '())
 		(intr-codepos-set! intr 0)

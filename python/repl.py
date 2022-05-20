@@ -19,11 +19,22 @@ def compile_and_load(intr, text, allow_overwrite):
 	import native
 	native.ALLOW_OVERWRITE_WORDS = allow_overwrite
 
+	# normally do NOT want to catch errors here since it's better for them to be
+	# caught in the normal flow. however sometimes a compiler bug happens where this
+	# needs to be uncommented see what it did
+
+	#try:
 	# push code, compile and load into interpreter
 	intr.push(LangString(text))
 	code = intr.lookupWordOrFail('compile-and-load-string')
 	intr.run(code)
-
+	#except LangError as exc:
+	#	errmsg = "*** " + exc.msg + " ***"
+	#	print(errmsg)
+	#	# always backtrace here since this is an error in the compiler not user code
+	#	print_backtrace(intr)
+	#	sys.exit(1) # treat as fatal
+		
 	native.ALLOW_OVERWRITE_WORDS = False # set back to default
 
 def deserialize_and_run(intr, filename):

@@ -391,6 +391,17 @@ drop
 dup 7 0 slice
 drop
 dup 7 1 slice
+clear
+
+( dictionaries )
+
+[ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict
+dup
+"uuu" get
+drop
+"xyz" 888 put
+"bbb" 444 put
+clear
 
 ( string / symbol make/unmake )
 clear

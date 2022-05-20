@@ -36,9 +36,11 @@
 (import srfi-34) ; exceptions
 (import (chicken format)) ; fprintf
 (import srfi-1) ; list library
+(import srfi-69) ; hash tables
 ;(import coops)
 (import dyn-vector)
-(import miscmacros) ; inc! dec! 
+(import miscmacros) ; inc! dec!
+(import (chicken sort)) ; sort! 
 ; shorthand
 ;(define slot slot-value)
 
@@ -119,6 +121,11 @@
 		((Float? obj) (Float-value obj))
 		((String? obj) (String-value obj))))
 
+; dictionary
+(define-record Dict table)
+;(define (new-Dict) (make-Dict (make-hash-table #:test string=?)))
+(define (new-Dict) (make-Dict (make-hash-table)))
+
 ; holds a List as llist
 (define-record Lambda llist)
 (define (lambda-llist obj) (Lambda-llist obj))
@@ -182,6 +189,7 @@
 		((string? obj) (string-length obj))
 		((String? obj) (string-length (String-value obj)))
 		((List? obj) (dynvector-length (List-objlist obj)))
+		((Dict? obj) (hash-table-size (Dict-table obj)))
 		(else
 			(error "Bad object in len")
 			(exit 1))))
@@ -216,6 +224,16 @@
 			(string-append "<"
 				(fmtStackPrintObjlist (List-objlist (lambda-llist obj)) "{" "}")
 				">"))
+		((Dict? obj)
+			(let* ((u-keys (hash-table-keys (Dict-table obj)))
+					(keys (sort u-keys string<?)))
+				(string-append "{ "
+					(fold (lambda (key str)
+						(string-append str "\"" (value key) "\" => " 
+							(fmtStackPrint (hash-table-ref (Dict-table obj) (value key))) " "))
+							"" keys)
+					"}")))
+
 		; for sanity, don't use lang-error (or langtype-error) just in case they switch to
 		; using fmtStackPrint. this would be an obvious bug that needs to be fixed, so just
 		; print message and exit
@@ -253,6 +271,15 @@
 			(string-append "<"
 				(fmtDisplayObjlist (List-objlist (lambda-llist obj)) "{" "}")
 				">"))
+		((Dict? obj)
+			(let* ((u-keys (hash-table-keys (Dict-table obj)))
+					(keys (sort u-keys string<?)))
+				(string-append "{ "
+					(fold (lambda (key str)
+						(string-append str "\"" key "\" => " 
+							(fmtDisplay (hash-table-ref (Dict-table obj) key)) " "))
+							"" keys)
+					"}")))
 		; like above, but lang-error/langtype-error DOES us this so it would be a loop to
 		; use those here
 		(else 
@@ -277,6 +304,12 @@
 					(lambda (i elem) (dynvector-set! (List-objlist newlist) i (deepcopy elem)))
 						(List-objlist obj))
 				newlist))
+		((Dict? obj)
+			(let ((newdict (new-Dict)))
+				(hash-table-walk (Dict-table obj)
+					(lambda (k v)
+						(hash-table-set! (Dict-table newdict) k (deepcopy v))))
+				newdict))
 		(else 
 			(print "Don't know how to deepcopy object:" (fmtStackPrint obj) ) (exit 1))))
 

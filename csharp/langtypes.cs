@@ -174,6 +174,30 @@ public class LangLambda : LangObject {
 	}
 }
 
+public class LangDict : LangObject {
+	public LangDict() {
+		dict = new SortedDictionary<String,LangObject>();
+	}
+	public SortedDictionary<String,LangObject> dict;
+	public override string typename() { return "dict"; }
+	public override string fmtDisplay() { 
+		string s = "{ ";
+		foreach(KeyValuePair<string,LangObject> pair in dict) {
+			s += "\"" + pair.Key + "\" => " + pair.Value.fmtDisplay() + " ";
+		}
+		s += "}";
+		return s;
+	}
+	public override string fmtStackPrint() { 
+		string s = "{ ";
+		foreach(KeyValuePair<string,LangObject> pair in dict) {
+			s += "\"" + pair.Key + "\" => " + pair.Value.fmtStackPrint() + " ";
+		}
+		s += "}";
+		return s;
+	}
+}
+
 public class LangList : LangObject {
 	public LangList() {
 		objlist = new List<LangObject>();

@@ -61,6 +61,14 @@ static Object popList(Interpreter *intr, const char *errmsg) {
 	return obj;
 }
 
+static Object popDict(Interpreter *intr, const char *where) {
+	Object obj = intr->pop();
+	if(!obj.isDict()) {
+		throw LangError(string(where) + " requires list, got: " + obj.fmtStackPrint());
+	}
+	return obj;
+}
+
 static void pushInt(Interpreter *intr, VINT i) {
 	intr->push(newInt(i));
 }
@@ -196,7 +204,7 @@ static void builtin_error(Interpreter *intr) {
 	throw LangError(msg);
 }
 
-static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &)) {
+static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &) const) {
 	Object b = intr->pop();
 	Object a = intr->pop();
 	intr->push((a.*op)(b));
@@ -238,15 +246,66 @@ static void builtin_slice(Interpreter *intr) {
 	intr->push(obj.opSlice(index, nr));
 }
 
-// ( list i obj -- new-list ; puts obj at list[i] )
+// ( string i -- i'th char as string )
+// ( symbol i -- i'th char as symbol )
+// ( list i -- list[i] )
+//		i<0 counts from end
+// ( dict key -- dict[key] )
+//		key must be a string
+static void builtin_get(Interpreter *intr) {
+	auto indexOrKey = intr->pop();
+	auto obj = intr->pop();
+	if(obj.isString() || obj.isSymbol() || obj.isList()) {
+		if(!indexOrKey.isInt())
+			throw LangError("get expects integer index, got: " + indexOrKey.fmtStackPrint());
+		int index = indexOrKey.asInt();
+		if(index < 0) 
+			index += obj.length(); // allow negative indexes to count from end
+		if(index < 0 || index >= obj.length())
+			throw LangError("index out of range in get: index=" + to_string(index) + " obj=" + obj.fmtStackPrint());
+		if(obj.isString())
+			intr->push(newString(obj.asString()+index, 1));
+		else if(obj.isSymbol())
+			intr->push(newSymbol(obj.asSymbol()+index, 1));
+		else if(obj.isList())
+			intr->push(obj.asList()->at(index));
+	}
+	else if(obj.isDict()) {
+		if(!indexOrKey.isString())
+			throw LangError("get expects string key, got: " + indexOrKey.fmtStackPrint());
+		auto entry = obj.asDict()->find(indexOrKey.asString());
+		if(entry == obj.asDict()->end())
+			throw LangError("No such key in dict: " + indexOrKey.fmtStackPrint());
+		 intr->push((*obj.asDict())[indexOrKey.asString()]);
+	}
+	else
+		throw LangError("get not supported for object: " + obj.fmtStackPrint());
+}
+
+// ( list i obj -- list ; puts obj at list[i] )
+// ( dict key obj -- dict ; puts obj at dict[key] )
+//		key must be a string
 static void builtin_put(Interpreter *intr) {
 	auto obj = intr->pop();
-	int index = (int)popInt(intr, "put expects integer index");
-	auto list = popList(intr, "put expects list");
-	if(index < 0 || index >= (int)list.asList()->size())
-		throw LangError("index out of range in put");
-	list.asList()->at(index) = obj;
-	intr->push(list);
+	auto indexOrKey = intr->pop();
+	auto dest = intr->pop();
+	if(dest.isList()) {
+		if(!indexOrKey.isInt())
+			throw LangError("put expects integer index, got: " + indexOrKey.fmtStackPrint());
+		int index = indexOrKey.asInt();
+		if(index < 0 || index >= (int)dest.asList()->size())
+			throw LangError("index out of range in put");
+		dest.asList()->at(index) = obj;
+		intr->push(dest);
+	}
+	else if(dest.isDict()) {
+		if(!indexOrKey.isString())
+			throw LangError("put expects string key, got: " + indexOrKey.fmtStackPrint());
+		(*dest.asDict())[indexOrKey.asString()] = obj;
+		intr->push(dest);
+	}
+	else
+		throw LangError("put not supported for object: " + dest.fmtStackPrint());
 }
 
 // append modifies original object
@@ -441,6 +500,10 @@ static void builtin_run_time(Interpreter *intr) {
 	intr->push(newFloat(diff.count()));
 }
 
+static void builtin_new_dict(Interpreter *intr) {
+	intr->push(newDict());
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -506,6 +569,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"self", builtin_self_get},
 	{"self!", builtin_self_set},
 	{"put", builtin_put},
+	{"get", builtin_get},
 	{"deepcopy", builtin_deepcopy},
 	{"alloc", builtin_alloc},
 	{",,del", builtin_del},
@@ -521,5 +585,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"floor", [](Interpreter *intr){intr->push(newInt((VINT)floor(popFloat(intr,"floor"))));}},
 
 	{"run-time", builtin_run_time},
+	{",,new-dict", builtin_new_dict},
 	
 };

@@ -252,6 +252,7 @@
 				(if (> (+ index nr) objsize) (set! nr (- objsize index)))
 				; make slice
 				(cond
+					; TODO -- (substring) would be better than string-copy probably
 					((String? obj) 
 						(push intr (make-String (string-copy (value obj) index (+ index nr)))))
 					((Symbol? obj)
@@ -336,12 +337,64 @@
 		(lang-error 'self "Attempting to set unbound self")
 		(Closure-state-set! (intr-closure intr) (pop intr))))
 
-(define (builtin-put intr alist index obj)
-	(if (or (< index 0) (>= index (len alist)))
-		(lang-error 'put "Index out of range in put")
-		(begin
-			(dynvector-set! (List-objlist alist) index obj)
-			(push intr alist))))
+(define (builtin-put intr dest index obj)
+	(cond
+		((List? dest)
+			(if (not (integer? index))
+				(lang-error 'put "Index must be an integer"))
+			(if (or (< index 0) (>= index (len dest)))
+				(lang-error 'put "Index out of range in put")
+				(begin
+					(dynvector-set! (List-objlist dest) index obj)
+					(push intr dest))))
+		((Dict? dest)
+			(if (not (String? index))
+				(lang-error 'put "Key must be string in put")
+				(begin
+					(hash-table-set! (Dict-table dest) (value index) obj)
+					(push intr dest))))
+		(else
+			(lang-error 'put "Object does not support put:" (fmtStackPrint dest)))))
+
+(define (builtin-get intr obj index)
+	(cond
+		((Symbol? obj)
+			(if (not (integer? index))
+				(lang-error 'get "Index must be an integer"))
+			(if (< index 0)
+				(set! index (+ index (len obj)))) ; negative index adjustment
+			(if (or (< index 0) (>= index (len obj)))
+				(lang-error 'get "Index out of range in get")
+				(push intr (substring obj index (+ index 1)))))
+		
+		((String? obj)
+			(if (not (integer? index))
+				(lang-error 'get "Index must be an integer"))
+			(if (< index 0)
+				(set! index (+ index (len obj)))) ; negative index adjustment
+			(if (or (< index 0) (>= index (len obj)))
+				(lang-error 'get "Index out of range in get")
+				(push intr (make-String (substring (value obj) index (+ index 1))))))
+		
+		((List? obj)
+			(if (not (integer? index))
+				(lang-error 'get "Index must be an integer"))
+			(if (< index 0)
+				(set! index (+ index (len obj)))) ; negative index adjustment
+			(if (or (< index 0) (>= index (len obj)))
+				(lang-error 'get "Index out of range in get")
+				(push intr (dynvector-ref (List-objlist obj) index))))
+					
+		((Dict? obj)
+			(if (not (String? index))
+				(lang-error 'get "Key must be string in get")
+				(if (not (hash-table-exists? (Dict-table obj) (value index)))
+					(lang-error 'get "No such key in dict: " (fmtStackPrint index))
+					(push intr (hash-table-ref (Dict-table obj) (value index))))))
+					
+		(else
+			(lang-error 'put "Object does not support put:" (fmtStackPrint obj)))))
+
 
 (import (chicken bitwise))
 
@@ -408,7 +461,8 @@
 					(lambda (intr llist state) (push intr (make-Closure (deepcopy llist) state))))
 		(list "self"		'() builtin-self-get)
 		(list "self!"		'() builtin-self-set)
-		(list "put" (reverse (list 'L 'i '*)) builtin-put)
+		(list "put" (reverse (list '* '* '*)) builtin-put)
+		(list "get" (reverse (list '* '*)) builtin-get)
 		(list "deepcopy" (list '*) (lambda (intr obj) (push intr (deepcopy obj))))
 		(list "alloc" (list 'i) (lambda (intr nr) (push intr (allocate intr nr))))
 		(list ",,del" (list 'y) (lambda (intr name) (intr-delete-word intr name)))
@@ -421,6 +475,7 @@
 
 		(list "run-time" '() 
 			(lambda (intr) (push intr (make-lang-float (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0)))))
+		(list ",,new-dict" '() (lambda (intr) (push intr (new-Dict))))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

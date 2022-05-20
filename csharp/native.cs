@@ -518,15 +518,100 @@ class Builtins {
 			intr.closure.state = intr.pop();
 	}
 
-	public static void self_put(Interpreter intr) {
+	public static void obj_get(Interpreter intr) {
+		var indexOrKey = intr.pop();
 		var obj = intr.pop();
-		var index = popInt(intr,"put");
-		var list = popList(intr,"put");
-		if(index < 0 || index >= list!.objlist.Count)
-			throw new LangError("Index out of bounds in put");
-		// note list sizes are limited to 32-bits
-		list.objlist[(int)index] = obj;
-		intr.push(list);
+		if(obj is LangString) {
+			if(indexOrKey is LangInt) {
+				var index = (indexOrKey as LangInt)!.value;
+				var s = (obj as LangString)!.value;
+				if(index < 0) index += s.Length; // index<0 counts from end
+				if(index < 0 || index >= s.Length)
+					throw new LangError("Index out of bounds in get");
+				// assumes length is limited to 32 bits
+				intr.push(new LangString(s.Substring((int)index,1)));
+			}
+			else
+				throw new LangError("Expecting index in get but got: " + indexOrKey.fmtStackPrint());
+		}
+		else if(obj is LangSymbol) {
+			if(indexOrKey is LangInt) {
+				var index = (indexOrKey as LangInt)!.value;
+				var s = (obj as LangSymbol)!.value;
+				if(index < 0) index += s.Length; // index<0 counts from end
+				if(index < 0 || index >= s.Length)
+					throw new LangError("Index out of bounds in get");
+				// assumes length is limited to 32 bits
+				intr.push(new LangSymbol(s.Substring((int)index,1)));
+			}
+			else
+				throw new LangError("Expecting index in get but got: " + indexOrKey.fmtStackPrint());
+		}
+		else if(obj is LangList) {
+			if(indexOrKey is LangInt) {
+				var index = (indexOrKey as LangInt)!.value;
+
+				var list = (obj as LangList)!;
+				if(index < 0) index += list.objlist.Count; // index<0 counts from end
+				if(index < 0 || index >= list.objlist.Count)
+					throw new LangError("Index out of bounds in put");
+
+				// note list sizes are limited to 32-bits
+				intr.push(list.objlist[(int)index]);
+			}
+			else
+				throw new LangError("Expecting index in put but got: " + indexOrKey.fmtStackPrint());
+		}
+		else if(obj is LangDict) {
+			if(indexOrKey is LangString) {
+				var dict = (obj as LangDict)!;
+				var key = (indexOrKey as LangString)!.value;
+				
+				if(dict.dict.ContainsKey(key))
+					intr.push(dict.dict[key]);
+				else
+					throw new LangError("No such key in dict: " + indexOrKey.fmtStackPrint());
+			}
+			else
+				throw new LangError("Expecting string key but got: " + indexOrKey.fmtStackPrint());
+		}
+		else
+			throw new LangError("Object does not support put: " + obj.fmtStackPrint());
+	}
+	
+	public static void obj_put(Interpreter intr) {
+		var obj = intr.pop();
+		var indexOrKey = intr.pop();
+		var dest = intr.pop();
+		if(dest is LangList) {
+			if(indexOrKey is LangInt) {
+				var index = (indexOrKey as LangInt)!.value;
+
+				var list = (dest as LangList)!;
+				if(index < 0 || index >= list.objlist.Count)
+					throw new LangError("Index out of bounds in put");
+
+				// note list sizes are limited to 32-bits
+				list.objlist[(int)index] = obj;
+				intr.push(dest);
+			}
+			else
+				throw new LangError("Expecting index in put but got: " + indexOrKey.fmtStackPrint());
+		}
+		else if(dest is LangDict) {
+			if(indexOrKey is LangString) {
+				var dict = (dest as LangDict)!;
+				var key = (indexOrKey as LangString)!.value;
+				
+				// note that [] allows overwriting, but Add() does not
+				dict.dict[key] = obj;
+				intr.push(dest);
+			}
+			else
+				throw new LangError("Expecting string key but got: " + indexOrKey.fmtStackPrint());
+		}
+		else
+			throw new LangError("Object does not support put: " + dest.fmtStackPrint());
 	}
 	
 	public static void bit_shl(Interpreter intr) {
@@ -594,7 +679,8 @@ class Builtins {
 		{"make-closure", make_closure},
 		{"self", self_get},
 		{"self!", self_set},
-		{"put", self_put},
+		{"put", obj_put},
+		{"get", obj_get},
 		{"deepcopy", intr => intr.push(intr.pop().deepcopy())},
 		{"alloc", intr => intr.push(new LangInt(intr.heapAllocate(popInt(intr,"alloc"))))},
 		{",,del", intr => intr.deleteWord(popSymbol(intr,",,del"))},
@@ -607,6 +693,6 @@ class Builtins {
 
 		{"run-time",
 			intr => intr.push(new LangFloat(((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0))},
-			
+		{",,new-dict", intr => intr.push(new LangDict())},
 	};
 }

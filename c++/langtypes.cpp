@@ -93,6 +93,13 @@ Object newList(ObjList *list) {
 	return obj;
 }
 
+Object newDict() {
+	Object obj;
+	obj.type = TYPE_DICT;
+	obj.data.objdict = new ObjDict();
+	return obj;
+}
+
 Object newFloat(double d) {
 	Object obj;
 	obj.type = TYPE_FLOAT;
@@ -145,7 +152,7 @@ Object newClosure(ObjList *objlist, Object state) {
 ObjList *Object::asClosureFunc() const { return data.closure->objlist; }
 Object Object::asClosureState() const { return data.closure->state; }
 
-bool Object::opEqual(const Object &other) {
+bool Object::opEqual(const Object &other) const {
 	switch(type) {
 		case TYPE_NULL: return other.isNull();
 		case TYPE_INT: return (other.type == TYPE_INT && other.data.i == data.i) ||
@@ -158,7 +165,7 @@ bool Object::opEqual(const Object &other) {
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
 		// lists are deep compared, via opEqual at each element
-		case TYPE_LIST:	
+		case TYPE_LIST:	{
 			if(other.type != TYPE_LIST)
 				return false;
 
@@ -170,6 +177,25 @@ bool Object::opEqual(const Object &other) {
 					return false;
 			}
 			return true;
+		}
+		// dicts are deep compared
+		case TYPE_DICT: {
+			if(other.type != TYPE_DICT)
+				return false;
+
+			if(data.objdict->size() != other.data.objdict->size())
+				return false;
+
+			for(const auto& pair: *data.objdict) {
+				auto found = other.data.objdict->find(pair.first);
+				if(found == other.data.objdict->end())
+					return false; // key not in other
+
+				if(!pair.second.opEqual(found->second))
+					return false; // values not equal
+			}
+			return true;
+		}
 
 		default: 
 			// i WANT to crash when I forget to add a new type ...
@@ -177,7 +203,7 @@ bool Object::opEqual(const Object &other) {
 	}
 }
 
-bool Object::opGreater(const Object &other) {
+bool Object::opGreater(const Object &other) const {
 	switch(type) {
 		case TYPE_INT:
 			if (other.type == TYPE_INT) return data.i > other.data.i;
@@ -244,7 +270,7 @@ double castFloat(const Object &a) {
 	}
 }
 
-Object Object::opAdd(const Object &other) {
+Object Object::opAdd(const Object &other) const {
 	// any cases that aren't handled fall through to single throw at end
 	switch(type) {
 		case TYPE_NULL: break;
@@ -302,7 +328,7 @@ Object Object::opAdd(const Object &other) {
 	throw LangError("Bad operands for +: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
-Object Object::opSubtract(const Object &other) {
+Object Object::opSubtract(const Object &other) const {
 	if(type == TYPE_INT && other.type == TYPE_INT) {
 		return newInt(data.i - other.data.i);
 	}
@@ -312,7 +338,7 @@ Object Object::opSubtract(const Object &other) {
 	throw LangError("Bad operands for -: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
-Object Object::opMul(const Object &other) {
+Object Object::opMul(const Object &other) const {
 	if(type == TYPE_INT && other.type == TYPE_INT) {
 		return newInt(data.i * other.data.i);
 	}
@@ -322,7 +348,7 @@ Object Object::opMul(const Object &other) {
 	throw LangError("Bad operands for *: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
-Object Object::opDivide(const Object &other) {
+Object Object::opDivide(const Object &other) const {
 	if(isNumber(*this) && isNumber(other)) {
 		double denom = castFloat(other);
 		if(denom == 0) {
@@ -333,18 +359,24 @@ Object Object::opDivide(const Object &other) {
 	throw LangError("Bad operands for /: " + this->fmtDisplay() + " & " + other.fmtDisplay());
 }
 
-Object Object::opLength() {
+int Object::length() const {
 	switch(type) {
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
-			return newInt(strlen(data.str));
+			return strlen(data.str);
 		case TYPE_LIST:
-			return newInt((int)(data.objlist->size()));
+			return (int)(data.objlist->size());
+		case TYPE_DICT:
+			return (int)(data.objdict->size());
 	}
 	throw LangError("'length' not supported for object: " + fmtStackPrint());
 }
 
-Object Object::opSlice(VINT index, VINT nr) {
+Object Object::opLength() const {
+	return newInt(length());
+}
+
+Object Object::opSlice(VINT index, VINT nr) const {
 	int objsize;
 	switch(type) {
 		case TYPE_STRING:
@@ -437,7 +469,17 @@ string Object::fmtDisplay() const {
 		case TYPE_STRING: return string(data.str);
 		case TYPE_SYMBOL: return string(data.str);
 		case TYPE_LIST: return fmtDisplayObjList(data.objlist, "[", "]");
-
+		case TYPE_DICT: {
+			// in order to ensure consistent output across languages, print with sorted keys.
+			// i believe the default c++ map takes care of this.
+			string s = "{ ";
+			for(const auto& pair: *data.objdict) {
+				s += "\"" + pair.first + "\" => ";
+				s += pair.second.fmtDisplay() + " ";
+			}
+			s += "}";
+			return s;
+		}
 		default: throw LangError("str not implemented for this object type" + to_string(type));
 	}
 }
@@ -485,6 +527,16 @@ string Object::fmtStackPrint() const {
 		// opposite of above -- since strings get " .. " then i don't get a ' here
 		case TYPE_SYMBOL: return "'" + string(data.str);
 		case TYPE_LIST: return fmtStackPrintObjList(data.objlist, "[", "]");
+		case TYPE_DICT: {
+			// as above, just with fmtStackPrint
+			string s = "{ ";
+			for(const auto& pair: *data.objdict) {
+				s += "\"" + pair.first + "\" => ";
+				s += pair.second.fmtStackPrint() + " ";
+			}
+			s += "}";
+			return s;
+		}
 		default: throw LangError("repr not implemented for object type " + to_string(type));
 	}
 }
@@ -497,7 +549,7 @@ ObjList *deepcopy(ObjList *objlist) {
 	return newlist;
 }
 
-Object Object::deepcopy() {
+Object Object::deepcopy() const {
 	switch(type) {
 		case TYPE_NULL:
 		case TYPE_VOID:
@@ -512,7 +564,15 @@ Object Object::deepcopy() {
 
 		case TYPE_LIST:
 			return newList(::deepcopy(data.objlist));
-			
+
+		case TYPE_DICT: {
+			Object obj = newDict();
+			for(const auto& pair: *data.objdict) {
+				(*obj.data.objdict)[pair.first] = pair.second.deepcopy();
+			}
+			return obj;
+		}
+	
 		default: throw LangError("deepcopy not implemented for object type " + to_string(type));
 	}
 }

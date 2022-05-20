@@ -23,9 +23,6 @@ Global TODO
 	* https://rosettacode.org/wiki/Bulls_and_cows
 	* https://rosettacode.org/wiki/Prime_decomposition
 
-
-
-
 ---[  Libraries  ]------------------------------------------------------
 
 * JSON import/export
@@ -48,12 +45,19 @@ Global TODO
 write-string, write-char ... basically I/O with ports concept like scheme
 
 * pick should be 0-based for consistency with other 0-indexed functions
+	* I think I should just add names S0, S0! S1 S1! etc to initlib instead
 
 * add load or import word (in verbii if possible)
 
 * more repl pieces in verbii
 
 * should have builtin dictionaries that work with get and put
+
+* need to extend ,,del (or maybe just get rid of 'del NAME' and always make del stack-based??)
+  to delete entries from more objects:
+	dict STRING ,,del ( delete a key from dictionary )
+	SYMBOL ,,del ( delete a word )
+	list INDEX ,,del ( delete entry from list )
 
 ---[    Tests     ]------------------------------------------------------
 
@@ -65,9 +69,12 @@ if/when verbii starts using full width integers on any platform. still worth enf
 width integers on platforms where integer width > verbii int width so behavior remains consistent
 across languages.
 
+* make sure negative indexes in 'get' are tested for strings/symbols/lists and that negative indexes
+  are tested for 'put' in lists
+  
 ---[   Clean-up   ]------------------------------------------------------
 
-* chicken: main interpreter loop -- use while instead having to place recursive calls everywhere
+* chicken: main interpreter loop -- use while instead of having to place recursive calls everywhere
 
 * More error checking of input types in library/tests/demos
 
@@ -89,6 +96,8 @@ never visible from verbii code
 * in native.* the pop* functions should take a 'where' argument like chicken
 
 * chicken: cleanout old comments
+
+* python: get rid of more type() and isinstance() and replace with the correct is*() function
 
 ---[ Optimization ]------------------------------------------------------
 

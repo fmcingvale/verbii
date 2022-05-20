@@ -10,7 +10,8 @@ from xml.dom.minidom import ReadOnlySequentialNamedNodeMap
 from errors import LangError
 from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
-				isNumeric, LangClosure, deepcopy
+				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
+					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool
 import time
 
 # has to be set externally
@@ -104,41 +105,41 @@ def builtin_showdef(I):
 
 def popInt(I):
 	obj = I.pop()
-	if type(obj) == int:
+	if isInt(obj):
 		return int(obj)
 	else:
 		raise LangError("Expecting int but got: " + fmtStackPrint(obj))
 
 def popIntOrFloat(I):
 	obj = I.pop()
-	if type(obj) == int or type(obj) == float:
+	if isNumeric(obj):
 		return float(obj)
 	else:
 		raise LangError("Expecting float or int but got: " + fmtStackPrint(obj))
 
 def popString(I,where):
 	obj = I.pop()
-	if isinstance(obj, LangString):
+	if isString(obj):
 		return obj.s
 	else:
 		raise LangError("Expecting string (in {0}) but got: {1} ".format(where, fmtStackPrint(obj)))
 
 def popSymbol(I):
 	obj = I.pop()
-	if type(obj) == str:
+	if isSymbol(obj):
 		return obj
 	else:
 		raise LangError("Expecting symbol but got: " + fmtStackPrint(obj))
 
 def popStringOrSymbol(I,where):
 	obj = I.pop()
-	if type(obj) == str: return obj
-	elif isinstance(obj, LangString): return obj.s
+	if isSymbol(obj): return obj
+	elif isString(obj): return obj.s
 	else: raise LangError("Expecting string or symbol (in {0}) but got: {1}".format(where,fmtStackPrint(obj)))
 
 def popList(I):
 	obj = I.pop()
-	if type(obj) == list:
+	if isList(obj):
 		return obj
 	else:
 		raise LangError("Expecting list but got: " + fmtStackPrint(obj))
@@ -149,21 +150,20 @@ def builtin_add(I):
 
 	#print("ADD: {0} + {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
-	if type(a) == int and type(b) == int:
+	if isInt(a) and isInt(b):
 		# keep as integer and check limits
 		I.pushInt(a+b)
 	elif isNumeric(a) and isNumeric(b): # result is float
 		#print("IS NUMERIC")
 		I.push(a+b)
-	elif type(a) == str and type(b) == str:
+	elif isSymbol(a) and isSymbol(b):
 		#print("ADD SYMBOLS")
 		I.push(a+b)
-	elif isinstance(a,LangString) and isinstance(b,LangString):
+	elif isString(a) and isString(b):
 		#print("IS LANG STRING")
 		#print(a.s+b.s)
-	
 		I.push(LangString(a.s+b.s))
-	elif type(a) == list and type(b) == list:
+	elif isList(a) and isList(b):
 		I.push(a+b)
 	else:
 		raise LangError("Don't know how to add '{0}' and '{1}'".format(a,b))
@@ -173,7 +173,7 @@ def builtin_subtract(I):
 	a = I.pop()
 
 	# like addition, keep int+int as special case
-	if type(a) == int and type(b) == int:
+	if isInt(a) and isInt(b):
 		I.pushInt(a-b)
 	elif isNumeric(a) and isNumeric(b):
 		#print("IS NUMERIC")
@@ -186,7 +186,7 @@ def builtin_mul(I):
 	a = I.pop()
 
 	# like above, int+int is special case
-	if type(a) == int and type(b) == int:
+	if isInt(a) and isInt(b):
 		I.pushInt(a*b)
 	elif isNumeric(a) and isNumeric(b):
 		I.push(a*b)
@@ -216,7 +216,7 @@ def builtin_gt(I):
 	I.push(a>b)
 
 def builtin_puts(I, obj):
-	if not isinstance(obj, LangString):
+	if not isString(obj):
 		raise LangError("puts requires string but got: " + fmtStackPrint(obj))
 
 	sys.stdout.write(obj.s)
@@ -239,15 +239,22 @@ def builtin_make_list(I):
 def test_equal(a,b):
 	if a is None: return b is None
 	elif isNumeric(a): return isNumeric(b) and a==b
-	elif type(a) == bool: return type(b) == bool and a==b
-	elif type(a) == str: return type(b) == str and a==b
-	elif isinstance(a,LangString): return isinstance(b,LangString) and a.s == b.s
-	elif isinstance(a,LangLambda): return False # lambdas are never equal, even if its the same object
-	elif type(a) == list:
-		if type(b) != list: return False
+	elif isBool(a): return isBool(b) and a==b
+	elif isSymbol(a): return isSymbol(b) and a==b
+	elif isString(a): return isString(b) and a.s == b.s
+	elif isLambda(a): return False # lambdas are never equal, even if its the same object
+	elif isList(a):
+		if not isList(b): return False
 		if len(a) != len(b): return False
 		for i in range(len(a)):
 			if not test_equal(a[i],b[i]): return False
+		return True
+	elif isDict(a):
+		if not isDict(b): return False
+		if len(a) != len(b): return False
+		for k in a.keys():
+			if k not in b: return False
+			if not test_equal(a[k],b[k]): return False
 		return True
 	else:
 		raise LangError("Unable to compare objects (==) {0} and {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
@@ -264,9 +271,9 @@ def builtin_greater(I):
 
 def test_greater(a,b):
 	if isNumeric(a) and isNumeric(b): return a>b
-	elif type(a) == str and type(b) == str: return a>b
-	elif isinstance(a,LangString) and isinstance(b,LangString): return a.s > b.s
-	elif type(a) == list and type(b) == list:
+	elif isSymbol(a) and isSymbol(b): return a>b
+	elif isString(a) and isString(b): return a.s > b.s
+	elif isList(a) and isList(b):
 		# see c++ comments - do it like a string test, still raise error on nonequal types	
 		# check up to max of common length
 		nr = min(len(a),len(b))
@@ -290,41 +297,40 @@ def builtin_error(I):
 
 def builtin_slice(I, obj, index, nr):
 	# ported from the C++ version
-	if type(obj) == str: objsize = len(obj)
-	elif isinstance(obj, LangString): objsize = len(obj.s)
-	elif type(obj) == list: objsize = len(obj)
+	if isSymbol(obj) or isList(obj): objsize = len(obj)
+	elif isString(obj): objsize = len(obj.s)
 	else: raise LangError("Object doesn't support slicing: " + fmtStackPrint(obj))
 	
 	if index < 0: index = objsize + index
 	if index < 0 or index >= objsize:
-		if type(obj) == str: return ""
-		elif isinstance(obj, LangString): return LangString("")
-		elif type(obj) == list: return []
+		if isSymbol(obj): return ""
+		elif isString(obj): return LangString("")
+		elif isList(obj): return []
 
 	if nr < 0: nr = objsize - index
 	if (index+nr) > objsize: nr = objsize - index
 
-	if type(obj) == str: return obj[index:index+nr]
-	elif isinstance(obj, LangString): return LangString(obj.s[index:index+nr])
-	elif type(obj) == list: return obj[index:index+nr]
+	if isSymbol(obj): return obj[index:index+nr]
+	elif isString(obj): return LangString(obj.s[index:index+nr])
+	elif isList(obj): return obj[index:index+nr]
 		
 	raise LangError("Unreachable code!!")
 
 def builtin_unmake(I, obj):
 	#print("UNMAKE:", fmtStackPrint(obj))
 	fn = lambda x: x
-	if type(obj) == str: 
+	if isSymbol(obj): 
 		seq = obj
 		fn = lambda x: ord(x)
-	elif isinstance(obj, LangString): 
+	elif isString(obj): 
 		seq = obj.s
 		fn = lambda x: ord(x)
-	elif type(obj) == list: seq = obj
-	elif isinstance(obj, LangLambda): 
+	elif isList(obj): seq = obj
+	elif isLambda(obj): 
 		# must deepcopy, see DESIGN-NOTES.md
 		I.push(deepcopy(obj.objlist))
 		return
-	elif isinstance(obj, LangClosure):
+	elif isClosure(obj):
 		# as above, must deepcopy list -- state is meant to be modified, so it stays as-is
 		I.push(deepcopy(obj.objlist))
 		I.push(obj.state)
@@ -357,15 +363,14 @@ def builtin_make_lambda(I):
 	I.push(LangLambda(deepcopy(_list)))
 
 def builtin_length(I, obj):
-	if type(obj) == str: I.pushInt(len(obj))
-	elif isinstance(obj, LangString): I.pushInt(len(obj.s))
-	elif type(obj) == list: I.pushInt(len(obj))
+	if isSymbol(obj) or isList(obj) or isDict(obj): I.pushInt(len(obj))
+	elif isString(obj): I.pushInt(len(obj.s))
 	else: raise LangError("Object doesn't support 'length': " + fmtStackPrint(obj))
 
 def builtin_make_word(I):
 	name = popSymbol(I)
 	objlist = I.pop()
-	if type(objlist) != list:
+	if not isList(objlist):
 		raise LangError("make-word expects list but got: " + fmtStackPrint(objlist))
 	
 	I.defineWord(name, objlist, ALLOW_OVERWRITE_WORDS)
@@ -376,7 +381,7 @@ def builtin_append(I):
 
 	obj = I.pop()
 	_list = I.pop()
-	if type(_list) != list:
+	if not isList(_list):
 		raise LangError("append expecting list but got: " + fmtStackPrint(_list))
 
 	_list.append(obj)
@@ -398,12 +403,42 @@ def builtin_self_set(I):
 	
 def builtin_put(I):
 	obj = I.pop()
-	index = popInt(I)
-	_list = popList(I)
-	if index < 0 or index >= len(_list): raise LangError("Index out of range in put")
-	_list[index] = obj
-	I.push(_list)
+	index = I.pop()
+	dest = I.pop()
 
+	if isList(dest):
+		if not isInt(index): raise LangError("put requires index, got: " + fmtStackPrint(index))
+		if index < 0 or index >= len(dest): raise LangError("Index out of range in put")
+		dest[index] = obj
+		I.push(dest)
+	elif isDict(dest):
+		if not isString(index): raise LangError("put requires string key, got: " + fmtStackPrint(index))
+		dest[index] = obj
+		I.push(dest)
+	else:
+		raise LangError("Object does not support put: " + fmtStackPrint(dest))
+
+def builtin_get(I):
+	index = I.pop()
+	obj = I.pop()
+
+	if isSymbol(obj) or isList(obj):
+		if not isInt(index): raise LangError("get requires index, got: " + fmtStackPrint(index))
+		if index < 0: index += len(obj) # negative indexes
+		if index < 0 or index >= len(obj): raise LangError("Index out of range in get")
+		I.push(obj[index])
+	elif isString(obj):
+		if not isInt(index): raise LangError("get requires index, got: " + fmtStackPrint(index))
+		if index < 0: index += len(obj.s) # negative indexes
+		if index < 0 or index >= len(obj.s): raise LangError("Index out of range in get")
+		I.push(LangString(obj.s[index]))
+	elif type(obj) == dict:
+		if not isString(index): raise LangError("get requires string key, got: " + fmtStackPrint(index))
+		if index not in obj: raise LangError("No such key in dict: " + fmtStackPrint(index))
+		I.push(obj[index])
+	else:
+		raise LangError("Object does not support get: " + fmtStackPrint(obj))
+	
 def builtin_bit_shr(I):
 	nr = popInt(I)
 	a = popInt(I)
@@ -476,6 +511,7 @@ BUILTINS = {
 	'self': ([], builtin_self_get),
 	'self!': ([], builtin_self_set),
 	'put': ([], builtin_put),
+	'get': ([], builtin_get),
 	'deepcopy': ([object], lambda I,o: I.push(deepcopy(o))),
 	'alloc': ([int], lambda I,nr: I.push(I.heap_alloc(nr))),
 	',,del': ([], lambda I: I.deleteWord(popSymbol(I))),
@@ -489,5 +525,6 @@ BUILTINS = {
 	'bit-shl': ([], builtin_bit_shl),
 	
 	'run-time': ([], lambda I: I.push(time.time()-STARTUP_TIME)),
+	',,new-dict': ([], lambda I: I.push({})),
 }
 

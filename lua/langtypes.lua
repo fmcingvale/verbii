@@ -19,6 +19,10 @@
 --]]
 
 -- make a "none" class that is differentiated from nil
+-- one reason this needs to exist is that to efficiently test for keys being
+-- present in a table, you do "if table[key] ~= nil" .. so if nil was used
+-- directly, there would be no way to store nil in a table and distinguish it from
+-- "not present"
 local None = {}
 function None:new(obj, value)
 	setmetatable(obj, self)
@@ -104,8 +108,22 @@ function new_String(str)
 	return String:new({}, str)
 end
 
-function isLambda(obj)
-	return type(obj) == "table" and obj.__class__ == "Lambda"
+-- dictionary type
+local Dict = {}
+function Dict:new(obj)
+	setmetatable(obj, self)
+	self.__index = self
+	obj.__class__ = "Dict"
+	obj.dict = {}
+	return obj
+end
+
+function new_Dict()
+	return Dict:new({})
+end
+
+function isDict(obj)
+	return type(obj) == "table" and obj.__class__ == "Dict"
 end
 
 -- lambda type
@@ -120,6 +138,10 @@ end
 
 function new_Lambda(objlist)
 	return Lambda:new({},objlist)
+end
+
+function isLambda(obj)
+	return type(obj) == "table" and obj.__class__ == "Lambda"
 end
 
 -- closure
@@ -160,16 +182,41 @@ function fmtDisplayObjlist(objlist,open_delim,close_delim)
 	return s
 end
 
+-- get keys from a Dict object
+function dictKeys(obj)
+	local keys = {}
+	for k,v in pairs(obj.dict) do
+		table.insert(keys,k)
+	end
+	return keys
+end
+
+-- as above but sort the keys
+function sortedDictKeys(obj)
+	local keys = dictKeys(obj)
+	table.sort(keys)
+	return keys
+end
+
+-- slow but i don't know a better way to do this .. only call when really needed
+function dictSize(obj)
+	local count = 0
+	for k,v in pairs(obj.dict) do
+		count = count + 1
+	end
+	return count
+end
+
 -- see c++ comments for display vs. stack format
 function fmtDisplay(obj)
-	if type(obj) == "number" then
+	if isInt(obj) then
 		return tostring(obj)
 	elseif isNone(obj) then
 		return "<null>"
 	elseif isFloat(obj) then
 		local fmt = "%." .. tostring(FLOAT_PRECISION) .. "g"
 		return string.format(fmt, obj.value)
-	elseif type(obj) == "boolean" then
+	elseif isBool(obj) then
 		if obj then
 			return "true"
 		else
@@ -183,6 +230,14 @@ function fmtDisplay(obj)
 		return obj
 	elseif isList(obj) then
 		return fmtDisplayObjlist(obj, "[", "]")
+	elseif isDict(obj) then
+		local s = "{ "
+		local keys = sortedDictKeys(obj)
+		for i=1,#keys do
+			s = s .. "\"" .. keys[i] .. "\" => " .. fmtDisplay(obj.dict[keys[i]]) .. " "
+		end
+		s = s .. "}"
+		return s
 	elseif isClosure(obj) then
 		return "<" .. fmtDisplayObjlist(obj.objlist,"{","}") .. " :: " ..
 				fmtDisplay(obj.state) .. ">"
@@ -200,18 +255,19 @@ function fmtStackPrintObjlist(objlist,open_delim,close_delim)
 	return s
 end
 
+
 -- see c++ comments for display vs. stack format
 function fmtStackPrint(obj)
 	if obj == nil then
 		return "<VOID>" -- the type that means "nothing, not even null"
 	elseif isNone(obj) then
 		return "<null>"
-	elseif type(obj) == "number" then
+	elseif isInt(obj) then
 		return tostring(obj)
 	elseif isFloat(obj) then
 		local fmt = "%." .. tostring(FLOAT_PRECISION) .. "g"
 		return "#" .. string.format(fmt, obj.value)
-	elseif type(obj) == "boolean" then
+	elseif isBool(obj) then
 		if obj then
 			return "<true>"
 		else
@@ -219,6 +275,14 @@ function fmtStackPrint(obj)
 		end
 	elseif isLambda(obj) then
 		return "<" .. fmtStackPrintObjlist(obj.objlist,"{","}") .. ">"
+	elseif isDict(obj) then
+		local s = "{ "
+		local keys = sortedDictKeys(obj)
+		for i=1,#keys do
+			s = s .. "\"" .. keys[i] .. "\" => " .. fmtStackPrint(obj.dict[keys[i]]) .. " "
+		end
+		s = s .. "}"
+		return s
 	elseif isClosure(obj) then
 		return "<" .. fmtStackPrintObjlist(obj.objlist,"{","}") .. " :: " ..
 				fmtStackPrint(obj.state) .. ">"
@@ -244,12 +308,18 @@ function deepcopyObjlist(objlist)
 end
 
 function deepcopy(obj)
-	if obj == nil or isNone(obj) or type(obj) == "number" or isFloat(obj) or
-		type(obj) == "boolean" or isLambda(obj) or isClosure(obj) or
+	if obj == nil or isNone(obj) or isInt(obj) or isFloat(obj) or
+		isBool(obj) or isLambda(obj) or isClosure(obj) or
 		isString(obj) or isSymbol(obj) then
 		return obj
 	elseif isList(obj) then
 		return deepcopyObjlist(obj)
+	elseif isDict(obj) then
+		local ndict = {}
+		for k,v in pairs(obj.dict) do
+			ndict[k] = deepcopy(v)
+		end
+		return ndict
 	else
 		error(">>>Don't know how to deepcopy object: " .. tostring(obj))
 	end

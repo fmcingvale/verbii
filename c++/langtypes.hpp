@@ -12,6 +12,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <map>
 
 const unsigned char TYPE_NULL = 0;
 const unsigned char TYPE_INT = 1;
@@ -33,9 +34,12 @@ const unsigned char TYPE_CLOSURE = 8;
 // it as a value. it is only used internally for a return type meaning
 // "nothing, not even null"
 const unsigned char TYPE_VOID = 9;
+const unsigned char TYPE_DICT = 10;
+
 class Object;
 
 typedef std::vector<Object> ObjList;
+typedef std::map<std::string,Object> ObjDict;
 
 // set this to control how many digits are printed (max is 17)
 // (this is TOTAL digits, not digits after the decimal ... so 'g' format for printf)
@@ -71,6 +75,7 @@ class Object {
 			((n == 0 && !strcmp(data.str,s)) ||
 			(n > 0 && !strncmp(data.str, s, n))); }
 	bool isList() const { return type == TYPE_LIST; }
+	bool isDict() const { return type == TYPE_DICT; }
 			
 	// get value (make sure to check first)
 	VINT asInt() const { return data.i; }
@@ -78,6 +83,7 @@ class Object {
 	ObjList* asLambda() const { return data.objlist; };
 	double asFloat() const { return data.d; }
 	ObjList *asList() const { return data.objlist; }
+	ObjDict *asDict() const { return data.objdict; }
 	 
 	const char *asString() const { return data.str; }
 	const char *asSymbol() const { return data.str; }
@@ -88,21 +94,23 @@ class Object {
 	// no as* function for Void since it is never supposed to be used
 
 	// '==' builtin (exact match except allows for int==float)
-	bool opEqual(const Object &other);
-	// '>' builtin (int, float, string, symbol)
-	bool opGreater(const Object &other);
-	// '+' builtin (int, float, strings, symbols, lists)
-	Object opAdd(const Object &other);
+	bool opEqual(const Object &other) const;
+	// '>' builtin (int, float, string, symbol, lists)
+	bool opGreater(const Object &other) const;
+	// '+' builtin (int, float, strings, symbols, lists, dicts)
+	Object opAdd(const Object &other) const;
 	// '-' builtin (int, float)
-	Object opSubtract(const Object &other);
+	Object opSubtract(const Object &other) const;
 	// '*' builtin (int, float)
-	Object opMul(const Object &other);
+	Object opMul(const Object &other) const;
 	// '/' builtin (int, float) - *ALWAYS* floating point result - use divmod for floor-divide behavior on ints
-	Object opDivide(const Object &other);
+	Object opDivide(const Object &other) const;
 	// '/mod' (ints)
-	Object opDivMod(const Object &other);
-	// 'length' word (string, symbol, list)
-	Object opLength();
+	Object opDivMod(const Object &other) const;
+	// 'length' word (string, symbol, list, dict)
+	Object opLength() const;
+	// length as regular function
+	int length() const;
 	// 'slice' operation - start at index, get nr items, or -1 for rest
 	// index/length out of bounds is never an error - returns empty object in worst case
 	// negative indexes count from end (where -1 is last item)
@@ -110,16 +118,16 @@ class Object {
 	//
 	// NOTE: slice are the same type as the original object -- so a 1-length slice of a list is still a list.
 	// use unmake when you need the contents in the original type.
-	Object opSlice(VINT index, VINT nr);
+	Object opSlice(VINT index, VINT nr) const;
 
 	// create a deepcopy of object
 	// semantics: modifying a deepcopy of an object cannot change the original object.
-	// implications: lists are the only modifiable object in verbii. therefore they
+	// implications: lists & dicts are the only modifiable object in verbii. therefore they
 	//               are the only object that has to be deepcopied. references to immutable
 	//               objects to not have to be deepcopied
 	//
-	// this is safe to call on ANY object, but any object except a list will just return itself
-	Object deepcopy();
+	// this is safe to call on ANY object, but any object except a list or dict will just return itself
+	Object deepcopy() const;
 	
 	// get string representation of object for printing to output
 	// (like would be displayed in normal program output)
@@ -134,6 +142,7 @@ class Object {
 		VINT i; // ints
 		bool b;
 		ObjList *objlist; // for lambdas & lists
+		ObjDict *objdict; // for dict
 		double d;
 		const char *str; // strings & symbols, immutable
 		Closure *closure;
@@ -145,7 +154,6 @@ class Closure {
 	ObjList *objlist; // the function
 	Object state; // the bound state
 };
-
 
 // single NULL object
 extern Object NULLOBJ;
@@ -172,6 +180,8 @@ Object newSymbol(const std::string& );
 
 Object newList(); // always makes empty list
 Object newList(ObjList *); // wraps existing list, does NOT copy
+
+Object newDict(); // make an empty dict
 
 Object newClosure(ObjList *, Object);
 

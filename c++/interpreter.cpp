@@ -405,7 +405,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			continue;
 		}
 
-		// builtins, then userwords, then vars
+		// builtins, then userwords
 		if(obj.isSymbol()) {
 			auto bltin = BUILTINS.find(obj.asSymbol());
 			if(bltin != BUILTINS.end()) {
