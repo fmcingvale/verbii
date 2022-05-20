@@ -132,12 +132,18 @@ var READER_POS 1
 	;
 
 : ltrim-char ( string char -- if char (single-char string) is at front of string, remove it )
+	over length 0 != if >>do-trim
+	drop return \ 0-length string, nothing to do
+	@do-trim
 	>L 0 +get L> == if >>trim
 	return
 	@trim 1 -1 slice
 	;
 
 : ltrim-sign ( string -- string with leading "+" or "-" removed [max 1] )
+	dup length 0 != if >>do-trim
+	return \ 0-length string
+	@do-trim
 	0 +get "+" == if >>trim
 	0 +get "-" == if >>trim
 	return
@@ -491,7 +497,7 @@ var TRIPLEQUOTE 1
 	;
 
 \ general note: the following is NOT intended to be a general-purpose serialization format.
-\ 				it's only purpose is to be able to serialize byte-compiled verbii source.
+\ 				its only purpose is to be able to serialize byte-compiled verbii source.
 \				primarily it is for compiler.verb and init.verb, but is general enough to
 \				serialize any verbii source file.
 \

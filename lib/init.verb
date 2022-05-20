@@ -95,18 +95,6 @@ SP SP_EMPTY set!
 : L8 LP 8 + ;
 : L9 LP 9 + ;
 
-: get ( sequence i -- obj = i'th object from sequence )
-	over list? if >>list
-	over string? if >>string
-	over symbol? if >>string
-	repr "Bad object in get: " swap + error
-	@string
-		( for string & symbol, slice of 1 item is desired value )
-		1 slice return
-	@list ( here i want first element of sliced list )
-		1 slice unmake drop
-	;
-
 : +get ( same as get but leaves obj on stack )
 	over swap get ;
 
@@ -139,6 +127,11 @@ SP SP_EMPTY set!
 		drop LP 3 + LP! true return
 	;
 
+\ this is what I should have named these ...
+\ TODO - find all code using any & all and change to any? and all?
+: any? any ;
+: all? all ;
+
 : string->symbol ( string -- symbol )
 	unmake make-symbol
 	;
@@ -165,5 +158,106 @@ SP SP_EMPTY set!
 	L1 ref 1 - L1 set! ( NR -= 1 ) <<loop
 	@done LP 2 + LP! ; ( remove locals )
 
+\ fold - left fold
+\	func: called with stack [ accum elem ] where accum is the accumulated value and
+\		  elem is the next element to be added to the accumulator.
+\		  func must leave updated accum on stack
+\	init: initial value for accumulator
+\
+\ 	pseudocode:
+\		acc = func(acc, seq[0])
+\		acc = func(acc, seq[1])
+\		.
+\		acc = func(acc, seq[n-1])
+: fold ( seq func init )
+	\ build closure to run for each element
+	\ make func into list
+	swap 1 make-list
+	\ FUNC will be append to left side of this
+	[ self -rot ( now: acc elem FUNC )
+		call self! ( make new acc and store )
+	]
+	+ ( [ FUNC ] + [ above ] )
+	\ make into closure & keep a copy
+	swap :: dup >L
+	for-each
+	\ leave end state on stack
+	L0 ref unmake nip
+	\ clean up locals
+	LP 1 + LP!
+	;
 
+\
+\ map - make new sequence of func[elem] for each elem in sequence
+\
+\ calls func with elem on top of stack; func must leave new element on stack
+\
+: map ( seq func )
+	over list? if >>map-list
+	over string? if >>map-string
+	str "Bad sequence in map: " swap + error	
+
+	@map-string
+		\ string concatenation operator & initval
+		'+ >L "" >L >>run
+	@map-list
+		\ list concatentation operator & initval
+		'append >L 0 make-list >L
+
+	@run ( seq func )
+		\ function to pass to fold
+		[ FUNC call CONCAT ]
+		\ replace FUNC with function
+		0 rot put
+		\ replace CONCAT with correct operator from above
+		2 L1 ref put
+		\ initval
+		L0 ref fold \ as above don't use [ ] here
+		\ clean up locals
+		LP 2 + LP!
+		return \ leave filtered list on stack
+	;
+
+
+
+\
+\ filter: make new sequence of only elements where func[elem] is true
+\
+\ calls func with elem on top of stack; func must leave true or false on stack
+\
+: filter ( seq func ; calls func[seq[i]] for each element )
+	over list? if >>filter-list
+	over string? if >>filter-string
+	str "Bad sequence in filter: " swap + error	
+
+	@filter-string
+		\ string concatenation operator & initval
+		'+ >L "" >L >>run
+	@filter-list
+		\ list concatentation operator & initval
+		'append >L 0 make-list >L
+
+	@run ( seq func )
+		\ function to pass to fold
+		[ dup FUNC call if >>keep drop return 
+			@keep CONCAT ]
+		\ replace FUNC with function
+		1 rot put
+		\ replace CONCAT with correct operator from above
+		8 L1 ref put
+		\ initval
+		L0 ref fold \ as above don't use [ ] here
+		\ clean up locals
+		LP 2 + LP!
+		return \ leave filtered list on stack
+	;
+
+\
+\ take a list of tuples and makes a dictionary:
+\	[ [ "foo" 123 ] [ "bar" 678 ] ] make-dict
+\
+: make-dict ( list-of-pairs -- dict )
+	\ called as: ( dict [ key val ] )
+	{ unmake drop put } ,,new-dict fold
+	;
 

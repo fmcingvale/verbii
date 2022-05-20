@@ -36,8 +36,9 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
    into lib/patches.verb. If you want to add new words, put those changes in patches.verb as well. 
    Words defined in patches.verb are allowed to overwrite existing words (this is the ONLY time this is possible).
 
-2. Test your changes as throughly as possible. By putting changes ONLY in patches.verb your system is
-   safe since the .b files are not touched. *** DO NOT RUN make-bootstrap.sh ***
+2. Test your changes as throughly as possible (at a minimum, run-all-regressions.sh at the top level). 
+   By putting changes ONLY in patches.verb your system is safe since the .b files are not touched. 
+   *** DO NOT RUN make-bootstrap.sh yet ***
    
 3. Once you are sure your changes are OK, cut & paste them back into compiler.verb and/or init.verb.
 
