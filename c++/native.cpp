@@ -293,6 +293,7 @@ static void builtin_put(Interpreter *intr) {
 		if(!indexOrKey.isInt())
 			throw LangError("put expects integer index, got: " + indexOrKey.fmtStackPrint());
 		int index = indexOrKey.asInt();
+		if(index < 0) index += (int)dest.asList()->size(); // negative indexes count from end
 		if(index < 0 || index >= (int)dest.asList()->size())
 			throw LangError("index out of range in put");
 		dest.asList()->at(index) = obj;

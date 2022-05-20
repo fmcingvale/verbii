@@ -408,6 +408,7 @@ def builtin_put(I):
 
 	if isList(dest):
 		if not isInt(index): raise LangError("put requires index, got: " + fmtStackPrint(index))
+		if index < 0: index += len(dest) # negative indexes
 		if index < 0 or index >= len(dest): raise LangError("Index out of range in put")
 		dest[index] = obj
 		I.push(dest)

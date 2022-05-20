@@ -337,6 +337,7 @@ del aaa
 del bbb
 del ccc
 
+( show that lists are callable )
 [    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
 call
 clear
@@ -356,11 +357,27 @@ clear
 ==
 clear
 
+( list get )
+[ 11 22 33 44 55 66 ]
+dup 2 get
+drop dup 0 get
+drop dup 5 get
+drop dup -1 get
+drop dup -3 get
+drop dup -6 get
+clear
+
 ( list put )
 [ 10 20 30 40 50 ] 
 2 "abc" put
 0 'xyz put
 4 false put
+clear
+
+[ 11 22 33 44 55 ]
+-1 "hello" put
+-3 #8.125 put
+-5 'world put
 clear
 
 ( slicing )

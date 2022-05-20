@@ -588,6 +588,7 @@ class Builtins {
 				var index = (indexOrKey as LangInt)!.value;
 
 				var list = (dest as LangList)!;
+				if(index < 0) index += list.objlist.Count; // negative indexes count from end
 				if(index < 0 || index >= list.objlist.Count)
 					throw new LangError("Index out of bounds in put");
 

@@ -13,6 +13,9 @@ else
 	UTEST="./test"
 fi
 
+# sure binaries up to date
+make
+
 mkdir -p ../unittests/RESULTS/c++
 
 echo "Core ..."

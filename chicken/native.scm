@@ -342,6 +342,8 @@
 		((List? dest)
 			(if (not (integer? index))
 				(lang-error 'put "Index must be an integer"))
+			(if (< index 0)
+				(set! index (+ index (len dest)))) ; handle negative index
 			(if (or (< index 0) (>= index (len dest)))
 				(lang-error 'put "Index out of range in put")
 				(begin

@@ -588,6 +588,8 @@ and		now		with			tabs
 => 
 >> del ccc
 => 
+>> ( show that lists are callable )
+=> 
 >> [    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
 => [ [ [ 2 8 '+ ] 'call ] 'call [ 12 8 '+ [ 40 10 '- ] 'call ] 'call ] 
 >> call
@@ -622,6 +624,24 @@ and		now		with			tabs
 => <true> <false> <false> <false> <true> <false> 
 >> clear
 => 
+>> ( list get )
+=> 
+>> [ 11 22 33 44 55 66 ]
+=> [ 11 22 33 44 55 66 ] 
+>> dup 2 get
+=> [ 11 22 33 44 55 66 ] 33 
+>> drop dup 0 get
+=> [ 11 22 33 44 55 66 ] 11 
+>> drop dup 5 get
+=> [ 11 22 33 44 55 66 ] 66 
+>> drop dup -1 get
+=> [ 11 22 33 44 55 66 ] 66 
+>> drop dup -3 get
+=> [ 11 22 33 44 55 66 ] 44 
+>> drop dup -6 get
+=> [ 11 22 33 44 55 66 ] 11 
+>> clear
+=> 
 >> ( list put )
 => 
 >> [ 10 20 30 40 50 ] 
@@ -632,6 +652,16 @@ and		now		with			tabs
 => [ 'xyz 20 "abc" 40 50 ] 
 >> 4 false put
 => [ 'xyz 20 "abc" 40 <false> ] 
+>> clear
+=> 
+>> [ 11 22 33 44 55 ]
+=> [ 11 22 33 44 55 ] 
+>> -1 "hello" put
+=> [ 11 22 33 44 "hello" ] 
+>> -3 #8.125 put
+=> [ 11 22 #8.125 44 "hello" ] 
+>> -5 'world put
+=> [ 'world 22 #8.125 44 "hello" ] 
 >> clear
 => 
 >> ( slicing )

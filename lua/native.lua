@@ -578,7 +578,9 @@ function builtin_put(intr)
 	if isList(dest) then
 		if not isInt(index) then
 			error(">>>put expects integer index")
-		elseif index < 0 or index >= #dest then
+		end
+		if index < 0 then index = index + #dest end -- negative indexes
+		if index < 0 or index >= #dest then
 			error(">>>Index out of range in put")
 		else
 			dest[index+1] = obj

@@ -5,6 +5,9 @@
 # run this before checking in revisions so i can see if the unittest results
 # changed from the expected values
 
+# ensure build is up to date
+./mono-build.sh
+
 mkdir -p ../unittests/RESULTS/csharp
 
 echo "Core ..."
