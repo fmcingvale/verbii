@@ -24,6 +24,13 @@ def parseBool(text):
 	elif text == "false": return False
 	else: raise LangError("Bad boolean literal: " + text)
 
+# need a void type that is differentiated from null (see c++ notes in langtypes.hpp)
+class LangVoid(object):
+	def __init__(self):
+		pass
+
+def isVoid(obj): return isinstance(obj, LangVoid)
+
 # since symbols are far more common than strings,
 # Python strings are used for symbols and this class is used
 # for strings
@@ -78,6 +85,8 @@ def fmtDisplay(obj):
 	"see c++ comments for display vs. stack format"
 	if isNull(obj):
 		return "<null>"
+	elif isVoid(obj):
+		return "<*void*>"
 	elif isInt(obj):
 		return str(obj)
 	elif isFloat(obj):
@@ -122,6 +131,8 @@ def fmtStackPrint(obj):
 	"see c++ comments for display vs. stack format"
 	if isNull(obj):
 		return "<null>"
+	elif isVoid(obj):
+		return "<*void*>"
 	elif isInt(obj):
 		return str(obj)
 	elif isFloat(obj):
@@ -161,7 +172,7 @@ def deepcopyObjlist(objlist):
 
 # see c++ implementation & DESIGN-NOTES.md
 def deepcopy(obj):
-	if isNull(obj) or isNumeric(obj) or isBool(obj) or \
+	if isNull(obj) or isVoid(obj) or isNumeric(obj) or isBool(obj) or \
 		isLambda(obj) or isClosure(obj) or \
 		isString(obj) or isSymbol(obj):
 		return obj

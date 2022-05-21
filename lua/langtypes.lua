@@ -7,7 +7,8 @@
 
 	verbii		Lua
 	------		---
-	null		None (class)
+	null		Null (class)
+	void		Void (class)
 	int			number
 	float		Float (class)
 	boolean		boolean
@@ -18,25 +19,45 @@
 	list		table (i.e. plain table with no __class attribute)
 --]]
 
--- make a "none" class that is differentiated from nil
--- one reason this needs to exist is that to efficiently test for keys being
+-- make a "null" class (like other ports) that is differentiated from nil
+-- one reason nil can't be used directly is that nil is treated specially by
+-- lua in several situation. for example to efficiently test for keys being
 -- present in a table, you do "if table[key] ~= nil" .. so if nil was used
 -- directly, there would be no way to store nil in a table and distinguish it from
 -- "not present"
-local None = {}
-function None:new(obj, value)
+local Null = {}
+function Null:new(obj, value)
 	setmetatable(obj, self)
 	self.__index = self
-	obj.__class__ = "None"
+	obj.__class__ = "Null"
 	return obj
 end
 
-function isNone(obj)
-	return type(obj) == "table" and obj.__class__ == "None"
+function isNull(obj)
+	return type(obj) == "table" and obj.__class__ == "Null"
 end
 
-function new_None()
-	return None:new({})
+function new_Null()
+	return Null:new({})
+end
+
+-- as with other ports, need a Void that is differentiated from Null. 
+-- again, I'm not using nil since it should be *possible* to store
+-- void in data structures (although this is normally not done)
+local Void = {}
+function Void:new(obj, value)
+	setmetatable(obj, self)
+	self.__index = self
+	obj.__class__ = "Void"
+	return obj
+end
+
+function isVoid(obj)
+	return type(obj) == "table" and obj.__class__ == "Void"
+end
+
+function new_Void()
+	return Void:new({})
 end
 
 function isBool(obj)
@@ -216,9 +237,11 @@ end
 
 -- see c++ comments for display vs. stack format
 function fmtDisplay(obj)
-	if isInt(obj) then
+	if isVoid(obj) then
+		return "<*void*>"
+	elseif isInt(obj) then
 		return tostring(obj)
-	elseif isNone(obj) then
+	elseif isNull(obj) then
 		return "<null>"
 	elseif isFloat(obj) then
 		local fmt = "%." .. tostring(FLOAT_PRECISION) .. "g"
@@ -265,9 +288,9 @@ end
 
 -- see c++ comments for display vs. stack format
 function fmtStackPrint(obj)
-	if obj == nil then
-		return "<VOID>" -- the type that means "nothing, not even null"
-	elseif isNone(obj) then
+	if isVoid(obj) then
+		return "<*void*>" -- the type that means "nothing, not even null"
+	elseif isNull(obj) then
 		return "<null>"
 	elseif isInt(obj) then
 		return tostring(obj)
@@ -315,9 +338,9 @@ function deepcopyObjlist(objlist)
 end
 
 function deepcopy(obj)
-	if obj == nil or isNone(obj) or isInt(obj) or isFloat(obj) or
+	if obj == nil or isNull(obj) or isInt(obj) or isFloat(obj) or
 		isBool(obj) or isLambda(obj) or isClosure(obj) or
-		isString(obj) or isSymbol(obj) then
+		isString(obj) or isSymbol(obj) or isVoid(obj) then
 		return obj
 	elseif isList(obj) then
 		return deepcopyObjlist(obj)

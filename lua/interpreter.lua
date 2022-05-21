@@ -271,8 +271,8 @@ function Interpreter:run(objlist, stephook)
 		end
 
 		-- see if its a literal to push
-		if type(obj) == "number" or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isClosure(obj) or isBool(obj) then
+		if isInt(obj) or isFloat(obj) or isString(obj) or isLambda(obj) or
+			isBool(obj) then
 			self:push(obj)
 			goto MAINLOOP
 		end

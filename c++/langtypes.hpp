@@ -29,10 +29,14 @@ const unsigned char TYPE_LIST = 7;
 // a state. instead of inventing a new word for "function with state", i'm calling
 // them closures since they are at least similar in concept.
 const unsigned char TYPE_CLOSURE = 8;
-// unlike TYPE_NULL, which gets pushed as an immediate when encountered,
-// type VOID is never pushed and it is an error in most cases to pass
-// it as a value. it is only used internally for a return type meaning
-// "nothing, not even null"
+// a void type which is differentiated from null.
+// in general, void is used in eof-type situations but can be used in any context
+// where a function needs to differentiate a return value of null from a
+// return of 'nothing'. for example the verbii compiler needs to be able to do this
+// so that null can be a literal. void can never be a literal since the same problem
+// would recur that there would be no way to differentiate a parsed void from eof.
+// void will only ever be a word, so it will always be parsed as a symbol. since void
+// normally shouldn't be used in data anyways, i don't think that's a problem.
 const unsigned char TYPE_VOID = 9;
 const unsigned char TYPE_DICT = 10;
 
@@ -90,8 +94,6 @@ class Object {
 
 	ObjList *asClosureFunc() const;
 	Object asClosureState() const;
-
-	// no as* function for Void since it is never supposed to be used
 
 	// '==' builtin (exact match except allows for int==float)
 	bool opEqual(const Object &other) const;

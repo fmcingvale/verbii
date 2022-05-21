@@ -12,7 +12,7 @@ from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
 					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
-						isNull, parseBool
+						isNull, parseBool, LangVoid, isVoid
 import time
 
 # has to be set externally
@@ -477,6 +477,7 @@ BUILTINS = {
 	'string?': ([object], lambda I,o: I.push(isString(o))),
 	'symbol?': ([object], lambda I,o: I.push(isSymbol(o))),
 	'null?': ([object], lambda I,o: I.push(isNull(o))),
+	'void?': ([object], lambda I,o: I.push(isVoid(o))),
 	'lambda?': ([object], lambda I,o: I.push(isLambda(o))),
 	'closure?': ([object], lambda I,o: I.push(isClosure(o))),
 	# [] for no args
@@ -507,6 +508,7 @@ BUILTINS = {
 	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),
 	'null': ([], lambda I: I.push(None)),
+	'void': ([], lambda I: I.push(LangVoid())),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 	'.dumpword': ([], lambda I: I.push(deepcopy(I.lookupWordOrFail(popSymbol(I))))),
 	'read-file': ([], builtin_readfile),

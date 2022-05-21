@@ -319,9 +319,9 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			}
 		}
 		
-		// check for literal objects that just get pushed
-		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() ||
-			obj.isClosure() || obj.isBool()) {
+		// check for literal objects that just get pushed (ONLY objects that have a 
+		// parseable form need to be here)
+		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool()) {
 			push(obj);
 			continue;
 		}

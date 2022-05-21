@@ -35,13 +35,18 @@ public abstract class LangObject {
 	public virtual LangObject deepcopy() { return this; } // MOST classes just return self
 }
 
-// void is differentiated from null since null can be a valid language object.
-// void is used internally only to mean "nothing, not even null"
+// in general, void is used in eof-type situations but can be used in any context
+// where the code needs to differentiate a return value of null from a
+// return of 'nothing'. for example the verbii compiler needs to be able to do this
+// so that null can be a literal. void can never be a literal since the same problem
+// would recur that there would be no way to differentiate a parsed void from eof.
 public class LangVoid : LangObject {
 	public LangVoid() {}
 
-	public override string typename() { return "<VOID>"; }
-	public override string fmtDisplay() { return "<VOID>"; }
+	// voids usually will not be present in stored data, so print it a little
+	// differently so it is easy to spot ... might indicate a programming error etc.
+	public override string typename() { return "<*void*>"; }
+	public override string fmtDisplay() { return "<*void*>"; }
 	public override string fmtStackPrint() { return fmtDisplay(); }
 }
 

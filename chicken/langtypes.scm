@@ -225,7 +225,7 @@
 				(fmtStackPrintObjlist (List-objlist (Closure-llist obj)) "{" "}")
 				" :: " (fmtStackPrint (Closure-state obj)) ">"))
 		((Null? obj) "<null>")
-		((Void? obj) "<VOID>")
+		((Void? obj) "<*void*>")
 		((Lambda? obj)
 			(string-append "<"
 				(fmtStackPrintObjlist (List-objlist (lambda-llist obj)) "{" "}")
@@ -272,7 +272,7 @@
 				(fmtDisplayObjlist (List-objlist (Closure-llist obj)) "{" "}")
 				" :: " (fmtDisplay (Closure-state obj)) ">"))
 		((Null? obj) "<null>")
-		((Void? obj) "<VOID>")
+		((Void? obj) "<*void*>")
 		((Lambda? obj)
 			(string-append "<"
 				(fmtDisplayObjlist (List-objlist (lambda-llist obj)) "{" "}")

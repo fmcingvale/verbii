@@ -484,23 +484,32 @@ null str . CR
 { 10 20 30 40 }
 unmake
 unmake
+clear
 
 ( type testing )
-clear
 123 int?
 #123 int?
 #446 float?
 123 float?
+clear
 "hello" string?
 "there" symbol?
 'world symbol?
 'foobar string?
+clear
 true bool?
+false bool?
 1 bool?
+clear
 null null?
 0 null?
-
+null void?
 clear
+void void?
+void null?
+0 void?
+clear
+
 10 'word #13.125 3 4 5 3 make-list "end" 5 make-list
 make-lambda
 unmake

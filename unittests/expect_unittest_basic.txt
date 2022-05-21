@@ -1,1080 +1,1098 @@
 >> \
-=> 
+=>
 >> \ test library functions and other basic things not covered in unittest_core
-=> 
+=>
 >> \ Copyright (c) 2022 Frank McIngvale, see LICENSE
-=> 
+=>
 >> \
-=> 
+=>
 >> 10 20 30 
-=> 10 20 30 
+=> 10 20 30
 >> depth
-=> 10 20 30 3 
+=> 10 20 30 3
 >> . . . . CR
 3 30 20 10 
-=> 
+=>
 >> depth
-=> 0 
+=> 0
 >> 10 20 30 40 50 60
-=> 0 10 20 30 40 50 60 
+=> 0 10 20 30 40 50 60
 >> SP 3 + SP!
-=> 0 10 20 30 
+=> 0 10 20 30
 >> "Hello world!" . CR
 Hello world! 
-=> 0 10 20 30 
+=> 0 10 20 30
 >> clear
-=> 
+=>
 >> 10 20 30
-=> 10 20 30 
+=> 10 20 30
 >> drop
-=> 10 20 
+=> 10 20
 >> drop
-=> 10 
+=> 10
 >> drop
-=> 
+=>
 >> 111 222
-=> 111 222 
+=> 111 222
 >> dup
-=> 111 222 222 
+=> 111 222 222
 >> dup
-=> 111 222 222 222 
+=> 111 222 222 222
 >> 0
-=> 111 222 222 222 0 
+=> 111 222 222 222 0
 >> dup?
-=> 111 222 222 222 0 
+=> 111 222 222 222 0
 >> clear
-=> 
+=>
 >> 11 22 33
-=> 11 22 33 
+=> 11 22 33
 >> swap
-=> 11 33 22 
+=> 11 33 22
 >> swap
-=> 11 22 33 
+=> 11 22 33
 >> clear
-=> 
+=>
 >> 11 22 33 44
-=> 11 22 33 44 
+=> 11 22 33 44
 >> 1 pick
-=> 11 22 33 44 44 
+=> 11 22 33 44 44
 >> drop
-=> 11 22 33 44 
+=> 11 22 33 44
 >> 2 pick
-=> 11 22 33 44 33 
+=> 11 22 33 44 33
 >> drop
-=> 11 22 33 44 
+=> 11 22 33 44
 >> 3 pick
-=> 11 22 33 44 22 
+=> 11 22 33 44 22
 >> drop
-=> 11 22 33 44 
+=> 11 22 33 44
 >> 4 pick
-=> 11 22 33 44 11 
+=> 11 22 33 44 11
 >> clear
-=> 
+=>
 >> 10 20 30 40
-=> 10 20 30 40 
+=> 10 20 30 40
 >> over
-=> 10 20 30 40 30 
+=> 10 20 30 40 30
 >> clear
-=> 
+=>
 >> 10 20 30 40 50 60
-=> 10 20 30 40 50 60 
+=> 10 20 30 40 50 60
 >> 2dup
-=> 10 20 30 40 50 60 50 60 
+=> 10 20 30 40 50 60 50 60
 >> clear
-=> 
+=>
 >> 10 20 30 40
-=> 10 20 30 40 
+=> 10 20 30 40
 >> 2drop
-=> 10 20 
+=> 10 20
 >> clear
-=> 
+=>
 >> 10 20 30 40 50 60
-=> 10 20 30 40 50 60 
+=> 10 20 30 40 50 60
 >> 2over 
-=> 10 20 30 40 50 60 30 40 
+=> 10 20 30 40 50 60 30 40
 >> clear
-=> 
+=>
 >> 10 20 30 40 50 60
-=> 10 20 30 40 50 60 
+=> 10 20 30 40 50 60
 >> 2swap
-=> 10 20 50 60 30 40 
+=> 10 20 50 60 30 40
 >> ( logical operations )
-=> 10 20 50 60 30 40 
+=> 10 20 50 60 30 40
 >> clear
-=> 
+=>
 >> true
-=> <true> 
+=> <true>
 >> false
-=> <true> <false> 
+=> <true> <false>
 >> clear
-=> 
+=>
 >> true not
-=> <false> 
+=> <false>
 >> false not
-=> <false> <true> 
+=> <false> <true>
 >> clear
-=> 
+=>
 >> true true or
-=> <true> 
+=> <true>
 >> true false or
-=> <true> <true> 
+=> <true> <true>
 >> false true or
-=> <true> <true> <true> 
+=> <true> <true> <true>
 >> false false or
-=> <true> <true> <true> <false> 
+=> <true> <true> <true> <false>
 >> clear
-=> 
+=>
 >> true true and
-=> <true> 
+=> <true>
 >> true false and
-=> <true> <false> 
+=> <true> <false>
 >> false true and
-=> <true> <false> <false> 
+=> <true> <false> <false>
 >> false false and
-=> <true> <false> <false> <false> 
+=> <true> <false> <false> <false>
 >> ( stack operations )
-=> <true> <false> <false> <false> 
+=> <true> <false> <false> <false>
 >> clear
-=> 
+=>
 >> 11 22 33 44 55 66 77
-=> 11 22 33 44 55 66 77 
+=> 11 22 33 44 55 66 77
 >> 4 ndrop
-=> 11 22 33 
+=> 11 22 33
 >> clear
-=> 
+=>
 >> 111 222 333 444 555
-=> 111 222 333 444 555 
+=> 111 222 333 444 555
 >> 5 ndrop
-=> 
+=>
 >> clear
-=> 
+=>
 >> 111 222 333
-=> 111 222 333 
+=> 111 222 333
 >> nip
-=> 111 333 
+=> 111 333
 >> clear
-=> 
+=>
 >> 10 20 30 tuck
-=> 10 30 20 30 
+=> 10 30 20 30
 >> clear
-=> 
+=>
 >> 10 20 30 40
-=> 10 20 30 40 
+=> 10 20 30 40
 >> rot
-=> 10 30 40 20 
+=> 10 30 40 20
 >> -rot
-=> 10 20 30 40 
+=> 10 20 30 40
 >> ( relational operators )
-=> 10 20 30 40 
+=> 10 20 30 40
 >> clear
-=> 
+=>
 >> 10 20 >=
-=> <false> 
+=> <false>
 >> 30 20 >=
-=> <false> <true> 
+=> <false> <true>
 >> 40 40 >=
-=> <false> <true> <true> 
+=> <false> <true> <true>
 >> clear
-=> 
+=>
 >> 10 20 <
-=> <true> 
+=> <true>
 >> 30 10 <
-=> <true> <false> 
+=> <true> <false>
 >> 40 40 <
-=> <true> <false> <false> 
+=> <true> <false> <false>
 >> clear
-=> 
+=>
 >> 15 20 <=
-=> <true> 
+=> <true>
 >> 35 21 <=
-=> <true> <false> 
+=> <true> <false>
 >> 40 40 <=
-=> <true> <false> <true> 
+=> <true> <false> <true>
 >> ( combinations of rich math operations )
-=> <true> <false> <true> 
+=> <true> <false> <true>
 >> clear
-=> 
+=>
 >> 10 20 +
-=> 30 
+=> 30
 >> 10 #21 +
-=> 30 #31 
+=> 30 #31
 >> #11 22 +
-=> 30 #31 #33 
+=> 30 #31 #33
 >> #11 #33 +
-=> 30 #31 #33 #44 
+=> 30 #31 #33 #44
 >> clear
-=> 
+=>
 >> 10 20 -
-=> -10 
+=> -10
 >> 10 #21 -
-=> -10 #-11 
+=> -10 #-11
 >> #11 20 -
-=> -10 #-11 #-9 
+=> -10 #-11 #-9
 >> #22 #77 -
-=> -10 #-11 #-9 #-55 
+=> -10 #-11 #-9 #-55
 >> clear
-=> 
+=>
 >> 10 20 *
-=> 200 
+=> 200
 >> 10 #21 *
-=> 200 #210 
+=> 200 #210
 >> #12 12 *
-=> 200 #210 #144 
+=> 200 #210 #144
 >> #10 #40 *
-=> 200 #210 #144 #400 
+=> 200 #210 #144 #400
 >> clear
-=> 
+=>
 >> 10 20 /
-=> #0.5 
+=> #0.5
 >> 40 #20 /
-=> #0.5 #2 
+=> #0.5 #2
 >> #30 2 /
-=> #0.5 #2 #15 
+=> #0.5 #2 #15
 >> #100 #25 /
-=> #0.5 #2 #15 #4 
+=> #0.5 #2 #15 #4
 >> clear
-=> 
+=>
 >> "hello" " " "world"
-=> "hello" " " "world" 
+=> "hello" " " "world"
 >> +
-=> "hello" " world" 
+=> "hello" " world"
 >> +
-=> "hello world" 
+=> "hello world"
 >> clear
-=> 
+=>
 >> 'abc 'def 'ghi
-=> 'abc 'def 'ghi 
+=> 'abc 'def 'ghi
 >> +
-=> 'abc 'defghi 
+=> 'abc 'defghi
 >> +
-=> 'abcdefghi 
+=> 'abcdefghi
 >> ( more math operations )
-=> 'abcdefghi 
+=> 'abcdefghi
 >> clear
-=> 
+=>
 >> 123 
-=> 123 
+=> 123
 >> neg
-=> -123 
+=> -123
 >> -456
-=> -123 -456 
+=> -123 -456
 >> neg
-=> -123 456 
+=> -123 456
 >> clear
-=> 
+=>
 >> 123 456 
-=> 123 456 
+=> 123 456
 >> max
-=> 456 
+=> 456
 >> -500 200 
-=> 456 -500 200 
+=> 456 -500 200
 >> max
-=> 456 200 
+=> 456 200
 >> 300 -44
-=> 456 200 300 -44 
+=> 456 200 300 -44
 >> max
-=> 456 200 300 
+=> 456 200 300
 >> 444 444 
-=> 456 200 300 444 444 
+=> 456 200 300 444 444
 >> max
-=> 456 200 300 444 
+=> 456 200 300 444
 >> clear
-=> 
+=>
 >> 100 200 
-=> 100 200 
+=> 100 200
 >> min
-=> 100 
+=> 100
 >> -400 500 
-=> 100 -400 500 
+=> 100 -400 500
 >> min
-=> 100 -400 
+=> 100 -400
 >> 123 -40 
-=> 100 -400 123 -40 
+=> 100 -400 123 -40
 >> min
-=> 100 -400 -40 
+=> 100 -400 -40
 >> 77 77
-=> 100 -400 -40 77 77 
+=> 100 -400 -40 77 77
 >> min
-=> 100 -400 -40 77 
+=> 100 -400 -40 77
 >> clear
-=> 
+=>
 >> 123
-=> 123 
+=> 123
 >> abs
-=> 123 
+=> 123
 >> -99
-=> 123 -99 
+=> 123 -99
 >> abs
-=> 123 99 
+=> 123 99
 >> 0
-=> 123 99 0 
+=> 123 99 0
 >> abs
-=> 123 99 0 
+=> 123 99 0
 >> clear
-=> 
+=>
 >> 10 20 30 40 
-=> 10 20 30 40 
+=> 10 20 30 40
 >> .S
 => 10 20 30 40 
-=> 10 20 30 40 
+=> 10 20 30 40
 >> : foobar 11 22 33 44 ;
-=> 10 20 30 40 
+=> 10 20 30 40
 >> 'foobar .dumpword
-=> 10 20 30 40 [ 11 22 33 44 ] 
+=> 10 20 30 40 [ 11 22 33 44 ]
 >> ( ensure i can't modify word from dumped list )
-=> 10 20 30 40 [ 11 22 33 44 ] 
+=> 10 20 30 40 [ 11 22 33 44 ]
 >> 2 777 put
-=> 10 20 30 40 [ 11 22 777 44 ] 
+=> 10 20 30 40 [ 11 22 777 44 ]
 >> 'foobar .dumpword
-=> 10 20 30 40 [ 11 22 777 44 ] [ 11 22 33 44 ] 
+=> 10 20 30 40 [ 11 22 777 44 ] [ 11 22 33 44 ]
 >> clear
-=> 
+=>
 >> ( -- lambdas -- )
-=> 
+=>
 >> { 4 5 6 }
-=> <{ 4 5 6 }> 
+=> <{ 4 5 6 }>
 >> call
-=> 4 5 6 
+=> 4 5 6
 >> clear
-=> 
+=>
 >> { 1 2 3 { 7 8 9 } 4 5 6 }
-=> <{ 1 2 3 <{ 7 8 9 }> 4 5 6 }> 
+=> <{ 1 2 3 <{ 7 8 9 }> 4 5 6 }>
 >> call
-=> 1 2 3 <{ 7 8 9 }> 4 5 6 
+=> 1 2 3 <{ 7 8 9 }> 4 5 6
 >> 3 ndrop
-=> 1 2 3 <{ 7 8 9 }> 
+=> 1 2 3 <{ 7 8 9 }>
 >> call
-=> 1 2 3 7 8 9 
+=> 1 2 3 7 8 9
 >> clear
-=> 
+=>
 >> { 111 222 333 }
-=> <{ 111 222 333 }> 
+=> <{ 111 222 333 }>
 >> dup
-=> <{ 111 222 333 }> <{ 111 222 333 }> 
+=> <{ 111 222 333 }> <{ 111 222 333 }>
 >> dup
-=> <{ 111 222 333 }> <{ 111 222 333 }> <{ 111 222 333 }> 
+=> <{ 111 222 333 }> <{ 111 222 333 }> <{ 111 222 333 }>
 >> call
-=> <{ 111 222 333 }> <{ 111 222 333 }> 111 222 333 
+=> <{ 111 222 333 }> <{ 111 222 333 }> 111 222 333
 >> 3 ndrop
-=> <{ 111 222 333 }> <{ 111 222 333 }> 
+=> <{ 111 222 333 }> <{ 111 222 333 }>
 >> call
-=> <{ 111 222 333 }> 111 222 333 
+=> <{ 111 222 333 }> 111 222 333
 >> 3 ndrop
-=> <{ 111 222 333 }> 
+=> <{ 111 222 333 }>
 >> call
-=> 111 222 333 
+=> 111 222 333
 >> clear
-=> 
+=>
 >> ( -- simple example of passing lambdas to another function -- )
-=> 
+=>
 >> def saything ( lambda -- ) dup "The" . 1 swap call "is" . 2 swap call CR ;
-=> 
+=>
 >> ( called with cmd on TOS )
-=> 
+=>
 >> { 1 == if >>one "blue" . return @one "ocean" . }
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }>
 >> { 1 == if >>one "green" . return @one "grass" . }
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }>
 >> { 1 == if >>one "red" . return @one "rose" . }
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }> <{ 1 '== 'if '>>one "red" '. 'return '@one "rose" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }> <{ 1 '== 'if '>>one "red" '. 'return '@one "rose" '. }>
 >> saything
 The rose is red 
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }>
 >> saything
 The grass is green 
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }>
 >> saything
 The ocean is blue 
-=> 
+=>
 >> clear
-=> 
+=>
 >> : zzz { 10 . 20 . "Hello lambda!" . 30 . 40 . } call CR ;
-=> 
+=>
 >> ( subtlety here -- have to run zzz at least twice to make sure it's working -- )
-=> 
+=>
 >> ( the FIRST time, the { .. } will be parsed and directly pushed as a lambda object ... )
-=> 
+=>
 >> ( ... modifying the source to remove the { .. } and replacing it with the lambda object that )
-=> 
+=>
 >> ( ... will be pushed as an immediate value on subsequent runs )
-=> 
+=>
 >> ( so have to run the SECOND time to make sure the modified wordlist is correct )
-=> 
+=>
 >> zzz
 10 20 Hello lambda! 30 40 
-=> 
+=>
 >> zzz
 10 20 Hello lambda! 30 40 
-=> 
+=>
 >> zzz ( once more for good measure )
 10 20 Hello lambda! 30 40 
-=> 
+=>
 >> ( this will fail if comments aren't removed in the syntax layer since the )
-=> 
+=>
 >> ( interpreter expects the name immediately after 'var' )
-=> 
+=>
 >> var ( hello ) t33 ( there ) 1
-=> 
+=>
 >> 1445 t33 set! 
-=> 
+=>
 >> t33 ref . CR
 1445 
-=> 
+=>
 >> clear
-=> 
+=>
 >> ( line comments )
-=> 
+=>
 >> "Expect 1 2 3 4: 1 2" . ( make sure \ inside a comment is ignored ) "3 4" . CR
 Expect 1 2 3 4: 1 2 3 4 
-=> 
+=>
 >> "Expect 5 6 7 8: 5 6 7 8" . CR \ ( this comment should be ignored ) "9 10 11 12" . CR
 Expect 5 6 7 8: 5 6 7 8 
-=> 
+=>
 >> clear
-=> 
+=>
 >> 11
-=> 11 
+=> 11
 >> \ a line comment
-=> 11 
+=> 11
 >> 22
-=> 11 22 
+=> 11 22
 >> \ another line comment
-=> 11 22 
+=> 11 22
 >> 33 \ yet another line comment
-=> 11 22 33 
+=> 11 22 33
 >> 44
-=> 11 22 33 44 
+=> 11 22 33 44
 >> "Stack should be: 11 22 33 44" . CR
 Stack should be: 11 22 33 44 
-=> 11 22 33 44 
+=> 11 22 33 44
 >> clear
-=> 
+=>
 >> "Expect A B C D: A B" . ( make sure these are ignored \n \r \t \b ) "C D" . CR
 Expect A B C D: A B C D 
-=> 
+=>
 >> ( make sure saving lambdas to vars works )
-=> 
+=>
 >> clear
-=> 
+=>
 >> { 133 244 355 } t33 set!
-=> 
+=>
 >> t33 ref call 
-=> 133 244 355 
+=> 133 244 355
 >> t33 ref call
-=> 133 244 355 133 244 355 
+=> 133 244 355 133 244 355
 >> clear
-=> 
+=>
 >> 123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
-=> 123 456 
+=> 123 456
 >> ( string parsing )
-=> 123 456 
+=> 123 456
 >> clear
-=> 
+=>
 >> "hello world here"
-=> "hello world here" 
+=> "hello world here"
 >> . CR
 hello world here 
-=> 
+=>
 >> " hello with leading trailing space "
-=> " hello with leading trailing space " 
+=> " hello with leading trailing space "
 >> . CR
  hello with leading trailing space  
-=> 
+=>
 >> "oneword"
-=> "oneword" 
+=> "oneword"
 >> . CR
 oneword 
-=> 
+=>
 >> """and some embedded"quote"chars << here"""
-=> "and some embedded"quote"chars << here" 
+=> "and some embedded"quote"chars << here"
 >> . CR
 and some embedded"quote"chars << here 
-=> 
+=>
 >> "|.......|.......|....|.........|....." . CR
 |.......|.......|....|.........|..... 
-=> 
+=>
 >> "here    with    some embedded  spaces" . CR
 here    with    some embedded  spaces 
-=> 
+=>
 >> ( assume tabs are printed as 8 spaces )
-=> 
+=>
 >> "|.......|.......|.......|.......|.......|.......|.......|......." . CR
 |.......|.......|.......|.......|.......|.......|.......|....... 
-=> 
+=>
 >> "and		now		with			tabs" . CR
 and		now		with			tabs 
-=> 
+=>
 >> "..." puts "...|......|......|.......|......|..........|.........." puts "..." puts CR
 ......|......|......|.......|......|..........|.............
-=> 
+=>
 >> ">>>" puts "   now    with   leading and    trailing   space      " puts "<<<" puts CR
 >>>   now    with   leading and    trailing   space      <<<
-=> 
+=>
 >> clear
-=> 
+=>
 >> ( string/symbol 'get' )
-=> 
+=>
 >> "abcdefghi"
-=> "abcdefghi" 
+=> "abcdefghi"
 >> dup 3 get
-=> "abcdefghi" "d" 
+=> "abcdefghi" "d"
 >> drop dup 0 get
-=> "abcdefghi" "a" 
+=> "abcdefghi" "a"
 >> drop dup 8 get
-=> "abcdefghi" "i" 
+=> "abcdefghi" "i"
 >> drop dup -1 get
-=> "abcdefghi" "i" 
+=> "abcdefghi" "i"
 >> drop dup -3 get
-=> "abcdefghi" "g" 
+=> "abcdefghi" "g"
 >> drop dup -9 get
-=> "abcdefghi" "a" 
+=> "abcdefghi" "a"
 >> clear
-=> 
+=>
 >> 'klmnopqrst
-=> 'klmnopqrst 
+=> 'klmnopqrst
 >> dup 2 get
-=> 'klmnopqrst 'm 
+=> 'klmnopqrst 'm
 >> drop dup 0 get
-=> 'klmnopqrst 'k 
+=> 'klmnopqrst 'k
 >> drop dup 9 get
-=> 'klmnopqrst 't 
+=> 'klmnopqrst 't
 >> drop dup -4 get
-=> 'klmnopqrst 'q 
+=> 'klmnopqrst 'q
 >> drop dup -1 get
-=> 'klmnopqrst 't 
+=> 'klmnopqrst 't
 >> drop dup -10 get
-=> 'klmnopqrst 'k 
+=> 'klmnopqrst 'k
 >> clear
-=> 
+=>
 >> ( length operator )
-=> 
+=>
 >> "hello"
-=> "hello" 
+=> "hello"
 >> length
-=> 5 
+=> 5
 >> 'bigsymbol
-=> 5 'bigsymbol 
+=> 5 'bigsymbol
 >> length
-=> 5 9 
+=> 5 9
 >> ( lists )
-=> 5 9 
+=> 5 9
 >> clear
-=> 
+=>
 >> 10 20 30 40 
-=> 10 20 30 40 
+=> 10 20 30 40
 >> 4 make-list
-=> [ 10 20 30 40 ] 
+=> [ 10 20 30 40 ]
 >> dup length
-=> [ 10 20 30 40 ] 4 
+=> [ 10 20 30 40 ] 4
 >> clear
-=> 
+=>
 >> 0 make-list
-=> [ ] 
+=> [ ]
 >> length
-=> 0 
+=> 0
 >> clear
-=> 
+=>
 >> 11 22 33 3 make-list
-=> [ 11 22 33 ] 
+=> [ 11 22 33 ]
 >> 44 55 66 77 4 make-list
-=> [ 11 22 33 ] [ 44 55 66 77 ] 
+=> [ 11 22 33 ] [ 44 55 66 77 ]
 >> +
-=> [ 11 22 33 44 55 66 77 ] 
+=> [ 11 22 33 44 55 66 77 ]
 >> length
-=> 7 
+=> 7
 >> clear
-=> 
+=>
 >> 11 22 2 make-list 33 44 55 3 make-list 66 1 make-list 0 make-list 77 88 99 3 make-list
-=> [ 11 22 ] [ 33 44 55 ] [ 66 ] [ ] [ 77 88 99 ] 
+=> [ 11 22 ] [ 33 44 55 ] [ 66 ] [ ] [ 77 88 99 ]
 >> 5 make-list
-=> [ [ 11 22 ] [ 33 44 55 ] [ 66 ] [ ] [ 77 88 99 ] ] 
+=> [ [ 11 22 ] [ 33 44 55 ] [ 66 ] [ ] [ 77 88 99 ] ]
 >> length
-=> 5 
+=> 5
 >> clear
-=> 
+=>
 >> "Hello" "world" 123 2 make-list "the end" 3 make-list
-=> [ "Hello" [ "world" 123 ] "the end" ] 
+=> [ "Hello" [ "world" 123 ] "the end" ]
 >> clear
-=> 
+=>
 >> ( list literals )
-=> 
+=>
 >> [ 11 22 33 ]
-=> [ 11 22 33 ] 
+=> [ 11 22 33 ]
 >> call
-=> 11 22 33 
+=> 11 22 33
 >> clear
-=> 
+=>
 >> : aaa + ;
-=> 
+=>
 >> : bbb - ;
-=> 
+=>
 >> : ccc * ;
-=> 
+=>
 >> [ 10 20 30 40 bbb ccc aaa ]
-=> [ 10 20 30 40 'bbb 'ccc 'aaa ] 
+=> [ 10 20 30 40 'bbb 'ccc 'aaa ]
 >> call
-=> -190 
+=> -190
 >> clear
-=> 
+=>
 >> del aaa
-=> 
+=>
 >> del bbb
-=> 
+=>
 >> del ccc
-=> 
+=>
 >> ( show that literals are correctly handled in literal lists )
-=> 
+=>
 >> [ 11 hello "world of fun" 4.25 true false ]
-=> [ 11 'hello "world of fun" #4.25 <true> <false> ] 
+=> [ 11 'hello "world of fun" #4.25 <true> <false> ]
 >> clear
-=> 
+=>
 >> ( show that lists are callable )
-=> 
+=>
 >> [    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
-=> [ [ [ 2 8 '+ ] 'call ] 'call [ 12 8 '+ [ 40 10 '- ] 'call ] 'call ] 
+=> [ [ [ 2 8 '+ ] 'call ] 'call [ 12 8 '+ [ 40 10 '- ] 'call ] 'call ]
 >> call
-=> 10 20 30 
+=> 10 20 30
 >> clear
-=> 
+=>
 >> ( deep list comparisons )
-=> 
+=>
 >> [ 1 2 3 ] [ 1 2 3 ] 
-=> [ 1 2 3 ] [ 1 2 3 ] 
+=> [ 1 2 3 ] [ 1 2 3 ]
 >> ==
-=> <true> 
+=> <true>
 >> [ 1 2 3 ] [ 1 2 4 ]
-=> <true> [ 1 2 3 ] [ 1 2 4 ] 
+=> <true> [ 1 2 3 ] [ 1 2 4 ]
 >> ==
-=> <true> <false> 
+=> <true> <false>
 >> [ 1 2 3 4 ] [ 1 2 3 4 5 ]
-=> <true> <false> [ 1 2 3 4 ] [ 1 2 3 4 5 ] 
+=> <true> <false> [ 1 2 3 4 ] [ 1 2 3 4 5 ]
 >> ==
-=> <true> <false> <false> 
+=> <true> <false> <false>
 >> [ 1 2 3 4 5 ] [ 1 2 3 4 ]
-=> <true> <false> <false> [ 1 2 3 4 5 ] [ 1 2 3 4 ] 
+=> <true> <false> <false> [ 1 2 3 4 5 ] [ 1 2 3 4 ]
 >> ==
-=> <true> <false> <false> <false> 
+=> <true> <false> <false> <false>
 >> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] dup
-=> <true> <false> <false> <false> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] 
+=> <true> <false> <false> <false> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ]
 >> ==
-=> <true> <false> <false> <false> <true> 
+=> <true> <false> <false> <false> <true>
 >> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 61 ] 7 8 ] 9 10 ]
-=> <true> <false> <false> <false> <true> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 61 ] 7 8 ] 9 10 ] 
+=> <true> <false> <false> <false> <true> [ 1 2 [ 3 4 [ 5 6 ] 7 8 ] 9 10 ] [ 1 2 [ 3 4 [ 5 61 ] 7 8 ] 9 10 ]
 >> ==
-=> <true> <false> <false> <false> <true> <false> 
+=> <true> <false> <false> <false> <true> <false>
 >> clear
-=> 
+=>
 >> ( list get )
-=> 
+=>
 >> [ 11 22 33 44 55 66 ]
-=> [ 11 22 33 44 55 66 ] 
+=> [ 11 22 33 44 55 66 ]
 >> dup 2 get
-=> [ 11 22 33 44 55 66 ] 33 
+=> [ 11 22 33 44 55 66 ] 33
 >> drop dup 0 get
-=> [ 11 22 33 44 55 66 ] 11 
+=> [ 11 22 33 44 55 66 ] 11
 >> drop dup 5 get
-=> [ 11 22 33 44 55 66 ] 66 
+=> [ 11 22 33 44 55 66 ] 66
 >> drop dup -1 get
-=> [ 11 22 33 44 55 66 ] 66 
+=> [ 11 22 33 44 55 66 ] 66
 >> drop dup -3 get
-=> [ 11 22 33 44 55 66 ] 44 
+=> [ 11 22 33 44 55 66 ] 44
 >> drop dup -6 get
-=> [ 11 22 33 44 55 66 ] 11 
+=> [ 11 22 33 44 55 66 ] 11
 >> clear
-=> 
+=>
 >> ( list put )
-=> 
+=>
 >> [ 10 20 30 40 50 ] 
-=> [ 10 20 30 40 50 ] 
+=> [ 10 20 30 40 50 ]
 >> 2 "abc" put
-=> [ 10 20 "abc" 40 50 ] 
+=> [ 10 20 "abc" 40 50 ]
 >> 0 'xyz put
-=> [ 'xyz 20 "abc" 40 50 ] 
+=> [ 'xyz 20 "abc" 40 50 ]
 >> 4 false put
-=> [ 'xyz 20 "abc" 40 <false> ] 
+=> [ 'xyz 20 "abc" 40 <false> ]
 >> clear
-=> 
+=>
 >> [ 11 22 33 44 55 ]
-=> [ 11 22 33 44 55 ] 
+=> [ 11 22 33 44 55 ]
 >> -1 "hello" put
-=> [ 11 22 33 44 "hello" ] 
+=> [ 11 22 33 44 "hello" ]
 >> -3 #8.125 put
-=> [ 11 22 #8.125 44 "hello" ] 
+=> [ 11 22 #8.125 44 "hello" ]
 >> -5 'world put
-=> [ 'world 22 #8.125 44 "hello" ] 
+=> [ 'world 22 #8.125 44 "hello" ]
 >> clear
-=> 
+=>
 >> ( slicing )
-=> 
+=>
 >> "abcdefghijklmnop" 4 5 slice
-=> "efghi" 
+=> "efghi"
 >> "abcdefghijklmnop" -5 3 slice
-=> "efghi" "lmn" 
+=> "efghi" "lmn"
 >> "zooming" 3 100 slice
-=> "efghi" "lmn" "ming" 
+=> "efghi" "lmn" "ming"
 >> "hello world" 4 -1 slice
-=> "efghi" "lmn" "ming" "o world" 
+=> "efghi" "lmn" "ming" "o world"
 >> "questionable" 4 0 slice
-=> "efghi" "lmn" "ming" "o world" "" 
+=> "efghi" "lmn" "ming" "o world" ""
 >> "________X__________" 8 1 slice
-=> "efghi" "lmn" "ming" "o world" "" "X" 
+=> "efghi" "lmn" "ming" "o world" "" "X"
 >> clear
-=> 
+=>
 >> 'hello-a-long-symbol 4 3 slice
-=> 'o-a 
+=> 'o-a
 >> 'short 3 100 slice
-=> 'o-a 'rt 
+=> 'o-a 'rt
 >> 'simple -4 2 slice
-=> 'o-a 'rt 'mp 
+=> 'o-a 'rt 'mp
 >> 'what-about-zero 6 0 slice
-=> 'o-a 'rt 'mp ' 
+=> 'o-a 'rt 'mp '
 >> depth
-=> 'o-a 'rt 'mp ' 4 
+=> 'o-a 'rt 'mp ' 4
 >> clear
-=> 
+=>
 >> 10 20 30 40 50 60 70 80 90 100 10 make-list
-=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ]
 >> dup 4 3 slice
-=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 50 60 70 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 50 60 70 ]
 >> drop
-=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ]
 >> dup -5 4 slice
-=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 60 70 80 90 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 60 70 80 90 ]
 >> drop
-=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ]
 >> dup 3 100 slice
-=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 40 50 60 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 40 50 60 70 80 90 100 ]
 >> drop
-=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ]
 >> dup 6 -1 slice
-=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 70 80 90 100 ]
 >> drop
-=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ]
 >> dup 7 0 slice
-=> [ 10 20 30 40 50 60 70 80 90 100 ] [ ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ ]
 >> drop
-=> [ 10 20 30 40 50 60 70 80 90 100 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ]
 >> dup 7 1 slice
-=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 80 ] 
+=> [ 10 20 30 40 50 60 70 80 90 100 ] [ 80 ]
 >> clear
-=> 
+=>
 >> ( dictionaries )
-=> 
+=>
 >> [ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict
-=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 }
 >> dup
-=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 }
 >> "uuu" get
-=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 333 
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 333
 >> drop
-=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 }
 >> "xyz" 888 put
-=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 } 
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 }
 >> "bbb" 444 put
-=> { "bbb" => 444 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 } 
+=> { "bbb" => 444 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 }
 >> clear
-=> 
+=>
 >> ( string / symbol make/unmake )
-=> 
+=>
 >> clear
-=> 
+=>
 >> 65 66 67 68 4 make-string
-=> "ABCD" 
+=> "ABCD"
 >> 66 67 68 69 70 5 make-symbol
-=> "ABCD" 'BCDEF 
+=> "ABCD" 'BCDEF
 >> clear
-=> 
+=>
 >> "Hello world!" unmake
-=> 72 101 108 108 111 32 119 111 114 108 100 33 12 
+=> 72 101 108 108 111 32 119 111 114 108 100 33 12
 >> make-symbol
-=> 'Hello world! 
+=> 'Hello world!
 >> unmake
-=> 72 101 108 108 111 32 119 111 114 108 100 33 12 
+=> 72 101 108 108 111 32 119 111 114 108 100 33 12
 >> make-string
-=> "Hello world!" 
+=> "Hello world!"
 >> clear
-=> 
+=>
 >> ( test that repr makes expected strings for all types )
-=> 
+=>
 >> 1234 repr . CR
 1234 
-=> 
+=>
 >> #3.75 repr . CR
 #3.75 
-=> 
+=>
 >> 4.125 repr . CR
 #4.125 
-=> 
+=>
 >> true repr . CR
 <true> 
-=> 
+=>
 >> false repr . CR
 <false> 
-=> 
+=>
 >> 10 20 'hello 11.5 4 make-list repr . CR
 [ 10 20 'hello #11.5 ] 
-=> 
+=>
 >> { 1 2 3 a b c } repr . CR
 <{ 1 2 3 'a 'b 'c }> 
-=> 
+=>
 >> [ 10 20 30 x y z ] 'abc :: repr . CR
 <{ 10 20 30 'x 'y 'z } :: 'abc> 
-=> 
+=>
 >> 'a-long-symbol repr . CR
 'a-long-symbol 
-=> 
+=>
 >> "hello there world" repr . CR
 "hello there world" 
-=> 
+=>
 >> null repr . CR
 <null> 
-=> 
+=>
 >> ( repeat for str )
-=> 
+=>
 >> 1234 str . CR
 1234 
-=> 
+=>
 >> #3.75 str . CR
 3.75 
-=> 
+=>
 >> 4.125 str . CR
 4.125 
-=> 
+=>
 >> true str . CR
 true 
-=> 
+=>
 >> false str . CR
 false 
-=> 
+=>
 >> 10 20 'hello 11.5 4 make-list str . CR
 [ 10 20 hello 11.5 ] 
-=> 
+=>
 >> { 1 2 3 a b c } str . CR
 <{ 1 2 3 a b c }> 
-=> 
+=>
 >> [ 10 20 30 x y z ] 'abc :: str . CR
 <{ 10 20 30 x y z } :: abc> 
-=> 
+=>
 >> 'a-long-symbol str . CR
 a-long-symbol 
-=> 
+=>
 >> "hello there world" str . CR
 hello there world 
-=> 
+=>
 >> null str . CR
 <null> 
-=> 
+=>
 >> { 10 20 30 40 }
-=> <{ 10 20 30 40 }> 
+=> <{ 10 20 30 40 }>
 >> unmake
-=> [ 10 20 30 40 ] 
+=> [ 10 20 30 40 ]
 >> unmake
-=> 10 20 30 40 4 
+=> 10 20 30 40 4
+>> clear
+=>
 >> ( type testing )
-=> 10 20 30 40 4 
->> clear
-=> 
+=>
 >> 123 int?
-=> <true> 
+=> <true>
 >> #123 int?
-=> <true> <false> 
+=> <true> <false>
 >> #446 float?
-=> <true> <false> <true> 
+=> <true> <false> <true>
 >> 123 float?
-=> <true> <false> <true> <false> 
+=> <true> <false> <true> <false>
+>> clear
+=>
 >> "hello" string?
-=> <true> <false> <true> <false> <true> 
+=> <true>
 >> "there" symbol?
-=> <true> <false> <true> <false> <true> <false> 
+=> <true> <false>
 >> 'world symbol?
-=> <true> <false> <true> <false> <true> <false> <true> 
+=> <true> <false> <true>
 >> 'foobar string?
-=> <true> <false> <true> <false> <true> <false> <true> <false> 
+=> <true> <false> <true> <false>
+>> clear
+=>
 >> true bool?
-=> <true> <false> <true> <false> <true> <false> <true> <false> <true> 
+=> <true>
+>> false bool?
+=> <true> <true>
 >> 1 bool?
-=> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> 
+=> <true> <true> <false>
+>> clear
+=>
 >> null null?
-=> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> <true> 
+=> <true>
 >> 0 null?
-=> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> <true> <false> 
+=> <true> <false>
+>> null void?
+=> <true> <false> <false>
 >> clear
-=> 
+=>
+>> void void?
+=> <true>
+>> void null?
+=> <true> <false>
+>> 0 void?
+=> <true> <false> <false>
+>> clear
+=>
 >> 10 'word #13.125 3 4 5 3 make-list "end" 5 make-list
-=> [ 10 'word #13.125 [ 3 4 5 ] "end" ] 
+=> [ 10 'word #13.125 [ 3 4 5 ] "end" ]
 >> make-lambda
-=> <{ 10 'word #13.125 [ 3 4 5 ] "end" }> 
+=> <{ 10 'word #13.125 [ 3 4 5 ] "end" }>
 >> unmake
-=> [ 10 'word #13.125 [ 3 4 5 ] "end" ] 
+=> [ 10 'word #13.125 [ 3 4 5 ] "end" ]
 >> unmake
-=> 10 'word #13.125 [ 3 4 5 ] "end" 5 
+=> 10 'word #13.125 [ 3 4 5 ] "end" 5
 >> clear
-=> 
+=>
 >> ( append should modify original object )
-=> 
+=>
 >> 10 20 30 3 make-list
-=> [ 10 20 30 ] 
+=> [ 10 20 30 ]
 >> dup dup 
-=> [ 10 20 30 ] [ 10 20 30 ] [ 10 20 30 ] 
+=> [ 10 20 30 ] [ 10 20 30 ] [ 10 20 30 ]
 >> 40 append ( all should change )
-=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 10 20 30 40 ] 
+=> [ 10 20 30 40 ] [ 10 20 30 40 ] [ 10 20 30 40 ]
 >> clear
-=> 
+=>
 >> ( '+' must create new lists )
-=> 
+=>
 >> 40 50 60 3 make-list >L 
-=> 
+=>
 >> 10 20 30 3 make-list >L 
-=> 
+=>
 >> L0 ref L1 ref +
-=> [ 10 20 30 40 50 60 ] 
+=> [ 10 20 30 40 50 60 ]
 >> L0 ref
-=> [ 10 20 30 40 50 60 ] [ 10 20 30 ] 
+=> [ 10 20 30 40 50 60 ] [ 10 20 30 ]
 >> L1 ref
-=> [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ] 
+=> [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ]
 >> ( tests of 'any' )
-=> [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ] 
+=> [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ]
 >> clear "abcde" { "e" == } any
-=> <true> 
+=> <true>
 >> clear "01234" { "9" == } any
-=> <false> 
+=> <false>
 >> clear 10 20 30 40 4 make-list { 30 > } any
-=> <true> 
+=> <true>
 >> clear 10 20 30 40 4 make-list { 0 <  } any
-=> <false> 
+=> <false>
 >> clear "mnopqr" dup { "m" >= } all swap { "r" <= } all and
-=> <true> 
+=> <true>
 >> clear "1234.567" dup { "0" >= } all swap { "9" <= } all and
-=> <false> 
+=> <false>
 >> clear "1234567" dup { "0" >= } all swap { "9" <= } all and
-=> <true> 
+=> <true>
 >> clear
-=> 
+=>
 >> ( closures )
-=> 
+=>
 >> [ 11 22 33 ] "hello world" make-closure
-=> <{ 11 22 33 } :: "hello world"> 
+=> <{ 11 22 33 } :: "hello world">
 >> clear
-=> 
+=>
 >> [ 11 self 22 self 33 self ] 7654 make-closure
-=> <{ 11 'self 22 'self 33 'self } :: 7654> 
+=> <{ 11 'self 22 'self 33 'self } :: 7654>
 >> call
-=> 11 7654 22 7654 33 7654 
+=> 11 7654 22 7654 33 7654
 >> clear
-=> 
+=>
 >> [ 111 222 333 ] [ "hello" 4321 "world!" false ] make-closure
-=> <{ 111 222 333 } :: [ "hello" 4321 "world!" <false> ]> 
+=> <{ 111 222 333 } :: [ "hello" 4321 "world!" <false> ]>
 >> unmake
-=> [ 111 222 333 ] [ "hello" 4321 "world!" <false> ] 
+=> [ 111 222 333 ] [ "hello" 4321 "world!" <false> ]
 >> clear
-=> 
+=>
 >> \ bind list in closure, modify list in closure and show that
-=> 
+=>
 >> \ the changes are visible afterwards in var
-=> 
+=>
 >> var MYSTATE 1
-=> 
+=>
 >> 0 make-list MYSTATE set!
-=> 
+=>
 >> [ self 99 append drop self 88 append drop self 77 append drop ] MYSTATE ref make-closure
-=> <{ 'self 99 'append 'drop 'self 88 'append 'drop 'self 77 'append 'drop } :: [ ]> 
+=> <{ 'self 99 'append 'drop 'self 88 'append 'drop 'self 77 'append 'drop } :: [ ]>
 >> call
-=> 
+=>
 >> "Expect [ 99 88 77 ]:" . MYSTATE ref . CR
 Expect [ 99 88 77 ]: [ 99 88 77 ] 
-=> 
+=>
 >> ( -- bit operations -- )
-=> 
+=>
 >> \ 11001001100010100110001011100110
-=> 
+=>
 >> \ 00110110011101011001110100011001
-=> 
+=>
 >> "Expect 913677593:" . 3381289702 bit-not . CR
 Expect 913677593: 913677593 
-=> 
+=>
 >> \ 10000000000000000000000000000000
-=> 
+=>
 >> \ 2147483648
-=> 
+=>
 >> \ 1073741824
-=> 
+=>
 >> \ 536870912
-=> 
+=>
 >> "Expect 2147483648:" . 1 31 bit-shl . CR
 Expect 2147483648: 2147483648 
-=> 
+=>
 >> "Expect 1073741824:" . 1 31 bit-shl 1 bit-shr . CR
 Expect 1073741824: 1073741824 
-=> 
+=>
 >> "Expect 536870912:" . 1 31 bit-shl 2 bit-shr . CR
 Expect 536870912: 536870912 
-=> 
+=>
 >> \ 11111000000000000000000000000000 4160749568
-=> 
+=>
 >> \ 00000011111000000000000000000000 65011712
-=> 
+=>
 >> "Expect 65011712:" . 4160749568 6 bit-shr . CR
 Expect 65011712: 65011712 
-=> 
+=>
 >> \ 11000000000000000000000000000000 3221225472
-=> 
+=>
 >> \ 10000000000000000000000000000000 2147483648
-=> 
+=>
 >> \ 00000000000000000000000000000000 0
-=> 
+=>
 >> "Expect 3221225472:" . 3 30 bit-shl . CR
 Expect 3221225472: 3221225472 
-=> 
+=>
 >> "Expect 2147483648:" . 3 31 bit-shl . CR
 Expect 2147483648: 2147483648 
-=> 
+=>
 >> "Expect 0:" . 3 32 bit-shl . CR
 Expect 0: 0 
-=> 
+=>
 >> \ 110
-=> 
+=>
 >> \ 011
-=> 
+=>
 >> \ 001
-=> 
+=>
 >> \ 000
-=> 
+=>
 >> "Expect 6:" . 3 1 bit-shl . CR
 Expect 6: 6 
-=> 
+=>
 >> "Expect 3:" . 3 1 bit-shl 1 bit-shr . CR
 Expect 3: 3 
-=> 
+=>
 >> "Expect 1:" . 3 1 bit-shl 2 bit-shr . CR
 Expect 1: 1 
-=> 
+=>
 >> "Expect 0:" . 3 1 bit-shl 3 bit-shr . CR
 Expect 0: 0 
-=> 
+=>
 >> \ 01000000100001000000001100001000 1082393352
-=> 
+=>
 >> \ 10000100000001000010000100010001 2214863121
-=> 
+=>
 >> \ 11000100100001000010001100011001 3296994073
-=> 
+=>
 >> "Expect 3296994073:" . 1082393352 2214863121 bit-or . CR
 Expect 3296994073: 3296994073 
-=> 
+=>
 >> \ 11110011000011111011111001111101 4077895293
-=> 
+=>
 >> \ 10001100111100001110000111000110 2364596678
-=> 
+=>
 >> \ 10000000000000001010000001000100 2147524676
-=> 
+=>
 >> "Expect 2147524676:" . 4077895293 2364596678 bit-and . CR
 Expect 2147524676: 2147524676 
-=> 
+=>
 >> \ 11010011010010011010011100110010 3544819506
-=> 
+=>
 >> \ 00110110110011100100010011000110 919487686
-=> 
+=>
 >> \ 11100101100001111110001111110100 3850888180
-=> 
+=>
 >> "Expect 3850888180:" . 3544819506 919487686 bit-xor . CR
 Expect 3850888180: 3850888180 
-=> 
+=>

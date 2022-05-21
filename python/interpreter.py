@@ -239,7 +239,7 @@ class Interpreter(object):
 			#print(" => " + self.reprStack())
 								
 			# literals that get pushed
-			if isNumeric(word) or isString(word) or isLambda(word) or isClosure(word) or isBool(word):
+			if isNumeric(word) or isString(word) or isLambda(word) or isBool(word):
 				self.push(word)
 				continue
 

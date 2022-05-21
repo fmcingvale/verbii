@@ -254,40 +254,6 @@ function popFloatOrInt(intr)
 	end
 end
 
--- reader interface
-local READER_WORDLIST = {}
-local READER_POS = 1
-function builtin_reader_open_string(intr)
-	local text = popString(intr)
-	--print("READER OPEN STRING: " .. text)
-	READER_WORDLIST = {} -- call always clears existing list
-	for word in string.gmatch(text, "[^%s]+") do
-		table.insert(READER_WORDLIST, word)
-	end
-	READER_POS = 1
-end
-
-function builtin_reader_open_file(intr)
-	local filename = popString(intr)
-	local f = io.open(filename,"r")
-	local text = f:read("a")
-	io.close(f)
-	intr:push(new_String(text))
-	builtin_reader_open_string(intr)
-end
-
-function builtin_reader_next(intr)
-	if READER_POS > #READER_WORDLIST then
-		--print("READER EOF")
-		intr:push(new_None())
-	else
-		local s = READER_WORDLIST[READER_POS]
-		READER_POS = READER_POS + 1
-		--print("READER NEXT WORD: " .. s)
-		intr:push(s) -- symbol
-	end
-end
-
 function builtin_make_list(intr, nr)
 	local list = {}
 	for i=1,nr do
@@ -303,8 +269,8 @@ function test_equal(a, b)
 		return isString(b) and b.value==a.value
 	elseif isSymbol(a) then
 		return isSymbol(b) and a==b
-	elseif isNone(a) then
-		return isNone(b)
+	elseif isNull(a) then
+		return isNull(b)
 	elseif isBool(a) then
 		return isBool(b) and a==b
 	elseif isLambda(a) then
@@ -611,7 +577,8 @@ BUILTINS = {
 	["int?"] = { {"any"}, function(intr,o) intr:push(isInt(o)) end},
 	["float?"] = { {"any"}, function(intr,o) intr:push(isFloat(o)) end},
 	["bool?"] = { {"any"}, function(intr,o) intr:push(isBool(o)) end},
-	["null?"] = { {"any"}, function(intr,o) intr:push(isNone(o)) end},
+	["null?"] = { {"any"}, function(intr,o) intr:push(isNull(o)) end},
+	["void?"] = { {"any"}, function(intr,o) intr:push(isVoid(o)) end},
 	["list?"] = { {"any"}, function(intr,o) intr:push(isList(o)) end},
 	["string?"] = { {"any"}, function(intr,o) intr:push(isString(o)) end},
 	["symbol?"] = { {"any"}, function(intr,o) intr:push(isSymbol(o)) end},
@@ -644,7 +611,8 @@ BUILTINS = {
 	["make-symbol"] = { {"number"}, builtin_make_symbol},
 	["make-lambda"] = { {}, builtin_make_lambda},
 	[".dumpword"] = { {}, function(intr) intr:push(deepcopy(intr:lookupWordOrFail(popSymbol(intr)))) end},
-	["null"] = { {}, function(intr) intr:push(new_None()) end},
+	["null"] = { {}, function(intr) intr:push(new_Null()) end},
+	["void"] = { {}, function(intr) intr:push(new_Void()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},
 

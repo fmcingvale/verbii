@@ -530,6 +530,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"float?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isFloat()));}},
 	{"bool?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isBool()));}},
 	{"null?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isNull()));}},
+	{"void?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isVoid()));}},
 	{"list?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isList()));}},
 	{"string?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isString()));}},
 	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
@@ -563,6 +564,8 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"parse-float", [](Interpreter *intr){intr->push(parseFloat(popStringOrSymbol(intr)));}},
 	{"parse-bool", [](Interpreter *intr){intr->push(parseBool(popStringOrSymbol(intr)));}},
 	{"null", [](Interpreter *intr){intr->push(Object());}},
+	{"void", [](Interpreter *intr){intr->push(newVoid());}},
+	
 	{".loadc", builtin_loadc},
 	{"cmdline-args", builtin_cmdline_args},
 

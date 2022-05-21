@@ -460,7 +460,9 @@ static string fmtDisplayObjList(ObjList *objlist, string open_delim, string clos
 string Object::fmtDisplay() const {
 	switch(type) {
 		case TYPE_NULL: return "<null>";
-		case TYPE_VOID: return "<*VOID*>";
+		// voids usually will not be present in stored data, so print it a little
+		// differently so it is easy to spot ... might indicate a programming error etc.
+		case TYPE_VOID: return "<*void*>";
 		case TYPE_INT: return to_string(data.i);
 		case TYPE_FLOAT: 
 		{
@@ -516,7 +518,7 @@ static string fmtStackPrintObjList(ObjList *objlist, string open_delim, string c
 string Object::fmtStackPrint() const {
 	switch(type) {
 		case TYPE_NULL: return "<null>";
-		case TYPE_VOID: return "<*VOID*>";
+		case TYPE_VOID: return "<*void*>";
 		case TYPE_INT: return to_string(data.i);
 		case TYPE_FLOAT: 
 		{
