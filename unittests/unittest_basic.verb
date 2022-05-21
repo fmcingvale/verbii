@@ -356,6 +356,10 @@ del aaa
 del bbb
 del ccc
 
+( show that literals are correctly handled in literal lists )
+[ 11 hello "world of fun" 4.25 true false ]
+clear
+
 ( show that lists are callable )
 [    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
 call
