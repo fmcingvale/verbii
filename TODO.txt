@@ -31,10 +31,24 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* add caching of byte-compilation, i.e. file.verb is cached to file.verb.b after
+  a successful byte-compile. to support this:
+	* need new words: file-exists?, file-mtime
+	* compiler needs to support writing to a file instead of (or in addition to) stdout
+	* deserialize needs to be callable from verbii
+
+* slightly change 'if' semantics:
+	1. pop bool from stack
+	2. if true, run next word (i.e. do nothing)
+	3. if false, skip over next word and continue
+
+	* in other words, word after 'if' no longer has to be a jump, but if it is
+	  a jump, code will continue to work as it always has
+
 * commpiler:syntax-next should return void instead of null on EOF conditions.
 	* once that is done, then null can be added as a literal like true & false were 
 	* make sure void is not serializable
-	
+
 * add bit level operations -- limit to 32 bits
 	* add random number generator
 

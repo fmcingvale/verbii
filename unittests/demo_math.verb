@@ -12,12 +12,15 @@
 : .. str puts ; ( .. is . without space padding )
 
 ( takes a lambda that takes nothing from the stack and leaves one result on the stack.
-  compares the result to 'a' - exit with error if difference too large )
+  compares the result to 'a' - print OK or error if error is too large )
 : expect-f ( lambda a )
-	"Expect" . dup . swap call "got" . dup . 
-	pct-diff dup "(" .. .. " %)" . CR
-	#1e-6 > if >>toolarge return
-	@toolarge "Error too large! Exiting test" error ;
+	\ "Expect" . dup . swap call "got" . dup . 
+	swap call
+	pct-diff \ dup "(" .. .. " %)" . CR
+	#1e-6 > if >>toolarge
+		"OK" . CR return
+	@toolarge "** !! ERROR !! **" . CR
+	;
 
 "-- pct-diff" . CR
 { 231 115 pct-diff } #67.05202312138728 expect-f

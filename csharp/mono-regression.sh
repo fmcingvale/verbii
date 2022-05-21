@@ -21,6 +21,5 @@ echo "Errors ..."
 echo "Demo ..."
 ./repl.exe ../unittests/unittest_demo.verb > ../unittests/RESULTS/csharp/actual_unittest_demo.txt
 
-# not a formal test yet
 echo "Math ..."
 ./repl.exe ../unittests/demo_math.verb > ../unittests/RESULTS/csharp/actual_demo_math.txt

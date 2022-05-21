@@ -1,0 +1,60 @@
+-- pct-diff 
+OK 
+OK 
+OK 
+ -- pow, x=int 
+OK 
+OK 
+OK 
+OK 
+OK 
+-- pow, x=float 
+OK 
+OK 
+OK 
+OK 
+ -- sqrt 
+OK 
+OK 
+-- fact 
+OK 
+OK 
+OK 
+-- log2 
+OK 
+OK 
+OK 
+OK 
+-- log10 
+OK 
+OK 
+OK 
+-- log [natural log] 
+OK 
+OK 
+OK 
+OK 
+OK 
+-- sin 
+OK 
+OK 
+OK 
+OK 
+OK 
+-- cos 
+OK 
+OK 
+OK 
+OK 
+OK 
+OK 
+-- exp 
+OK 
+OK 
+OK 
+OK 
+OK 
+OK 
+-- powf 
+OK 
+OK 
