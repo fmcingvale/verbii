@@ -957,9 +957,9 @@ hello there world
 >> clear
 => 
 >> [ 111 222 333 ] [ "hello" 4321 "world!" false ] make-closure
-=> <{ 111 222 333 } :: [ "hello" 4321 "world!" 'false ]> 
+=> <{ 111 222 333 } :: [ "hello" 4321 "world!" <false> ]> 
 >> unmake
-=> [ 111 222 333 ] [ "hello" 4321 "world!" 'false ] 
+=> [ 111 222 333 ] [ "hello" 4321 "world!" <false> ] 
 >> clear
 => 
 >> \ bind list in closure, modify list in closure and show that

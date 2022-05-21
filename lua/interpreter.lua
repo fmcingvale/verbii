@@ -272,7 +272,7 @@ function Interpreter:run(objlist, stephook)
 
 		-- see if its a literal to push
 		if type(obj) == "number" or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isClosure(obj) then
+			isClosure(obj) or isBool(obj) then
 			self:push(obj)
 			goto MAINLOOP
 		end
@@ -290,6 +290,17 @@ function Interpreter:run(objlist, stephook)
 				goto MAINLOOP
 			end
 
+			-- see c++ notes, hopefully these can be removed
+			if obj == "true" then
+				self:push(true)
+				goto MAINLOOP
+			end
+
+			if obj == "false" then
+				self:push(false)
+				goto MAINLOOP
+			end
+			
 			if obj == "return" then
 				-- return from word by popping back to previous wordlist (if not at toplevel)
 				if self:havePrevFrames() then

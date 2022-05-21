@@ -629,6 +629,16 @@ class Builtins {
 		intr.push(new LangInt((a >> nr) & 0xffffffff));
 	}
 
+	public static void parse_bool(Interpreter intr) {
+		var sym = popSymbol(intr, "parse-bool");
+		if(sym == "true")
+			intr.push(new LangBool(true));
+		else if(sym == "false")
+			intr.push(new LangBool(false));
+		else
+			throw new LangError("Bad boolean literal: " + sym);
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -671,6 +681,7 @@ class Builtins {
 		{"append", append},
 		{"parse-int", intr => intr.push(new LangInt(long.Parse(popStringOrSymbol(intr,"parse-int"))))},
 		{"parse-float", intr => intr.push(new LangFloat(double.Parse(popStringOrSymbol(intr,"parse-float"))))},
+		{"parse-bool", parse_bool},
 		{"make-lambda", make_lambda},
 		{"make-symbol", make_symbol},
 		{".dumpword", dumpword},

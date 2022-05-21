@@ -505,6 +505,18 @@ static void builtin_new_dict(Interpreter *intr) {
 	intr->push(newDict());
 }
 
+// compiler uses this to get the true & false objects
+// TODO these should be singletons
+static void builtin_parse_bool(Interpreter *intr) {
+	const char *s = popSymbol(intr, "parse-bool");
+	if(!strcmp(s,"true"))
+		intr->push(newBool(true));
+	else if(!strcmp(s,"false"))
+		intr->push(newBool(false));
+	else
+		throw LangError("Bad boolean symbol: " + string(s));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -561,6 +573,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// function anyways to deserialize programs, so just use that
 	{"parse-int", [](Interpreter *intr){intr->push(parseInt(popStringOrSymbol(intr)));}},
 	{"parse-float", [](Interpreter *intr){intr->push(parseFloat(popStringOrSymbol(intr)));}},
+	{"parse-bool", builtin_parse_bool},
 	{"null", [](Interpreter *intr){intr->push(Object());}},
 	{".loadc", builtin_loadc},
 	{"cmdline-args", builtin_cmdline_args},

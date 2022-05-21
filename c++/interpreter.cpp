@@ -321,7 +321,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		
 		// check for literal objects that just get pushed
 		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() ||
-			obj.isClosure()) {
+			obj.isClosure() || obj.isBool()) {
 			push(obj);
 			continue;
 		}
@@ -338,7 +338,19 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));
 			continue;
 		}
+		
+		// TODO -- the next two should NOT be necessary once compiler is re-bootstrapped
+		// with true/false literals ... I think?????
+		if(obj.isSymbol("true")) {
+			push(newBool(true));
+			continue;
+		}
 
+		if(obj.isSymbol("false")) {
+			push(newBool(false));
+			continue;
+		}
+		
 		if(obj.isSymbol("return")) {
 			// return from word by popping back to previous wordlist (if not at toplevel)
 			//if(syntax->hasPushedObjLists()) {	

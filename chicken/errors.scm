@@ -22,13 +22,16 @@
 (import langtypes)
 (import simple-exceptions)
 
-(define lang-error (lambda (wheresym . args)
+(define lang-error (lambda (wheresym msg . args)
 	(raise ((make-exception 
-		(string-append "*** " 
+		(string-append "*** " msg " "
 			(string-join (map 
 				(lambda (obj)
 					(cond
 						((string? obj) obj)
-						(else (fmtDisplay obj)))) args) " ") " ***") 'lang-error) 'lang-error))))
+						(else (fmtDisplay obj)))
+					;(fmtStackPrint obj)
+						) 
+						args) " ") " ***") 'lang-error) 'lang-error))))
 
 ) ; end of module

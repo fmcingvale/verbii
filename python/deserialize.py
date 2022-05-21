@@ -1,6 +1,6 @@
 from __future__ import annotations
 from errors import LangError
-from langtypes import LangLambda, LangString
+from langtypes import LangLambda, LangString, isList
 """
 	Deserialize - load bytecode from compiler and put into Interpreter.
 	
@@ -30,13 +30,13 @@ def deserialize_stream(intr, fileIn):
 		return objs
 	elif line[0] == 'F': # lambda
 		objs = deserialize_stream(intr, fileIn)
-		if type(objs) != list:
+		if not isList(objs):
 			raise LangError("Expecting list after 'F' but got: " + objs.fmtStackPrint())
 		return LangLambda(objs)
 	elif line[0] == 'W': # word
 		name = line[2:]
 		objs = deserialize_stream(intr, fileIn)
-		if type(objs) != list:
+		if not isList(objs):
 			raise LangError("Expecting list after 'W' but got: " + objs.fmtStackPrint())
 		intr.defineWord(name,objs,False)
 		#print("LOADED WORD: " + name)

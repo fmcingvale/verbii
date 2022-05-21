@@ -1,6 +1,7 @@
 from __future__ import annotations
 from langtypes import LangLambda, LangString, fmtStackPrint, MAX_VINT, MIN_VINT, \
-			LangClosure
+			LangClosure, isBool, isClosure, isLambda, isFloat, isInt, isString, isSymbol, isNumeric, \
+			isList, isDict
 """
 	Interpreter - runs code deserialized from bytecode.
 
@@ -133,14 +134,14 @@ class Interpreter(object):
 			while True:
 				word = self.nextCodeObj()
 				if word is None: raise LangError("No such jump: " + jumpword)
-				elif type(word) == str and word[1:] == jumpword[2:]:
+				elif isSymbol(word) and word[1:] == jumpword[2:]:
 					return # found word, stop
 		elif jumpword[:2] == "<<":
 			# backward jump
 			while True:
 				word = self.prevCodeObject()
 				if word is None: raise LangError("No such jump: " + jumpword)
-				elif type(word) == str and word[1:] == jumpword[2:]:
+				elif isSymbol(word) and word[1:] == jumpword[2:]:
 					return # found word, stop
 		else:
 			raise LangError("Bad jumpword " + jumpword)
@@ -238,13 +239,12 @@ class Interpreter(object):
 			#print(" => " + self.reprStack())
 								
 			# literals that get pushed
-			if type(word) == int or type(word) == float or isinstance(word,LangString) or \
-				isinstance(word, LangLambda) or	isinstance(word, LangClosure):
+			if isNumeric(word) or isString(word) or isLambda(word) or isClosure(word) or isBool(word):
 				self.push(word)
 				continue
 
 			# list literals are deepcopied (see DESIGN-NOTES.txt)
-			if type(word) == list:
+			if isList(word):
 				self.push(deepcopy(word))
 				continue
 
@@ -253,6 +253,15 @@ class Interpreter(object):
 				self.push(word[1:])
 				continue
 
+			# see c++ notes - should be able to remove these later
+			if word == "true":
+				self.push(True)
+				continue
+
+			if word == "false":
+				self.push(False)
+				continue
+			
 			# string are symbols
 			if word == "return":
 				# return from word by popping back to previous wordlist (if not at toplevel)
@@ -292,15 +301,15 @@ class Interpreter(object):
 			if word == "call":
 				# see if top of stack is Lambda or list
 				obj = self.pop()
-				if isinstance(obj,LangLambda):
+				if isLambda(obj):
 					#print("CALLING LAMBDA:",obj.wordlist)
 					# now this is just like calling a userword, below
 					# TODO -- tail call elimination??
 					self.code_call(obj.objlist)
-				elif type(obj) == list:
+				elif isList(obj):
 					# call list like lambda
 					self.code_call(obj)
-				elif isinstance(obj, LangClosure):
+				elif isClosure(obj):
 					# like above but sets closure
 					self.code_call(obj.objlist, obj)
 				else:				

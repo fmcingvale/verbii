@@ -337,7 +337,7 @@ public class Interpreter {
 
 			// check for immediates that get pushed
 			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
-					obj is LangClosure) {
+					obj is LangClosure || obj is LangBool) {
 				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
 				push(obj);
 				continue;
@@ -355,6 +355,17 @@ public class Interpreter {
 				if(sym!.value[0] == '\'') {
 					// quoted symbol - remove one level of quoting and push
 					push(new LangSymbol(sym.value.Substring(1)));
+					continue;
+				}
+
+				// see c++ notes, hopefully these can be removed ...
+				if(sym!.match("true")) {
+					push(new LangBool(true));
+					continue;
+				}
+
+				if(sym!.match("false")) {
+					push(new LangBool(false));
 					continue;
 				}
 

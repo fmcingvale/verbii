@@ -51,8 +51,6 @@ write-string, write-char ... basically I/O with ports concept like scheme
 
 * more repl pieces in verbii
 
-* should have builtin dictionaries that work with get and put
-
 * need to extend ,,del (or maybe just get rid of 'del NAME' and always make del stack-based??)
   to delete entries from more objects:
 	dict STRING ,,del ( delete a key from dictionary )
@@ -63,15 +61,7 @@ write-string, write-char ... basically I/O with ports concept like scheme
 
 * math demo needs to be a unittest -- rework it to print TESTNAME: OK, or something like that, instead
 of printing all the numeric values which will not match between platforms
-
-* probably should remove integer overflow detection -- not a portable way to test for that
-if/when verbii starts using full width integers on any platform. still worth enforcing max
-width integers on platforms where integer width > verbii int width so behavior remains consistent
-across languages.
-
-* make sure negative indexes in 'get' are tested for strings/symbols/lists and that negative indexes
-  are tested for 'put' in lists
-  
+ 
 ---[   Clean-up   ]------------------------------------------------------
 
 * chicken: main interpreter loop -- use while instead of having to place recursive calls everywhere
@@ -81,6 +71,8 @@ across languages.
 * sort out usage of null/NULL/'void' in ports for consistency. add some unittests
 that include null to make sure it is handled correctly. also make sure voids are 
 never visible from verbii code
+	*** POSSIBLY void can be a word (but NOT a literal, so it can never be serialized directly)
+	    this would allow functions that can return null to return a "nothing" as void
 
 * shouldn't syntax-next return void on end of input instead of null? check/change across ports.
 	* actually not -- 'null' has no literal form so cannot be serialized nor found in a source file.

@@ -11,7 +11,8 @@ from errors import LangError
 from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
-					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool
+					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
+						isNull
 import time
 
 # has to be set externally
@@ -237,7 +238,7 @@ def builtin_make_list(I):
 	I.push(objlist)
 
 def test_equal(a,b):
-	if a is None: return b is None
+	if isNull(a): return isNull(b)
 	elif isNumeric(a): return isNumeric(b) and a==b
 	elif isBool(a): return isBool(b) and a==b
 	elif isSymbol(a): return isSymbol(b) and a==b
@@ -433,7 +434,7 @@ def builtin_get(I):
 		if index < 0: index += len(obj.s) # negative indexes
 		if index < 0 or index >= len(obj.s): raise LangError("Index out of range in get")
 		I.push(LangString(obj.s[index]))
-	elif type(obj) == dict:
+	elif isDict(obj):
 		if not isString(index): raise LangError("get requires string key, got: " + fmtStackPrint(index))
 		if index not in obj: raise LangError("No such key in dict: " + fmtStackPrint(index))
 		I.push(obj[index])
@@ -450,6 +451,12 @@ def builtin_bit_shl(I):
 	a = popInt(I)
 	I.push((a<<nr) & 0xffffffff)
 
+def builtin_parse_bool(I):
+	s = popSymbol(I)
+	if s == "true": I.push(True)
+	elif s == "false": I.push(False)
+	else: raise LangError("Bad boolean literal: " + fmtStackPrint(s))
+	
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -469,15 +476,15 @@ BUILTINS = {
 	'str': ([object], lambda I,o: I.push(LangString(fmtDisplay(o)))),
 	# print string from TOS
 	'puts': ([object], builtin_puts),
-	'int?': ([object], lambda I,o: I.push(type(o) == int)),
-	'float?': ([object], lambda I,o: I.push(type(o) == float)),
-	'bool?': ([object], lambda I,o: I.push(type(o) == bool)),
-	'list?': ([object], lambda I,o: I.push(type(o) == list)),
-	'string?': ([object], lambda I,o: I.push(isinstance(o,LangString))),
-	'symbol?': ([object], lambda I,o: I.push(type(o) == str)),
-	'null?': ([], lambda I: I.push(I.pop() is None)),
-	'lambda?': ([object], lambda I,o: I.push(isinstance(o,LangLambda))),
-	'closure?': ([object], lambda I,o: I.push(isinstance(o,LangClosure))),
+	'int?': ([object], lambda I,o: I.push(isInt(o))),
+	'float?': ([object], lambda I,o: I.push(isFloat(o))),
+	'bool?': ([object], lambda I,o: I.push(isBool(o))),
+	'list?': ([object], lambda I,o: I.push(isList(o))),
+	'string?': ([object], lambda I,o: I.push(isString(o))),
+	'symbol?': ([object], lambda I,o: I.push(isSymbol(o))),
+	'null?': ([object], lambda I,o: I.push(isNull(o))),
+	'lambda?': ([object], lambda I,o: I.push(isLambda(o))),
+	'closure?': ([object], lambda I,o: I.push(isClosure(o))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
 	'ref': ([int], builtin_ref),
@@ -501,6 +508,7 @@ BUILTINS = {
 	'length': ([object], lambda I,obj: builtin_length(I,obj)),
 	'parse-int': ([], lambda I: I.pushInt(int(popStringOrSymbol(I,'parse-int')))),
 	'parse-float': ([], lambda I: I.push(float(popStringOrSymbol(I,'parse-int')))),
+	'parse-bool': ([], builtin_parse_bool),
 	'make-word': ([], builtin_make_word),
 	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),

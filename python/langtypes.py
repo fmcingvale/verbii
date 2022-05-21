@@ -6,12 +6,14 @@ from __future__ import annotations
 """
 
 from errors import LangError
+import sys
 
 FLOAT_PRECISION = 17
 # see c++ notes
 MAX_VINT = (1<<53) - 1
 MIN_VINT = -MAX_VINT
 
+def isNull(obj): return obj is None
 def isInt(obj): return type(obj) == int
 def isFloat(obj): return type(obj) == float
 def isNumeric(obj): return type(obj) == int or type(obj) == float
@@ -69,36 +71,39 @@ def fmtDisplayObjlist(objlist, open_delim, close_delim):
 
 def fmtDisplay(obj):
 	"see c++ comments for display vs. stack format"
-	if obj is None:
+	if isNull(obj):
 		return "<null>"
-	elif type(obj) is int:
+	elif isInt(obj):
 		return str(obj)
-	elif type(obj) is float:
+	elif isFloat(obj):
 		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
 		return fmt.format(obj)
-	elif obj is True:
-		return "true"
-	elif obj is False:
-		return "false"
-	elif isinstance(obj, LangLambda):
+	elif isBool(obj): 
+		if obj is True: return "true"
+		else: return "false"
+	elif isLambda(obj):
 		return "<" + fmtDisplayObjlist(obj.objlist,"{","}") + ">"
-	elif isinstance(obj, LangClosure):
+	elif isClosure(obj):
 		return "<" + fmtDisplayObjlist(obj.objlist,"{","}") + " :: " + fmtDisplay(obj.state) + ">"
-	elif type(obj) == list:
+	elif isList(obj):
 		return fmtDisplayObjlist(obj, '[', ']')
-	elif type(obj) == dict:
+	elif isDict(obj):
 		s = "{ "
 		# have to sort keys to give identical output across languages
 		for k in sorted(obj.keys()):
 			s += '"' + k + '" => ' + fmtDisplay(obj[k]) + " "
 		s += "}"
 		return s
-	elif isinstance(obj, LangString):
+	elif isString(obj):
 		return obj.s
-	elif type(obj) is str:
+	elif isSymbol(obj):
 		return obj
 	else:
-		raise LangError("Don't know how to print object: " + str(obj))
+		# special case ... very like i'm being called from an exception so 
+		# print & exit() instead of raising LangError
+		#raise LangError("Don't know how to print object: " + str(obj))
+		print("Don't know how to print object: " + str(obj) + str(type(obj)))
+		sys.exit(1)
 
 def fmtStackPrintObjlist(objlist, open_delim, close_delim):
 	rlist = [open_delim]
@@ -110,29 +115,26 @@ def fmtStackPrintObjlist(objlist, open_delim, close_delim):
 
 def fmtStackPrint(obj):
 	"see c++ comments for display vs. stack format"
-	if obj is None:
+	if isNull(obj):
 		return "<null>"
-	elif type(obj) is int:
+	elif isInt(obj):
 		return str(obj)
-	elif type(obj) is float:
+	elif isFloat(obj):
 		fmt = "{0:." + str(FLOAT_PRECISION) + "g}"
 		return '#' + fmt.format(obj)
-	elif obj is True:
-		return "<true>"
-	elif obj is False:
-		return "<false>"
-	elif isinstance(obj, LangLambda):
+	elif isBool(obj): return "<true>" if obj else "<false>"
+	elif isLambda(obj):
 		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + ">"
-	elif isinstance(obj, LangClosure):
+	elif isClosure(obj):
 		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + " :: " + fmtStackPrint(obj.state) + ">"
-	elif isinstance(obj, LangString):
+	elif isString(obj):
 		# in a stack display, strings get " ... "
 		return '"' + obj.s + '"'
-	elif type(obj) is str:
+	elif isSymbol(obj):
 		return "'" + obj
-	elif type(obj) == list:
+	elif isList(obj):
 		return fmtStackPrintObjlist(obj, '[', ']')
-	elif type(obj) == dict:
+	elif isDict(obj):
 		s = "{ "
 		# have to sort keys to give identical output across languages
 		for k in sorted(obj.keys()):
@@ -140,7 +142,10 @@ def fmtStackPrint(obj):
 		s += "}"
 		return s
 	else:
-		raise LangError("Don't know how to print object: " + str(obj))
+		# as above
+		#raise LangError("Don't know how to print object: " + str(obj))
+		print("Don't know how to print object: " + str(obj) + str(type(obj)))
+		sys.exit(1)
 
 def deepcopyObjlist(objlist):
 	newlist = []
@@ -151,13 +156,13 @@ def deepcopyObjlist(objlist):
 
 # see c++ implementation & DESIGN-NOTES.md
 def deepcopy(obj):
-	if obj is None or type(obj) is int or type(obj) is float or obj is True or \
-		obj is False or isinstance(obj, LangLambda) or isinstance(obj, LangClosure) or \
-		isinstance(obj, LangString) or type(obj) is str:
+	if isNull(obj) or isNumeric(obj) or isBool(obj) or \
+		isLambda(obj) or isClosure(obj) or \
+		isString(obj) or isSymbol(obj):
 		return obj
-	elif type(obj) == list:
+	elif isList(obj):
 		return deepcopyObjlist(obj)
-	elif type(obj) == dict:
+	elif isDict(obj):
 		nd = {}
 		for k in obj.keys():
 			nd[k] = deepcopy(obj[k])
