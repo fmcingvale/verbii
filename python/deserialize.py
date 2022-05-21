@@ -1,6 +1,6 @@
 from __future__ import annotations
 from errors import LangError
-from langtypes import LangLambda, LangString, isList
+from langtypes import LangLambda, LangString, isList, parseBool
 """
 	Deserialize - load bytecode from compiler and put into Interpreter.
 	
@@ -17,6 +17,7 @@ def deserialize_stream(intr, fileIn):
 	line = line.rstrip() # remove \n
 	if line[0] == 'i': return int(line[2:])
 	elif line[0] == 'f': return float(line[2:])
+	elif line[0] == 'b': return parseBool(line[2:])
 	elif line[0] == 's':
 		s = line[2:]
 		s = s.replace("%32"," ").replace("%09","\t").replace("%10","\n").replace("%13","\r").replace("%37","%")

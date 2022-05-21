@@ -99,6 +99,12 @@
 	;(make Float 'value (exact->inexact value)))
 	(make-Float (exact->inexact value)))
 
+(define (parse-bool text)
+	(cond
+		((string=? text "true") #t)
+		((string=? text "false") #f)
+		(else (langtype-error 'parse-bool "Bad boolean literal: " text))))
+
 ; for code that doesn't care if its int or float and will just use (value obj)
 (define (is-numeric? obj) (or (integer? obj) (Float? obj)))
 (define (as-numeric obj)

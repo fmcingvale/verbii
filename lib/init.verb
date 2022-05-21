@@ -37,9 +37,6 @@ SP SP_EMPTY set!
 : rot ( a b c -- b c a ) 3 pick >L >L >L drop L> L> L> ;
 : -rot ( b c a -- a b c ) 2 pick >L 3 pick >L >L drop drop L> L> L> ;
 
-: true ( -- true ) 1 1 == ;
-: false ( -- false ) 1 0 == ;
-
 : not ( a -- not[a] ) if >>true true return @true false ;
 : or ( a b -- a|b ) if >>true1 if >>true2 false return @true1 drop @true2 true ;
 : and ( a b -- a&b ) if >>true1 drop false return @true1 if >>true2 false return @true2 true ;

@@ -253,15 +253,6 @@ class Interpreter(object):
 				self.push(word[1:])
 				continue
 
-			# see c++ notes - should be able to remove these later
-			if word == "true":
-				self.push(True)
-				continue
-
-			if word == "false":
-				self.push(False)
-				continue
-			
 			# string are symbols
 			if word == "return":
 				# return from word by popping back to previous wordlist (if not at toplevel)

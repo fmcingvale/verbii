@@ -18,6 +18,8 @@ function deserialize_stream(intr, fileIn)
 		return tonumber(line:sub(3))
 	elseif line:sub(1,1) == "f" then
 		return new_Float(tonumber(line:sub(3)))
+	elseif line:sub(1,1) == "b" then
+		return parseBool(line:sub(3))
 	elseif line:sub(1,1) == "s" then
 		local s = line:sub(3)
 		-- unescape string

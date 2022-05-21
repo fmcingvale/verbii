@@ -354,13 +354,6 @@
 						; remove one level of quoting and push
 						(push intr (string-drop obj 1))
 						(run-loop (nextObj intr)))
-					; see c++ notes, I think the next two can be removed
-					((string=? obj "true")
-						(push intr #t)
-						(run-loop (nextObj intr)))
-					((string=? obj "false")
-						(push intr #f)
-						(run-loop (nextObj intr)))
 					((string=? obj "return")
 						; as above - return or exit
 						(if (havePushedFrames intr)

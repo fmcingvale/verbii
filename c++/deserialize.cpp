@@ -26,6 +26,7 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 		switch(line[0]) {
 			case 'i': return parseInt(line.substr(2));
 			case 'f': return parseFloat(line.substr(2));
+			case 'b': return parseBool(line.substr(2));
 			case 's':
 				string_replace(line, "%32", " ");
 				string_replace(line, "%09", "\t");

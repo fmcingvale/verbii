@@ -88,6 +88,13 @@ function asNumeric(obj)
 	end
 end
 
+function parseBool(text)
+	if text == "true" then return true
+	elseif text == "false" then return false
+	else error(">>>Bad boolean literal: " .. text)
+	end
+end
+	
 -- as in the Python port, regular Lua strings as used as symbols,
 -- and strings get their own type
 local String = {}

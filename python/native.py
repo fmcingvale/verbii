@@ -12,7 +12,7 @@ from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
 					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
-						isNull
+						isNull, parseBool
 import time
 
 # has to be set externally
@@ -451,12 +451,6 @@ def builtin_bit_shl(I):
 	a = popInt(I)
 	I.push((a<<nr) & 0xffffffff)
 
-def builtin_parse_bool(I):
-	s = popSymbol(I)
-	if s == "true": I.push(True)
-	elif s == "false": I.push(False)
-	else: raise LangError("Bad boolean literal: " + fmtStackPrint(s))
-	
 import sys
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -508,7 +502,7 @@ BUILTINS = {
 	'length': ([object], lambda I,obj: builtin_length(I,obj)),
 	'parse-int': ([], lambda I: I.pushInt(int(popStringOrSymbol(I,'parse-int')))),
 	'parse-float': ([], lambda I: I.push(float(popStringOrSymbol(I,'parse-int')))),
-	'parse-bool': ([], builtin_parse_bool),
+	'parse-bool': ([], lambda I: I.push(parseBool(popStringOrSymbol(I,'parse-bool')))),
 	'make-word': ([], builtin_make_word),
 	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),

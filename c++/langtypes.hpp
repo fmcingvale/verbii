@@ -163,6 +163,8 @@ extern Object VOIDOBJ;
 // these return Null objects on parsing error
 Object parseInt(const std::string &);
 Object parseFloat(const std::string &);
+// this raises exception on error
+Object parseBool(const std::string &);
 
 Object newNull();
 Object newVoid();

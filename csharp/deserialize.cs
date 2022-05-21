@@ -12,6 +12,15 @@ using System.IO;
 
 public class Deserializer {
 
+	public static bool parseBool(string text) {
+		if(text == "true")
+			return true;
+		else if(text == "false")
+			return false;
+		else
+			throw new LangError("Bad boolean literal: " + text);
+	}
+
 	// deserialize & return next object from stream
 	public static LangObject deserialize_stream(Interpreter intr, StreamReader stream) {
 		string? line;
@@ -23,6 +32,7 @@ public class Deserializer {
 			switch(line[0]) {
 				case 'i': return new LangInt(int.Parse(line.Substring(2)));
 				case 'f': return new LangFloat(double.Parse(line.Substring(2)));
+				case 'b': return new LangBool(parseBool(line.Substring(2)));
 				case 's':
 					line = line.Substring(2);
 					line = line.Replace("%32", " ");

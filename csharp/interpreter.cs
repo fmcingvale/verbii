@@ -358,17 +358,6 @@ public class Interpreter {
 					continue;
 				}
 
-				// see c++ notes, hopefully these can be removed ...
-				if(sym!.match("true")) {
-					push(new LangBool(true));
-					continue;
-				}
-
-				if(sym!.match("false")) {
-					push(new LangBool(false));
-					continue;
-				}
-
 				if(sym!.match("return")) {
 					// return from word by popping back to previous wordlist (don't call at toplevel)
 					if(havePushedFrames()) {	

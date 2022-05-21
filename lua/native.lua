@@ -598,14 +598,6 @@ function builtin_put(intr)
 	end
 end
 
-function builtin_parse_bool(intr)
-	local sym = popSymbol(intr)
-	if sym == "true" then intr:push(true)
-	elseif sym == "false" then intr:push(false)
-	else error(">>>Bad boolean literal: " + sym)
-	end
-end
-	
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -648,7 +640,7 @@ BUILTINS = {
 	["append"] = { {"any","any"}, builtin_append},
 	["parse-int"] = { {}, function(intr) intr:pushInt(tonumber(popStringOrSymbol(intr))) end},
 	["parse-float"] = { {}, function(intr) intr:push(new_Float(tonumber(popStringOrSymbol(intr)))) end},
-	["parse-bool"] = { {}, builtin_parse_bool},
+	["parse-bool"] = { {}, function(intr) intr:push(parseBool(popStringOrSymbol(intr))) end},
 	["make-symbol"] = { {"number"}, builtin_make_symbol},
 	["make-lambda"] = { {}, builtin_make_lambda},
 	[".dumpword"] = { {}, function(intr) intr:push(deepcopy(intr:lookupWordOrFail(popSymbol(intr)))) end},

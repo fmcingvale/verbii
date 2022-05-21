@@ -31,9 +31,10 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
-* I think 'true' and 'false' should be literals -- things like [ 1 2 3 true ] won't
-  give the expected result if true is a word since insides of lists are not evaluated
-
+* commpiler:syntax-next should return void instead of null on EOF conditions.
+	* once that is done, then null can be added as a literal like true & false were 
+	* make sure void is not serializable
+	
 * add bit level operations -- limit to 32 bits
 	* add random number generator
 
@@ -56,6 +57,8 @@ write-string, write-char ... basically I/O with ports concept like scheme
 	dict STRING ,,del ( delete a key from dictionary )
 	SYMBOL ,,del ( delete a word )
 	list INDEX ,,del ( delete entry from list )
+
+* make sure { .. } :: obj works -- right now just [ .. ] : obj is accepted
 
 ---[    Tests     ]------------------------------------------------------
 

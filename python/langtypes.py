@@ -19,6 +19,11 @@ def isFloat(obj): return type(obj) == float
 def isNumeric(obj): return type(obj) == int or type(obj) == float
 def isBool(obj): return type(obj) == bool
 
+def parseBool(text):
+	if text == "true": return True
+	elif text == "false": return False
+	else: raise LangError("Bad boolean literal: " + text)
+
 # since symbols are far more common than strings,
 # Python strings are used for symbols and this class is used
 # for strings

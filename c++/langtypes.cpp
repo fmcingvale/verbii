@@ -45,6 +45,15 @@ Object parseFloat(const std::string &text) {
 	}
 }
 
+Object parseBool(const std::string &text) {
+	if(text == "true")
+		return newBool(true);
+	else if(text == "false")
+		return newBool(false);
+	else
+		throw LangError("Bad boolean literal: " + text);
+}
+
 Object newInt(VINT i) {
 	checkIntOrFail(i);
 	Object obj;

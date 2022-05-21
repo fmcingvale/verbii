@@ -52,6 +52,7 @@
 				(case (string-ref line 0)
 					((#\i) (string->number (string-drop line 2)))
 					((#\f) (make-lang-float (string->number (string-drop line 2))))
+					((#\b) (parse-bool (string-drop line 2)))
 					((#\s) 
 						(if (>= (string-length line) 2) ; watch for empty string
 							(make-String (replace-escapes (string-drop line 2)))

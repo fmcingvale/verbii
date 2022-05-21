@@ -308,13 +308,7 @@
 	(push intr llist))
 
 (define (String-or-Symbol? o) (or (String? o) (Symbol? o)))
-
-(define (builtin-parse-bool intr sym)
-	(cond
-		((string=? sym "true") (push intr #t))
-		((string=? sym "false") (push intr #f))
-		(else (lang-error "Bad boolean literal: " (fmtStackPrint sym)))))
-
+	
 (define (builtin-dumpword intr name)
 	(if (not (intr-has-word intr name))
 		(lang-error '.dumpword "No such word: " name))
@@ -452,7 +446,9 @@
 		(list "parse-float" '() (lambda (intr) 
 			(push intr (make-lang-float (string->number (value 
 				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-float")))))))
-		(list "parse-bool"  (list 'y) builtin-parse-bool)
+		(list "parse-bool" '() (lambda (intr) 
+			(push intr (parse-bool  
+				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-bool")))))
 		(list "str" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtDisplay obj)))))
 		(list "repr" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtStackPrint obj)))))
 		(list "puts" 		(list 's) (lambda (intr obj) (display (value obj))))

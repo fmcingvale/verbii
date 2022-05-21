@@ -290,17 +290,6 @@ function Interpreter:run(objlist, stephook)
 				goto MAINLOOP
 			end
 
-			-- see c++ notes, hopefully these can be removed
-			if obj == "true" then
-				self:push(true)
-				goto MAINLOOP
-			end
-
-			if obj == "false" then
-				self:push(false)
-				goto MAINLOOP
-			end
-			
 			if obj == "return" then
 				-- return from word by popping back to previous wordlist (if not at toplevel)
 				if self:havePrevFrames() then
