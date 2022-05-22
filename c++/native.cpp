@@ -589,6 +589,4 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 
 	{"run-time", builtin_run_time},
 	{",,new-dict", builtin_new_dict},
-	// i think this can be removed later?
-	{",,null", [](Interpreter *intr){intr->push(newNull());}},
 };

@@ -529,6 +529,5 @@ BUILTINS = {
 	
 	'run-time': ([], lambda I: I.push(time.time()-STARTUP_TIME)),
 	',,new-dict': ([], lambda I: I.push({})),
-	',,null': ([], lambda I: I.push(LangNull())),
 }
 

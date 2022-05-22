@@ -479,7 +479,6 @@
 		(list "run-time" '() 
 			(lambda (intr) (push intr (make-lang-float (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0)))))
 		(list ",,new-dict" '() (lambda (intr) (push intr (new-Dict))))
-		(list ",,null" '() (lambda (intr) (push intr (make-Null))))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

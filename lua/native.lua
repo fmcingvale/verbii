@@ -632,5 +632,4 @@ BUILTINS = {
 	
 	["run-time"] = { {}, function(intr) intr:push(new_Float(SOCKET:gettime()-STARTUP_TIME)) end},
 	[",,new-dict"] = { {}, function(intr) intr:push(new_Dict()) end},
-	[",,null"] = { {}, function(intr) intr:push(new_Null()) end},
 }
