@@ -1,3 +1,6 @@
+## THIS IS VERY ALPHA QUALITY
+- Major code breakage can happen at any time, the language is still in development.
+
 ## THESE DOCS ARE A WORK IN PROGRESS
 - May be disorganized at times
 

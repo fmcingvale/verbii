@@ -176,7 +176,7 @@ function backtrace_curframe(intr)
 	local nr = 7 -- number of words to print in each frame
 	while nr > 0 do
 		local w = intr:prevObj()
-		if w == nil then
+		if isVoid(w) then
 			print(trace)
 			return
 		else

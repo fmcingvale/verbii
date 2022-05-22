@@ -338,7 +338,7 @@
 				))
 			; literals get pushed
 			((integer? obj) (push-int intr obj) (run-loop (nextObj intr)))
-			((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj))
+			((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj))
 				(push intr obj)
 				(run-loop (nextObj intr)))
 

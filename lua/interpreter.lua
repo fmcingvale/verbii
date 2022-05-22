@@ -106,7 +106,7 @@ function Interpreter:do_jump(jumpword)
 		while true do
 			local word = self:nextObj()
 			--print("WORD " .. fmtStackPrint(word))
-			if word == nil then
+			if isVoid(word) then
 				error(">>>No such jump: " .. jumpword)
 			elseif isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
@@ -117,7 +117,7 @@ function Interpreter:do_jump(jumpword)
 		while true do
 			local word = self:prevObj()
 			--print("FIND BACKWARD: " .. jumpword .. ", " .. word)
-			if word == nil then
+			if isVoid(word) then
 				error(">>>No such jump: " .. jumpword)
 			elseif isSymbol(word) and string.sub(word,2) == string.sub(jumpword,3) then
 				return -- found word, stop
@@ -130,7 +130,7 @@ end
 
 function Interpreter:nextObj()
 	if self.code == nil or self.codepos > #self.code then
-		return nil
+		return new_Void()
 	else
 		local obj = self.code[self.codepos]
 		self.codepos = self.codepos + 1
@@ -140,7 +140,7 @@ end
 
 function Interpreter:nextObjOrFail(why)
 	local obj = self:nextObj()
-	if obj == nil then
+	if isVoid(obj) then
 		error(">>>" .. why)
 	else
 		return obj
@@ -149,7 +149,7 @@ end
 
 function Interpreter:peekObj()
 	if self.code == nil or self.codepos > #self.code then
-		return nil
+		return new_Void()
 	else
 		return self.code[self.codepos]
 	end
@@ -157,7 +157,7 @@ end
 
 function Interpreter:prevObj()
 	if self.code == nil or self.codepos == 1 then
-		return nil
+		return new_Void()
 	else
 		self.codepos = self.codepos - 1
 		return self.code[self.codepos]
@@ -166,7 +166,7 @@ end
 
 function Interpreter:prevObjOrFail(why)
 	local obj = self:prevObj()
-	if obj == nil then
+	if isVoid(obj) then
 		error(">>>" .. why)
 	else
 		return obj
@@ -257,7 +257,7 @@ function Interpreter:run(objlist, stephook)
 			stephook(self,word)
 		end
 		
-		if obj == nil then
+		if isVoid(obj) then
 			--print("RETURNING FROM WORD")
 			-- i could be returning from a word that had no 'return',
 			-- so pop words like i would if it were a return
@@ -272,7 +272,7 @@ function Interpreter:run(objlist, stephook)
 
 		-- see if its a literal to push
 		if isInt(obj) or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isBool(obj) then
+			isBool(obj) or isNull(obj) then
 			self:push(obj)
 			goto MAINLOOP
 		end
@@ -368,7 +368,7 @@ function Interpreter:run(objlist, stephook)
 				--print("READY TO CALL WORD:" .. obj)
 				--print("PEEK IS:" .. fmtStackPrint(self:peekObj()))
 				-- tail call elimination
-				if self:peekObj() == nil or (isSymbol(self:peekObj()) and self:peekObj() == "return") then
+				if isVoid(self:peekObj()) or (isSymbol(self:peekObj()) and self:peekObj() == "return") then
 					-- last statement in list, will never need to return here,
 					-- so go ahead and pop my frame so callstack won't grow on
 					-- tail-recursive calls

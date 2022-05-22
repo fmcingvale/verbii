@@ -72,7 +72,9 @@ write-string, write-char ... basically I/O with ports concept like scheme
 	SYMBOL ,,del ( delete a word )
 	list INDEX ,,del ( delete entry from list )
 
-* make sure { .. } :: obj works -- right now just [ .. ] : obj is accepted
+* make sure { .. } :: obj works -- right now just [ .. ] :: obj is accepted
+
+* chicken needs backtraces
 
 ---[    Tests     ]------------------------------------------------------
 
@@ -80,6 +82,10 @@ write-string, write-char ... basically I/O with ports concept like scheme
 of printing all the numeric values which will not match between platforms
  
 ---[   Clean-up   ]------------------------------------------------------
+
+* compiler should insert a 'return' at the end of words to rid of special cases in interpreter
+
+* I think parse-bool can be removed now .. also remove null & ,,null once that is possible
 
 * chicken: main interpreter loop -- use while instead of having to place recursive calls everywhere
 
@@ -90,13 +96,6 @@ that include null to make sure it is handled correctly. also make sure voids are
 never visible from verbii code
 	*** POSSIBLY void can be a word (but NOT a literal, so it can never be serialized directly)
 	    this would allow functions that can return null to return a "nothing" as void
-
-* shouldn't syntax-next return void on end of input instead of null? check/change across ports.
-	* actually not -- 'null' has no literal form so cannot be serialized nor found in a source file.
-		so returning null is fine.
-	* update serializer/deserialize to remove null handling since it should never be possible
-		* OR raise exception if null found in stream
-	* also true and false are words and not values so shouldn't need bools in serialized file
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 

@@ -258,3 +258,5 @@ SP SP_EMPTY set!
 	{ unmake drop put } ,,new-dict fold
 	;
 
+\ ( message -- ) ;  print a debug message along with the stack
+: debug . .S CR ;

@@ -11,7 +11,7 @@ require("interpreter")
 function deserialize_stream(intr, fileIn)
 	local line = fileIn:read('l')
 	if line == fail then
-		return nil
+		return new_Void()
 	end
 	--print("LINE: " .. line)
 	if line:sub(1,1) == "i" then
@@ -20,6 +20,8 @@ function deserialize_stream(intr, fileIn)
 		return new_Float(tonumber(line:sub(3)))
 	elseif line:sub(1,1) == "b" then
 		return parseBool(line:sub(3))
+	elseif line:sub(1,1) == "n" then
+		return new_Null()
 	elseif line:sub(1,1) == "s" then
 		local s = line:sub(3)
 		-- unescape string

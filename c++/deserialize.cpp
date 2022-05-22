@@ -27,6 +27,7 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 			case 'i': return parseInt(line.substr(2));
 			case 'f': return parseFloat(line.substr(2));
 			case 'b': return parseBool(line.substr(2));
+			case 'n': return newNull();
 			case 's':
 				string_replace(line, "%32", " ");
 				string_replace(line, "%09", "\t");
@@ -68,7 +69,11 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 				}
 
 			default:
-				throw LangError("Unrecogized line in deserialize:" + line);
+				// this is a fatal error, so just print & exit -- trying to do an exception
+				// makes the output weird
+				//throw LangError("Unrecogized line in deserialize:" + line);
+				printf("Unrecogized line in deserialize: %s\n", line.c_str());
+				exit(1);
 		}
 	}
 	return newVoid();

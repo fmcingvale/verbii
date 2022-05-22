@@ -698,5 +698,6 @@ class Builtins {
 		{"run-time",
 			intr => intr.push(new LangFloat(((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0))},
 		{",,new-dict", intr => intr.push(new LangDict())},
+		{",,null", intr => intr.push(new LangNull())},
 	};
 }

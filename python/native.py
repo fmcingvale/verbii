@@ -12,7 +12,7 @@ from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
 					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
-						isNull, parseBool, LangVoid, isVoid
+						isNull, parseBool, LangVoid, isVoid, LangNull
 import time
 
 # has to be set externally
@@ -507,7 +507,7 @@ BUILTINS = {
 	'make-word': ([], builtin_make_word),
 	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),
-	'null': ([], lambda I: I.push(None)),
+	'null': ([], lambda I: I.push(LangNull())),
 	'void': ([], lambda I: I.push(LangVoid())),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 	'.dumpword': ([], lambda I: I.push(deepcopy(I.lookupWordOrFail(popSymbol(I))))),
@@ -531,5 +531,6 @@ BUILTINS = {
 	
 	'run-time': ([], lambda I: I.push(time.time()-STARTUP_TIME)),
 	',,new-dict': ([], lambda I: I.push({})),
+	',,null': ([], lambda I: I.push(LangNull())),
 }
 

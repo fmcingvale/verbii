@@ -20,6 +20,8 @@ string PATCHESLIB = "../lib/patches.verb";
 
 bool SHOW_RUN_STATS = false;
 
+void print_backtrace(Interpreter *intr);
+
 string readfile(string filename) {
 	ifstream fileIn(filename);
 	string line, buf;
@@ -42,9 +44,28 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 void compile_and_load(Interpreter *intr, string &text, bool allowOverwrite) {
 	// set flag so make-word can overwrite existing words
 	ALLOW_OVERWRITING_WORDS = allowOverwrite;
+	// normal implementation -- see below if errors are happening in the compiler
+	#if 1
 	intr->push(newString(text));
 	auto code = intr->lookup_word("compile-and-load-string");
 	intr->run(code);
+	#endif
+	// normally don't want to catch errors here, better to catch them later,
+	// but sometimes the compiler breaks so badly it's helpful to turn this on
+	// temporarily
+	#if 0
+	try {
+		intr->push(newString(text));
+		auto code = intr->lookup_word("compile-and-load-string");
+		intr->run(code);
+	}
+	catch (LangError &err) {
+		auto errstr = "*** " + string(err.what()) + " ***";
+		printf("%s\n", errstr.c_str());
+		print_backtrace(intr);
+		exit(1);
+	}
+	#endif
 	// turn flag back off (default)
 	ALLOW_OVERWRITING_WORDS = false;
 }
@@ -80,7 +101,7 @@ void backtrace_curframe(Interpreter *intr) {
 	int nr = 7; // number of words to print in each frame
 	while(nr--) {
 		auto o = intr->prevCodeObj();
-		if(o.isNull()) {
+		if(o.isVoid()) {
 			cout << trace << endl;
 			return;
 		}

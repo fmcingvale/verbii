@@ -1,4 +1,4 @@
-L 61
+L 62
 W depth
 L 6
 y SP_EMPTY
@@ -651,6 +651,11 @@ y drop
 y put
 y ,,new-dict
 y fold
+W debug
+L 3
+y .
+y .S
+y CR
 W __main__
 L 6
 y 'SP_EMPTY

@@ -33,6 +33,7 @@ public class Deserializer {
 				case 'i': return new LangInt(int.Parse(line.Substring(2)));
 				case 'f': return new LangFloat(double.Parse(line.Substring(2)));
 				case 'b': return new LangBool(parseBool(line.Substring(2)));
+				case 'n': return new LangNull();
 				case 's':
 					line = line.Substring(2);
 					line = line.Replace("%32", " ");

@@ -19,12 +19,11 @@
 	list		table (i.e. plain table with no __class attribute)
 --]]
 
--- make a "null" class (like other ports) that is differentiated from nil
--- one reason nil can't be used directly is that nil is treated specially by
--- lua in several situation. for example to efficiently test for keys being
--- present in a table, you do "if table[key] ~= nil" .. so if nil was used
--- directly, there would be no way to store nil in a table and distinguish it from
--- "not present"
+-- it is tempting to use nil for verbii nil, but like other ports (Python, Chicken),
+-- this is avoiding to not clash in semantics with Lua nil usage. A primary example
+-- is for testing for a key in a table like "if table[key] ~= nil" -- this would
+-- prohibit nulls from being stored in tables if verbii used nil==null. so to make
+-- the code cleaner, nil is reserved for Lua-specific things and never means verbii null.
 local Null = {}
 function Null:new(obj, value)
 	setmetatable(obj, self)
@@ -338,7 +337,7 @@ function deepcopyObjlist(objlist)
 end
 
 function deepcopy(obj)
-	if obj == nil or isNull(obj) or isInt(obj) or isFloat(obj) or
+	if isNull(obj) or isInt(obj) or isFloat(obj) or
 		isBool(obj) or isLambda(obj) or isClosure(obj) or
 		isString(obj) or isSymbol(obj) or isVoid(obj) then
 		return obj

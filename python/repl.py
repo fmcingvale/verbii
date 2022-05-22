@@ -1,6 +1,6 @@
 from __future__ import annotations
 from errors import LangError
-from langtypes import LangString, fmtStackPrint
+from langtypes import LangString, fmtStackPrint, isVoid
 """
 	repl - run code interactively, run unittests, or run programs.
 
@@ -151,7 +151,7 @@ def backtrace_curframe(intr: Interpreter):
 	nr = 7; # number of words to print in each frame
 	while nr > 0:
 		w = intr.prevCodeObject()
-		if(w == None):
+		if isVoid(w):
 			print(trace)
 			return
 		else:

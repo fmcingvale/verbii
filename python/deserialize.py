@@ -1,6 +1,6 @@
 from __future__ import annotations
 from errors import LangError
-from langtypes import LangLambda, LangString, isList, parseBool
+from langtypes import LangLambda, LangString, isList, parseBool, LangNull, LangVoid
 """
 	Deserialize - load bytecode from compiler and put into Interpreter.
 	
@@ -12,12 +12,13 @@ from langtypes import LangLambda, LangString, isList, parseBool
 def deserialize_stream(intr, fileIn):
 	line = fileIn.readline()
 	if line == "":
-		return None
+		return LangVoid()
 
 	line = line.rstrip() # remove \n
 	if line[0] == 'i': return int(line[2:])
 	elif line[0] == 'f': return float(line[2:])
 	elif line[0] == 'b': return parseBool(line[2:])
+	elif line[0] == 'n': return LangNull() 
 	elif line[0] == 's':
 		s = line[2:]
 		s = s.replace("%32"," ").replace("%09","\t").replace("%10","\n").replace("%13","\r").replace("%37","%")
@@ -41,7 +42,7 @@ def deserialize_stream(intr, fileIn):
 			raise LangError("Expecting list after 'W' but got: " + objs.fmtStackPrint())
 		intr.defineWord(name,objs,False)
 		#print("LOADED WORD: " + name)
-		return None
+		return LangVoid()
 	else:
 		raise LangError("Unrecognized line while deserializing: " + line)
 

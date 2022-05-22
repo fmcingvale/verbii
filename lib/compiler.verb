@@ -32,21 +32,27 @@ var READER_POS 1
 	read-file reader-open-string
 	;
 
+\
+\ general note for below: for consistency, when there is no return value due to EOF,
+\ void is returned. although technically only a few places need to distinguish null from void,
+\ using void throughout I think will be less confusing in the long run
+\
+
 : reader-peek-char ( -- char; get next char [string] from reader without advancing stream )
 	READER_POS ref READER_TEXT_LEN ref >= if >>eof
 	READER_TEXT ref READER_POS ref get ( char )
 	return
 	@eof 
-		null
+		void \ return void on eof
 	;
 
-: reader-next-char ( -- char; get next char [string] from reader stream or null on eof )
+: reader-next-char ( -- char; get next char [string] from reader stream or void on eof )
 	READER_POS ref READER_TEXT_LEN ref >= if >>eof
 	READER_TEXT ref READER_POS ref get ( char )
 	READER_POS ref 1 + READER_POS set! ( char; ++pos )
 	return
 	@eof
-		null
+		void
 	;
 
 : reader-next-chunk ( -- next string of either all whitespace or non-whitespace )
@@ -54,13 +60,13 @@ var READER_POS 1
 	"" ( string )
 	\ see what next chunk starts with ...
 	reader-peek-char
-	dup null? if >>drop-return
+	dup void? if >>drop-return
 	dup whitespace? if >>ws 
 	\ else, non-whitespace
 	drop
 	@non-ws-loop ( string )
 	reader-peek-char ( if next is whitespace, do NOT want to read it )
-	dup null? if >>drop-return
+	dup void? if >>drop-return
 	dup whitespace? if >>drop-return
 	drop reader-next-char + <<non-ws-loop ( append to string and continue )
 
@@ -69,7 +75,7 @@ var READER_POS 1
 	drop
 	@ws-loop ( string )
 	reader-peek-char
-	dup null? if >>drop-return
+	dup void? if >>drop-return
 	dup whitespace? not if >>drop-return
 	drop reader-next-char + <<ws-loop
 
@@ -77,23 +83,23 @@ var READER_POS 1
 		drop return
 	;
 
-: reader-next ( -- symbol ; get next word from reader stream, or null on eof )
+: reader-next ( -- symbol ; get next word from reader stream, or void on eof )
 	"" ( word )
 	@skipws ( skip leading whitespace )
 		reader-peek-char
-		dup null? if >>null-on-read 
+		dup void? if >>void-on-read 
 		ord 32 > if >>word-loop
 		reader-next-char ( word char; ++pos )
 		drop
 		<<skipws
 
-	@null-on-read ( word null )
+	@void-on-read ( word void )
 		drop >>eof
 
 	@word-loop ( word )
 		( i want to preserve any whitespace after word [e.g. for string parsing], so peek first )
 		reader-peek-char ( word char )
-		dup null? if <<null-on-read
+		dup void? if <<void-on-read
 		( check for whitespace )
 		dup ord 32 <= if >>space  ( treat anything from ' ' to NUL as whitespace )
 		( not whitespace, read char, append and continue )
@@ -103,11 +109,11 @@ var READER_POS 1
 		drop ( fall through to return word below )
 
 	@eof ( word ) 
-		( return word, null on end of file )
-		dup length 0 == if >>isnull
+		( return word, void on end of file )
+		dup length 0 == if >>isvoid
 		string->symbol return ( return word as symbol )
 
-	@isnull drop null return
+	@isvoid drop void return
 	;
 
 : whitespace? ( string -- bool; is first char of string whitespace? )
@@ -197,8 +203,8 @@ var TRIPLEQUOTE 1
 
 : syntax-next ( convert next word from input to runnable object )
 	reader-next
-		\ "syntax-next:" . dup . CR
-	dup null? if >>null
+		 \ "syntax-next:" . dup . CR
+	dup void? if >>void
 	dup '( == if >>comment
 	dup '\ == if >>line-comment
 	dup '{ == if >>lambda
@@ -209,23 +215,22 @@ var TRIPLEQUOTE 1
 	dup 'del == if >>del
 	dup 'true == if >>true-literal
 	dup 'false == if >>false-literal
-	\ don't do null yet since null is used as a meaninful return value -- need
-	\ to change those to use void instead
+	dup 'null == if >>null-literal
 
 	( look for triple-quoted string first )
 	dup 0 3 slice TRIPLEQUOTE ref == if >>triplestring
 	( now single quoted string )
 	dup 0 get '" == if >>string ( "... )
-	( test for correct format before passing to parse-int or parse-float since those functions
-	  will happily parse something like "123abc" as 123 )
+	\ test for correct format before passing to parse-int or parse-float since those functions
+	\ will happily parse something like "123abc" as 123 )
 	dup int-symbol? if >>integer
 	dup float-symbol? if >>float
 	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
 	@nomatch
 		( leave unprocessed word on stack )
 		return
-	@null
-		return ( leave null on stack )
+	@void
+		return ( leave void on stack )
 	@worddef
 		drop syntax-define-word return
 	@var
@@ -252,8 +257,9 @@ var TRIPLEQUOTE 1
 		parse-float return
 	@float-literal ( #NN.NN form )
 		1 -1 slice parse-float return
-	@true-literal parse-bool return
-	@false-literal parse-bool return
+	@true-literal drop true return
+	@false-literal drop false return
+	@null-literal drop ,,null return
 	;
 
 : syntax-define-word
@@ -262,7 +268,7 @@ var TRIPLEQUOTE 1
 	>L SP >L   ( L0=starting SP, L1=name )
 	@loop
 	syntax-next ( get next processed object - assume it can be more than 1 object )
-	dup null? if >>eof
+	dup void? if >>eof
 	dup '; == if >>endword
 	<<loop
 	@badname str "Invalid name after ':' : " swap + error
@@ -323,7 +329,7 @@ var TRIPLEQUOTE 1
 	( now switch to character mode to preserve all inner whitespace )
 	@loop ( string )
 		reader-next-char ( string char )
-		dup null? if >>eof ( EOF in string, error )
+		dup void? if >>eof ( EOF in string, error )
 		dup ord 34 == if >>quote ( test against ASCII value for " to avoid any parsing weirdness )
 		( else, append regular char to string )
 		+ <<loop
@@ -333,7 +339,7 @@ var TRIPLEQUOTE 1
 
 		( if whitespace is next, then string is complete )
 		reader-peek-char
-		dup null? if >>endquote ( EOF ok AFTER end quote )
+		dup void? if >>endquote ( EOF ok AFTER end quote )
 		dup whitespace? if >>endquote
 		( else, keep reading more )
 		drop <<loop
@@ -358,7 +364,7 @@ var TRIPLEQUOTE 1
 	\ that ends in """
 	@read-loop
 		reader-next-chunk
-		dup null? if >>error-eos
+		dup void? if >>error-eos
 		+
 		dup -3 -1 slice TRIPLEQUOTE ref symbol->string == if >>return
 		<<read-loop
@@ -376,7 +382,7 @@ var TRIPLEQUOTE 1
 		\ note - any inner lambdas will be handled automatically by syntax-next,
 		\ so don't have to check for "{" here
 		syntax-next
-		dup null? if >>eof
+		dup void? if >>eof
 		dup '} == if >>closebrace
 		append ( else append to list and continue ) <<loop
 	@eof
@@ -391,7 +397,7 @@ var TRIPLEQUOTE 1
 		\ note - any inner lists/lambdas will be handled automatically by syntax-next,
 		\ so don't have to check for { or [ here
 		syntax-next
-		dup null? if >>eof
+		dup void? if >>eof
 		dup '] == if >>closelist
 		append ( else append to list and continue ) <<loop
 	@eof
@@ -404,7 +410,7 @@ var TRIPLEQUOTE 1
 	"" >L 1 >L ( L0 = nesting, L1 = comment text )
 	@loop
 		reader-next ( puts symbol on stack )
-		dup null? if >>eof
+		dup void? if >>eof
 		( add to comment text )
 		dup symbol->string L1 ref " " + swap + L1 set! 
 
@@ -431,7 +437,7 @@ var TRIPLEQUOTE 1
 	@loop
 		reader-next-char
 		( if end of stream, "\n" or "\r", then i'm done )
-		dup null? if >>eol
+		dup void? if >>eol
 		dup ord 13 == if >>eol
 		dup ord 10 == if >>eol
 		drop <<loop ( discard char and continue )
@@ -526,6 +532,7 @@ var TRIPLEQUOTE 1
 	dup list? if >>list
 	dup lambda? if >>lambda
 	dup bool? if >>bool
+	dup null? if >>null
 	repr "Unknown obj in serialize-object:" swap + error
 	@int ( i NNN )
 		"i" . str puts CR return
@@ -533,6 +540,8 @@ var TRIPLEQUOTE 1
 		"f" . str puts CR return
 	@bool ( b true|false )
 		"b" . str puts CR return
+	@null ( n )
+		drop "n" . CR return
 	@string ( s SSS )
 		"s" . serialize-escape-string puts CR return
 	@symbol ( y SSS - symbols cannot contains spaces, \n, etc. so no escaping needed )
@@ -553,6 +562,7 @@ var TRIPLEQUOTE 1
 	;
 
 var COMPILED_NAMELISTS 1
+
 : byte-compile ( -- names wordlists ; byte-compile source from current reader stream )
 	( do NOT store compiled words into interpreter since that would prevent compiling
 	  any code that contained a name that was already defined -- for example when
@@ -569,7 +579,7 @@ var COMPILED_NAMELISTS 1
 	@loop
 	( read all parsed objects then make into a list )
 	syntax-next
-	dup null? if >>done 
+	dup void? if >>done 
 	dup list? if >>list
 	<<loop
 	@list

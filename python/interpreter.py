@@ -1,7 +1,7 @@
 from __future__ import annotations
 from langtypes import LangLambda, LangString, fmtStackPrint, MAX_VINT, MIN_VINT, \
 			LangClosure, isBool, isClosure, isLambda, isFloat, isInt, isString, isSymbol, isNumeric, \
-			isList, isDict
+			isList, isDict, isVoid, LangVoid, isNull
 """
 	Interpreter - runs code deserialized from bytecode.
 
@@ -133,22 +133,25 @@ class Interpreter(object):
 			# forward jump, find word (>>NAME -> @NAME)
 			while True:
 				word = self.nextCodeObj()
-				if word is None: raise LangError("No such jump: " + jumpword)
+				if isVoid(word): raise LangError("No such jump: " + jumpword)
 				elif isSymbol(word) and word[1:] == jumpword[2:]:
 					return # found word, stop
 		elif jumpword[:2] == "<<":
 			# backward jump
 			while True:
 				word = self.prevCodeObject()
-				if word is None: raise LangError("No such jump: " + jumpword)
+				if isVoid(word): raise LangError("No such jump: " + jumpword)
 				elif isSymbol(word) and word[1:] == jumpword[2:]:
 					return # found word, stop
 		else:
 			raise LangError("Bad jumpword " + jumpword)
 
+	# note that void is returned on EOF/not found conditions to differentiate from a
+	# null object
+
 	def nextCodeObj(self):
 		if self.code is None: raise LangError("nextCodeObj called while not running!")
-		if self.codepos >= len(self.code): return None
+		if self.codepos >= len(self.code): return LangVoid()
 
 		obj = self.code[self.codepos]
 		self.codepos += 1
@@ -156,28 +159,28 @@ class Interpreter(object):
 
 	def nextCodeObjOrFail(self):
 		obj = self.nextCodeObj()
-		if obj is None:
+		if isVoid(obj):
 			raise LangError("Unexpected end of input")
 
 		return obj
 
 	def peekNextCodeObj(self):
 		if self.code is None: raise LangError("peekNextCodeObj called while not running!")
-		if self.codepos >= len(self.code): return None
+		if self.codepos >= len(self.code): return LangVoid()
 
 		return self.code[self.codepos]
 
 	def prevCodeObject(self):
 		if self.code is None: raise LangError("prevCodeObject called while not running!")
 		if self.codepos == 0:
-			return None
+			return LangVoid()
 		else:
 			self.codepos -= 1
 			return self.code[self.codepos]
 
 	def prevCodeObjectOrFail(self):
 		obj = self.prevCodeObject()
-		if obj is None:
+		if isVoid(obj):
 			raise LangError("Unexpected end of input")
 
 		return obj
@@ -225,7 +228,7 @@ class Interpreter(object):
 			if stephook is not None:
 				stephook(self, word)
 
-			if word is None:
+			if isVoid(word):
 				# i could be returning from a word that had no 'return',
 				# so do return, if possible
 				if self.havePushedFrames():
@@ -239,7 +242,8 @@ class Interpreter(object):
 			#print(" => " + self.reprStack())
 								
 			# literals that get pushed
-			if isNumeric(word) or isString(word) or isLambda(word) or isBool(word):
+			if isNumeric(word) or isString(word) or isLambda(word) or isBool(word) or \
+				isNull(word):
 				self.push(word)
 				continue
 
@@ -267,9 +271,7 @@ class Interpreter(object):
 			if word == "if":
 				# true jump is required
 				true_jump = self.nextCodeObj()
-				# false word is optional
-				peeked = self.peekNextCodeObj()
-
+				
 				cond = self.pop()
 				if cond != True and cond != False:
 					raise LangError("'if' expects true or false but got: " + str(cond))
@@ -333,7 +335,7 @@ class Interpreter(object):
 
 			if word in self._WORDS:
 				# tail call elimination
-				if self.peekNextCodeObj() is None or self.peekNextCodeObj() == "return":
+				if isVoid(self.peekNextCodeObj()) or self.peekNextCodeObj() == "return":
 					# no need to come back here, so go ahead and pop my call frame before
 					# calling word -- callstack will never grow on recursive tail-calls now
 					if self.havePushedFrames():

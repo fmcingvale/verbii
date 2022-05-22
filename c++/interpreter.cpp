@@ -127,7 +127,7 @@ int Interpreter::heap_alloc(int nr) {
 
 Object Interpreter::nextCodeObj() {
 	if(!code || codepos >= code->size()) {
-		return newNull();
+		return newVoid();
 	}
 
 	return code->at(codepos++);
@@ -135,7 +135,7 @@ Object Interpreter::nextCodeObj() {
 
 Object Interpreter::nextCodeObjOrFail(const char *failmsg) {
 	Object o = nextCodeObj();
-	if(o.isNull()) {
+	if(o.isVoid()) {
 		throw LangError("End of input: " + string(failmsg));
 	}
 	return o;
@@ -151,7 +151,7 @@ Object Interpreter::nextSymbolOrFail(const char *failmsg) {
 
 Object Interpreter::peekNextCodeObj() {
 	if(!code || codepos >= code->size()) {
-		return newNull();
+		return newVoid();
 	}
 
 	return code->at(codepos);
@@ -159,14 +159,14 @@ Object Interpreter::peekNextCodeObj() {
 
 Object Interpreter::prevCodeObj() {
 	if(!code || codepos == 0) {
-		return newNull();
+		return newVoid();
 	}
 	return code->at(--codepos);
 }
 
 Object Interpreter::prevCodeObjOrFail(const char *failmsg) {
 	Object o = prevCodeObj();
-	if(o.isNull()) {
+	if(o.isVoid()) {
 		throw LangError("No previous object: " + string(failmsg));
 	}
 	return o;
@@ -179,7 +179,7 @@ void Interpreter::do_jump(const char *jumpword) {
 		// forward jump, find word (>>NAME -> @NAME)
 		while(true) {
 			auto obj = nextCodeObj();
-			if(obj.isNull())
+			if(obj.isVoid())
 				throw LangError("No such jump: " + string(jumpword));
 			//cout << "NEXT-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
@@ -192,7 +192,7 @@ void Interpreter::do_jump(const char *jumpword) {
 		// backward jump
 		while(true) {
 			auto obj = prevCodeObj();
-			if(obj.isNull())
+			if(obj.isVoid())
 				throw LangError("No such jump: " + string(jumpword));
 			//cout << "PREV-WORD: " << word << endl;
 			if(obj.isSymbol() && !strcmp(obj.asSymbol()+1, jumpword+2)) {
@@ -302,7 +302,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		// another consideration is how often words run -- better to have the most commonly run
 		// words here since 'if(word == ...)' is a lot faster than a map lookup. But .. again ..
 		// no hard and fast rule about it.
-		if(obj.isNull()) {
+		if(obj.isVoid()) {
 			// i could be returning from a word that had no 'return',
 			// so pop words like i would if it were a return
 			//if(syntax->hasPushedObjLists()) {
@@ -321,7 +321,8 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		
 		// check for literal objects that just get pushed (ONLY objects that have a 
 		// parseable form need to be here)
-		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool()) {
+		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool() ||
+			obj.isNull()) {
 			push(obj);
 			continue;
 		}
@@ -418,7 +419,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 				// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 				// i don't need to come back here, so pop my wordlist first to stop stack from growing
 				#if 1 // can turn off to test without tail call elimination, if desired
-				if(peekNextCodeObj().isNull() || peekNextCodeObj().isSymbol("return")) {
+				if(peekNextCodeObj().isVoid() || peekNextCodeObj().isSymbol("return")) {
 					if(havePushedFrames()) { // in case i'm at the toplevel
 						code_return();
 						++nr_tailcalls;

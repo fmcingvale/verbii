@@ -7,7 +7,7 @@
 ;;;
 ;;;	verbii		Lua
 ;;;	------		---
-;;;	null		Null (class) ** maybe change this to '() ?? **
+;;;	null		Null (class) 
 ;;; void		Void (class)
 ;;;	int			integer
 ;;;	float		Float (class)
@@ -65,21 +65,13 @@
 ;(define-method (value (str <string>)) str)
 (define Symbol? string?)
 
-; need a null type that is distinct from '() so that '() can be the empty list
-; ---- ugh ... that's obsolete since I have List, but I still prefer Null to '()
-
+; need a verbii null object distinct from '() -- much like in the Python port, there
+; are places where '() is more natural to use on the scheme side, so having a Null object
+; makes it clear that those instances are not verbii nulls.
 (define-record Null)
-;(define-class Null ())
-	
-;	(define (Null? obj) (subclass? (class-of obj) Null))
 
-; and a void type distinct from null & '()
-;(define-class Void ())
-	
-	;(define (Void? obj) (subclass? (class-of obj) Void))
+; ... and a void type distint from null -- see notes in c++/langtypes.hpp
 (define-record Void)
-
-; (define-method (value (i <integer>)) i)
 
 ; see c++ notes on integer limits
 (define MAX_VINT 9007199254740991)
@@ -139,32 +131,13 @@
 ; holds a List and an arbitrary object
 (define-record Closure llist state)
 
-;(define-class Lambda ()
-;	((llist accessor: llist initform: (make List))))
-
-;	(define (Lambda? obj) (subclass? (class-of obj) Lambda))
-
 ; verbii string type
 (define-record String value)
-;(define-class String ()
-;	((value initform: "" accessor: value)))
-
-;	(define (String? obj) (subclass? (class-of obj) String))
-
-	; get i'th char
-	;(define-method (get (str String) index) 
-	;	(string-ref (value str) index)) 
-	; sequences get 'len'
-	;(define-method (len (str String)) 
-	;	(string-length (value str)))
 
 ; verbii lists are really arrays, so use a vector
 (define-record List objlist)
 
 (define (new-lang-list) (make-List (make-dynvector 0 0)))
-
-;(define-class List () (
-;		(objlist accessor: objlist initform: (make-dynvector 0 0)) ))
 
 ; get i'th object
 (define (llist-get llist index)
@@ -176,18 +149,10 @@
 (define (llist-push-back llist obj)
 	(dynvector-set! (List-objlist llist) (dynvector-length (List-objlist llist)) obj))
 
-	; sequences get len
-	;(define-method (len (llist List))
-	;	(dynvector-length (objlist llist)))
-
-	;(define (List? obj) (subclass? (class-of obj) List))
-
 	(define (list->List lst) 
 		;(print "LANGLIST FROM LIST: " lst)
 		;(make List 'objlist (list->dynvector lst)))
 		(make-List (list->dynvector lst)))
-
-;(define (Null? obj) (subclass? (class-of obj) Null))
 
 ; a generic "length" operator, but better to use type-specific when possible
 (define (len obj)

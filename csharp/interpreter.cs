@@ -338,7 +338,7 @@ public class Interpreter {
 			// check for literals that get pushed (only objects that can be directly parsed,
 			// so e.g. closures aren't here since they can only be created at runtime
 			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
-					obj is LangBool) {
+					obj is LangBool || obj is LangNull) {
 				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
 				push(obj);
 				continue;

@@ -13,7 +13,15 @@ FLOAT_PRECISION = 17
 MAX_VINT = (1<<53) - 1
 MIN_VINT = -MAX_VINT
 
-def isNull(obj): return obj is None
+# i was using None for verbii null initially, but I think this led to too much
+# ambiguity since in many places it is more pythonic to return None, NOT meaning
+# the verbii null object. so to make the code more obvious in its intent, LangNull
+# is now used for verbii null.
+class LangNull(object):
+	def __init___(self):
+		pass
+
+def isNull(obj): return isinstance(obj, LangNull)
 def isInt(obj): return type(obj) == int
 def isFloat(obj): return type(obj) == float
 def isNumeric(obj): return type(obj) == int or type(obj) == float
