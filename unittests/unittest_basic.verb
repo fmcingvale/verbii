@@ -357,7 +357,7 @@ del bbb
 del ccc
 
 ( show that literals are correctly handled in literal lists )
-[ 11 hello "world of fun" 4.25 true false ]
+[ 11 [ hello "world of fun" ] [ 4.25 #8.125 ] [ true false null ] void another-symbol ]
 clear
 
 ( show that lists are callable )
