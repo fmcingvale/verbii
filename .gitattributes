@@ -1,3 +1,6 @@
 # trying to tell github how to recognize .verb files
-*.verb  linguist-language=forth
+#
+# Forth seems to work best for syntax highlighting purposes,
+# although verbii is not compatible with Forth in any way
+*.verb  linguist-language=Forth
 
