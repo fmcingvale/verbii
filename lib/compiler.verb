@@ -445,36 +445,6 @@ var TRIPLEQUOTE 1
 		drop ( discard char and return )
 	;
 
-( 
-	for-each -- call a lambda on each element of a sequence [any object that supports
-   	'length' and 'slice' methods]
-
-	lambda is called with current item of sequence on top of stack. for-each does not
-	touch the stack otherwise.
-)
-: for-each ( object lambda -- call lambda on each object in string,symbol,list )
-	>L dup length >L 0 >L ( L0=index, L1=length, L2=lambda )
-	@loop
-	L0 ref L1 ref >= if >>done
-	L0 ref +get L2 ref 
-	call ( call lambda with element on stack )
-	L0 ref 1 + L0 set! <<loop
-	@done drop LP 3 + LP!
-	;
-
-\
-\	for-each-reverse -- same as for-each, but starts at the end
-\
-: for-each-reverse ( object lambda -- call lambda on each object in string,symbol,list in reverse order )
-	>L dup length 1 - >L ( L0=index, L1=lambda )
-	@loop
-	L0 ref 0 < if >>done
-	L0 ref +get L1 ref 
-	call ( call lambda with element on stack )
-	L0 ref 1 - L0 set! <<loop
-	@done drop LP 2 + LP!
-	;
-
 : serialize-escape-string ( string -- string with whitespace escaped )
 	"" swap  ( escaped string )
 	{ 
