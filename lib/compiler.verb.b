@@ -483,7 +483,7 @@ b false
 y return
 y @null-literal
 y drop
-y ,,null
+n 
 y return
 W syntax-define-word
 L 41

@@ -259,7 +259,7 @@ var TRIPLEQUOTE 1
 		1 -1 slice parse-float return
 	@true-literal drop true return
 	@false-literal drop false return
-	@null-literal drop ,,null return
+	@null-literal drop null return
 	;
 
 : syntax-define-word

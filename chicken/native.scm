@@ -414,7 +414,6 @@
 		(list "symbol?" (list '*)  (lambda (intr obj) (push intr (string? obj))))
 		(list "lambda?" (list '*)  (lambda (intr obj) (push intr (Lambda? obj))))
 		(list "closure?" (list '*)  (lambda (intr obj) (push intr (Closure? obj))))
-		(list "null" 	'() (lambda (intr) (push intr (make-Null))))
 		(list "void" 	'() (lambda (intr) (push intr (make-Void))))
 		(list "make-list" (list 'i) builtin-make-list)
 		(list "set!" 	(reverse (list '* 'i)) builtin-set)
@@ -448,9 +447,6 @@
 		(list "parse-float" '() (lambda (intr) 
 			(push intr (make-lang-float (string->number (value 
 				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-float")))))))
-		(list "parse-bool" '() (lambda (intr) 
-			(push intr (parse-bool  
-				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-bool")))))
 		(list "str" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtDisplay obj)))))
 		(list "repr" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtStackPrint obj)))))
 		(list "puts" 		(list 's) (lambda (intr obj) (display (value obj))))

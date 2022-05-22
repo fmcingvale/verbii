@@ -52,6 +52,9 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 	$ cp lib/init.verb.b lib/init.verb.b.WORKING 
 	$ cp lib/compiler.verb.b lib/compiler.verb.b.WORKING 
 	
+	# NOTE: make-boostrap.sh uses the c++ repl -- you can change it to any other port if you
+	# don't have/can't build the c++ port
+
 	$ cd bootstrap
 	$ ./make-bootstrap.sh
 	$ ./make-bootstrap.sh 

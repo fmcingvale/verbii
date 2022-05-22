@@ -3,6 +3,9 @@
 PRODUCTION=1
 # define which repl is considered the production compiler (all should produce identical output,
 # so it's really just a matter of which one is easiest to run)
+#
+# i usually implement new things in the c++ compiler first, so that is a primary reason why
+# the c++ repl is the default
 REPL='../c++/repl'
 
 if [ $PRODUCTION -eq 1 ]; then

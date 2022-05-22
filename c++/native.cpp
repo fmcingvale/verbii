@@ -562,8 +562,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// function anyways to deserialize programs, so just use that
 	{"parse-int", [](Interpreter *intr){intr->push(parseInt(popStringOrSymbol(intr)));}},
 	{"parse-float", [](Interpreter *intr){intr->push(parseFloat(popStringOrSymbol(intr)));}},
-	{"parse-bool", [](Interpreter *intr){intr->push(parseBool(popStringOrSymbol(intr)));}},
-	{"null", [](Interpreter *intr){intr->push(Object());}},
 	{"void", [](Interpreter *intr){intr->push(newVoid());}},
 	
 	{".loadc", builtin_loadc},
@@ -593,5 +591,4 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{",,new-dict", builtin_new_dict},
 	// i think this can be removed later?
 	{",,null", [](Interpreter *intr){intr->push(newNull());}},
-	
 };
