@@ -1,0 +1,209 @@
+
+\ greatest common divisor
+: gcd ( a b -- gcd of a & b )
+	\ Euclidean algorithm
+	\ e.g. https://www.geeksforgeeks.org/euclidean-algorithms-basic-and-extended/
+	over 0 == if >>done ( a==0 ? )
+	over mod ( a b%a )
+	swap gcd return \ recursive call: gcd(b%a,a)
+
+	@done ( a b )
+		nip ( return b )
+		;
+
+"GCD test ..." . CR
+
+\ like . with no space after
+: .. str puts ;
+
+[ [ 10 15 5 ] [ 35 10 5 ] [ 31 2 1 ] [ 9 6 3 ] [ 8 45 1 ] [ 40902 24140 34 ]  ]
+	12 509 * 397 12 * 12 3 make-list append
+	241 449 18 * * 463 367 18 * * 18 3 make-list append
+	{ unmake drop -rot over .. "," . dup . "[expect " .. rot .. "]" .. ":" . gcd . CR } for-each
+
+\ least common multiple
+\ translated from: https://rosettacode.org/wiki/Least_common_multiple#Python
+: lcm ( a b -- lcm[a,b] )
+	2dup * abs -rot gcd / \ abs(a*b) / gcd(a,b)
+	;
+
+"LCM test ..." . CR
+[ [ 12 18 36 ] [ -6 14 42 ] ]
+	{ unmake drop -rot over .. "," . dup . "[expect " .. rot .. "]" .. ":" . lcm . CR } for-each
+
+: ddd ( msg -- print debug message + stack )
+	. .S CR
+	;
+
+\ https://rosettacode.org/wiki/Prime_decomposition#Simple_trial_division
+: prime-factors ( n -- list of prime factors )
+	2 [ ] -rot ( list n divisor )
+	@outer ( list n divisor )
+		over 1 > not if >>done ( loop until n <= 1 )
+
+	@inner ( list n divisor )
+		2dup mod 0 != if >>inner-done ( inner loops while n%divisor == 0 )
+		rot over append -rot ( add divisor to list )
+		2dup // rot drop swap ( list n//divisor divisor )
+		<<inner
+
+	@inner-done ( list n divisor )
+		1 + ( list n divisor+1 )
+		<<outer
+
+	@done
+		drop drop ( leave list on stack )
+	;
+
+"Prime factors test ..." . CR
+28 prime-factors . CR
+"Expect [ 2 2 3 7 13 23 ]:" . CR
+"      " . 2 2 3 7 13 23 * * * * * prime-factors . CR
+
+"Expect [ 2 3 3 41 41 41 67 67 73 127 ]:" . CR
+"      " . 2 3 3 41 41 41 67 67 73 127 * * * * * * * * * prime-factors . CR
+
+( -- test bit operations -- )
+
+\ define short names
+: & bit-and ;
+: | bit-or ;
+: ^ bit-xor ;
+: ~ bit-not ;
+: B<< bit-shl ;
+: B>> bit-shr ;
+
+: str.b ( n -- ; get n as binary string )
+	32 "" -rot
+	@loop ( s n i )
+		dup 0 == if >>done ( i==0? )
+		over 1 bit-and 0 == if >>zero
+			rot "1" swap + -rot >>next ( prepend 1 )
+		@zero
+			rot "0" swap + -rot ( prepend 0 )
+		@next ( s n i )
+			swap 1 bit-shr swap 1 - ( s n>>1 --i )
+			<<loop
+	@done
+		drop drop ( leave string on stack )
+		\ put in dotted form for readability
+		dup 0 8 slice "." + swap
+		dup 8 8 slice "." + swap 
+		dup 16 8 slice "." + swap 
+		24 8 slice
+		+ + + 
+		;
+
+"Expect 16520:" . 1 14 B<< 1 7 B<< 1 3 B<< | | . CR
+"Expect 14384:" . 7283 9283 ^ . CR
+
+"Expect -938235 938234:" . CR
+"      " . 938234 ~ dup . ~ . CR
+
+"Expect 11000101.10110001.11000011.10000110:" . CR
+"      " . 3316761478 str.b . CR
+
+"Expect 01101010.01100011.10100011.01011011:" . CR
+"      " . 1784914779 str.b . CR
+
+"Expect 00000000.00000000.00000000.00000000:" . CR
+"      " . 0 str.b . CR
+
+"Expect 11111111.11111111.11111111.11111111:" . CR
+"      " . 4294967295 str.b . CR
+
+"Expect 2147483648 1073741824 536870912 268435456 134217728 67108864 33554432:" . CR
+"      " . 2147483648 { dup . 1 B>> } 7 repeat CR drop
+
+"Expect 1 2 4 8 16 32 64 128:" . CR
+"      " . 1 { dup . 1 B<< } 8 repeat CR drop
+
+"Expect 16795204:" . CR
+"      " . 198237934 3842983493 & . CR
+
+\ max unsigned 32-bit value
+var MAX_INT32 1
+4294967295 MAX_INT32 set!
+
+\ 32-bit xor-shift pseudo random number generator
+\ ported from: https://en.wikipedia.org/wiki/Xorshift
+var XORSHIFT_32_STATE 1
+
+: xorshift32_seed ( n -- ; seed randomizer with seed n )
+	XORSHIFT_32_STATE set!
+	;
+
+: xorshift32 ( -- n ; returns random n )
+	XORSHIFT_32_STATE ref ( x )
+	dup 13 bit-shl ( x x<<13 )
+	bit-xor ( x ^ x<<13 )
+	dup 17 bit-shr ( x x>>17 )
+	bit-xor ( x ^ x>>17 )
+	dup 5 bit-shl ( x x<<5 )
+	bit-xor ( x ^ x>>5 )
+	dup XORSHIFT_32_STATE set!
+	( leave state on stack as result )
+	;
+
+3593953034 xorshift32_seed
+{ xorshift32 dup str.b . . CR } 20 repeat 
+
+: random-xor32 ( -- n ; returns random number between 0..1 )
+	xorshift32 MAX_INT32 ref /
+	;
+
+{ random-xor32 . CR } 20 repeat
+
+: randint-xor32 ( a b -- n ; returns random number on the internal [a, b) )
+	over - random-xor32 * + floor ( a b-a )
+	;
+
+{ -100 100 randint-xor32 . } 200 repeat CR
+
+\ 128-bit xor-shift random number generator
+\ still returns 32-bit result, but keeps 128 bits internally
+var XORSHIFT_128_STATE 4
+
+: xorshift128_seed ( a b c d -- ; seeds rng with 4 x 32 bit values )
+	XORSHIFT_128_STATE set!
+	XORSHIFT_128_STATE 1 + set!
+	XORSHIFT_128_STATE 2 + set!
+	XORSHIFT_128_STATE 3 + set!
+	;
+
+: xorshift128 ( -- n ; returns random n )
+	XORSHIFT_128_STATE 3 + ref ( t )
+	XORSHIFT_128_STATE ref ( t s )
+	XORSHIFT_128_STATE 2 + ref XORSHIFT_128_STATE 3 + set! ( t s ; state[3] = state[2] )
+	XORSHIFT_128_STATE 1 + ref XORSHIFT_128_STATE 2 + set! ( t s ; state[2] = state[1] )
+	XORSHIFT_128_STATE 1 + set! ( t ; state[1] = s )
+
+	dup 11 bit-shl ( t t<<11 )
+	bit-xor ( t ^ t<<11 )
+	dup 8 bit-shr ( t t>>8 )
+	bit-xor ( t ^ t>>8 )
+	XORSHIFT_128_STATE 1 + ref dup ( t s s )
+	19 bit-shr ( t s s>>19 )
+	bit-xor bit-xor ( t ^ s ^ s>>19 )
+	dup XORSHIFT_128_STATE set! ( state[0] = t ^ s ^ s^10 )
+	\ leave on stack 
+	;
+	
+\ 1234 5678 9101112 13141516 xorshift128_seed
+\ { xorshift128 dup str.b . . CR } 30 repeat
+
+: djb2-hash ( string -- hash )
+	\ for each char in string, hash = hash * 33 + c, with initial value 5381
+	[ ord swap 33 * + ] 5381 fold
+	MAX_INT32 ref bit-and ( keep 32 bits only )
+	;
+
+[ 	[ "Hello World 12345 ^.^" 24858410 ]
+	[ "the djb2 hashing function" 2070383472 ]
+	[ "Some Day somewhere In THE futurE 9.8.7.6.5.4.3.2.1.ZeRo" 2915615060 ]
+	[ "Algorithms are Fun!!!" 1239930307 ]
+	[ "lots of bits and shifting and stuff" 3405806360 ]
+	[ "the quick brown fox jumped over the lazy dog" 1191916020 ]
+	[ "the Quick bRown fOx jumPed oveR tHe lAzy doG" 3385321716 ] ]
+
+	[ unmake drop "Expect:" . . CR "       " . djb2-hash . CR ] for-each

@@ -1,0 +1,69 @@
+\
+\ Programming problems from various places
+\
+\ Note the code here implements the solutions found at the sites (where there is a site given)
+\ -- the challenge here being to implement the algorithms in verbii, not always come up with 
+\ the algorithm itself.
+\
+
+( *** math-based *** )
+
+( find sum of the digits in a string )
+
+( sum digits in string, ignoring non-digits )
+
+( test if a large number [as a string] is divisible by 11 )
+( ref: https://www.geeksforgeeks.org/check-large-number-divisible-11-not/ )
+
+( calc difference of two large numbers [as strings] )
+( ref: https://www.geeksforgeeks.org/difference-of-two-large-numbers/?ref=lbp )
+
+( happy numbers )
+( ref: https://rosettacode.org/wiki/Happy_numbers )
+
+( print all permutations of characters in a string )
+( ref: https://www.geeksforgeeks.org/write-a-c-program-to-print-all-permutations-of-a-given-string/?ref=leftbar-rightbar )
+
+( *** lists *** )
+
+( reverse a list )
+
+: reverse-list ( list -- reversed-list )
+	0 make-list >L ( build new list in L0 )
+	0
+	@loop ( list i )
+		2dup swap length >= if >>done ( if i >= length then done )
+		2dup -1 swap - get ( get with negative index )
+		L0 ref swap append drop ( appends to existing object, so don't need to re-save to L0 )
+		1 + <<loop
+	@done
+		2drop L>
+		;
+
+11 22 33 44 55 66 77 88 99 9 make-list
+"List:    " . dup . CR
+"Reversed:" . reverse-list . CR
+
+( quicksort a list )
+
+
+( *** strings *** )
+
+( reverse a string )
+
+: reverse-string ( string -- reversed-string )
+	( same basic idea as reverse-list except strings are immutable so a little different )
+	0 make-string >L ( build new string in L0 )
+	0
+	@loop ( string i )
+		2dup swap length >= if >>done ( if i >= length then done )
+		2dup -1 swap - get ( get with negative index )
+		L0 ref swap + L0 set! ( makes new string, so save back to L0 )
+		1 + <<loop
+	@done
+		2drop L>
+		;
+
+"ABCDEFG"
+"String:  " . dup . CR
+"Reversed:" . reverse-string . CR
