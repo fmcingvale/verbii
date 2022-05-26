@@ -587,7 +587,7 @@ var COMPILED_NAMELISTS 1
 	;
 
 ( compiles filename and writes serialized form to stdout. does NOT alter interpreter words )
-: compile-and-serialize ( filename )
+: compile-and-serialize ( filename -- )
 	byte-compile-file ( this will be all code other than word definitions )
 
 	( that left list of [ name list ] on stack )
@@ -599,8 +599,8 @@ var COMPILED_NAMELISTS 1
 	serialize-compiled-output
 	;
 
-( compiles filename and loads words into current interpreter )
-: compile-and-load-string ( string )
+( compiles string and loads words into current interpreter )
+: compile-and-load-string ( string -- )
 	byte-compile-string
 	( now load the [ name wordlist ] pairs into interpreter )
 	{ dup 1 get swap 0 get make-word } for-each
