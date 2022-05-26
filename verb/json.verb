@@ -1,0 +1,269 @@
+\
+\ JSON parser
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+\ Parser accepts all valid JSON but is not strict so will accept some things
+\ that are not valid JSON:
+\	* \unnnn - verbii does not support unicode so this is translated to <u?nnnn>
+\	* Accepts a superset of JSON float formats (does not require leading 0)
+\	* Accepts arrays without commas between elements
+\	* Extra/missing commas in objects are accepted
+\
+
+var JSON_READER_TEXT 1
+var JSON_READER_TEXT_LEN 1
+var JSON_READER_POS 1
+
+: json-reader-open-string ( string -- ; open string for parsing JSON )
+	JSON_READER_TEXT set!
+	JSON_READER_TEXT ref length JSON_READER_TEXT_LEN set!
+	0 JSON_READER_POS set!
+	;
+
+: json-reader-open-file ( filename -- ; open file for parsing JSON )
+	read-file json-reader-open-string
+	;
+
+: json-reader-peek-char ( -- c ; peek next char [as string] from JSON text )
+	JSON_READER_POS ref JSON_READER_TEXT_LEN ref >= if >>eof
+	
+	JSON_READER_TEXT ref JSON_READER_POS ref get return 
+	
+	@eof null
+	;
+
+: json-reader-next-char ( -- c ; read next char from JSON text )
+	JSON_READER_POS ref JSON_READER_TEXT_LEN ref >= if >>eof
+	JSON_READER_TEXT ref JSON_READER_POS ref get
+	JSON_READER_POS ref 1 + JSON_READER_POS set! return
+	
+	@eof null
+	;
+
+: json-skip-whitespace ( -- ; skip any whitespace from current position in JSON text )
+	@loop
+		json-reader-peek-char 
+		dup null? if >>done
+		dup whitespace? not if >>done
+		drop json-reader-next-char drop
+		<<loop
+	@done
+		drop
+	;
+
+: json-read-word ( -- word ; read next word [non-whitespace chunk] from JSON text )
+	""
+	@loop ( str )
+		json-reader-peek-char
+		\ check for EOF or special (non-word) char
+		dup null? if >>done
+		dup whitespace? if >>done
+		dup "[" == if >>done
+		dup "]" == if >>done
+		dup "{" == if >>done
+		dup "}" == if >>done
+		dup "," == if >>done
+		\ regular char, add to string
+		drop json-reader-next-char + 
+		<<loop
+	@done ( str c )
+		drop
+	;
+
+\ debug
+: ddd . .S CR ;
+
+\ read object, assumes '{' was just read
+: json-parse-object ( -- obj )
+	,,new-dict
+	@loop
+		json-skip-whitespace
+		json-reader-next-char
+		dup "}" == if >>done
+		dup "," == if >>comma
+		\ key (string) must be next
+		dup ord 34 != if >>bad-key \ chr(34) == "
+		drop json-parse-string
+		json-skip-whitespace
+		json-reader-next-char
+		\ : must be after key
+		":" != if >>bad-value
+		\ get value then store key=>value
+		json-parse-next
+		put <<loop
+	@comma ( dict "," )
+		drop
+		<<loop
+	@done ( dict c )
+		drop return
+	@bad-key
+		"Bad key in object" error
+	@bad-value
+		"Bad value in object" error
+	;
+
+\ read array -- assumes '[' was just read
+: json-parse-array ( -- list )
+	0 make-list
+	@loop ( list )
+		json-skip-whitespace
+		json-reader-peek-char
+		\ check for stop chars/eof
+		dup null? if >>eof
+		dup "]" == if >>end-list
+		\ get next object and append to list
+		drop json-parse-next append
+		json-skip-whitespace
+		\ skip any commas
+		json-reader-peek-char
+		dup "," == if >>skip-comma
+		drop <<loop
+	@skip-comma ( list "," )
+		drop json-reader-next-char
+		drop <<loop
+	@end-list ( list "]" )
+		drop json-reader-next-char drop ( list )
+		return
+	@eof ( list null )
+		drop
+		drop
+		"End of JSON input inside [ .. ]" error
+	;
+
+\ parse string -- assumes " was just read
+: json-parse-string ( -- string )
+	"" 
+	@loop
+		json-reader-next-char
+		dup null? if >>eof
+		dup ord 34 == if >>end \ char 34 == "
+		dup ord 92 == if >>escape \ chr 92 == backslash
+		+ <<loop
+	@eof
+		drop drop
+		"End of JSON input inside string" error
+	@end ( str " )
+		drop return
+	@escape ( str \ )
+		drop 
+		\ see which escape it is ...
+		json-reader-next-char
+		dup "b" == if >>esc-B
+		dup "f" == if >>esc-F
+		dup "n" == if >>esc-N
+		dup "r" == if >>esc-R
+		dup "t" == if >>esc-T
+		dup "u" == if >>esc-U
+		\ anything else, just keep the literal char
+		+ <<loop
+	\ replace escapes with chars
+	@esc-B
+		drop 8 chr + <<loop
+	@esc-F
+		drop 12 chr + <<loop
+	@esc-N
+		drop 10 chr + <<loop
+	@esc-R
+		drop 13 chr + <<loop
+	@esc-T
+		drop 9 chr + <<loop
+	@esc-U
+		\ \uNNNN becomes <u?NNNN>
+		drop "<u?" + 
+		json-reader-next-char +
+		json-reader-next-char +
+		json-reader-next-char +
+		json-reader-next-char +
+		">" +
+		<<loop
+	;
+
+\ parse and return next value from JSON reader
+: json-parse-next ( -- object )
+	@loop
+		json-skip-whitespace
+		json-reader-peek-char
+		dup null? if >>eof
+		dup ord 34 == if >>string \ chr 34 == "
+		dup "{" == if >>object
+		dup "[" == if >>array
+		\ not a special char, so read as word and see what it is ...
+		drop json-read-word
+		dup "true" == if >>true
+		dup "false" == if >>false
+		dup "null" == if >>null
+		dup int-string? if >>int
+		dup float-string? if >>float
+		"Unknown token:" swap + error
+	@object
+		drop json-reader-next-char drop
+		json-parse-object return
+	@array
+		drop json-reader-next-char drop
+		json-parse-array return
+	@string
+		drop json-reader-next-char drop
+		json-parse-string return
+	@true
+		drop true return
+	@false
+		drop false return
+	@null
+		drop null return
+	@int
+		parse-int return
+	@float
+		parse-float return
+	@eof
+		drop
+		"No object found" error
+	;
+
+\ parse JSON from a string and return parsed valud
+: json-parse ( string -- object )
+	json-reader-open-string
+	json-parse-next
+	;
+	
+\ just for fun, show how long script takes to run
+var START_TIME 1
+run-time START_TIME set!
+
+"1234" json-parse .S CR
+
+"     -5678.75e-12    " json-parse .S CR
+"   true   " json-parse .S CR
+"  false  " json-parse .S CR
+"   null   " json-parse .S CR
+" [ 11 , 22 , 33 , 44 ] " json-parse .S CR
+"[55,66,77,88]" json-parse .S CR
+"[1,2,[3,4,[5,6],7],8]" json-parse .S CR
+"""   "Hello JSON world! \na\tsecond\tline\twith\ttabs\r\nand now unicode\uabcdthere" """ json-parse .S CR
+
+\ since verbii doesn't recognize C-style escapes, no awkward quoting is needed here ...
+""" "Some\"embedded\"quotes\"" """ json-parse .S CR
+clear
+"""
+{ "ddd" : 444 , "bbb" : 222 , "zzz": 555 , "aaa" : 111 , "ccc" : 333 }
+""" json-parse .S CR
+clear
+"""
+{"ddd":444,"bbb":222,"zzz":555,"aaa":111,"ccc":333}
+""" json-parse .S CR
+clear
+"""
+{,"ddd":444,"bbb":222,"zzz":555,"aaa":111,"ccc":333,}
+""" json-parse .S CR
+clear
+"""
+{
+	"numbers" : [-123,456,8.75,-1e6],
+	"strings": ["hello world","one","tab:\tlf:\ncrlf:\r\nquotes:\"hi there\"\nbackslashes:\\\\\nslashes:\/\/\nunicode:\u1234"],
+	"special": [true,false,null],
+}
+""" json-parse .S CR
+
+6 f.setprec
+"Script ran in" . run-time START_TIME ref - . "seconds" . CR
+"TOTAL run time" . run-time . "seconds" . CR
