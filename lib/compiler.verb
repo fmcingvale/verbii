@@ -486,7 +486,7 @@ var TRIPLEQUOTE 1
 \
 \				as a consequence, there is no need to serialize anything that cannot exist
 \				in source form. this includes:
-\					* null - no source format (null is a word)
+\					* void - no source format (void is a word)
 \					* closure - no source format - requires :: at runtime
 \					* dict - no source format - requires make-dict or ,,new-dict at runtime
 \
@@ -605,3 +605,37 @@ var COMPILED_NAMELISTS 1
 	( now load the [ name wordlist ] pairs into interpreter )
 	{ dup 1 get swap 0 get make-word } for-each
 	;
+
+
+\
+\ compile & load the given file. if "filename.b" exists, and is the same age (or newer), 
+\ then it is loaded instead of recompiling filename.
+\
+\ if "filename.b" does not exist, or is older than filename, then filename is
+\ compiled and the result saved to "filename.b"
+\
+\ note this does NOT run the resulting __main__ -- it is the caller's responsibility
+\ to run __main__ (or not) and to delete __main__ when complete
+\
+: cached-compile-and-load ( filename -- )
+		\ "cached-compile-and-load of: " . dup . CR
+	\ see if filename.b exists
+	dup ".b" + file-exists? not if >>do-compile \ does not exist, must compile filename
+		\ ".b file exists" . CR
+	\ see if mtime of filename > filename.b (i.e. filename.b out of date)
+	dup file-mtime over ".b" + file-mtime ( filename mtime mtime.b )
+	> if >>do-compile \ .b is out of date, must recompile
+		\ ".b file is current" . CR
+	\ .b file is current, so load it
+	".b" + deserialize return \ load words into interpreter & return
+
+	@do-compile ( filename )
+		 \ "(re) compiling " . dup . CR
+		\ compile filename -> filename.b
+		dup ".b" + open-as-stdout \ write to filename.b
+		dup compile-and-serialize \ compile filename -> filename.b
+		void open-as-stdout \ restore stdout to write to the screen
+		\ easiest thing to do now is load the serialized file i just created
+		".b" + deserialize return
+	;
+	

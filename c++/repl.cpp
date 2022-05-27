@@ -18,11 +18,12 @@ string INITLIB = "../lib/init.verb.b";
 string COMPILERLIB = "../lib/compiler.verb.b";
 string PATCHESLIB = "../lib/patches.verb";
 
-bool SHOW_RUN_STATS = false;
+bool SHOW_RUN_STATS = false; // -stats
+bool NO_CACHE_COMPILATION = false; // -nocache
 
 void print_backtrace(Interpreter *intr);
 
-string readfile(string filename) {
+string readfile(string& filename) {
 	ifstream fileIn(filename);
 	string line, buf;
 	while(getline(fileIn, line)) {
@@ -36,38 +37,87 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 	deserialize_stream(intr, fileIn);
 	// run __main__ to setup any vars
 	auto code = intr->lookup_word("__main__");
+	if(!code) 
+		throw LangError("Unable to find __main__ after deserializing: " + filename);
+
 	intr->run(code);
 	// always delete __main__, else next file will fail to load
+	//printf("DEL MAIN 1\n");
 	intr->deleteWord("__main__");
 }
 
-void compile_and_load(Interpreter *intr, string &text, bool allowOverwrite) {
-	// set flag so make-word can overwrite existing words
+// returns error message or "" on no error
+string compile_and_load_string(Interpreter *intr, string &text, bool allowOverwrite) {
+	// set flag so make-word can overwrite existing words when requested
 	ALLOW_OVERWRITING_WORDS = allowOverwrite;
 	// normal implementation -- see below if errors are happening in the compiler
-	#if 1
+	#if 0
 	intr->push(newString(text));
 	auto code = intr->lookup_word("compile-and-load-string");
+	if(!code)
+		throw LangError("Unable to find compile-and-load-string");
+
 	intr->run(code);
 	#endif
 	// normally don't want to catch errors here, better to catch them later,
 	// but sometimes the compiler breaks so badly it's helpful to turn this on
 	// temporarily
-	#if 0
+	#if 1
 	try {
 		intr->push(newString(text));
 		auto code = intr->lookup_word("compile-and-load-string");
+		if(!code)
+			throw LangError("Unable to find compile-and-load-string");
+
 		intr->run(code);
+		return "";
 	}
 	catch (LangError &err) {
 		auto errstr = "*** " + string(err.what()) + " ***";
-		printf("%s\n", errstr.c_str());
-		print_backtrace(intr);
-		exit(1);
+		// don't normally want backtraces on compilation errors since the compilation error
+		// will say what happened. but sometimes i break things really badly and need to turn
+		// this on ... (turning it on normally will break unittests)
+		//print_backtrace(intr);
+		return errstr;
 	}
 	#endif
 	// turn flag back off (default)
 	ALLOW_OVERWRITING_WORDS = false;
+}
+
+// load filename with caching of bytecode to/from filename.b
+string cached_compile_and_load_file(Interpreter *intr, string &filename, bool allowOverwrite) {
+	if(!NO_CACHE_COMPILATION) {
+		// normal caching version
+
+		// set flag so make-word can overwrite existing words when requested
+		ALLOW_OVERWRITING_WORDS = allowOverwrite;
+		intr->push(newString(filename));
+		// catch compilation errors
+		try {
+			auto code = intr->lookup_word("cached-compile-and-load");
+			if(!code)
+				throw LangError("Unable to find cached-compile-and-load");
+
+			intr->run(code);			
+		}
+		catch (LangError &err) {
+			auto errstr = "*** " + string(err.what()) + " ***";
+			// don't normally want backtraces on compilation errors since the compilation error
+			// will say what happened. but sometimes i break things really badly and need to turn
+			// this on ... (turning it on normally will break unittests)
+			//print_backtrace(intr);
+			return errstr;
+		}
+		// turn flag back off (default)
+		ALLOW_OVERWRITING_WORDS = false;
+		return ""; // no error
+	}
+	else {
+		// caching disabled
+		string text = readfile(filename);
+		return compile_and_load_string(intr, text, allowOverwrite);
+	}
 }
 
 void debug_hook(Interpreter *intr, Object obj) {
@@ -77,23 +127,6 @@ void debug_hook(Interpreter *intr, Object obj) {
 	fflush(stdout);
 	string line;
 	getline(cin, line);
-}
-
-// use safe_ version below
-void compile_and_run(Interpreter *intr, string text, bool singlestep, bool allowOverwrite=false) {
-	compile_and_load(intr, text, allowOverwrite);
-	
-	// run __main__
-	auto code = intr->lookup_word("__main__");
-
-	// subtlety -- the code i'm about to run might want to redefine __main__
-	// (i.e. if i'm running the compiler). so delete __main__ BEFORE running
-	intr->deleteWord("__main__");
-
-	if(singlestep)
-		intr->run(code, &debug_hook);
-	else
-		intr->run(code);
 }
 	
 void backtrace_curframe(Interpreter *intr) {
@@ -126,11 +159,28 @@ void print_backtrace(Interpreter *intr) {
 	}
 }
 
+// you must call compile_and_load_string() or cached_compile_and_load_file() before
+// calling this to load code into the passed interpreter
+//
+// __main__ will have been deleted upon exit from this function
+//
 // return empty string if OK, error message on error
-string safe_compile_and_run(Interpreter *intr, string text, bool singlestep, bool backtrace_on_error,
-							bool allowOverwrite=false) {
+string safe_run_main(Interpreter *intr, bool singlestep, bool backtrace_on_error) {
 	try {
-		compile_and_run(intr, text, singlestep, allowOverwrite);
+		// run __main__
+		auto code = intr->lookup_word("__main__");
+		if(!code)
+			throw LangError("Unable to find __main__ in safe_run_main()");
+
+		// subtlety -- the code i'm about to run might want to redefine __main__
+		// (i.e. if i'm running the compiler). so delete __main__ BEFORE running
+		//printf("DEL MAIN 2\n");
+		intr->deleteWord("__main__");
+
+		if(singlestep)
+			intr->run(code, &debug_hook);
+		else
+			intr->run(code);
 		return "";
 	}
 	catch (LangError &err) {
@@ -152,9 +202,26 @@ Interpreter* newInterpreter() {
 	deserialize_and_run(intr, COMPILERLIB);
 
 	// now that those are loaded, load & run the patches file like any other
-	// source file (this is the only file that is allowed to overwrite existing words)
-	safe_compile_and_run(intr, readfile(PATCHESLIB), false, true, true);
+	// source file, except it is allowed to overwrite existing words
+
+	// FIX for now don't cache patches file
+	//string text = readfile(PATCHESLIB);
+	//compile_and_load_string(intr,text,true);
 	
+	auto errmsg = cached_compile_and_load_file(intr, PATCHESLIB, true);
+	if(errmsg.length() >0) {
+		cout << errmsg << endl;
+		// can't continue if patches didn't load OK
+		exit(1);		
+	}
+
+	errmsg = safe_run_main(intr, false, true);
+	if(errmsg.length() >0) {
+		cout << errmsg << endl;
+		// can't continue if patches didn't load OK
+		exit(1);		
+	}
+
 	// GC after loading init files
 	x_mem_gcollect();
 
@@ -177,7 +244,14 @@ void repl(bool singlestep) {
 				intr->print_stats();
 			return;
 		}
-		auto errmsg = safe_compile_and_run(intr, line, singlestep, true);
+		// compile & run line
+		auto errmsg = compile_and_load_string(intr, line, false);
+		if(errmsg.length() >0) {
+			cout << errmsg << endl;
+			intr = newInterpreter(); // restart interpreter on error
+			continue;
+		}
+		errmsg = safe_run_main(intr, singlestep, true);
 		if(errmsg.length() > 0) {
 			cout << errmsg << endl;
 			intr = newInterpreter(); // restart interpreter on error
@@ -191,7 +265,7 @@ void repl(bool singlestep) {
 // like a non-interactive repl, reads a line at a time, prints it,
 // runs it, then prints the stack. this is intented for unittesting.
 // maxline is maximum line that ran OK last time so i ca restart.
-void run_test_mode(string filename) {
+void run_test_mode(string& filename) {
 
 	regex blankline(R"""(^[ \t\r\n]*$)""");
 
@@ -207,9 +281,16 @@ void run_test_mode(string filename) {
 		}
 	
 		cout << ">> " << line << endl;
+		// compile & load line
+		auto errmsg = compile_and_load_string(intr, line, false);
+		if(errmsg.length() > 0) {
+			cout << errmsg << endl;
+			intr = newInterpreter(); // restart on error
+			continue;
+		}
 		// no backtraces here - if an unexpected error occurs, rerun test case without -test
-		// to see the backtrace
-		auto errmsg = safe_compile_and_run(intr, line, false, false);
+		// in order to see the backtrace
+		errmsg = safe_run_main(intr, false, false);
 		if(errmsg.length() > 0) {
 			cout << errmsg << endl;
 			intr = newInterpreter(); // restart on error
@@ -220,9 +301,16 @@ void run_test_mode(string filename) {
 	}
 }
 
-void run_file(string filename, bool singlestep) {
+void run_file(string& filename, bool singlestep) {
 	auto intr = newInterpreter();
-	auto errmsg = safe_compile_and_run(intr, readfile(filename), singlestep, true);
+	// compile & load
+	auto errmsg = cached_compile_and_load_file(intr, filename, false);
+	if(errmsg.length() > 0) {
+		cout << errmsg << endl;
+		return;
+	}
+	// run with backtrace on error
+	errmsg = safe_run_main(intr, singlestep, true);
 	if(errmsg.length() > 0) {
 		cout << errmsg << endl;
 	}
@@ -262,6 +350,9 @@ int main(int argc, char *argv[]) {
 		}
 		else if(!strcmp(argv[i], "-step")) {
 			singlestep = true;
+		}
+		else if(!strcmp(argv[i], "-nocache")) {
+			NO_CACHE_COMPILATION = true;
 		}
 		else if(!strcmp(argv[i], "--")) {
 			// pass rest of args to script

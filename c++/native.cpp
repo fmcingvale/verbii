@@ -12,7 +12,11 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <sys/stat.h>
 using namespace std;
+
+// file to write output
+static FILE *fp_stdout = stdout;
 
 Object native_cmdline_args;
 
@@ -121,9 +125,9 @@ static void builtin_make_word(Interpreter *intr) {
 
 static void builtin_printchar(Interpreter *intr) {
 	int c = (int)popInt(intr, "Bad printchar arg");
-	putc(c, stdout);
+	putc(c, fp_stdout);
 	if(c == 10 || c == 13) {
-		fflush(stdout);
+		fflush(fp_stdout);
 	}
 }
 
@@ -505,6 +509,50 @@ static void builtin_new_dict(Interpreter *intr) {
 	intr->push(newDict());
 }
 
+static void builtin_file_exists(Interpreter *intr) {
+	auto filename = popString(intr,"file-exists?");
+	struct stat st;
+	if(stat(filename, &st) < 0)
+		intr->push(newBool(false));
+	else
+		intr->push(newBool(S_ISREG(st.st_mode) != 0));
+}
+
+static void builtin_file_mtime(Interpreter *intr) {
+	auto filename = popString(intr,"file-exists?");
+	struct stat st;
+	if(stat(filename, &st) < 0)
+		throw LangError("No such file: " + string(filename));
+	else
+		intr->push(newInt(st.st_mtime));
+}
+
+// ( filename -- ; open filename and write stdout there )
+// ( void -- ; close any file attached to stdout and reset to normal stdout )
+//
+// this only redirects builtins 'puts' and '.c'. this does NOT redirect error messages,
+// they still go to the screen.
+static void builtin_open_as_stdout(Interpreter *intr) {
+	auto obj = intr->pop();
+	if(obj.isVoid()) {
+		if(fp_stdout!=stdout) {
+			fclose(fp_stdout);
+			fp_stdout = stdout;
+		}
+	}
+	else if(obj.isString()) {
+		fp_stdout = fopen(obj.asString(), "w");
+	}
+}
+
+#include "deserialize.hpp"
+
+static void builtin_deserialize(Interpreter *intr) {
+	auto filename = popString(intr,"deserialize");
+	ifstream fileIn(filename);
+	deserialize_stream(intr, fileIn);
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -513,7 +561,8 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"/mod", builtin_divmod},
 	{"f.setprec", [](Interpreter *intr) { FLOAT_PRECISION = popInt(intr, "Bad arg to f.setprec");}},
 	{".c", builtin_printchar},
-	{"puts", [](Interpreter *intr) {printf("%s", popString(intr, "bad puts arg"));}},
+	{"puts", [](Interpreter *intr) 
+		{fprintf(fp_stdout, "%s", popString(intr, "bad puts arg"));}},
 	
 	// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
 	//          implemented natively anyways for internal error printing, so
@@ -589,4 +638,9 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 
 	{"run-time", builtin_run_time},
 	{",,new-dict", builtin_new_dict},
+
+	{"file-exists?", builtin_file_exists},
+	{"file-mtime", builtin_file_mtime},
+	{"open-as-stdout", builtin_open_as_stdout},
+	{"deserialize", builtin_deserialize},
 };

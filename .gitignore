@@ -20,3 +20,6 @@ chicken/local-chicken/
 chicken/repl
 chicken/PROFILE.*
 chicken/bench_objs
+verb/*.verb.b
+unittests/*.verb.b 
+

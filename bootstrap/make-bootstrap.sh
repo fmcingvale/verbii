@@ -32,7 +32,12 @@ then
 		
 		# causes an error to overwrite (at least) compiler.verb.b directly,
 		# so save to temp file then copy
-		$REPL ../verb/compile.verb -- ../lib/$name.verb > ../lib/$name.verb.b.temp
+		#
+		# use -nocache to be safer in case i'm compiling changes to the caching code
+		# (PROBABLY this was only needed when the caching code was first added via patches.verb,
+		# to get around the chicken-and-egg problem of being unable to load patches.verb.b,
+		# but doesn't hurt to leave it in)
+		$REPL ../verb/compile.verb -nocache -- ../lib/$name.verb > ../lib/$name.verb.b.temp
 		cp ../lib/$name.verb.b.temp ../lib/$name.verb.b
 		rm ../lib/$name.verb.b.temp
 	done

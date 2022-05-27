@@ -15,3 +15,9 @@
 ( cd chicken; make clean )
 
 # currently nothing to clean for lua
+
+# remove all .b files ... but NOT in lib/
+rm verb/*.verb.b 
+rm unittests/*.verb.b
+
+

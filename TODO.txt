@@ -98,6 +98,16 @@ write-string, write-char ... basically I/O with ports concept like scheme
 
 ---[ Optimization ]------------------------------------------------------
 
+* repls are still doing to much work, even more with caching additions. need to push more
+  of this to verbii code. maybe interpreter:run should have a safe_run wrapper to handle
+  a lot of this that could be called from verbii (??)
+  
+* compiler.verb -- in byte-compile, all words for __main__ get pushed to stack and then
+  a huge list made at the end. this leads to stack overflows for large files (like the unittests
+  where everything is in __main__). would be better to add items in chunks (maybe do an append
+  every N words, for example)  so compilation won't overflow the stack. for now i just bumped up the
+  stack size in all ports.
+
 * I think the native make-word should be renamed to something like set-word and 
   make-word should be implemented in verbii and perform optimizations at creation time
   examples:
