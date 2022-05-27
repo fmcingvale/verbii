@@ -22,7 +22,7 @@ public class Interpreter {
 	// NOTE: Many places assume that these are integers (32-bit) so don't change these to long
 	// without searching for (int) casts to change as well.
 
-	public const int STACK_SIZE = (1<<10);
+	public const int STACK_SIZE = (1<<16);
 	public const int LOCALS_SIZE = (1<<10);
 	public const int HEAP_STARTSIZE = (1<<16);
 

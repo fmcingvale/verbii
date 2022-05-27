@@ -279,9 +279,11 @@ Object Interpreter::getWordlist() {
 }
 
 void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object)) {
-	if(code) {
+	if(code)
 		throw LangError("Interpreter run() called recursively");
-	}
+
+	if(!to_run)
+		throw LangError("Got NULL* as code in run()");
 
 	code = to_run;
 	codepos = 0;

@@ -395,7 +395,7 @@ function Interpreter:new(obj)
 	obj.__class__ = "Interpreter"
 	
 	-- 3 memory areas: stack, locals, heap (program-allocated memory)
-	obj.STACK_SIZE = (1<<10)
+	obj.STACK_SIZE = (1<<16)
 	obj.LOCALS_SIZE = (1<<10)
 	obj.HEAP_STARTSIZE = (1<<16)
 	

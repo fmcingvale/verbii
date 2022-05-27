@@ -13,7 +13,8 @@
 //#include "reader.hpp"
 //#include "syntax.hpp"
 
-const int STACK_SIZE = (1<<10);
+// setting these small for now to help detect runaway code filling up the stack.
+const int STACK_SIZE = (1<<16);
 const int LOCALS_SIZE = (1<<10);
 const int HEAP_STARTSIZE = (1<<16);
 

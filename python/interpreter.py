@@ -13,7 +13,7 @@ import re
 from errors import LangError
 
 class Interpreter(object):
-	STACK_SIZE = (1<<10)
+	STACK_SIZE = (1<<16)
 	LOCALS_SIZE = (1<<10)
 	HEAP_STARTSIZE = (1<<16) # grows as needed
 

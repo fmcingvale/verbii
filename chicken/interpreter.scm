@@ -30,7 +30,7 @@
 (import langtypes)
 (import errors)
 
-(define STACK_SIZE (expt 2 10))
+(define STACK_SIZE (expt 2 16))
 (define LOCALS_SIZE (expt 2 10))
 (define HEAP_STARTSIZE (expt 2 16))
 
