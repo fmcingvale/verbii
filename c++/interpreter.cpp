@@ -78,8 +78,10 @@ void Interpreter::print_stats() {
 	cout << "  size of Object: " << sizeof(Object) << endl;
 
 	cout << "* Notices:\n";
-	if(SP != SP_EMPTY)
+	if(SP != SP_EMPTY) {
 		cout << "  Stack is not empty! (" << (SP_EMPTY-SP) << " items)\n";
+		cout << " => " << reprStack() << endl;
+	}
 	if(LP != LP_EMPTY)
 		cout << "  Locals are not empty! (" << (LP_EMPTY-LP) << " items)\n";
 }
