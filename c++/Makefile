@@ -22,7 +22,7 @@ GC_LIBS = -lgc -lgccpp
 # this optimization level works fine under Ubuntu
 CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
 
-all: repl
+all: repl min
 
 %.o: %.cpp $(HEADERS)
 	g++ $(CFLAGS) -Wall -c $< -o $@
@@ -38,6 +38,9 @@ test.exe: test.cpp $(TEST_SRC) verbii.a
 
 repl: repl.cpp verbii.a
 	g++ $(CFLAGS) -Wall -o repl repl.cpp verbii.a $(GC_LIBS)
+
+min: run.cpp verbii.a
+	g++ $(CFLAGS) -Wall -o min run.cpp verbii.a $(GC_LIBS)
 
 gctest.exe: gctest.cpp
 	g++ $(CFLAGS) -Wall -o gctest gctest.cpp $(GC_LIBS)

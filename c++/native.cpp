@@ -553,6 +553,21 @@ static void builtin_deserialize(Interpreter *intr) {
 	deserialize_stream(intr, fileIn);
 }
 
+#include <stdio.h>
+
+static void builtin_prompt(Interpreter *intr) {
+	auto prompt = popString(intr,"prompt");
+	// NOTE - ignore any user-set stdout since user needs to see prompt on screen
+	printf("%s", prompt);
+	fflush(stdout);
+	char buf[256];
+	cin.getline(buf, sizeof(buf));	
+	if(cin.eof())
+		intr->push(newVoid());
+	else
+		intr->push(newString(buf));
+}	
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -643,4 +658,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"file-mtime", builtin_file_mtime},
 	{"open-as-stdout", builtin_open_as_stdout},
 	{"deserialize", builtin_deserialize},
+	{"prompt", builtin_prompt},
 };

@@ -1,0 +1,67 @@
+
+\
+\ Experimental verbii bootloader/repl
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+
+\ NOTE - only builtin words allowed here, at least in the functions
+\ that init the interpreter
+
+\ load .b file, run its __main__, then delete __main__
+: deserialize-and-run ( filename -- )
+	deserialize
+	\ run __main__ but be careful -- the __main__ I'm about to run might want to 
+	\ redefine __main__ itself (maybe it loads another module, etc.), so do a little
+	\ trick: first dump __main__ to a list, delete __main__, then run the dumped list
+	'__main__ .dumpword
+	'__main__ ,,del
+	call
+	;
+	
+\ assumes interpreter has just started - get init & compiler loaded
+: init-interpreter ( -- )
+
+	\ load precompiled init & compiler libraries
+	"../lib/init.verb.b" deserialize-and-run 
+	"../lib/compiler.verb.b" deserialize-and-run
+
+	\ load patches file -- .verb only for now, add caching later once this is working
+	
+	\ "../lib/patches.verb" read-file 
+	\ compile & load words into interpreter
+	\ compile-and-load-string
+	\ run main & delete
+	 \ __main__ 
+	\ '__main__ ,,del
+	;
+
+\ run read-eval-print loop
+\
+\ at this point, the compiler/init must be loaded, so i can use any words now
+: repl ( -- )
+	@loop
+		">> " prompt
+		dup void? if >>eof
+		\ "GOT: " . . CR
+		compile-and-load-string
+		\ do same trick as above to safely run & delete __main__
+		'__main__ .dumpword
+		'__main__ ,,del
+		call
+		.S
+		<<loop
+	@eof
+		drop
+		CR "Exiting on EOF" . CR
+	;
+
+\ startup interpreter & run repl
+init-interpreter
+"cmd args:" . cmdline-args . CR
+repl
+
+
+
+
+
