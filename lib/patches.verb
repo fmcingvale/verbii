@@ -22,5 +22,45 @@
 
 ( ------ compiler ------- )
 
+\ if list is [ ,,inline obj1 .. objN ] then push obj1 .. objN to the stack
+\ and remove of list. else leave list alone.
+: flatten-if-inline ( list -- list or items )
+	dup length 0 == if >>done \ empty list, leave on stack
+	dup 0 get ',,inline == if >>flatten
+	return \ not ,,inline, leave on stack
+	@flatten ( list )
+		\ drop ,,inline and push rest of list to stack
+		1 -1 slice unmake drop
+	;
+
+: syntax-define-word
+	syntax-next ( name should be next )
+	dup symbol? not if >>badname
+	\ call syntax-next repeatedly until ';' is found. this will leave all parsed
+	\ words on stack that i'll then make into a list. easy way to do this is remember
+	\ starting value of SP then subtract from SP at end to get # of items parsed.
+	>L SP >L   ( L0=starting SP, L1=name )
+	@loop
+	syntax-next ( get next processed object )
+	dup void? if >>eof
+	dup '; == if >>endword
+	dup list? if >>list \ lists may need special handling, see below
+	<<loop
+	\ when i get a list i need to see if it is [ ,,inline ... ] and flatten it if so
+	@list ( list )
+		flatten-if-inline <<loop
+
+	@badname str "Invalid name after ':' : " swap + error
+	@eof "Unexpected end of input looking for ';'" error
+	@endword
+	drop ( drop ; )
+	L> SP - 1 - ( calc number of items )
+	make-list
+	L> 
+	( save names & compiled words )
+	save-defined-word
+	syntax-next ( save-defined-word has no return value, so return NEXT object )
+	;
+
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR
