@@ -1,5 +1,11 @@
 Global TODO
 
+---[   Periodic  ]------------------------------------------------------
+
+* run all unittests, demos, etc. with -stats across ports to make sure
+  everything matches (# userwords, # tail calls, builtin words, max stack/locals depth)
+  and no Notices are given (i.e. stack/locals not clean)
+
 ---[    Ports    ]------------------------------------------------------
 
 * node.js
@@ -25,7 +31,7 @@ Global TODO
 
 ---[  Libraries  ]------------------------------------------------------
 
-* JSON import/export
+* JSON export
 
 * math: gcd, sqrt
 
@@ -78,6 +84,10 @@ write-string, write-char ... basically I/O with ports concept like scheme
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* read-file should be file-read for consistency with file-exists?, etc.
+
+* need a better way to find lib/ than hardcoding/assuming path in repls
+
 * compiler should insert a 'return' at the end of words to rid of special cases in interpreter
 
 * I think parse-bool can be removed now .. also remove null & ,,null once that is possible
@@ -89,6 +99,9 @@ write-string, write-char ... basically I/O with ports concept like scheme
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
 * why does chicken port report more userwords when running same code as other ports?
+	** I think this is fixed now ... maybe the hashing changes i added a while ago 
+
+* c++ reports (sometimes vastly) different # of tail calls with -stats than other ports
 
 * in native.* the pop* functions should take a 'where' argument like chicken
 
@@ -101,7 +114,7 @@ write-string, write-char ... basically I/O with ports concept like scheme
 * repls are still doing to much work, even more with caching additions. need to push more
   of this to verbii code. maybe interpreter:run should have a safe_run wrapper to handle
   a lot of this that could be called from verbii (??)
-  
+
 * compiler.verb -- in byte-compile, all words for __main__ get pushed to stack and then
   a huge list made at the end. this leads to stack overflows for large files (like the unittests
   where everything is in __main__). would be better to add items in chunks (maybe do an append

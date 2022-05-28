@@ -15,7 +15,7 @@
 	\ redefine __main__ itself (maybe it loads another module, etc.), so do a little
 	\ trick: first dump __main__ to a list, delete __main__, then run the dumped list
 	'__main__ .dumpword
-	'__main__ ,,del
+	del __main__
 	call
 	;
 	
@@ -47,7 +47,7 @@
 		compile-and-load-string
 		\ do same trick as above to safely run & delete __main__
 		'__main__ .dumpword
-		'__main__ ,,del
+		del __main__
 		call
 		.S
 		<<loop
@@ -56,12 +56,82 @@
 		CR "Exiting on EOF" . CR
 	;
 
-\ startup interpreter & run repl
+\ load filename, respecting NOCACHE setting
+: load-file-maybe-cached ( filename -- )
+	NOCACHE ref if >>nocache
+	\ do cached load
+	cached-compile-and-load
+	return
+
+	\ ignore any .b file - load source file and compile
+	@nocache
+		read-file
+		compile-and-load-string
+		;
+	
+\ load & run file
+: run-file ( filename -- )
+	load-file-maybe-cached
+	\ same trick as above to delete __main__ before running
+	'__main__ .dumpword
+	del __main__
+	call
+	;
+
+\ first, must init interpreter for anything else to work
+\ (no userwords are loaded yet .. no compiler, no init lib)
 init-interpreter
-"cmd args:" . cmdline-args . CR
-repl
 
+\ parsed from cmdline args - set defaults
+var FILENAME 1
+void FILENAME set!
 
+var NOCACHE 1
+false NOCACHE set!
+
+var BADARGS 1
+false BADARGS set!
+
+\ parse cmdline args
+cmdline-args 
+{ 
+	\ "ARG:" . dup . CR 
+	dup "-nocache" == if >>set-nocache
+	dup file-exists? if >>set-filename
+	\ else, don't know what it is
+	"Unrecognized command line argument: " swap + . CR
+	true BADARGS set! return
+
+	@set-nocache
+		drop
+		true NOCACHE set! return
+	@set-filename
+		FILENAME ref void? not if >>have-filename
+		FILENAME set! return
+	@have-filename
+		"Extra filename given on command line: " swap + . CR
+		true BADARGS set! return
+} 
+for-each
+
+\ want to do a clean exit instead of throwing error so
+\ host side doesn't restart me and i loop on the same error
+BADARGS ref if >>exit 
+
+\ "GOT ARGS:" . CR
+\ "	Filename:" . FILENAME ref . CR
+\ "	Nocache:" . NOCACHE ref . CR
+
+FILENAME ref void? if >>do-repl
+\ run FILENAME
+FILENAME ref run-file >>exit
+
+\ no filename, run interactive repl loop
+@do-repl
+	repl
+
+@exit
+	return
 
 
 
