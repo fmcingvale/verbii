@@ -30,7 +30,8 @@
 	return \ not ,,inline, leave on stack
 	@flatten ( list )
 		\ drop ,,inline and push rest of list to stack
-		1 -1 slice unmake drop
+		1 -1 slice unmake drop return
+	@done ( list )
 	;
 
 : syntax-define-word

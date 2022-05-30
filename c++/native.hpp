@@ -20,6 +20,8 @@ extern Object native_cmdline_args;
 
 extern bool ALLOW_OVERWRITING_WORDS;
 
+extern bool EXIT_ON_EXCEPTION;
+
 extern std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
 
 

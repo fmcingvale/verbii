@@ -23,6 +23,10 @@ Object native_cmdline_args;
 // whether make-word is allowed to overwrite existing words
 bool ALLOW_OVERWRITING_WORDS = false;
 
+// scripts can set via set-exit-on-exception to tell host whether
+// to restart on exceptions (default is to exit)
+bool EXIT_ON_EXCEPTION = true;
+
 std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
 
 static VINT popInt(Interpreter *intr, const char *errmsg) {
@@ -659,4 +663,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"open-as-stdout", builtin_open_as_stdout},
 	{"deserialize", builtin_deserialize},
 	{"prompt", builtin_prompt},
+	{"set-exit-on-exception", [](Interpreter *intr){EXIT_ON_EXCEPTION = popBool(intr);}},
 };

@@ -528,6 +528,7 @@ clear
 L0 ref L1 ref +
 L0 ref
 L1 ref
+LP 2 + LP! \ clean up locals
 
 ( tests of 'any' )
 clear "abcde" { "e" == } any

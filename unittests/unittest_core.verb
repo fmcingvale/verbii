@@ -187,10 +187,12 @@ ccc
 clear
 def ggg 123 456 789 ;
 ggg
+clear
 
 ( make sure return doesn't crash )
 def zzz 123 456 return ;
 zzz
+clear
 return
 
 ( local stack )
@@ -250,5 +252,6 @@ var x 1
 
 ( check that 'return' at the top level works correctly )
 clear
-10 20 == if >>T 3333 return @T 4444
+10 20 == if >>T return @T 4444
 5555
+

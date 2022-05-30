@@ -85,6 +85,8 @@ int main(int argc, char *argv[]) {
 			auto errstr = "*** " + string(err.what()) + " ***";
 			print_backtrace(intr);
 			printf("%s\n", errstr.c_str());
+			if(EXIT_ON_EXCEPTION)
+				exit(1);
 		}
 	}
 }
