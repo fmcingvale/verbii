@@ -8,15 +8,20 @@
 \ NOTE - only builtin words allowed here, at least in the functions
 \ that init the interpreter
 
-\ load .b file, run its __main__, then delete __main__
-: deserialize-and-run ( filename -- )
-	deserialize
-	\ run __main__ but be careful -- the __main__ I'm about to run might want to 
-	\ redefine __main__ itself (maybe it loads another module, etc.), so do a little
-	\ trick: first dump __main__ to a list, delete __main__, then run the dumped list
+\ safely run currently loaded __main__ and delete it
+: safe-run-and-delete-main ( -- )
+	\ the __main__ I'm about to run might want to redefine __main__ itself 
+	\ (maybe it loads another module, etc.), so do a little trick: 
+	\ first dump __main__ to a list, delete __main__, then run the dumped list
 	'__main__ .dumpword
 	del __main__
 	call
+	;
+
+\ load .b file, run its __main__, then delete __main__
+: deserialize-and-run ( filename -- )
+	deserialize
+	safe-run-and-delete-main
 	;
 	
 \ assumes interpreter has just started - get init & compiler loaded
@@ -40,22 +45,21 @@
 \
 \ at this point, the compiler/init must be loaded, so i can use any words now
 : repl ( -- )
+	\ i do NOT want host to exit on exception, but restart me
+	false set-exit-on-exception
 	@loop
 		">> " prompt
 		dup void? if >>eof
 		\ "GOT: " . . CR
 		compile-and-load-string
-		\ do same trick as above to safely run & delete __main__
-		'__main__ .dumpword
-		del __main__
-		call
+		safe-run-and-delete-main \ run __main__ then delete it
 		.S
 		<<loop
 	@eof
 		drop
 		CR "Exiting on EOF" . CR
 	;
-
+	
 \ load filename, respecting NOCACHE setting
 : load-file-maybe-cached ( filename -- )
 	NOCACHE ref if >>nocache
@@ -69,8 +73,26 @@
 		compile-and-load-string
 		;
 	
-\ load & run file
+\ load & import module from either name.verb or name.verb.b
+\ TODO:
+\	*  define library paths & add search 
+\	* add way to let modules know they are being imported so they
+\	  shouldn't run their main code (unless it's required to init the module of course)
+: import ( name -- )
+	".verb" +
+	dup file-exists? if >>good
+	"Unable to find file:" swap + error
+	@good
+		load-file-maybe-cached
+		\ module may need to init its own globals, etc., so run it
+		safe-run-and-delete-main
+	;
+
+\ load & run file (whole program mode)
 : run-file ( filename -- )
+	\ i want to exit on exceptions to avoid infinite loops
+	true set-exit-on-exception
+
 	load-file-maybe-cached
 	\ same trick as above to delete __main__ before running
 	'__main__ .dumpword
@@ -78,9 +100,41 @@
 	call
 	;
 
+\ run in test mode (like non-interactive repl)
+: run-test ( filename -- )
+	"stream" import \ import stream reader -- TODO guard against multiple import
+	\ create & store my stream to TESTMODE_STREAM (see declaration below ...)
+	stream-reader-open-file TESTMODE_STREAM set!
+	@loop
+		TESTMODE_STREAM ref stream-reader-next-line nip ( line )
+			\ "** LINE:" . dup . CR
+		dup void? if >>done \ eof
+		dup string-empty? if >>skip \ skip blank lines
+		\ print line i'm about to run
+		dup ">>" . . CR
+		\ compile & run
+		compile-and-load-string
+		safe-run-and-delete-main
+		\ print stack result
+		.S
+		<<loop
+	@skip ( line )
+		drop <<loop
+	@done ( line )
+		drop
+		;
+
 \ first, must init interpreter for anything else to work
 \ (no userwords are loaded yet .. no compiler, no init lib)
 init-interpreter
+
+\ this belongs to run-test above, but I have to put it here since it
+\ would not compile it it was above init-interpreter ...
+\
+\ normally this would be a bad usage of a global, but in test mode
+\ i have to stay completely out of the stack & locals for the tests to
+\ run correctly so this is the only real option
+var TESTMODE_STREAM 1
 
 \ parsed from cmdline args - set defaults
 var FILENAME 1
@@ -88,6 +142,9 @@ void FILENAME set!
 
 var NOCACHE 1
 false NOCACHE set!
+
+var TESTMODE 1
+false TESTMODE set!
 
 var BADARGS 1
 false BADARGS set!
@@ -97,6 +154,7 @@ cmdline-args
 { 
 	\ "ARG:" . dup . CR 
 	dup "-nocache" == if >>set-nocache
+	dup "-test" == if >>set-testmode
 	dup file-exists? if >>set-filename
 	\ else, don't know what it is
 	"Unrecognized command line argument: " swap + . CR
@@ -105,6 +163,9 @@ cmdline-args
 	@set-nocache
 		drop
 		true NOCACHE set! return
+	@set-testmode
+		drop
+		true TESTMODE set! return
 	@set-filename
 		FILENAME ref void? not if >>have-filename
 		FILENAME set! return
@@ -123,13 +184,20 @@ BADARGS ref if >>exit
 \ "	Nocache:" . NOCACHE ref . CR
 
 FILENAME ref void? if >>do-repl
-\ run FILENAME
+\ got filename -- did I get -test or not?
+TESTMODE ref if >>do-test-mode
+
+\ no -test - run FILENAME as a program
 FILENAME ref run-file >>exit
+
+\ got -test - run filename as a test
+@do-test-mode
+	FILENAME ref run-test >>exit
 
 \ no filename, run interactive repl loop
 @do-repl
 	repl
-
+	\ fall through to exit
 @exit
 	return
 
