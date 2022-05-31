@@ -33,12 +33,14 @@
 
 	\ load patches file -- .verb only for now, add caching later once this is working
 	
-	\ "../lib/patches.verb" read-file 
+	"../lib/patches.verb" read-file 
 	\ compile & load words into interpreter
-	\ compile-and-load-string
+	true set-allow-overwrite-words
+	compile-and-load-string
 	\ run main & delete
-	 \ __main__ 
-	\ '__main__ ,,del
+	__main__ 
+	'__main__ ,,del
+	false set-allow-overwrite-words
 	;
 
 \ run read-eval-print loop
@@ -47,6 +49,8 @@
 : repl ( -- )
 	\ i do NOT want host to exit on exception, but restart me
 	false set-exit-on-exception
+
+	"Verbi (mini)" . CR
 	@loop
 		">> " prompt
 		dup void? if >>eof

@@ -132,9 +132,3 @@
 => 
 >> foo2
 *** No such jump: <<badlabel ***
->> ( missing keys in table )
-=> 
->> [ [ "zzz" 444 ] [ "yyy" 333 ] [ "aaa" 111 ] ] make-dict 
-=> { "aaa" => 111 "yyy" => 333 "zzz" => 444 } 
->> "bbb" get
-*** No such key in dict: "bbb" ***

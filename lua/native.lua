@@ -528,7 +528,7 @@ function builtin_get(intr)
 		if not isString(index) then
 			error(">>>get (dict) expects string key")
 		elseif obj.dict[index.value] == nil then
-			error(">>>No such key in dict: " .. fmtStackPrint(index))
+			intr:push(new_Void()) -- return void when key doesn't exist
 		else
 			intr:push(obj.dict[index.value])
 		end

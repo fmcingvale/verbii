@@ -436,8 +436,10 @@ def builtin_get(I):
 		I.push(LangString(obj.s[index]))
 	elif isDict(obj):
 		if not isString(index): raise LangError("get requires string key, got: " + fmtStackPrint(index))
-		if index not in obj: raise LangError("No such key in dict: " + fmtStackPrint(index))
-		I.push(obj[index])
+		if index not in obj:
+			I.push(LangVoid()) # missing key returns void
+		else:
+			I.push(obj[index])
 	else:
 		raise LangError("Object does not support get: " + fmtStackPrint(obj))
 	

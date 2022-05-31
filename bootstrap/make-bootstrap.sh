@@ -26,11 +26,11 @@ fi
 if [ "$line" == "YES" ]; 
 then
 	echo ""
-	declare -a Libraries=("init" "compiler")	
+	declare -a Libraries=("boot" "init" "compiler")	
 	for name in ${Libraries[@]}; do
 		echo "Bootstrapping " "$name.verb"
 		
-		# causes an error to overwrite (at least) compiler.verb.b directly,
+		# trying to overwrite (at least) compiler.verb.b directly causes an error,
 		# so save to temp file then copy
 		#
 		# use -nocache to be safer in case i'm compiling changes to the caching code

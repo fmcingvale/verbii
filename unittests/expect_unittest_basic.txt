@@ -768,6 +768,10 @@ and		now		with			tabs
 => { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 333 
 >> drop
 => { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 
+>> dup "zyzyz" get
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } <*void*> 
+>> drop
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 
 >> "xyz" 888 put
 => { "bbb" => 555 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 } 
 >> "bbb" 444 put

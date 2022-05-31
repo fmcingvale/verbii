@@ -570,7 +570,7 @@ class Builtins {
 				if(dict.dict.ContainsKey(key))
 					intr.push(dict.dict[key]);
 				else
-					throw new LangError("No such key in dict: " + indexOrKey.fmtStackPrint());
+					intr.push(new LangVoid()); // void if key doesn't exist
 			}
 			else
 				throw new LangError("Expecting string key but got: " + indexOrKey.fmtStackPrint());

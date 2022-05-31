@@ -89,7 +89,3 @@ foo1
 
 foo2
 
-( missing keys in table )
-
-[ [ "zzz" 444 ] [ "yyy" 333 ] [ "aaa" 111 ] ] make-dict 
-"bbb" get

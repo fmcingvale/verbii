@@ -439,6 +439,8 @@ clear
 dup
 "uuu" get
 drop
+dup "zyzyz" get
+drop
 "xyz" 888 put
 "bbb" 444 put
 clear

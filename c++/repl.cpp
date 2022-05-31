@@ -42,7 +42,6 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 
 	intr->run(code);
 	// always delete __main__, else next file will fail to load
-	//printf("DEL MAIN 1\n");
 	intr->deleteWord("__main__");
 }
 
@@ -50,19 +49,7 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 string compile_and_load_string(Interpreter *intr, string &text, bool allowOverwrite) {
 	// set flag so make-word can overwrite existing words when requested
 	ALLOW_OVERWRITING_WORDS = allowOverwrite;
-	// normal implementation -- see below if errors are happening in the compiler
-	#if 0
-	intr->push(newString(text));
-	auto code = intr->lookup_word("compile-and-load-string");
-	if(!code)
-		throw LangError("Unable to find compile-and-load-string");
-
-	intr->run(code);
-	#endif
-	// normally don't want to catch errors here, better to catch them later,
-	// but sometimes the compiler breaks so badly it's helpful to turn this on
-	// temporarily
-	#if 1
+	// catch compiler errors
 	try {
 		intr->push(newString(text));
 		auto code = intr->lookup_word("compile-and-load-string");
@@ -80,7 +67,6 @@ string compile_and_load_string(Interpreter *intr, string &text, bool allowOverwr
 		//print_backtrace(intr);
 		return errstr;
 	}
-	#endif
 	// turn flag back off (default)
 	ALLOW_OVERWRITING_WORDS = false;
 }
@@ -114,7 +100,7 @@ string cached_compile_and_load_file(Interpreter *intr, string &filename, bool al
 		return ""; // no error
 	}
 	else {
-		// caching disabled
+		// non-caching version
 		string text = readfile(filename);
 		return compile_and_load_string(intr, text, allowOverwrite);
 	}
@@ -174,7 +160,6 @@ string safe_run_main(Interpreter *intr, bool singlestep, bool backtrace_on_error
 
 		// subtlety -- the code i'm about to run might want to redefine __main__
 		// (i.e. if i'm running the compiler). so delete __main__ BEFORE running
-		//printf("DEL MAIN 2\n");
 		intr->deleteWord("__main__");
 
 		if(singlestep)
@@ -205,10 +190,11 @@ Interpreter* newInterpreter() {
 	// source file, except it is allowed to overwrite existing words
 
 	// FIX for now don't cache patches file
-	//string text = readfile(PATCHESLIB);
-	//compile_and_load_string(intr,text,true);
+	string text = readfile(PATCHESLIB);
+	auto errmsg = compile_and_load_string(intr,text,true);
 	
-	auto errmsg = cached_compile_and_load_file(intr, PATCHESLIB, true);
+	//auto errmsg = cached_compile_and_load_file(intr, PATCHESLIB, true);
+
 	if(errmsg.length() >0) {
 		cout << errmsg << endl;
 		// can't continue if patches didn't load OK

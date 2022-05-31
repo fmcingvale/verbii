@@ -391,7 +391,7 @@
 			(if (not (String? index))
 				(lang-error 'get "Key must be string in get")
 				(if (not (hash-table-exists? (Dict-table obj) (value index)))
-					(lang-error 'get "No such key in dict: " (fmtStackPrint index))
+					(push intr (make-Void)) ; return void when missing key
 					(push intr (hash-table-ref (Dict-table obj) (value index))))))
 					
 		(else

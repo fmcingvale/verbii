@@ -14,6 +14,8 @@
 #include "native.hpp"
 using namespace std;
 
+static const char *BOOTFILE = "../lib/boot.verb.b";
+
 void backtrace_curframe(Interpreter *intr) {
 	string trace = "";
 	int nr = 7; // number of words to print in each frame
@@ -78,7 +80,7 @@ int main(int argc, char *argv[]) {
 	while(1) {
 		try {
 			intr = new Interpreter();
-			deserialize_and_run(intr, "boot.verb.b");
+			deserialize_and_run(intr, BOOTFILE);
 			break;
 		}
 		catch (LangError &err) {
