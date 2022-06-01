@@ -1,25 +1,29 @@
 ***                                                                        ***
-*** READ ALL THESE NOTES BEFORE HACKING lib/init.verb or lib/compiler.verb ***
+*** READ ALL THESE NOTES BEFORE HACKING lib/boot.verb, lib/init.verb       ***
+*** or lib/compiler.verb                                                   ***
+***                                                                        ***
 ***          YOU CAN EASILY BREAK YOUR VERBII INSTALLATION!                ***
 ***                                                                        ***
 
 Verbii is fully bootstrapped, meaning there is no longer a non-Verbii compiler that
-can compile Verbii code. There are two bytecode (.b) files which are required in order
+can compile Verbii code. There are three bytecode (.b) files which are required in order
 for Verbii to come up in a working state.
 
 Verbii startup sequence:
 
-	1. New Interpreter created, contains only builtin (native) words.
-	   This Interpreter cannot compile code, so is basically non-functional.
+	1. Native (host language) creates new Interpreter. This interpreter contains 
+	   only builtin (native/host language) words. This interpreter cannot compile
+	   code so really is unable to do much of anything.
 
-	2. The precompiled lib/init.verb.b and lib/compiler.verb.b (bytecode files) are 
-	   loaded into the interpreter.
+	2. lib/boot.verb.b is loaded (by host language) into the interpreter and run.
+	
+	3. Boot process (in verbii) loads lib/init.verb.b and lib/compiler.verb.b into the interpreter.
 
 	3. At this point, Verbii can compile Verbii code.
 	   
 	4. lib/patches.verb is compiled and loaded (this is important, see below)
 
-	** NOTE that compiler.verb and init.verb are not read as part of startup! Any 
+	** NOTE that boot.verb, compiler.verb and init.verb are NOT read as part of startup! Any 
 	** changes made to those files have no effect until after the system is bootstrapped
 	** again. This is why it is so important to test changes via patches first.
 	**
@@ -30,11 +34,12 @@ The chicken-and-egg problem is how to compile the .b files since a working compi
 is required to create them.
 
 Verbii comes with prebuilt .b files so this isn't a problem normally. However, if you
-wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
+wish to edit boot.verb, init.verb or compiler.verb, follow these steps CAREFULLY:
 
-1. Copy & paste any existing words you want to change from init.verb and/or compiler.verb 
-   into lib/patches.verb. If you want to add new words, put those changes in patches.verb as well. 
-   Words defined in patches.verb are allowed to overwrite existing words (this is the ONLY time this is possible).
+1. Copy & paste any existing words you want to change from boot/init/compiler into 
+   lib/patches.verb. If you want to add new words, put those changes in patches.verb as well. 
+   Words defined in patches.verb are allowed to overwrite existing words (this is the 
+   ONLY time this is possible by default(*1)).
 
 2. Test your changes as throughly as possible (at a minimum, run-all-regressions.sh at the top level). 
    By putting changes ONLY in patches.verb your system is safe since the .b files are not touched. 
@@ -45,15 +50,16 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 4. Bootstrap new init/compiler:
 
 	#===============================================================================================
-	# MAKE A BACKUP OF lib/init.verb.b and lib/compiler.verb.b -- if something below breaks, copy
-	# those backups over the lib/*.b files to restore system to a working state.
+	# MAKE A BACKUP OF boot/init/verb -- if something below breaks, copy those backups over the 
+	# lib/*.b files to restore system to a working state [or if using git, just revert the files]
 	#===============================================================================================
 
+	$ cp lib/boot.verb.b lib/boot.verb.b.WORKING 
 	$ cp lib/init.verb.b lib/init.verb.b.WORKING 
 	$ cp lib/compiler.verb.b lib/compiler.verb.b.WORKING 
 	
 	# NOTE: make-boostrap.sh uses the c++ repl -- you can change it to any other port if you
-	# don't have/can't build the c++ port
+	# don't have or can't build the c++ port
 
 	$ cd bootstrap
 	$ ./make-bootstrap.sh
@@ -71,4 +77,12 @@ wish to edit lib/init.verb or lib/compiler.verb, follow these steps CAREFULLY:
 	$ ./makediffs.sh
 		-- ensure ALL diffs are ZERO before continuing.
 
-Your new compiler/init should be working now; safe to commit changes.
+Your new boot/compiler/init should be working now; safe to commit changes.
+
+NOTE: The above process is SAFER than directly editing boot/init/compiler.verb but not foolproof. 
+Sometimes I still mess things up and have to manually edit the .b files to fix it.
+
+Footnotes:
+*1 - it is now possible to control this via set-allow-overwrite-words, but the default is not
+     to allow words to be overwritten. I find this helps track down subtle errors in the 
+	 implementations that I would otherwise not notice.
