@@ -283,7 +283,9 @@ static void builtin_get(Interpreter *intr) {
 			throw LangError("get expects string key, got: " + indexOrKey.fmtStackPrint());
 		auto entry = obj.asDict()->find(indexOrKey.asString());
 		if(entry == obj.asDict()->end())
-			throw LangError("No such key in dict: " + indexOrKey.fmtStackPrint());
+			// no such key -> void (since void is never a valid stored object)
+			intr->push(newVoid());
+		else
 		 intr->push((*obj.asDict())[indexOrKey.asString()]);
 	}
 	else
