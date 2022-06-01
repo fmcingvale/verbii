@@ -106,7 +106,6 @@
 
 \ run in test mode (like non-interactive repl)
 : run-test ( filename -- )
-	"stream" import \ import stream reader -- TODO guard against multiple import
 	\ create & store my stream to TESTMODE_STREAM (see declaration below ...)
 	stream-reader-open-file TESTMODE_STREAM set!
 	@loop

@@ -87,9 +87,7 @@ y '__main__
 y ,,del
 y call
 W run-test
-L 32
-s stream
-y import
+L 30
 y stream-reader-open-file
 y TESTMODE_STREAM
 y set!
