@@ -67,6 +67,8 @@ int main(int argc, char *argv[]) {
 	bool SHOW_RUN_STATS = false;
 	native_cmdline_args = newList();
 
+	// catch only the flags that have to be implemented natively
+	// pass the rest through as-is to boot.verb code
 	for(int i=1; i<argc; ++i) {
 		if(!strcmp(argv[i], "-stats")) {
 			SHOW_RUN_STATS = true;
@@ -87,6 +89,7 @@ int main(int argc, char *argv[]) {
 			auto errstr = "*** " + string(err.what()) + " ***";
 			print_backtrace(intr);
 			printf("%s\n", errstr.c_str());
+			// see if boot.verb requested to exit on exception or run again
 			if(EXIT_ON_EXCEPTION)
 				exit(1);
 		}

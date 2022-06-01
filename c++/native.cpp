@@ -286,7 +286,7 @@ static void builtin_get(Interpreter *intr) {
 			// no such key -> void (since void is never a valid stored object)
 			intr->push(newVoid());
 		else
-		 intr->push((*obj.asDict())[indexOrKey.asString()]);
+		 	intr->push((*obj.asDict())[indexOrKey.asString()]);
 	}
 	else
 		throw LangError("get not supported for object: " + obj.fmtStackPrint());
@@ -536,8 +536,8 @@ static void builtin_file_mtime(Interpreter *intr) {
 // ( filename -- ; open filename and write stdout there )
 // ( void -- ; close any file attached to stdout and reset to normal stdout )
 //
-// this only redirects builtins 'puts' and '.c'. this does NOT redirect error messages,
-// they still go to the screen.
+// this only redirects builtins 'puts' and '.c'. this does NOT redirect error messages
+// and (builtin) prompts, they still go to the screen.
 static void builtin_open_as_stdout(Interpreter *intr) {
 	auto obj = intr->pop();
 	if(obj.isVoid()) {
@@ -557,6 +557,7 @@ static void builtin_deserialize(Interpreter *intr) {
 	auto filename = popString(intr,"deserialize");
 	ifstream fileIn(filename);
 	deserialize_stream(intr, fileIn);
+	// no return, just loads words into interpreter
 }
 
 #include <stdio.h>
@@ -660,10 +661,12 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"run-time", builtin_run_time},
 	{",,new-dict", builtin_new_dict},
 
+	// new words needed for running boot.verb
 	{"file-exists?", builtin_file_exists},
 	{"file-mtime", builtin_file_mtime},
 	{"open-as-stdout", builtin_open_as_stdout},
 	{"deserialize", builtin_deserialize},
 	{"prompt", builtin_prompt},
 	{"set-exit-on-exception", [](Interpreter *intr){EXIT_ON_EXCEPTION = popBool(intr);}},
+	{"set-allow-overwrite-words", [](Interpreter *intr){ALLOW_OVERWRITING_WORDS = popBool(intr);}},
 };
