@@ -13,13 +13,17 @@ from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
 					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
 						isNull, parseBool, LangVoid, isVoid, LangNull
-import time
+import time, sys
 
 # has to be set externally
 NATIVE_CMDLINE_ARGS = []
 ALLOW_OVERWRITE_WORDS = False
+EXIT_ON_EXCEPTION = True
 
 STARTUP_TIME = time.time()
+
+# file for writing output (puts, .c)
+FILE_STDOUT = sys.stdout
 
 # see notes in C++ implementation of this function.
 # this returns (quotient,mod) instead of taking mod as a return param.
@@ -90,19 +94,6 @@ def builtin_fromlocal(I: Interpreter):
 	
 	I.push(I.OBJMEM[I.LP])
 	I.LP += 1
-
-def builtin_showdef(I):
-	name = I.syntax.nextWordOrFail()
-	if name not in I.WORDS:
-		print("No such word: " + name)
-		return
-
-	wordlist = I.WORDS[name]
-	sys.stdout.write(name + ": ")
-	for w in wordlist:
-		sys.stdout.write(str(w) + " ")
-
-	print(";")
 
 def popInt(I):
 	obj = I.pop()
@@ -220,7 +211,7 @@ def builtin_puts(I, obj):
 	if not isString(obj):
 		raise LangError("puts requires string but got: " + fmtStackPrint(obj))
 
-	sys.stdout.write(obj.s)
+	FILE_STDOUT.write(obj.s)
 
 def builtin_wordlist(I):
 	I.push(list(I.WORDS.keys()))
@@ -453,7 +444,51 @@ def builtin_bit_shl(I):
 	a = popInt(I)
 	I.push((a<<nr) & 0xffffffff)
 
-import sys
+def builtin_set_exit_on_exception(I, flag):
+	global EXIT_ON_EXCEPTION
+	EXIT_ON_EXCEPTION = flag
+
+def builtin_set_allow_overwrite_words(I, flag):
+	global ALLOW_OVERWRITE_WORDS
+	ALLOW_OVERWRITE_WORDS = flag
+
+def builtin_deserialize(I):
+	from deserialize import deserialize_stream
+	fileIn = open(popString(I,"deserialize"), "r")
+	deserialize_stream(I, fileIn)
+	# no return, just loads words into interpreter
+
+def builtin_prompt(I):
+	prompt = popString(I,"prompt")
+	# NOTE - ignore any user-set stdout since user needs to see prompt on screen
+	sys.stdout.write(prompt)
+	sys.stdout.flush()
+	line = sys.stdin.readline()
+	if len(line) == 0:
+		I.push(LangVoid()) # eof
+	else:
+		# chop off any \r or \n
+		while len(line) and line[-1] in "\r\n":
+			line = line[:-1]
+
+		I.push(LangString(line))
+
+# ( filename -- ; open filename and write stdout there )
+# ( void -- ; close any file attached to stdout and reset to normal stdout )
+#
+# this only redirects builtins 'puts' and '.c'. this does NOT redirect error messages
+# and (builtin) prompts, they still go to the screen.
+def builtin_open_as_stdout(I):
+	global FILE_STDOUT
+	obj = I.pop()
+	if isVoid(obj):
+		if FILE_STDOUT != sys.stdout:
+			FILE_STDOUT.close()
+			FILE_STDOUT = sys.stdout
+	elif isString(obj):
+		FILE_STDOUT = open(obj.s, "w")
+
+import os
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
 	'+': ([], builtin_add),
@@ -464,7 +499,7 @@ BUILTINS = {
 	'f.setprec': ([int], builtin_fsetprec),
 	'==': ([], builtin_equal),
 	'>': ([], builtin_greater),
-	'.c': ([int], lambda I,a: sys.stdout.write(chr(a))),
+	'.c': ([int], lambda I,a: FILE_STDOUT.write(chr(a))),
 	# object means any type
 	# format TOS for stack display and push string
 	'repr': ([object], lambda I,o: I.push(LangString(fmtStackPrint(o)))),
@@ -492,7 +527,6 @@ BUILTINS = {
 	'LP!': ([int], builtin_setlp),
 	'>L': ([], builtin_tolocal),
 	'L>': ([], builtin_fromlocal),
-	'.showdef': ([], builtin_showdef),
 	'.wordlist': ([], builtin_wordlist),
 	'error': ([], builtin_error),
 
@@ -531,5 +565,14 @@ BUILTINS = {
 	
 	'run-time': ([], lambda I: I.push(time.time()-STARTUP_TIME)),
 	',,new-dict': ([], lambda I: I.push({})),
+
+	# new words needed for running boot.verb
+	'file-exists?': ([], lambda I: I.push(os.path.isfile(popString(I,'file-exists?')))),
+	'file-mtime': ([], lambda I: I.push(os.path.getmtime(popString(I,'file-mtime')))),
+	'open-as-stdout': ([], builtin_open_as_stdout),
+	'deserialize': ([], builtin_deserialize),
+	'prompt': ([], builtin_prompt),
+	'set-exit-on-exception': ([bool], builtin_set_exit_on_exception),
+	'set-allow-overwrite-words': ([bool], builtin_set_allow_overwrite_words),
 }
 
