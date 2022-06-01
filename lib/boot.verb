@@ -50,7 +50,7 @@
 	\ i do NOT want host to exit on exception, but restart me
 	false set-exit-on-exception
 
-	"Verbi (mini)" . CR
+	"Verbii (mini)" . CR
 	@loop
 		">> " prompt
 		dup void? if >>eof

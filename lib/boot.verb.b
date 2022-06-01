@@ -30,7 +30,7 @@ W repl
 L 22
 b false
 y set-exit-on-exception
-s Verbi%32(mini)
+s Verbii%32(mini)
 y .
 y CR
 y @loop
