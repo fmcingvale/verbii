@@ -65,6 +65,7 @@ int main(int argc, char *argv[]) {
 	x_mem_init();
 
 	bool SHOW_RUN_STATS = false;
+	bool DO_PROFILING = false;
 	native_cmdline_args = newList();
 
 	// catch only the flags that have to be implemented natively
@@ -72,6 +73,10 @@ int main(int argc, char *argv[]) {
 	for(int i=1; i<argc; ++i) {
 		if(!strcmp(argv[i], "-stats")) {
 			SHOW_RUN_STATS = true;
+		}
+		else if(!strcmp(argv[i], "-profile")) {
+			DO_PROFILING = true;
+			SHOW_RUN_STATS = true; // -profile implies -stats
 		}
 		else {
 			native_cmdline_args.data.objlist->push_back(newString(argv[i]));
@@ -82,7 +87,10 @@ int main(int argc, char *argv[]) {
 	while(1) {
 		try {
 			intr = new Interpreter();
+			intr->PROFILE_CALLS = DO_PROFILING;
 			deserialize_and_run(intr, BOOTFILE);
+			if(SHOW_RUN_STATS)
+				intr->print_stats();
 			break;
 		}
 		catch (LangError &err) {

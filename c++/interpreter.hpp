@@ -93,6 +93,7 @@ class Interpreter {
 	std::vector<Closure*> callstack_closure;
 
 	// stats
+	bool PROFILE_CALLS;
 	void print_stats();
 	int max_callstack;
 	int min_run_SP;
@@ -102,6 +103,10 @@ class Interpreter {
 	protected:
 	// use functions above so error handling can be in one place
 	std::map<std::string,ObjList*> WORDS; // user-defined words
+
+	// when profiling, this is the number of times a word (either builtin or user-defined) is called
+	std::map<std::string,int> WORD_CALLS;
+	void print_word_calls();
 };
 
 

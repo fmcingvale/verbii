@@ -16,6 +16,7 @@
 #include "xmalloc.hpp"
 #include "string.h"
 #include "langtypes.hpp"
+#include <algorithm>
 using namespace std;
 
 Interpreter::Interpreter() {
@@ -51,6 +52,27 @@ Interpreter::Interpreter() {
 	min_run_SP = SP;
 	min_run_LP = LP;
 	nr_tailcalls = 0;
+	PROFILE_CALLS = false;
+}
+
+void Interpreter::print_word_calls() {
+	size_t MAX_WORDS = 20;
+	cout << "  Word calls (top " << MAX_WORDS << "):\n";
+
+	// sort by call frequency
+	vector<tuple<string,int>> clist;
+	for(const auto& ent: WORD_CALLS)
+		clist.push_back(make_tuple(ent.first,ent.second));
+
+	sort(clist.begin(), clist.end(), [](tuple<string,int> a,tuple<string,int> b) { return get<1>(a) > get<1>(b); });
+
+	// only show first MAX_WORDS
+	if(clist.size() > MAX_WORDS)
+		clist.resize(MAX_WORDS);
+
+	for(const auto& tup: clist) {
+		cout << "    " << get<0>(tup) << ": " << get<1>(tup) << endl;
+	}
 }
 
 void Interpreter::print_stats() {	
@@ -62,7 +84,9 @@ void Interpreter::print_stats() {
 	cout << "  Max locals depth: " << (LP_EMPTY - min_run_LP) << endl;
 	cout << "  Max callstack depth: " << max_callstack << endl;
 	cout << "  Tail calls: " << nr_tailcalls << endl;
-
+	if(PROFILE_CALLS) {
+		print_word_calls();
+	}
 	cout << "* C++:\n";
 #if defined(USE_GCMALLOC)
 	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
@@ -415,6 +439,13 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			auto bltin = BUILTINS.find(obj.asSymbol());
 			if(bltin != BUILTINS.end()) {
 				bltin->second(this);
+				if(PROFILE_CALLS) {
+					auto w = WORD_CALLS.find(obj.asSymbol());
+					if(w == WORD_CALLS.end())
+						WORD_CALLS[obj.asSymbol()] = 1; // new entry
+					else
+						WORD_CALLS[obj.asSymbol()] += 1;
+				}
 				continue;
 			}
 			
@@ -433,6 +464,13 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 				// execute word by pushing its objlist and continuing
 				code_call(wordlist);
 				//syntax->pushObjList(wordlist);
+				if(PROFILE_CALLS) {
+					auto w = WORD_CALLS.find(obj.asSymbol());
+					if(w == WORD_CALLS.end())
+						WORD_CALLS[obj.asSymbol()] = 1; // new entry
+					else
+						WORD_CALLS[obj.asSymbol()] += 1;
+				}
 				continue;
 			}
 		}
