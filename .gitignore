@@ -26,3 +26,5 @@ unittests/*.verb.b
 c++/min
 lib/patches.verb.b
 c++/boot.verb.b
+lua/temp-out.txt
+c++/temp-out.txt

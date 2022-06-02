@@ -171,5 +171,6 @@ Expect: 789 Gur DHVPX oebja SBK whzcf bire gur YNML qbt *#%
         789 Gur DHVPX oebja SBK whzcf bire gur YNML qbt *#& 
 Expect: 789 The QUICK brown FOX jumps over the LAZY dog *#& 
         789 The QUICK brown FOX jumps over the LAZY dog *#& 
+Expect true:  true 
 END STACK: => 
 

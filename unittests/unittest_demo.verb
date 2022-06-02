@@ -579,5 +579,12 @@ swap . . CR
 "       " .
 [ rot13-char ] map . CR
 
+\ simple test of open-as-stdout
+"temp-out.txt" open-as-stdout
+"123456" puts
+void open-as-stdout
+"Expect true: " .
+"temp-out.txt" file-read parse-int 123456 == . CR
+
 "END STACK:" . .S CR
 
