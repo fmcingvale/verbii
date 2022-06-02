@@ -487,6 +487,8 @@ def builtin_open_as_stdout(I):
 			FILE_STDOUT = sys.stdout
 	elif isString(obj):
 		FILE_STDOUT = open(obj.s, "w")
+	else:
+		raise LangError("Unknown arg to open-as-stdout:" + fmtStackPrint(obj))
 
 import os
 # the interpreter pops & checks the argument types, making the code shorter here

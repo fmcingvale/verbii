@@ -546,9 +546,10 @@ static void builtin_open_as_stdout(Interpreter *intr) {
 			fp_stdout = stdout;
 		}
 	}
-	else if(obj.isString()) {
+	else if(obj.isString())
 		fp_stdout = fopen(obj.asString(), "w");
-	}
+	else
+		throw LangError("Unknown arg to open-as-stdout: " + obj.fmtStackPrint());
 }
 
 #include "deserialize.hpp"
