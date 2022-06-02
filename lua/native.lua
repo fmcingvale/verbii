@@ -6,13 +6,25 @@
 	Ported from Python version
 ]]
 require("langtypes")
-local SOCKET = require("socket") -- luasocket
+-- local SOCKET = require("socket") -- luasocket
+local POSIX = require("posix") -- luaposix
 
 -- these are globals
 NATIVE_CMDLINE_ARGS = {}
 ALLOW_OVERWRITING_WORDS = false
+EXIT_ON_EXCEPTION = true
 
-local STARTUP_TIME = SOCKET.gettime()
+-- file to write like stdout
+local FILE_STDOUT = io.stdout
+
+-- local STARTUP_TIME = SOCKET.gettime()
+
+function get_usec_time()
+	local t = POSIX.gettimeofday()
+	return t["sec"] + t["usec"]/1000000.0
+end
+
+local STARTUP_TIME = get_usec_time()
 
 function set_native_cmdline_args(args)
 	NATIVE_CMDLINE_ARGS = args
@@ -65,7 +77,7 @@ function builtin_puts(intr)
 	if not isString(obj) then
 		error(">>>puts requires string but got " .. fmtStackPrint(obj))
 	end
-	io.write(obj.value)
+	FILE_STDOUT:write(obj.value)
 end
 
 -- ( obj addr -- ) - save obj to addr
@@ -125,9 +137,9 @@ function builtin_fromlocal(intr)
 end
 
 function builtin_printchar(intr,a) 
-	io.write(string.char(a))
+	FILE_STDOUT:write(string.char(a))
 	if a == 10 or a == 13 then
-		io.flush()
+		FILE_STDOUT:flush()
 	end
 end
 
@@ -187,6 +199,15 @@ function popList(intr)
 		return obj
 	else
 		error(">>>Expecting list but got: " .. fmtStackPrint(obj))
+	end
+end
+
+function popBool(intr)
+	local obj = intr:pop()
+	if isBool(obj) then
+		return obj
+	else
+		error(">>>Expecting bool but got: " .. fmtStackPrint(obj))
 	end
 end
 
@@ -459,6 +480,20 @@ function builtin_make_lambda(intr)
 	intr:push(new_Lambda(deepcopy(list)))
 end
 
+function builtin_open_as_stdout(intr)
+	local obj = intr:pop()
+	if isVoid(obj) then
+		if FILE_STDOUT ~= io.stdout then
+			FILE_STDOUT:close()
+			FILE_STDOUT = io.stdout
+		end
+	elseif isString(obj) then
+		FILE_STDOUT = io.open(obj.value, "w")
+	else
+		error(">>>Unknown arg to open-as-stdout:" .. fmtStackPrint(obj))
+	end
+end
+
 function builtin_readfile(intr)
 	local filename = popString(intr)
 	local f = io.open(filename, "r")
@@ -564,6 +599,48 @@ function builtin_put(intr)
 	end
 end
 
+-- does filename exist AND is a regular file
+function file_exists(filename)
+	local st = POSIX.stat(filename)
+	if st == nil then 
+		return false
+	else 
+		return st["type"] == "regular"
+	end
+end
+
+function builtin_file_exists(intr)
+	intr:push(file_exists(popString(intr)))
+end
+
+function builtin_file_mtime(intr)
+	local filename = popString(intr)
+	if not file_exists(filename) then
+		error(">>>No such file: " .. filename)
+	else
+		intr:push(POSIX.stat(filename)["mtime"])
+	end
+end
+
+function builtin_deserialize(intr)
+	local f = io.open(popString(intr), "r")
+	deserialize_stream(intr, f)
+	f:close()
+	-- no return, just loads words into interpreter
+end
+
+function builtin_prompt(intr)
+	local prompt = popString(intr)
+	io.write(prompt)
+	io.flush()
+	local line = io.read("l")
+	if line == nil then
+		intr:push(new_Void())
+	else
+		intr:push(new_String(line))
+	end
+end
+
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -630,6 +707,17 @@ BUILTINS = {
 	["bit-shl"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a<<n) & 0xffffffff) end},
 	["bit-shr"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a>>n) & 0xffffffff) end},
 	
-	["run-time"] = { {}, function(intr) intr:push(new_Float(SOCKET:gettime()-STARTUP_TIME)) end},
+	--["run-time"] = { {}, function(intr) intr:push(new_Float(SOCKET:gettime()-STARTUP_TIME)) end},
+	["run-time"] = { {}, function(intr) intr:push(new_Float(get_usec_time()-STARTUP_TIME)) end},
 	[",,new-dict"] = { {}, function(intr) intr:push(new_Dict()) end},
+
+	-- new words needed for running boot.verb
+	["file-exists?"] = { {}, builtin_file_exists},
+	["file-mtime"] = { {}, builtin_file_mtime},
+	["open-as-stdout"] = { {}, builtin_open_as_stdout},
+	["deserialize"] = { {}, builtin_deserialize},
+	["prompt"] = { {}, builtin_prompt},
+	["set-exit-on-exception"] = { {}, function(intr) EXIT_ON_EXCEPTION = popBool(intr) end},
+	["set-allow-overwrite-words"] = { {}, function(intr) ALLOW_OVERWRITING_WORDS = popBool(intr) end},
+
 }
