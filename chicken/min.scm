@@ -9,19 +9,15 @@
 (declare (standard-bindings))
 (declare (extended-bindings))
 
-;; this is my first try using coops so ... may be some suboptimal stuff here ...
-
-;(import coops-primitive-objects)
-(import srfi-13) ; string library
-(import srfi-34) ; exceptions
-(import (chicken condition)) ; exception object
-(import (chicken format)) ; fprintf
-(import srfi-1) ; list library
-;(import coops)
-(import dyn-vector)
-(import miscmacros) ; inc! dec! 
-(import srfi-69) ; hash-tables
-(import (chicken io))
+;(import srfi-13) ; string library
+;(import srfi-34) ; exceptions
+;(import (chicken condition)) ; exception object
+;(import (chicken format)) ; fprintf
+;(import srfi-1) ; list library
+;(import dyn-vector)
+;(import miscmacros) ; inc! dec! 
+;(import srfi-69) ; hash-tables
+;(import (chicken io))
 
 (import (chicken platform))
 (cond-expand
@@ -61,8 +57,8 @@
 		
 (import simple-exceptions) ; with-exn-handler
 
-(import srfi-193)
-(import (chicken file))
+(import srfi-193) ; command line ... is this not in a base chicken library??
+;(import (chicken file))
 
 ;(print "COMMAND LINE: " (command-line))
 ;(repl)
