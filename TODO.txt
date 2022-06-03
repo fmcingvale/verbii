@@ -16,6 +16,8 @@ Global TODO
 
 ---[    Demos    ]------------------------------------------------------
 
+* simple demo games (i.e. 'guess the number', etc. beginner programming type things)
+
 * Chess engine
 
 * (mini) scheme -> verbii translator
@@ -32,8 +34,6 @@ Global TODO
 ---[  Libraries  ]------------------------------------------------------
 
 * JSON export
-
-* math: gcd, sqrt
 
 ---[   Features   ]------------------------------------------------------
 
@@ -97,16 +97,11 @@ write-string, write-char ... basically I/O with ports concept like scheme
 
 * compiler should insert a 'return' at the end of words to rid of special cases in interpreter
 
-* I think parse-bool can be removed now .. also remove null & ,,null once that is possible
-
 * chicken: main interpreter loop -- use while instead of having to place recursive calls everywhere
 
 * More error checking of input types in library/tests/demos
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
-
-* why does chicken port report more userwords when running same code as other ports?
-	** I think this is fixed now ... maybe the hashing changes i added a while ago 
 
 * c++ reports (sometimes vastly) different # of tail calls with -stats than other ports
 
@@ -114,13 +109,16 @@ write-string, write-char ... basically I/O with ports concept like scheme
 
 * chicken: cleanout old comments
 
-* python: get rid of more type() and isinstance() and replace with the correct is*() function
-
 ---[ Optimization ]------------------------------------------------------
 
-* repls are still doing to much work, even more with caching additions. need to push more
+* why do interpreters check for symbols last in main loop? symbols account for about 70-80% of
+  code (going by boot/init/compiler .b files) so shouldn't they be checked first?
+
+* repls are still doing too much work, even more with caching additions. need to push more
   of this to verbii code. maybe interpreter:run should have a safe_run wrapper to handle
   a lot of this that could be called from verbii (??)
+	* in progress - only c# remains to be done
+	* once stable, switch repls to the minimized frontends
 
 * compiler.verb -- in byte-compile, all words for __main__ get pushed to stack and then
   a huge list made at the end. this leads to stack overflows for large files (like the unittests
@@ -148,11 +146,24 @@ write-string, write-char ... basically I/O with ports concept like scheme
 				* need to add a return at end of all word lists for simplicity
 	
 	* try inlining small functions
+		* the question would be should this be done recursively and to what depth?
+			i.e. 
+				: 3dup dup dup dup ;
+				: 9dup 3dup 3dup 3dup ;
+
+			should 9dup be expanded to the 3dups, then the 3dups expanded to dups,
+			then the dups expanded to their lowest level form?
 
 * improve exp by reducing x like dividing by 100,1000,1e6,etc. and adjusting
   at end since values for powers of 10 can be in a table (exp algorithm seems
   to have trouble with larger values)
 
+	* i think i should add more math functions (sin,cos,log,exp,etc.) -- these
+  are all basically 1-liners so isn't saving significant code space now to
+  omit them.
+
+	* math: gcd, sqrt
+	
 * the chicken argument dispatch to builtins is really slow ... rework
 
 ---[   Unsorted   ]------------------------------------------------------
