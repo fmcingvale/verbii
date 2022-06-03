@@ -28,3 +28,6 @@ lib/patches.verb.b
 c++/boot.verb.b
 lua/temp-out.txt
 c++/temp-out.txt
+chicken/min
+chicken/temp-out.txt
+c++/*.verb.b

@@ -1,5 +1,5 @@
 
-all: repl
+all: repl min
 
 #CFLAGS=
 CFLAGS=-O3
@@ -28,4 +28,6 @@ native.o: native.scm
 repl: verbii.scm langtypes.o errors.o interpreter.o deserializer.o native.o 
 	./local-chicken/bin/csc -o repl ${CFLAGS} -static langtypes.o deserializer.o native.o interpreter.o -uses langtypes -uses errors -uses deserializer -uses native -uses interpreter verbii.scm
 
+min: min.scm langtypes.o errors.o interpreter.o deserializer.o native.o 
+	./local-chicken/bin/csc -o min ${CFLAGS} -static langtypes.o deserializer.o native.o interpreter.o -uses langtypes -uses errors -uses deserializer -uses native -uses interpreter min.scm
 

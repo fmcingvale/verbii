@@ -1,7 +1,5 @@
 ;;;==================================================================================
-;;; verbii in chicken scheme
-;;;
-;;; all one long file for now since i haven't figured out chicken modules ...
+;;; verbii repl
 ;;;
 ;;; Copyright (c) 2022 Frank McIngvale, see LICENSE
 ;;;==================================================================================

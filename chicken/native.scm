@@ -33,9 +33,13 @@
 (import langtypes)
 (import errors)
 (import interpreter)
+(import deserializer)
 
 (define NATIVE_CMDLINE_ARGS (new-lang-list))
 (define ALLOW_OVERWRITING_WORDS #f)
+(define EXIT_ON_EXCEPTION #t)
+
+(define FP_STDOUT '()) ; null for normal stdout, non-null for file
 
 (define STARTUP_TIME (current-process-milliseconds))
 
@@ -397,7 +401,16 @@
 		(else
 			(lang-error 'put "Object does not support put:" (fmtStackPrint obj)))))
 
+(import (chicken io))
 
+(define (builtin-prompt intr prompt)
+	(display prompt)
+	(let ((line (read-line)))
+		(cond
+			((string? line)
+				(push intr (make-String line)))
+			(else (push intr (make-Void))))))
+	
 (import (chicken bitwise))
 
 ; TODO -- some of the above can be lambdas here instead
@@ -449,8 +462,29 @@
 				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-float")))))))
 		(list "str" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtDisplay obj)))))
 		(list "repr" 		(list '*)  (lambda (intr obj) (push intr (make-String (fmtStackPrint obj)))))
-		(list "puts" 		(list 's) (lambda (intr obj) (display (value obj))))
-		(list ".c" 			(list 'i) (lambda (intr obj) (display (integer->char obj))))
+		(list "puts" 		(list 's) 
+			(lambda (intr obj) 
+				(if (null? FP_STDOUT)
+					(display (value obj)) ; write to normal output port
+					(file-write FP_STDOUT (value obj)))))
+		(list ".c" 			(list 'i) 
+			(lambda (intr obj) 
+				(if (null? FP_STDOUT)
+					(display (integer->char obj)) ; write to normal output port
+					(file-write FP_STDOUT (string (integer->char obj))))))
+		(list "open-as-stdout" (list '*)
+			(lambda (intr filename)
+				(if (not (null? FP_STDOUT))
+					(begin
+						(file-close FP_STDOUT)
+						(set! FP_STDOUT '())))
+				(cond
+					((Void? filename)) ; nothing, already reset to stdout above
+					((String? filename)
+						(set! FP_STDOUT (file-open (value filename) (+ open/wronly open/creat))))
+					(else
+						(lang-error 'open-as-stdout "Expecting filename or obj but got:" filename)))))
+				
 		; must deepcopy list - see DESIGN-NOTES.md
 		(list "make-lambda" (list 'L) (lambda (intr llist) (push intr (make-Lambda (deepcopy llist)))))
 		(list "make-symbol" (list 'i) builtin-make-symbol)
@@ -479,6 +513,20 @@
 		(list "run-time" '() 
 			(lambda (intr) (push intr (make-lang-float (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0)))))
 		(list ",,new-dict" '() (lambda (intr) (push intr (new-Dict))))
+
+		(list "file-exists?" (list 's) (lambda (intr name) (push intr (regular-file? name))))
+		(list "file-mtime" (list 's) 
+			(lambda (intr name)
+				(if (regular-file? name)
+					(push intr (vector-ref (file-stat name) 8))
+					(lang-error 'file-mtime "No such file" name))))
+		(list "deserialize" (list 's)
+			(lambda (intr filename)
+				(let ((fileIn (open-input-file filename)))
+					(deserialize-stream intr fileIn))))
+		(list "set-allow-overwrite-words" (list 'b) (lambda (intr b) (set! ALLOW_OVERWRITING_WORDS b)))
+		(list "set-exit-on-exception" (list 'b) (lambda (intr b) (set! EXIT_ON_EXCEPTION b)))
+		(list "prompt" (list 's) builtin-prompt)
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

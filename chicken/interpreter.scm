@@ -263,6 +263,7 @@
 			(loop (cdr argtypes) (cons 
 				(case (car argtypes)
 					((i) (popTypeOrFail intr integer? "integer" wheresym))
+					((b) (popTypeOrFail intr boolean? "boolean" wheresym))
 					((f) (value (popTypeOrFail intr Float? "float" wheresym)))
 					((s) (value (popTypeOrFail intr String? "string" wheresym)))
 					((y) (popTypeOrFail intr string? "symbol" wheresym))

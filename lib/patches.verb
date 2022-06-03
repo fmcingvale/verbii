@@ -10,6 +10,9 @@
 
 ( ------ init ----------- )
 
+\ what this SHOULD be named ...
+: file-read read-file ;
+
 ( ------ compiler ------- )
 
 ( ------ misc ------- )
