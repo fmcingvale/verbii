@@ -37,6 +37,10 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
+  NAME can be defined to get value and NAME! to set value. if arrays are needed then
+  just store a list to NAME
+
 * add caching of byte-compilation, i.e. file.verb is cached to file.verb.b after
   a successful byte-compile. to support this:
 	* need new words: file-exists?, file-mtime
@@ -83,6 +87,9 @@ write-string, write-char ... basically I/O with ports concept like scheme
 * reorganize tests by category?
  
 ---[   Clean-up   ]------------------------------------------------------
+
+* makeboot needs to compile files to a temp location and not replace existing files until ALL are recompiled.
+	* avoid the crashes caused when e.g. init changes in way that is incompatible with existing compiler.verb.b 
 
 * read-file should be file-read for consistency with file-exists?, etc.
 
