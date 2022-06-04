@@ -7,11 +7,14 @@
 */
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 class Builtins {
 	public static LangList NATIVE_CMDLINE_ARGS = new LangList();
 	public static bool ALLOW_OVERWRITING_WORDS = false;
+	public static bool EXIT_ON_EXCEPTION = true;
 	public static long STARTUP_TIME_MSEC = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+	public static StreamWriter FP_STDOUT = StreamWriter.Null;
 
 	public static long popInt(Interpreter intr, string where) {
 		var obj = intr.pop();
@@ -20,6 +23,15 @@ class Builtins {
 			throw new LangError("Expecting int (in " + where + ") but got: " + obj.fmtStackPrint());
 		}
 		return i.value;
+	}
+
+	public static bool popBool(Interpreter intr, string where) {
+		var obj = intr.pop();
+		var b = obj as LangBool;
+		if(b == null) {
+			throw new LangError("Expecting bool (in " + where + ") but got: " + obj.fmtStackPrint());
+		}
+		return b.value;
 	}
 
 	public static string popString(Interpreter intr, string where) {
@@ -188,12 +200,30 @@ class Builtins {
 	public static void printchar(Interpreter intr) {
 		long c = popInt(intr,"printchar");
 		char ch = (char)c;
-		Console.Write(ch);
-		if(c == 10 || c == 13) {
-			Console.Out.Flush();
+		if(FP_STDOUT == StreamWriter.Null) {
+			Console.Write(ch);
+			if(c == 10 || c == 13) {
+				Console.Out.Flush();
+			}
+		}
+		else {
+			FP_STDOUT.Write(ch);
+			if(c == 10 || c == 13) 
+				FP_STDOUT.Flush();
 		}
 	}
 
+	public static void open_as_stdout(Interpreter intr) {
+		if(FP_STDOUT != StreamWriter.Null) {
+			FP_STDOUT.Close();
+		}
+		var obj = intr.pop();
+		if(obj is LangVoid)
+			FP_STDOUT = StreamWriter.Null;
+		else if(obj is LangString)
+			FP_STDOUT = new StreamWriter((obj as LangString)!.value);
+	}
+			
 	// set stack pointer from addr on stack
 	// (SP values must be integers)
 	public static void setsp(Interpreter intr) {
@@ -284,7 +314,10 @@ class Builtins {
 			throw new LangError("puts requires string but got: " + o.fmtStackPrint());
 		}
 		else {
-			Console.Write(s.value);
+			if(FP_STDOUT == StreamWriter.Null)
+				Console.Write(s.value);
+			else
+				FP_STDOUT.Write(s.value);
 		}
 	}
 
@@ -629,6 +662,21 @@ class Builtins {
 		intr.push(new LangInt((a >> nr) & 0xffffffff));
 	}
 
+	public static void deserialize(Interpreter intr) {
+		var fileIn = System.IO.File.OpenText(popString(intr,"deserialize"));
+		Deserializer.deserialize_stream(intr, fileIn);
+	}
+		
+	public static void prompt(Interpreter intr) {
+		Console.Write(popString(intr,"prompt"));
+		Console.Out.Flush();
+		var line = Console.In.ReadLine();
+		if(line == null)
+			intr.push(new LangVoid());
+		else
+			intr.push(new LangString(line));
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -696,5 +744,13 @@ class Builtins {
 		{"run-time",
 			intr => intr.push(new LangFloat(((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0))},
 		{",,new-dict", intr => intr.push(new LangDict())},
+
+		{"file-exists?", intr => intr.push(new LangBool(File.Exists(popString(intr,"file-exists?"))))},
+		{"file-mtime", intr => intr.push(new LangInt(File.GetLastWriteTime(popString(intr,"file-mtime")).Ticks))},
+		{"set-allow-overwrite-words", intr => ALLOW_OVERWRITING_WORDS = popBool(intr,"set-allow-overwrite-words")},
+		{"set-exit-on-exception", intr => EXIT_ON_EXCEPTION = popBool(intr,"set-exit-on-exception")},
+		{"deserialize", deserialize},
+		{"prompt", prompt},
+		{"open-as-stdout", open_as_stdout},
 	};
 }

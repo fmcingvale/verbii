@@ -88,6 +88,9 @@ write-string, write-char ... basically I/O with ports concept like scheme
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* check all places (in all ports) where files are opened to make sure any errors are returned
+  as verbii errors and don't crash the host language
+  
 * makeboot needs to compile files to a temp location and not replace existing files until ALL are recompiled.
 	* avoid the crashes caused when e.g. init changes in way that is incompatible with existing compiler.verb.b 
 

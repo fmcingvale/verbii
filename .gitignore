@@ -31,3 +31,5 @@ c++/temp-out.txt
 chicken/min
 chicken/temp-out.txt
 c++/*.verb.b
+csharp/min.pdb
+csharp/temp-out.txt

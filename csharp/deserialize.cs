@@ -30,7 +30,7 @@ public class Deserializer {
 				return new LangVoid();
 			}
 			switch(line[0]) {
-				case 'i': return new LangInt(int.Parse(line.Substring(2)));
+				case 'i': return new LangInt(long.Parse(line.Substring(2)));
 				case 'f': return new LangFloat(double.Parse(line.Substring(2)));
 				case 'b': return new LangBool(parseBool(line.Substring(2)));
 				case 'n': return new LangNull();
