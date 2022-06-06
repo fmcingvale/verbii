@@ -1,0 +1,140 @@
+\
+\ Experimenting with an object-oriented approach to iterators.
+\
+\ Iterator protocol:
+\	An iterator is a dict that contains (at least) these fields:
+\
+\	"next" : callable that gets the next object and pushes it to the stack,
+\			advances the iterator and leave the iterator ( iter -- iter obj )
+\	"peek" : callable that gets the next object and pushes it to the stack,
+\			WITHOUT advancing the iterator
+\	"done" : callable that returns true|false indicating if iteration is complete
+\			( iter -- iter done? )
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+
+\ since iterators are normally called in a loop, the iter-* functions leave the iterator
+\ on the stack -- this tends to avoid extra dups in the caller and extra drops in the iterator
+
+: iter-next ( iter -- iter obj )
+	dup "next" get call
+	;
+
+: iter-peek ( iter -- iter obj )
+	dup "peek" get call
+	;
+
+: iter-done? ( iter -- iter done? )
+	dup "done" get call
+	;
+
+: string-iterator ( string -- iter )
+	>L \ save string in L0
+	[
+		[ "pos" 0 ]
+		[ "next"
+			{
+				\ iterator is on TOS
+				dup "string" get over "pos" get ( iter str pos )
+				2dup swap length >= ( iter str pos pos>=len[str] )
+				if >>eos
+				get swap dup "pos" get 1 + "pos" swap ( char iter "pos" pos+1 )
+				put swap ( iter char ) return
+				@eos ( iter str pos )
+					2drop void ( iter void )
+			}
+		]
+
+		[ "peek"
+			{
+				\ iterator is on TOS
+				dup "string" get over "pos" get ( iter str pos )
+				2dup swap length >= ( iter str pos pos>=len[str] )
+				if >>eos
+					get ( iter char ) return
+				@eos ( iter str pos )
+					2drop void ( iter void )
+			}
+		]
+
+		[ "done"
+			{
+				\ iterator is on TOS
+				dup "string" get over "pos" get ( iter str pos )
+				swap length >= ( iter pos>=len[str] )
+				if >>eos
+					false return ( iter false )
+				@eos ( iter )
+					true ( iter true )
+			}
+		]
+	] make-dict
+	L> "string" swap put
+	;
+
+"abcd" string-iterator .S CR 
+[
+"DONE?" . iter-done? . CR
+"PEEK" . iter-peek . CR
+"READ" . iter-next . CR
+] 5 repeat
+
+drop 
+
+\ show how long it takes to read a large file and iterate over all chars with
+\ different methods ...
+\
+\ summary: string-iterator takes about 2x the time of stream-reader, so this
+\ is not a good replacement for the stream reader but this approach could be
+\ at least convenient in other use cases
+
+\ method 1: string-iterator
+
+var T0 1
+
+"n128.verb" file-read string-iterator
+
+run-time T0 set!
+
+@loop ( iter )
+	iter-done? if >>eof
+	iter-next drop <<loop
+@eof
+
+drop 
+
+run-time T0 ref - "string-iterator ran in:" . . "seconds" . CR
+
+\ method 2: stream-reader
+
+"n128.verb" file-read stream-reader-open-string
+
+run-time T0 set!
+
+@loop
+	stream-reader-next-char
+	dup void? if >>eof
+	drop <<loop
+@eof
+
+drop drop
+
+run-time T0 ref - "stream-reader an in:" . . "seconds" . CR
+
+\ method 3: for-each
+
+"n128.verb" file-read 
+run-time T0 set!
+
+{ drop } for-each
+
+run-time T0 ref - "for-each ran in:" . . "seconds" . CR
+
+"END STACK:" . .S
+
+
+				
+
+				
+
