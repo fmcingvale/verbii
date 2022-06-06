@@ -8,10 +8,39 @@
 
 ( ------ boot ----------- )
 
+var IMPORTED_MODULES 1
+,,new-dict IMPORTED_MODULES set!
+
+\ load & import module from either name.verb or name.verb.b
+\ TODO:
+\	* define library paths & add search 
+\	* add way to let modules know they are being imported so they
+\	  shouldn't run their main code (unless it's required to init the module of course)
+: import ( name -- )
+	\ see if name has been imported already and don't import again
+	IMPORTED_MODULES ref over get void? not if >>already-imported
+	\ not yet imported - go ahead and mark as imported - if the below fails then 
+	\ the program will crash anyways
+	dup IMPORTED_MODULES ref swap true put drop
+	\ import module
+	".verb" +
+	dup file-exists? if >>good
+	"Unable to find file:" swap + error
+	@good
+		load-file-maybe-cached
+		\ module may need to init its own globals, etc., so run it
+		safe-run-and-delete-main
+		return
+	@already-imported ( name )
+		\ "ALREADY IMPORTED:" . dup . CR
+		drop
+	;
+
 ( ------ init ----------- )
 
 \ what this SHOULD be named ...
 : file-read read-file ;
+
 
 ( ------ compiler ------- )
 
