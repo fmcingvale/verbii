@@ -57,7 +57,9 @@
 		
 (import simple-exceptions) ; with-exn-handler
 
-(import srfi-193) ; command line ... is this not in a base chicken library??
+(import (chicken process-context))
+
+;(import srfi-193) ; command line ... is this not in a base chicken library??
 ;(import (chicken file))
 
 ;(print "COMMAND LINE: " (command-line))
@@ -76,7 +78,7 @@
 					((string=? arg "--") (set! rest-to-script #t)) ; rest go to NATIVE_CMDLINE_ARGS
 					(else
 						; anything else goes to script
-						(llist-push-back NATIVE_CMDLINE_ARGS (make-String arg)))))) (cdr (command-line))))
+						(llist-push-back NATIVE_CMDLINE_ARGS (make-String arg)))))) (cdr (argv))))
 
 	(let ((intr (make-Interpreter)))
 		(handle-exceptions exn
