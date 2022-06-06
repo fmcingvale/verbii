@@ -37,6 +37,8 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* boot.verb.b needs to be able to run the error test cases
+
 * i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
   NAME can be defined to get value and NAME! to set value. if arrays are needed then
   just store a list to NAME
@@ -88,17 +90,20 @@ write-string, write-char ... basically I/O with ports concept like scheme
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* when compiling to a .b file, should write to temp file and only overwrite .b after it is complete,
+  in case of a crash, or user doing Ctrl-C during compilation, etc. and corrupting .b file.
+  
+* chicken - minimize imports across all files
+
 * check all places (in all ports) where files are opened to make sure any errors are returned
   as verbii errors and don't crash the host language
   
-* makeboot needs to compile files to a temp location and not replace existing files until ALL are recompiled.
-	* avoid the crashes caused when e.g. init changes in way that is incompatible with existing compiler.verb.b 
-
 * read-file should be file-read for consistency with file-exists?, etc.
 
 * need a better way to find lib/ than hardcoding/assuming path in repls
 
 * compiler should insert a 'return' at the end of words to rid of special cases in interpreter
+	* no ... can't do that since lists can be called without any make-word pass to insert the return
 
 * chicken: main interpreter loop -- use while instead of having to place recursive calls everywhere
 
@@ -117,11 +122,7 @@ write-string, write-char ... basically I/O with ports concept like scheme
 * why do interpreters check for symbols last in main loop? symbols account for about 70-80% of
   code (going by boot/init/compiler .b files) so shouldn't they be checked first?
 
-* repls are still doing too much work, even more with caching additions. need to push more
-  of this to verbii code. maybe interpreter:run should have a safe_run wrapper to handle
-  a lot of this that could be called from verbii (??)
-	* in progress - only c# remains to be done
-	* once stable, switch repls to the minimized frontends
+* change minimized frontends to main frontends once stable
 
 * compiler.verb -- in byte-compile, all words for __main__ get pushed to stack and then
   a huge list made at the end. this leads to stack overflows for large files (like the unittests
