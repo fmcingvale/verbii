@@ -1,0 +1,66 @@
+
+\ Hashing functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ FNV-1a 32-bit hash function
+\
+\ This is much faster than fnv-128 since it uses native 32-bit integers.
+\
+\ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+var FNV32-PRIME 1
+var FNV32-OFFSET 1
+2166136261 FNV32-OFFSET set!
+16777619 FNV32-PRIME set!
+
+\ these conversions should be in another lib ...
+: int4-to-hex ( n -- h ; 4-bit value to hex digit )
+	dup 9 <= if >>digit 
+	dup 16 < if >>hex 
+	"Bad value in int4-to-hex:" swap str + error
+
+	@digit "0" ord + chr return
+	@hex 10 - "a" ord + chr
+	;
+
+: int8-to-hex ( n -- h ; 8-bit value to 2 hex digits )
+	16 /mod int4-to-hex swap int4-to-hex +
+	;
+
+: int16-to-hex ( n -- h ; 16-bit value to 4 hex digits )
+	256 /mod int8-to-hex swap int8-to-hex +
+	;
+
+: int32-to-hex ( n -- h ; 32-bit value to 8 hex digits )
+	65536 /mod int16-to-hex swap int16-to-hex +
+	;
+
+: hash-fnv-32 ( text -- hash, as integer, 32-bits )
+	\ for each byte:
+	\	hash = hash XOR byte
+	\	hash = hash * FNV32-PRIME
+
+	\ called with stack: [ hash char ]
+	[ 
+		ord bit-xor ( hash^c )
+		FNV32-PRIME ref * ( hash*prime )
+	]
+	\ init hash = FNV32-OFFSET
+	FNV32-OFFSET ref
+	fold
+	\ keep 32-bits only
+	4294967295 bit-and ( (hash*prime)&0xffffffff )
+	;
+
+\ max unsigned 32-bit value
+var MAX_INT32 1
+4294967295 MAX_INT32 set!
+
+\ ref: https://theartincode.stanis.me/008-djb2/ (djb2 hash)
+: hash-djb2 ( string -- hash )
+	\ for each char in string, hash = hash * 33 + c, with initial value 5381
+	[ ord swap 33 * + ] 5381 fold
+	MAX_INT32 ref bit-and ( keep 32 bits only )
+	;
+
+

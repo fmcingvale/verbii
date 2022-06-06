@@ -125,40 +125,6 @@
 var MAX_INT32 1
 4294967295 MAX_INT32 set!
 
-\ 32-bit xor-shift pseudo random number generator
-\ ported from: https://en.wikipedia.org/wiki/Xorshift
-var XORSHIFT_32_STATE 1
-
-: xorshift32_seed ( n -- ; seed randomizer with seed n )
-	XORSHIFT_32_STATE set!
-	;
-
-: xorshift32 ( -- n ; returns random n )
-	XORSHIFT_32_STATE ref ( x )
-	dup 13 bit-shl ( x x<<13 )
-	bit-xor ( x ^ x<<13 )
-	dup 17 bit-shr ( x x>>17 )
-	bit-xor ( x ^ x>>17 )
-	dup 5 bit-shl ( x x<<5 )
-	bit-xor ( x ^ x>>5 )
-	dup XORSHIFT_32_STATE set!
-	( leave state on stack as result )
-	;
-
-3593953034 xorshift32_seed
-{ xorshift32 dup str.b . . CR } 20 repeat 
-
-: random-xor32 ( -- n ; returns random number between 0..1 )
-	xorshift32 MAX_INT32 ref /
-	;
-
-{ random-xor32 . CR } 20 repeat
-
-: randint-xor32 ( a b -- n ; returns random number on the internal [a, b) )
-	over - random-xor32 * + floor ( a b-a )
-	;
-
-{ -100 100 randint-xor32 . } 200 repeat CR
 
 \ 128-bit xor-shift random number generator
 \ still returns 32-bit result, but keeps 128 bits internally

@@ -1,0 +1,95 @@
+\ Pseudo-random number generation (for non-cryptographic use)
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ these two should be in another lib ...
+
+\ max unsigned 32-bit value
+\ var MAX_INT32 1
+\ 4294967295 MAX_INT32 set!
+
+"hashing" import
+
+: str.b ( n -- ; get n as binary string )
+	32 "" -rot
+	@loop ( s n i )
+		dup 0 == if >>done ( i==0? )
+		over 1 bit-and 0 == if >>zero
+			rot "1" swap + -rot >>next ( prepend 1 )
+		@zero
+			rot "0" swap + -rot ( prepend 0 )
+		@next ( s n i )
+			swap 1 bit-shr swap 1 - ( s n>>1 --i )
+			<<loop
+	@done
+		drop drop ( leave string on stack )
+		\ put in dotted form for readability
+		dup 0 8 slice "." + swap
+		dup 8 8 slice "." + swap 
+		dup 16 8 slice "." + swap 
+		24 8 slice
+		+ + + 
+		;
+
+\ 32-bit xor-shift pseudo random number generator
+\ ported from: https://en.wikipedia.org/wiki/Xorshift
+var XORSHIFT_32_STATE 1
+
+: xorshift32-seed ( n -- ; seed randomizer with seed n )
+	XORSHIFT_32_STATE set!
+	;
+
+\ on startup, set default seed using hash of current date/time as string plus current runtime as string.
+\ there appears to be enough variability in startup time that even running the script multiple times
+\ in the same second will give a unique starting seed (of course, this is all considered non-cryptogrphic
+\ RNG anyways, but at least trying to give better than 1-second resolution on this)
+time-string " " + run-time str + hash-fnv-32 xorshift32-seed
+
+: xorshift32 ( -- n ; returns random n )
+	XORSHIFT_32_STATE ref ( x )
+	dup 13 bit-shl ( x x<<13 )
+	bit-xor ( x ^ x<<13 )
+	dup 17 bit-shr ( x x>>17 )
+	bit-xor ( x ^ x>>17 )
+	dup 5 bit-shl ( x x<<5 )
+	bit-xor ( x ^ x>>5 )
+	dup XORSHIFT_32_STATE set!
+	( leave state on stack as result )
+	;
+
+: random-xor32 ( -- n ; returns random number between 0..1 )
+	xorshift32 MAX_INT32 ref /
+	;
+
+: randint-xor32 ( a b -- n ; returns random number on the internal [a, b) )
+	over - random-xor32 * + floor ( a b-a )
+	;
+
+: test-random-generator
+	\ 3593953034 xorshift32_seed
+	{ xorshift32 dup str.b . . CR } 20 repeat 
+
+	{ random-xor32 . CR } 20 repeat
+
+	{ -100 100 randint-xor32 . } 200 repeat CR
+	;
+
+: test-randint-in-bins
+	\ make random integers from 0..19 and count how many of each
+	[ ] { 0 append } 20 repeat \ make bins
+	\ get random, ++ its slot value and repeat
+	[ 0 20 randint-xor32 ( v )
+		dup self swap get ( v count )
+		1 + self -rot put ( self v count+1 )
+		drop
+	] swap :: \ bind bins as self
+	\ copy closure so i can retrieve state after this runs
+	dup
+	\ run N times
+	2000 repeat
+	unmake nip \ keep final state on stack
+	. CR
+	;
+	
+test-random-generator
+{ test-randint-in-bins } 20 repeat
