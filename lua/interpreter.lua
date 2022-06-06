@@ -270,9 +270,9 @@ function Interpreter:run(objlist, stephook)
 			end
 		end
 
-		-- see if its a literal to push
+		-- push everything here excepts lists/symbols/void -- see c++ notes for more
 		if isInt(obj) or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isBool(obj) or isNull(obj) then
+			isBool(obj) or isNull(obj) or isClosure(obj) or isDict(obj) then
 			self:push(obj)
 			goto MAINLOOP
 		end

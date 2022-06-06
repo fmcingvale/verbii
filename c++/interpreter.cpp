@@ -333,6 +333,16 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		if(obj.isVoid()) {
 			// i could be returning from a word that had no 'return',
 			// so pop words like i would if it were a return
+
+			// note a subtle (unintended) side effect here:
+			//		10 20 void 30 40 5 make-list call
+			// execution will stop after 20 since void makes the interpreter think it has reached
+			// the end of the list. avoiding this by making 'return' mandator runs into trouble for
+			// dynamically created lists that are called -- doesn't seem worth it to have to check every
+			// list before calling that it ends with 'return' and modifying it if not.
+			// bottom line -- storing void (in ANY container) is a bad idea and this is just an d
+			// example of one consequence
+
 			//if(syntax->hasPushedObjLists()) {
 			//	syntax->popObjList();
 			//	continue;
@@ -347,8 +357,8 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			}
 		}
 		
-		// check for literal objects that just get pushed (ONLY objects that have a 
-		// parseable form need to be here)
+		// check for literal objects that just get pushed 
+		// ORIGINAL ASSUMPTION (see below) -- ONLY objects that have a parseable form need to be here
 		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool() ||
 			obj.isNull()) {
 			push(obj);
@@ -362,6 +372,19 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			continue;
 		}
 		
+		// oops ... the above assumption (about only pushing literals) is wrong .. quick example:
+		//	[ 10 20 30 ] 123 :: 1 make-list call --> pushes closure when list is called
+		//  [ ] make-dict 1 make-list call --> pushes dict when list is called
+		//
+		// i'm breaking these two cases out separately to point out why this is needed since it
+		// wasn't obvious to me at the time
+		#if 1
+		if(obj.isClosure() || obj.isDict()) {
+			push(obj);
+			continue;
+		}
+		#endif
+
 		if(obj.isSymbol("'",1)) {
 			// quoted symbol - remove one level of quoting and push
 			push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));

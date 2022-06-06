@@ -337,9 +337,10 @@
 					; else set self not running & exit
 					(intr-code-set! intr '())
 				))
-			; literals get pushed
+			; push everything except lists/symbols/void (see c++ notes for more)
 			((integer? obj) (push-int intr obj) (run-loop (nextObj intr)))
-			((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj))
+			((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj)
+					(Closure? obj) (Dict? obj))
 				(push intr obj)
 				(run-loop (nextObj intr)))
 

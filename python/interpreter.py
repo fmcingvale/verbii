@@ -241,9 +241,9 @@ class Interpreter(object):
 			#print("RUN OBJ:",word)
 			#print(" => " + self.reprStack())
 								
-			# literals that get pushed
+			# all objects excepts lists, void & symbols are pushed here -- see c++ notes for this
 			if isNumeric(word) or isString(word) or isLambda(word) or isBool(word) or \
-				isNull(word):
+				isNull(word) or isClosure(word) or isDict(word):
 				self.push(word)
 				continue
 

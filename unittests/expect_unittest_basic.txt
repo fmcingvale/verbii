@@ -1102,3 +1102,31 @@ Expect 2147524676: 2147524676
 >> "Expect 3850888180:" . 3544819506 919487686 bit-xor . CR
 Expect 3850888180: 3850888180 
 => 
+>> \ floor
+=> 
+>> 3.21 floor
+=> 3 
+>> 4 floor
+=> 3 4 
+>> -3.21 floor
+=> 3 4 -4 
+>> -5 floor
+=> 3 4 -4 -5 
+>> clear
+=> 
+>> \ this was a bug in the interpreters -- bad assumption that closures & dicts didn't need to be
+=> 
+>> \ pushed as literals ...
+=> 
+>> 10 20 [ 111 222 333 ] 77 :: 30 40 5 make-list
+=> [ 10 20 <{ 111 222 333 } :: 77> 30 40 ] 
+>> call
+=> 10 20 <{ 111 222 333 } :: 77> 30 40 
+>> clear
+=> 
+>> 11 22 [ ] make-dict 33 44 5 make-list
+=> [ 11 22 { } 33 44 ] 
+>> call
+=> 11 22 { } 33 44 
+>> clear
+=> 

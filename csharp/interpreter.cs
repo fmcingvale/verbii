@@ -335,10 +335,9 @@ public class Interpreter {
 			//Console.WriteLine("STACK NOW: " + reprStack());
 			//Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
 
-			// check for literals that get pushed (only objects that can be directly parsed,
-			// so e.g. closures aren't here since they can only be created at runtime
+			// all object types except lists, symbols & void are pushed here (see c++ notes for more)
 			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
-					obj is LangBool || obj is LangNull) {
+					obj is LangBool || obj is LangNull || obj is LangClosure || obj is LangDict) {
 				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
 				push(obj);
 				continue;
