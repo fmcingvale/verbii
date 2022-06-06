@@ -411,7 +411,16 @@
 				(push intr (make-String line)))
 			(else (push intr (make-Void))))))
 	
+(define (builtin-floor intr)
+	(let ((obj (pop intr)))
+		(cond
+			((integer? obj) (push intr obj))
+			((Float? obj) (push intr (inexact->exact (floor (value obj)))))
+			(else (lang-error 'floor "Floor expects number but got:" obj)))))
+
 (import (chicken bitwise))
+(import (chicken time))
+(import (chicken time posix))
 
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
@@ -527,6 +536,10 @@
 		(list "set-allow-overwrite-words" (list 'b) (lambda (intr b) (set! ALLOW_OVERWRITING_WORDS b)))
 		(list "set-exit-on-exception" (list 'b) (lambda (intr b) (set! EXIT_ON_EXCEPTION b)))
 		(list "prompt" (list 's) builtin-prompt)
+
+		(list "time-string" '() (lambda (intr) (push intr 
+			(make-String (time->string (seconds->local-time (current-seconds)) "%Y-%m-%d %H:%M:%S")))))
+		(list "floor" '() builtin-floor)
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

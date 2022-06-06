@@ -720,4 +720,7 @@ BUILTINS = {
 	["set-exit-on-exception"] = { {}, function(intr) EXIT_ON_EXCEPTION = popBool(intr) end},
 	["set-allow-overwrite-words"] = { {}, function(intr) ALLOW_OVERWRITING_WORDS = popBool(intr) end},
 
+	["time-string"] = { {}, function(intr) intr:push(new_String(POSIX.strftime("%Y-%m-%d %H:%M:%S",POSIX.localtime()))) end},
+	["floor"] = { {}, function(intr) intr:pushInt(math.floor(popFloatOrInt(intr))) end},
+
 }

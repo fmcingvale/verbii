@@ -677,6 +677,12 @@ class Builtins {
 			intr.push(new LangString(line));
 	}
 
+	public static void time_string(Interpreter intr) {
+		var now = DateTime.Now;
+		var s = String.Format("{0:yyyy-mm-dd HH:mm:ss}", now);
+		intr.push(new LangString(s));
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -752,5 +758,8 @@ class Builtins {
 		{"deserialize", deserialize},
 		{"prompt", prompt},
 		{"open-as-stdout", open_as_stdout},
+
+		{"time-string", time_string},
+		{"floor", intr => intr.push(new LangInt((long)Math.Floor(popFloatOrInt(intr,"floor"))))},
 	};
 }

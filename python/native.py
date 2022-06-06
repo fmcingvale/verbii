@@ -576,5 +576,8 @@ BUILTINS = {
 	'prompt': ([], builtin_prompt),
 	'set-exit-on-exception': ([bool], builtin_set_exit_on_exception),
 	'set-allow-overwrite-words': ([bool], builtin_set_allow_overwrite_words),
+
+	'time-string': ([], lambda I: I.push(LangString(time.strftime("%Y-%m-%d %H:%M:%S")))),
+	'floor': ([], lambda I: I.push(int(floor(popIntOrFloat(I))))),
 }
 

@@ -40,9 +40,19 @@ static VINT popInt(Interpreter *intr, const char *errmsg) {
 static double popFloat(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isFloat()) {
-		throw LangError(string(errmsg) + " (requires integer, got: " + obj.fmtStackPrint() + ")");
+		throw LangError(string(errmsg) + " (requires float, got: " + obj.fmtStackPrint() + ")");
 	}
 	return obj.asFloat();
+}
+
+static double popFloatOrInt(Interpreter *intr, const char *errmsg) {
+	Object obj = intr->pop();
+	if(obj.isFloat())
+		return obj.asFloat();
+	else if(obj.isInt())
+		return (float)obj.asInt();
+	else
+		throw LangError(string(errmsg) + " (requires integer, got: " + obj.fmtStackPrint() + ")");
 }
 
 static const char *popString(Interpreter *intr, const char *errmsg) {
@@ -576,6 +586,16 @@ static void builtin_prompt(Interpreter *intr) {
 		intr->push(newString(buf));
 }	
 
+#include <time.h>
+
+static void builtin_time_string(Interpreter *intr) {
+	char buf[100];
+	time_t now;
+	time(&now);
+	strftime(buf,sizeof(buf)-1,"%Y-%m-%d %H:%M:%S",localtime(&now));
+	intr->push(newString(buf));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -657,8 +677,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"bit-shr", builtin_bit_shr},
 	{"bit-shl", builtin_bit_shl},
 
-	{"floor", [](Interpreter *intr){intr->push(newInt((VINT)floor(popFloat(intr,"floor"))));}},
-
 	{"run-time", builtin_run_time},
 	{",,new-dict", builtin_new_dict},
 
@@ -670,4 +688,12 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"prompt", builtin_prompt},
 	{"set-exit-on-exception", [](Interpreter *intr){EXIT_ON_EXCEPTION = popBool(intr);}},
 	{"set-allow-overwrite-words", [](Interpreter *intr){ALLOW_OVERWRITING_WORDS = popBool(intr);}},
+
+	// more words added while making the random module
+	{"time-string", builtin_time_string},
+	// this is commonly defined as returning a float, but i'm defining it to return an int --
+	// will make no difference in any math operation and this allows the result to be used
+	// in an integer context
+	{"floor", [](Interpreter *intr){intr->push(newInt((VINT)floor(popFloatOrInt(intr,"floor"))));}},
+
 };
