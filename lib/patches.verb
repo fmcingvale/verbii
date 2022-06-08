@@ -41,8 +41,237 @@ var IMPORTED_MODULES 1
 \ what this SHOULD be named ...
 : file-read read-file ;
 
+\
+\ like for-each, except includes index. lambda is called as:
+\	: lambda ( i elem -- ) 
+\
+\ *NOTE* lambda CANNOT rely on the state of the stack or locals -- bind with state if 
+\ data is needed other than the passed ( i elem )
+\
+: for-each-i ( object lambda -- )
+ 	>L dup length >L 0 >L ( L0=index, L1=length, L2=lambda )
+	@loop ( object )
+		L0 ref L1 ref >= ( obj index>=length ) if >>done 
+		L0 ref +get L0 ref swap L2 ref ( obj index obj[index] lambda )
+		call ( call lambda with [index element] on stack )
+		L0 ref 1 + L0 set! ( ++index ) <<loop
+	@done ( obj )
+		drop LP 3 + LP! ( drop object, remove locals )
+	;
 
 ( ------ compiler ------- )
+
+\ given a compiled objlist, if it is of the form:
+\	@args ARGLIST @locals LOCALLIST 
+\ then rewrite objlist to do:
+\	- pop #ARGLIST args from stack into locals
+\	- reserve #LOCALLIST locals
+\	- for even name N in ARGLIST and LOCALLIST, create
+\		mappings:
+\			N -> LP i + ref 
+\			N! -> LP i + set!
+\	- replace all instances of N and N! in objlist with above mappings
+: compile-rewrite-args-locals ( objlist -- new-objlist )
+	@begin
+	\ locals:
+	\	L0: ARGLIST
+	\	L1: LOCALLIST
+	\	L2: dict mapping names -> code replacements
+	\	L3: new-objlist
+	LP 4 - LP!
+		\ does it have '@args ARGLIST'?
+		dup length 2 < if >>no-args
+		dup 0 get '@args != if >>no-args
+		dup 1 get list? not if >>bad-args-list 
+		dup 1 get LP set! \ store ARGLIST to L0
+		2 -1 slice >>check-locals \ drop @args ARGLIST and continue
+
+	@bad-args-list ( objlist )
+		1 get str "List required after @args but got:" swap + error
+	@no-args ( objlist )
+		[ ] LP set! \ set ARGLIST to empty
+
+	@check-locals ( objlist )
+		\ does it have '@locals LIST
+		dup length 2 < if >>no-locals
+		dup 0 get '@locals != if >>no-locals
+		dup 1 get list? not if >>bad-locals-list 
+		dup 1 get LP 1 + set! \ store LOCALS to L1
+		2 -1 slice >>process \ drop @locals LIST and continue
+
+	@bad-locals-list ( objlist )
+		1 get str "List required after @locals but got:" swap + error
+	@no-locals ( objlist )
+		[ ] LP 1 + set! \ set LOCALS to empty
+
+	@process ( objlist )
+		\ "Got @args:" . L0 ref . CR
+		\ "Got @locals:" . L1 ref . CR
+		\ "Code now:" . dup . CR
+
+		\ if I have NO @args nor @locals, then do not modify objlist -- no need for
+		\ code to setup/teardown frame when no named vars being used
+		L0 ref length 0 ==
+		L1 ref length 0 ==
+		and if >>exit
+
+		\ make locals layout:
+		\	N+M-1: locals[M-1]
+		\	...
+		\	N+1: locals[1]
+		\	N: locals[0]
+		\	N-1: args[N-1]
+		\	...
+		\	1: args[1]
+		\	0: args[0]
+		[ ] make-dict L2 set! \ make dict mapping names -> code
+		\ process @args first:
+		\	for each arg "N" at index i, create two symbols:
+		\		"N" -> LP i + ref
+		\		"N!" -> LP i + set!
+		L0 ref ( objlist args )
+		{
+			( called with: i name ; self bound to mapping dict )
+			str 2dup over 'LP swap '+ 'ref 4 make-list ( i name i name [ 'LP i '+ 'ref ] )
+			self -rot put ( i name i dict ) drop drop
+			over 'LP swap '+ 'set! 4 make-list ( i name [ 'LP i '+ 'set! ] )
+			swap "!" + swap ( i name! [ 'LP i '+ 'set! ] )
+			self -rot put ( i dict ) drop drop
+		} L2 ref :: ( bind lambda+dict -- dict already saved in L2 so don't need a copy here )
+		for-each-i 
+			\ "MAPPINGS after adding @args:" . L2 ref . CR
+		\ basically same thing for locals now, with offset:
+		\	for each local "N" at index i, create two symbols:
+		\		"N" -> LP i + #args + ref
+		\		"N!" -> LP i + #args + set!
+		L1 ref ( objlist locals )
+		{
+			( called with: i name ; self bound to [ dict #args ] )
+			str 2dup over self 1 get + 'LP swap '+ 'ref 4 make-list ( i name i name [ 'LP i+#args '+ 'ref ] )
+			self 0 get -rot put ( i name i dict ) drop drop
+			over self 1 get + 'LP swap '+ 'set! 4 make-list ( i name [ 'LP i+#args '+ 'set! ] )
+			swap "!" + swap ( i name! [ 'LP i+#args '+ 'set! ] )
+			self 0 get -rot put ( i dict ) drop drop
+		} L2 ref L0 ref length 2 make-list :: ( bind lambda with [ dict #args ] )
+		for-each-i 
+			\ "MAPPINGS after adding @locals:" . L2 ref . CR
+		\ add a mapping with code for 'return' (LP #args+#locals + LP!)
+		L2 ref "return" 'LP L0 ref length L1 ref length + '+ 'LP! 'return 5 make-list put drop
+			\ "MAPPINGS after adding 'return':" . L2 ref . CR
+		\ create new objlist by replacing all mapped symbols
+		( objlist )
+		{
+			\ called with: ( accum elem ) ; self bound to mapping dict
+
+			\ only process symbols
+			dup symbol? not if >>copy \ not symbol, leave it as-is
+			self over str get void? if >>copy \ not in mapping dict, copy as-is
+			\ replace with mapping
+			self swap str get + return
+
+			@copy ( accum elem )
+				append return \ append to new list as-is
+		} L2 ref :: ( bind self to mapping dict )
+	 	\ "READY TO FOLD:" . .S CR
+		\ initial value is stack setup: [ LP #locals - LP! ] then one >L for each @arg
+		'LP L1 ref length '- 'LP! 4 make-list
+		[ '>L append ] L0 ref length repeat
+		fold >>exit
+
+	@exit
+		\ clean up my locals
+		LP 4 + LP!
+		\ "FOLDED:" . . CR
+	;
+
+\ take a parsed objlist, presumably from byte-compile, and perform finalization:
+\	* ensure objlist ends with 'return'
+\	* transform @args [ .. ] and @locals [ .. ] into code
+\
+\ returns a new list, does NOT modify objlist
+: compile-finalize-word ( objlist -- newlist )
+	dup length 0 > if >>not-empty
+	\ objlist is empty; newlist is [ return ]
+	drop 'return 1 make-list >>transform-args-locals
+
+	@not-empty ( objlist )
+		dup -1 get 'return != if >>add-return
+		\ already has return at end
+		>>transform-args-locals
+
+	@add-return ( objlist )
+		deepcopy \ don't modify original
+		'return append
+
+	@transform-args-locals ( objlist )
+		compile-rewrite-args-locals
+	;
+
+\ *********************************************
+\ REMOVE ME!!!!!!!!!!!!!!!!!!!
+\ ONLY NEEDED SINCE THE SAME VAR EXISTS IN COMPILER.VERB.B
+\ *********************************************
+del COMPILED_NAMELISTS
+var COMPILED_NAMELISTS 1
+
+\ take the parsed COMPILED_NAMELISTS and perform finalization on the words.
+\ see compiled-finalize-wprd for details. saves finalized lists back to COMPILED_NAMELISTS
+: compiler-finalize-all-words ( -- )
+		\ "FINALIZE ALL WORDS" . CR
+	0
+	@loop ( i )
+		dup COMPILED_NAMELISTS ref length >= ( i >= #lists ) if >>done 
+		COMPILED_NAMELISTS ref over get ( i lists[i] )
+			\ "READY FOR PAIR:" . .S CR
+		1 get ( i objlist )
+			\ "REWRITING OBJLIST:" . dup . CR
+		compile-finalize-word ( i new-objlist )
+		over COMPILED_NAMELISTS ref swap get ( i newlist LISTS[i] )
+			\ "READY TO PUT:" . .S CR
+		1 rot put drop ( i )
+		1 + <<loop ( ++i )
+	@done
+		\ "FINAL NAMELISTS:" . COMPILED_NAMELISTS ref . CR
+		drop
+	;
+
+: byte-compile ( -- names wordlists ; byte-compile source from current reader stream )
+	\ do NOT store compiled words into interpreter since that would prevent compiling
+	\  any code that contained a name that was already defined -- for example when
+	\  compiling this file
+	\
+	\ instead, store as a list of [name,wordlist] to COMPILED_NAMELISTS
+
+	0 make-list COMPILED_NAMELISTS set!
+
+	\ i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
+	\ save starting SP so I can count at the end
+	SP >L ( L0=SP at start )
+	@loop
+	( read all parsed objects then make into a list )
+	syntax-next
+	dup void? if >>done 
+	dup list? if >>list
+	<<loop
+	@list
+	\ **TODO** change this to use flatten-if-inline
+	\ check for [ ,,inline ... ] and flatten
+	dup length 0 == if <<loop
+	dup 0 get ',,inline == if >>flatten
+	<<loop
+	@flatten
+		1 -1 slice unmake drop <<loop
+	@done
+	drop
+	( count # items added to stack and make list )
+	L> SP - 1 - make-list
+	( save this code under __main__ )
+	'__main__ save-defined-word
+	( perform finalization of all words )
+	compiler-finalize-all-words
+	( leave list of [ name list ] on stack )
+	COMPILED_NAMELISTS ref
+	;
 
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR
