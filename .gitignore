@@ -34,3 +34,4 @@ c++/*.verb.b
 csharp/min.pdb
 csharp/temp-out.txt
 python/temp-out.txt
+verb/temp-out.txt

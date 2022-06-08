@@ -1,0 +1,323 @@
+\
+\ WIP versions new iteration/functional words
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+\ Demos below show that these versions outperform the existing versions
+\ of these functions anywhere from 20% faster to 3x faster.
+\
+\ example run (with c++ min repl):
+\
+\ for-each ran in 1.0639623000024585 seconds
+\ new-for-each ran in 0.83031889999983832 seconds
+\
+\ map ran in 1.544817600006354 seconds
+\ new-map ran in 1.0088499999983469 seconds
+\
+\ fold ran in 1.2410779000056209 seconds
+\ new-fold ran in 0.79467200000362936 seconds
+\
+\ filter ran in 1.4759841999912169 seconds
+\ new-filter ran in 0.45552580000367016 seconds
+
+\ for each item in seq, call func as:
+\	( seq[i] -- )
+: new-for-each ( seq func -- )
+	@args [ seq func ]
+	@locals [ i ]
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		seq i get func call 
+		i 1 + i! <<loop
+	@done 
+		;
+
+: new-for-each-reverse ( seq func -- )
+	@args [ seq func ]
+	@locals [ i ]
+	seq length 1 - i!
+	@loop
+		i 0 < if >>done 
+		seq i get func call 
+		i 1 - i! <<loop
+	@done 
+		;
+
+\ call func for each item of list as:
+\	( list[i] -- out )
+\ make a newlist from the 'out' values
+: new-map-list ( list func -- newlist )
+	@args [ list func ]
+	@locals [ i newlist ]
+	0 i!
+	[ ] newlist!
+	@loop
+		i list length >= if >>done 
+		list i get func call
+		newlist swap append newlist!
+		i 1 + i! <<loop
+	@done
+		newlist
+		;
+	
+\ call func for each char of string as:
+\	( str[i] -- out )
+\ make a newlist from the 'out' values
+: new-map-string ( str func -- newstring )
+	@args [ str func ]
+	@locals [ i newstr ]
+	0 i!
+	"" newstr!
+	@loop
+		i str length >= if >>done 
+		str i get func call
+		newstr swap + newstr!
+		i 1 + i! <<loop
+	@done
+		newstr
+		;
+
+: new-map ( seq func -- newseq )
+	@args [ seq func ]
+	seq list? if >>list 
+	seq string? if >>string 
+	"Bad sequence in map:" seq str + error
+
+	@list seq func new-map-list return
+	@string seq func new-map-string return
+	;
+
+\ fold - left fold
+\	func: called as: ( accum elem -- new-accum ) where accum is the accumulated value and
+\		  elem is the next element to be added to the accumulator.
+\		  func must leave updated accum on stack
+\	init: initial value for accumulator
+\
+\ 	pseudocode:
+\		acc = func(acc, seq[0])
+\		acc = func(acc, seq[1])
+\		.
+\		acc = func(acc, seq[n-1])
+: new-fold ( seq func init -- accum )
+	@args [ seq func init ]
+	@locals [ accum i ]
+	init accum!
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		accum seq i get func call accum!
+		i 1 + i! <<loop
+	@done
+		accum
+	;
+
+: new-filter ( seq func -- truelist )
+	@args [ seq func ]
+	@locals [ truelist i ]
+	[ ] truelist!
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		seq i get func call not if >>next 
+		truelist seq i get append
+	@next
+		i 1 + i! <<loop
+	@done
+		truelist
+	;
+
+\ join a list of strings by separator string
+: string-join ( list separator -- string )
+	@args [ list sep ]
+	list
+	\ self is the separator
+	{ ( accum elem ) over length 0 == if >>skip \ skip separator before first string
+		swap self + swap
+		@skip +
+	} sep :: \ bind separator as self to func
+	"" fold
+	;
+
+"Items (for-each):" . CR
+[ "one" "two" "three" "four" ]
+{ . CR } for-each
+
+"Items (new-for-each):" . CR
+[ "one" "two" "three" "four" ]
+{ . CR } new-for-each
+
+"Items (for-each-reverse):" . CR
+[ "one" "two" "three" "four" ]
+{ . CR } for-each-reverse
+
+"Items (new-for-each-reverse):" . CR
+[ "one" "two" "three" "four" ]
+{ . CR } new-for-each-reverse
+
+"map (list):" . CR
+[ 10 20 30 40 50 ]
+{ 30 * } map . CR
+
+"new-map (list):" . CR
+[ 10 20 30 40 50 ]
+{ 30 * } new-map . CR
+
+"map (string):" . CR
+"abcdef"
+{ ord 3 + chr } map . CR
+
+"new-map (string):" . CR
+"abcdef"
+{ ord 3 + chr } new-map . CR
+
+"fold -> string:" . CR
+"abcde"
+{ "-" + + } "" fold . CR
+
+"new-fold -> string:" . CR
+"abcde"
+{ "-" + + } "" new-fold . CR
+
+"fold -> list:" . CR
+[ "hello" "there" "world" ]
+{ append "*" append } [ ] fold . CR
+
+"new-fold -> list:" . CR
+[ "hello" "there" "world" ]
+{ append "*" append } [ ] new-fold . CR
+
+"fold -> number:" . CR
+[ 13 45 82 122 87 ]
+{ + } 0 fold . CR
+
+"new-fold -> number:" . CR
+[ 13 45 82 122 87 ]
+{ + } 0 new-fold . CR
+
+"filter (> 50):" . CR
+[ 10 542 133 -21 47 50 99 1 1777 ]
+{ 50 > } filter . CR
+
+"new-filter (> 50):" . CR
+[ 10 542 133 -21 47 50 99 1 1777 ]
+{ 50 > } new-filter . CR
+
+"string-join:" . CR
+[ "abc" "def" "ghi" ] "-*-" string-join . CR
+
+: make-number-list ( NR -- [ 1 2 3 ... NR ] )
+	@args [ NR ]
+	@locals [ i newlist ]
+	[ ] newlist!
+	1 i!
+	@loop
+		i NR > if >>done 
+		newlist i append newlist!
+		i 1 + i! <<loop
+	@done
+		newlist
+		;
+
+var T0 1
+var T1 1
+
+\ == for-each vs new-for-each
+
+100 make-number-list 
+run-time T0 set!
+[
+dup
+{ drop } for-each
+] 1000 repeat
+
+run-time T1 set!
+
+"for-each ran in" . T1 ref T0 ref - . "seconds" . CR
+
+run-time T0 set!
+[
+dup
+{ drop } new-for-each
+] 1000 repeat
+
+run-time T1 set!
+"new-for-each ran in" . T1 ref T0 ref - . "seconds" . CR
+
+\ ==== map vs new-map
+
+100 make-number-list 
+dup
+run-time T0 set!
+[
+dup
+{ 30 * } map drop
+] 1000 repeat
+
+run-time T1 set!
+
+"map ran in" . T1 ref T0 ref - . "seconds" . CR
+
+100 make-number-list 
+dup
+run-time T0 set!
+[
+dup
+{ 30 * } new-map drop
+] 1000 repeat
+
+run-time T1 set!
+"new-map ran in" . T1 ref T0 ref - . "seconds" . CR
+
+\ == fold vs new-fold
+
+100 make-number-list 
+dup
+run-time T0 set!
+[
+dup
+{ + } 0 fold drop
+] 1000 repeat
+
+run-time T1 set!
+
+"fold ran in" . T1 ref T0 ref - . "seconds" . CR
+
+100 make-number-list 
+dup
+run-time T0 set!
+[
+dup
+{ + } 0 new-fold drop
+] 1000 repeat
+
+run-time T1 set!
+
+"new-fold ran in" . T1 ref T0 ref - . "seconds" . CR
+
+\ == filter vs new-filter
+
+100 make-number-list 
+dup
+run-time T0 set!
+[
+dup
+{ 50 > } filter drop
+] 1000 repeat
+
+run-time T1 set!
+
+"filter ran in" . T1 ref T0 ref - . "seconds" . CR
+
+100 make-number-list 
+dup
+run-time T0 set!
+[
+dup
+{ 50 > } new-filter drop
+] 1000 repeat
+
+run-time T1 set!
+
+"new-filter ran in" . T1 ref T0 ref - . "seconds" . CR
+
