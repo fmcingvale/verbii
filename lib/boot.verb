@@ -79,10 +79,18 @@
 	
 \ load & import module from either name.verb or name.verb.b
 \ TODO:
-\	*  define library paths & add search 
+\	* define library paths & add search 
 \	* add way to let modules know they are being imported so they
 \	  shouldn't run their main code (unless it's required to init the module of course)
 : import ( name -- )
+	\ see if name has been imported already and don't import again
+	\ (NOTE this is declared below like the other vars since the parser can't handle
+	\ seeing it up here)
+	IMPORTED_MODULES ref over get void? not if >>already-imported
+	\ not yet imported - go ahead and mark as imported - if the below fails then 
+	\ the program will crash anyways
+	dup IMPORTED_MODULES ref swap true put drop
+	\ import module
 	".verb" +
 	dup file-exists? if >>good
 	"Unable to find file:" swap + error
@@ -90,6 +98,10 @@
 		load-file-maybe-cached
 		\ module may need to init its own globals, etc., so run it
 		safe-run-and-delete-main
+		return
+	@already-imported ( name )
+		\ "ALREADY IMPORTED:" . dup . CR
+		drop
 	;
 
 \ load & run file (whole program mode)
@@ -138,6 +150,10 @@ init-interpreter
 \ i have to stay completely out of the stack & locals for the tests to
 \ run correctly so this is the only real option
 var TESTMODE_STREAM 1
+
+\ this belongs with 'import' but again it cannot be parsed sitting up there
+var IMPORTED_MODULES 1
+,,new-dict IMPORTED_MODULES set!
 
 \ parsed from cmdline args - set defaults
 var FILENAME 1

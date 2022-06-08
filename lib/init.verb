@@ -125,9 +125,10 @@ SP SP_EMPTY set!
 	;
 
 \ this is what I should have named these ...
-\ TODO - find all code using any & all and change to any? and all?
+\ TODO - find all code using these and change so i can remove these eventually
 : any? any ;
 : all? all ;
+: file-read read-file ;
 
 \ ========================================================================
 \ String functions
@@ -186,14 +187,16 @@ SP SP_EMPTY set!
 	L1 ref 1 - L1 set! ( NR -= 1 ) <<loop
 	@done LP 2 + LP! ; ( remove locals )
 
-
 \	for-each -- call a lambda on each element of a sequence [any object that supports
 \  	'length' and 'slice' methods]
 \
 \	lambda is called with current item of sequence on top of stack. for-each does not
 \	touch the stack otherwise.
 \
-: for-each ( object lambda -- call lambda on each object in string,symbol,list )
+\	*NOTE* lambda CANNOT rely on the state of the stack or locals -- bind with state if 
+\	data is needed other than the passed elements
+\
+: for-each ( seq lambda -- call lambda on each object in string,symbol,list )
 	>L dup length >L 0 >L ( L0=index, L1=length, L2=lambda )
 	@loop
 	L0 ref L1 ref >= if >>done
@@ -206,7 +209,7 @@ SP SP_EMPTY set!
 \
 \	for-each-reverse -- same as for-each, but starts at the end
 \
-: for-each-reverse ( object lambda -- call lambda on each object in string,symbol,list in reverse order )
+: for-each-reverse ( seq lambda -- call lambda on each element in string,symbol,list in reverse order )
 	>L dup length 1 - >L ( L0=index, L1=lambda )
 	@loop
 	L0 ref 0 < if >>done
@@ -216,6 +219,24 @@ SP SP_EMPTY set!
 	@done drop LP 2 + LP!
 	;
 
+\
+\ like for-each, except includes index. lambda is called as:
+\	: lambda ( i elem -- ) 
+\
+\ *NOTE* lambda CANNOT rely on the state of the stack or locals -- bind with state if 
+\ data is needed other than the passed ( i elem )
+\
+: for-each-i ( object lambda -- )
+ 	>L dup length >L 0 >L ( L0=index, L1=length, L2=lambda )
+	@loop ( object )
+		L0 ref L1 ref >= ( obj index>=length ) if >>done 
+		L0 ref +get L0 ref swap L2 ref ( obj index obj[index] lambda )
+		call ( call lambda with [index element] on stack )
+		L0 ref 1 + L0 set! ( ++index ) <<loop
+	@done ( obj )
+		drop LP 3 + LP! ( drop object, remove locals )
+	;
+	
 \ fold - left fold
 \	func: called with stack [ accum elem ] where accum is the accumulated value and
 \		  elem is the next element to be added to the accumulator.
@@ -248,7 +269,8 @@ SP SP_EMPTY set!
 \
 \ map - make new sequence of func[elem] for each elem in sequence
 \
-\ calls func with elem on top of stack; func must leave new element on stack
+\ calls func as:
+\	: func ( elem -- new-elem )
 \
 : map ( seq func )
 	over list? if >>map-list
