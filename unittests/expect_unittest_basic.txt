@@ -320,13 +320,13 @@ Hello world!
 >> : foobar 11 22 33 44 ;
 => 10 20 30 40 
 >> 'foobar .dumpword
-=> 10 20 30 40 [ 11 22 33 44 ] 
+=> 10 20 30 40 [ 11 22 33 44 'return ] 
 >> ( ensure i can't modify word from dumped list )
-=> 10 20 30 40 [ 11 22 33 44 ] 
+=> 10 20 30 40 [ 11 22 33 44 'return ] 
 >> 2 777 put
-=> 10 20 30 40 [ 11 22 777 44 ] 
+=> 10 20 30 40 [ 11 22 777 44 'return ] 
 >> 'foobar .dumpword
-=> 10 20 30 40 [ 11 22 777 44 ] [ 11 22 33 44 ] 
+=> 10 20 30 40 [ 11 22 777 44 'return ] [ 11 22 33 44 'return ] 
 >> clear
 => 
 >> ( -- lambdas -- )
@@ -824,6 +824,9 @@ and		now		with			tabs
 >> [ 10 20 30 x y z ] 'abc :: repr . CR
 <{ 10 20 30 'x 'y 'z } :: 'abc> 
 => 
+>> { 11 22 33 x y z } 'abc :: repr . CR \ test all ways of using ::
+<{ 11 22 33 'x 'y 'z } :: 'abc> 
+=> 
 >> 'a-long-symbol repr . CR
 'a-long-symbol 
 => 
@@ -858,6 +861,9 @@ false
 => 
 >> [ 10 20 30 x y z ] 'abc :: str . CR
 <{ 10 20 30 x y z } :: abc> 
+=> 
+>> { 11 22 33 x y z } 'abc :: str . CR
+<{ 11 22 33 x y z } :: abc> 
 => 
 >> 'a-long-symbol str . CR
 a-long-symbol 
@@ -1122,6 +1128,12 @@ Expect 3850888180: 3850888180
 => [ 10 20 <{ 111 222 333 } :: 77> 30 40 ] 
 >> call
 => 10 20 <{ 111 222 333 } :: 77> 30 40 
+>> clear
+=> 
+>> 111 222 [ 33 44 55 ] 888 :: 333 444 5 make-list make-lambda
+=> <{ 111 222 <{ 33 44 55 } :: 888> 333 444 }> 
+>> call
+=> 111 222 <{ 33 44 55 } :: 888> 333 444 
 >> clear
 => 
 >> 11 22 [ ] make-dict 33 44 5 make-list

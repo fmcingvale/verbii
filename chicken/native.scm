@@ -418,6 +418,15 @@
 			((Float? obj) (push intr (inexact->exact (floor (value obj)))))
 			(else (lang-error 'floor "Floor expects number but got:" obj)))))
 
+(define (make-closure intr obj state)
+	(cond
+		((List? obj)
+			(push intr (make-Closure (deepcopy obj) state)))
+		((Lambda? obj)
+			(push intr (make-Closure (deepcopy (lambda-llist obj)) state)))
+		(else
+			(lang-error 'make-closure "make-closure expects list or lambda, got:" obj))))
+
 (import (chicken bitwise))
 (import (chicken time))
 (import (chicken time posix))
@@ -503,8 +512,7 @@
 		(list "read-file"   (list 's) builtin-read-file)
 		(list "cmdline-args" '() (lambda (intr) (push intr NATIVE_CMDLINE_ARGS)))
 		; as above, must deepcopy list
-		(list "make-closure" (reverse (list 'L '*)) 
-					(lambda (intr llist state) (push intr (make-Closure (deepcopy llist) state))))
+		(list "make-closure" (reverse (list '* '*)) make-closure)
 		(list "self"		'() builtin-self-get)
 		(list "self!"		'() builtin-self-set)
 		(list "put" (reverse (list '* '* '*)) builtin-put)

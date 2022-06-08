@@ -507,9 +507,15 @@ end
 
 function builtin_make_closure(intr)
 	local state = intr:pop()
-	local objlist = popList(intr)
-	-- as above, must deepcopy list
-	intr:push(new_Closure(deepcopy(objlist),state))
+	local obj = intr:pop()
+	-- as above, must deepcopy lists
+	if isList(obj) then
+		intr:push(new_Closure(deepcopy(obj),state))
+	elseif isLambda(obj) then
+		intr:push(new_Closure(deepcopy(obj.objlist),state))
+	else
+		error(">>>make-closure expects list or lambda but got:" .. fmtStackPrint(obj))
+	end
 end
 
 function builtin_self_get(intr)

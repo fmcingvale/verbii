@@ -444,10 +444,16 @@ static void builtin_cmdline_args(Interpreter *intr) {
 
 static void builtin_make_closure(Interpreter *intr) {
 	Object state = intr->pop();
-	Object objlist = popList(intr, "make-closure expecting list");
-	// must deepcopy lists so future changes to original list do not affect
-
-	intr->push(newClosure(objlist.deepcopy().data.objlist, state));
+	Object obj = intr->pop();
+	// can be called with [ .. ] or { .. } as function
+	if(obj.isList())
+		// must deepcopy lists so future changes to original list do not affect this
+		intr->push(newClosure(deepcopy(obj.asList()), state));
+	else if(obj.isLambda())
+		// as above
+		intr->push(newClosure(deepcopy(obj.asLambda()), state));
+	else
+		throw LangError("make-closure expects list or lambda, got:" + obj.fmtStackPrint());
 }
 	
 static void builtin_self_get(Interpreter *intr) {

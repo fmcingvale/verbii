@@ -381,9 +381,14 @@ def builtin_append(I):
 
 def builtin_make_closure(I):
 	state = I.pop()
-	objlist = popList(I)
-	# as with lambda, deepcopy objlist
-	I.push(LangClosure(deepcopy(objlist),state))
+	obj = I.pop()
+	if isList(obj):
+		# as with lambda, deepcopy objlist
+		I.push(LangClosure(deepcopy(obj),state))
+	elif isLambda(obj):
+		I.push(LangClosure(deepcopy(obj.objlist),state))
+	else:
+		raise LangError("make-closure expects list or lambda but got:" + fmtStackPrint(obj))
 
 def builtin_self_get(I):
 	if I.closure is None: raise LangError("Attempting to reference unbound self")

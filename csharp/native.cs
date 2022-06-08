@@ -532,9 +532,14 @@ class Builtins {
 
 	public static void make_closure(Interpreter intr) {
 		var state = intr.pop();
-		var objlist = popList(intr,"make-closure");
+		var obj = intr.pop();
 		// as above, deepcopy list
-		intr.push(new LangClosure(LangList.deepcopyObjlist(objlist.objlist), state));
+		if(obj is LangList)
+			intr.push(new LangClosure(LangList.deepcopyObjlist((obj as LangList)!.objlist), state));
+		else if(obj is LangLambda)
+			intr.push(new LangClosure(LangList.deepcopyObjlist((obj as LangLambda)!.objlist), state));
+		else
+			throw new LangError("make-closure expects list or lambda but got:" + obj.fmtStackPrint());
 	}
 
 	public static void self_get(Interpreter intr) {

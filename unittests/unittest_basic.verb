@@ -466,6 +466,7 @@ false repr . CR
 10 20 'hello 11.5 4 make-list repr . CR
 { 1 2 3 a b c } repr . CR
 [ 10 20 30 x y z ] 'abc :: repr . CR
+{ 11 22 33 x y z } 'abc :: repr . CR \ test all ways of using ::
 'a-long-symbol repr . CR
 "hello there world" repr . CR
 null repr . CR
@@ -479,6 +480,7 @@ false str . CR
 10 20 'hello 11.5 4 make-list str . CR
 { 1 2 3 a b c } str . CR
 [ 10 20 30 x y z ] 'abc :: str . CR
+{ 11 22 33 x y z } 'abc :: str . CR
 'a-long-symbol str . CR
 "hello there world" str . CR
 null str . CR
@@ -624,6 +626,9 @@ clear
 \ this was a bug in the interpreters -- bad assumption that closures & dicts didn't need to be
 \ pushed as literals ...
 10 20 [ 111 222 333 ] 77 :: 30 40 5 make-list
+call
+clear
+111 222 [ 33 44 55 ] 888 :: 333 444 5 make-list make-lambda
 call
 clear
 11 22 [ ] make-dict 33 44 5 make-list
