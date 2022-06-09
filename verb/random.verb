@@ -61,7 +61,7 @@ time-string " " + run-time str + hash-fnv-32 xorshift32-seed
 	xorshift32 MAX_INT32 ref /
 	;
 
-: randint-xor32 ( a b -- n ; returns random number on the internal [a, b) )
+: randint-xor32 ( a b -- n ; returns random number on the interval [a, b) )
 	over - random-xor32 * + floor ( a b-a )
 	;
 
@@ -91,5 +91,7 @@ time-string " " + run-time str + hash-fnv-32 xorshift32-seed
 	. CR
 	;
 	
-test-random-generator
-{ test-randint-in-bins } 20 repeat
+: test-random-module
+	test-random-generator
+	{ test-randint-in-bins } 20 repeat
+	;

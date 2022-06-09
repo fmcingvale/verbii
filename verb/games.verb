@@ -1,0 +1,116 @@
+
+\ Simple text-based games, some based on Rosettacode tasks
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"random" import
+
+: guess-the-number-game ( max -- )
+	@args [ max ]
+	@locals [ nr tries ]
+	1 max 1 + randint-xor32 nr! \ generate number [1..max]
+	0 tries! \ count tries
+	\ "NUMBER IS:" . nr . CR
+	CR "My number is between 1 and " max str + ". Enter your guess and I will" + . CR
+	"tell you if my number is higher or lower." . CR CR
+	@guess
+		tries 1 + tries!
+		"Guess #" tries str + " >> " + prompt
+		dup int-string? not if >>bad-guess 
+		parse-int
+		dup nr == if >>correct 
+		dup nr > if >>too-high 
+		"My number is HIGHER; try again ..." . CR
+		<<guess
+	@correct
+		"You guessed it in " tries str + " tries!" + . CR return
+	@too-high
+		"My number is LOWER; try again ..." . CR
+		<<guess
+	@bad-guess ( str )
+		drop "That is not a number; try again ..." . CR
+		<<guess
+	;
+
+: guess-the-number-advanced-game
+	@menu 
+		CR
+		"Enter maximum value (0 to exit): " prompt 
+		dup void? if >>exit 
+		dup int-string? not if >>bad-number 
+		parse-int 
+		dup 0 == >>exit 
+		dup 2 < if >>bad-number 
+		guess-the-number-game
+		<<menu
+	@bad-number "Not a valid number, try again ..." . <<menu
+	@exit
+	;
+
+: text-ui-menu-choices ( title prompt choices -- index )
+	@args [ title _prompt choices ]
+	@locals [ index ]
+	title . CR CR
+	@showmenu
+	choices { ( i elem ) "   " puts swap 1 + str puts ": " puts puts CR } for-each-i 
+	_prompt prompt
+
+	dup void? if >>exit 
+	dup int-string? not if >>bad-index
+	parse-int
+	dup 1 < if >>bad-index 
+	dup choices length > if >>bad-index 
+	1 - return
+
+	@bad-index "Not a valid selection, try again ..." . CR CR <<showmenu
+	@exit
+	;
+
+\ make new list of tuples [ listA[i] listB[i] ]
+\
+\ output will be same length as listA. if listB is too short, it is repeated as needed.
+\ if listB is longer, extra elements will not be used
+: zip ( listA listB -- zipped )
+	@args [ listA listB ]
+	@locals [ ia ib zipped ]
+	[ ] zipped!
+	0 ia! 0 ib!
+	@loop
+		ia listA length >= if >>done 
+		ib listB length < if >>zip-next
+		0 ib! \ index B wraps around if shorter than listA
+	@zip-next
+		listA ia get listB ib get 2 make-list zipped swap append zipped!
+		ia 1 + ia!
+		ib 1 + ib!
+		<<loop 
+	@done 
+		zipped 
+		;
+
+
+: games-main 
+	@locals [ titles games ]
+	[ "Guess the number" "Guess the number (advanced)" "Exit" ] titles!
+	[ { 100 guess-the-number-game } { guess-the-number-advanced-game } null ] games!
+	
+	@game-loop
+		CR
+		"Select game to play:" ">> " titles
+		text-ui-menu-choices
+		dup void? if >>done
+		games swap get
+		dup null? if >>done 
+		call <<game-loop 
+	@done
+	;
+
+: test-zip
+	[ 10 20 30 ] [ "aaa" "bbb" "ccc" ] zip . CR
+
+	[ 11 22 33 44 55 66 77 88 99 ] [ "aaa" "bbb" "ccc" ] zip . CR
+
+	[ 111 222 333 ] [ "aaa" "bbb" "ccc" "ddd" "eee" "fff" ] zip . CR
+	;
+
+games-main
