@@ -5,10 +5,12 @@
 
 "random" import
 
+: rand-int randint-xor32 ;
+
 : guess-the-number-game ( max -- )
 	@args [ max ]
 	@locals [ nr tries ]
-	1 max 1 + randint-xor32 nr! \ generate number [1..max]
+	1 max 1 + rand-int nr! \ generate number [1..max]
 	0 tries! \ count tries
 	\ "NUMBER IS:" . nr . CR
 	CR "My number is between 1 and " max str + ". Enter your guess and I will" + . CR
@@ -47,6 +49,179 @@
 	@exit
 	;
 
+\ return random item from choices (string/list)
+: rand-choice ( choices )
+	@args [ choices ]
+	0 choices length rand-int 
+	choices swap get
+	;
+
+\ make string of nr copies of c (string)
+: string-fill ( c nr -- string )
+	@args [ c nr ]
+	@locals [ i out ]
+	"" out!
+	0 i!
+	@loop
+		i nr >= if >>done 
+		out c + out!
+		i 1 + i! <<loop
+	@done
+		out
+	;
+
+\ make list of nr elements of obj
+: list-fill ( obj nr -- list )
+	@args [ obj nr ]
+	@locals [ i out ]
+	[ ] out!
+	0 i!
+	@loop
+		i nr >= if >>done 
+		out obj append out!
+		i 1 + i! <<loop
+	@done
+		out
+	;
+
+: code-breaker-eval-guess ( code guess -- status )
+	@args [ code guess ]
+	@locals [ status i ]
+	\ start with no-matched status
+	"." code length list-fill status!
+	\ sanity check length
+	code length guess length != if >>bad-length
+	\ mark O's where char in somewhere in code
+	0 i!
+	@mark-Os
+		\ see if each char in guess is *anywhere* in code
+		i guess length >= if >>ready-mark-Xs
+		code guess i get find-obj void? if >>next-O
+		status i "O" put status!
+	@next-O 
+		i 1 + i! <<mark-Os
+
+	@ready-mark-Xs 
+		0 i!
+	@mark-Xs
+		i guess length >= if >>done 
+		code i get guess i get != if >>next-X 
+		status i "X" put status!
+	@next-X 
+		i 1 + i! <<mark-Xs 
+	@bad-length
+		"Guess must be" . code length . "digits; try again ..." . CR
+		void return
+	@done
+		status
+	;
+
+\ does status represent winning game?
+: code-breaker-won? ( status -- bool )
+	dup "O" find-obj void? not if >>no 
+	dup "." find-obj void? not if >>no 
+	drop true return
+	@no drop false return
+	;
+
+: test-code-breaker-funcs
+	"Expect [ O O O O ]:" . "1234" "4321" code-breaker-eval-guess . CR
+	"Expect [ . O . . ]:" . "1234" "0400" code-breaker-eval-guess . CR
+	"Expect [ . . . O ]:" . "1234" "0003" code-breaker-eval-guess . CR
+	"Expect [ . . X . ]:" . "1234" "0030" code-breaker-eval-guess . CR
+	"Expect [ X . X . ]:" . "1234" "1930" code-breaker-eval-guess . CR
+	"Expect [ X X X X ]:" . "1234" "1234" code-breaker-eval-guess . CR
+	"Expect [ X O X O ]:" . "1234" "1432" code-breaker-eval-guess . CR
+
+	"Expect false:" . [ "X" "O" "X" "X" ] code-breaker-won? . CR
+	"Expect false:" . [ "X" "O" "X" "." ] code-breaker-won? . CR
+	"Expect true:" . [ "X" "X" "X" "X" ] code-breaker-won? . CR
+	;
+
+\ like the mastermind game --
+\	generate a code of length codelen taken from the given alphabet
+\
+\	user enters their guess at the code and game displays result like:
+\		XO.OX.
+\	where:
+\		X = correct code in this position
+\		O = correct letter but wrong position
+\		. = digit not in code
+\
+: code-breaker-game ( alphabet codelen -- )
+	@args [ alphabet codelen ]
+	@locals [ code guess tries ]
+	"" code!
+	0 tries!
+
+	"           ** Code Breaker **" . CR CR
+	"How to play:" . CR
+	"    You have to guess the secret code ..." . CR
+	"    The code is made of these characters:" . alphabet "" string-join . CR
+	"    The code is of length:" . codelen . CR
+	"Each time you guess, I will show you how you did, like this:" . CR
+	"    [ . X O . ]" . CR
+	"Where:" . CR
+	"    X = you guessed the correct digit in that position" . CR
+	"    O = you guessed a correct digit but NOT in the correct position" . CR
+	"    . = the digit you guessed in that position is NOT in the secret code" . CR
+	"Special:" . CR
+	"    A digit MAY appear in more than one position!" . CR
+	CR  
+
+	@make-code
+		code length codelen >= if >>start 
+		code alphabet rand-choice + code!
+		<<make-code
+	@start
+		\ "MADE CODE:" . code . CR
+		"Let's begin! ..." . CR CR
+		\ make known-incorrect guess for initial status
+		"*" code length string-fill guess!
+	@guess
+		\ get win/loss status
+		code guess code-breaker-eval-guess
+		dup void? if >>get-guess
+		dup code-breaker-won? if >>won 
+		tries 1 + tries!
+		"Status:" . . CR
+	@get-guess
+		"Guess #" tries str + ": " + prompt guess!
+		<<guess
+	@won
+		CR "** Solved in " tries str + " tries! **" + . CR
+	;
+
+\ like code-breaker but more options for player
+: code-breaker-advanced-game ( -- )
+	@locals [ codelen alphabet ]
+
+	@pick-code-length
+		"Pick length for secret code (2 ...): " prompt
+		dup int-string? not if >>bad-length
+		parse-int
+			dup 2 < if >>bad-length 
+			codelen! >>pick-alphabet
+		
+	@bad-length
+		"Bad length; try again ..." . CR <<pick-code-length
+
+	@pick-alphabet
+		"Number of digits to choose from (2 .. 10): " prompt
+		dup int-string? not if >>bad-alphabet
+		parse-int
+			dup 2 < if >>bad-alphabet
+			dup 10 > if >>bad-alphabet
+			"0123456789" 0 rot slice alphabet!
+			>>play 
+
+	@bad-alphabet
+		"Bad number of digits; try again ..." . CR <<pick-alphabet 
+
+	@play	
+		alphabet codelen code-breaker-game
+		;
+
 : text-ui-menu-choices ( title prompt choices -- index )
 	@args [ title _prompt choices ]
 	@locals [ index ]
@@ -64,6 +239,25 @@
 
 	@bad-index "Not a valid selection, try again ..." . CR CR <<showmenu
 	@exit
+	;
+
+\ get index of first element of seq where func[seq[i]] is true
+\ returns void if not found
+: find ( seq func -- index|void )
+	@args [ seq func ]
+	@locals [ i ]
+	0 i!
+	@loop
+		i seq length >= if >>not-found 
+		seq i get func call if >>found 
+		i 1 + i! <<loop
+	@found i return 
+	@not-found void return
+	;
+
+\ like find but find an exact equal object
+: find-obj ( seq obj -- index|void )
+	'== 2 make-list find \ pass [ obj == ] as the func
 	;
 
 \ make new list of tuples [ listA[i] listB[i] ]
@@ -88,11 +282,15 @@
 		zipped 
 		;
 
-
 : games-main 
 	@locals [ titles games ]
-	[ "Guess the number" "Guess the number (advanced)" "Exit" ] titles!
-	[ { 100 guess-the-number-game } { guess-the-number-advanced-game } null ] games!
+	[ "Guess the number" "Guess the number (advanced)" "Code breaker" 
+		"Code breaker (advanced)" "Exit" ] titles!
+	[ { 100 guess-the-number-game } { guess-the-number-advanced-game } 
+		\ default game has 6 colors like original
+		{ "012345" 4 code-breaker-game }  
+		{ code-breaker-advanced-game }
+		null ] games!
 	
 	@game-loop
 		CR
@@ -113,4 +311,35 @@
 	[ 111 222 333 ] [ "aaa" "bbb" "ccc" "ddd" "eee" "fff" ] zip . CR
 	;
 
+: test-find
+	"Expect 3:" . [ 11 22 33 44 55 ] { 44 == } find . CR
+	"Expect 0:" . [ 11 22 33 44 55 ] { 11 == } find . CR
+	"Expect 4:" . [ 11 22 33 44 55 ] { 55 == } find . CR
+	"Expect void:" . [ 11 22 33 44 55 ] { 88 == } find . CR
+	"Expect 4:" . "tkcdqpij" { "q" == } find . CR
+	"Expect 0:" . "tkcdqpij" { "t" == } find . CR 
+	"Expect 7:" . "tkcdqpij" { "j" == } find . CR 
+	"Expect void:" . "tkcdqpij" { "Z" == } find . CR 
+
+	"Expect 2:" . [ 111 222 333 444 ] 333 find-obj . CR
+	"Expect 0:" . [ 111 222 333 444 ] 111 find-obj . CR
+	"Expect 3:" . [ 111 222 333 444 ] 444 find-obj . CR
+	"Expect void:" . [ 111 222 333 444 ] 777 find-obj . CR
+	;
+
+: test-string-fill
+	"Expect AAAAA:" . "A" 5 string-fill . CR
+	"Expect B:" . "B" 1 string-fill . CR
+	"Expect :" . "C" 0 string-fill . CR
+	;
+
+: test-list-fill
+	"Expect [ A A A ]: " . "A" 3 list-fill . CR
+	"Expect [ B ]: " . "B" 1 list-fill . CR
+	"Expect [ ]: " . "C" 0 list-fill . CR
+	;
+
+\ test-list-fill
 games-main
+\ "0123456789" 3 code-breaker-game
+
