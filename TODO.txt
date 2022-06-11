@@ -43,12 +43,6 @@ Global TODO
   NAME can be defined to get value and NAME! to set value. if arrays are needed then
   just store a list to NAME
 
-* add caching of byte-compilation, i.e. file.verb is cached to file.verb.b after
-  a successful byte-compile. to support this:
-	* need new words: file-exists?, file-mtime
-	* compiler needs to support writing to a file instead of (or in addition to) stdout
-	* deserialize needs to be callable from verbii
-
 * slightly change 'if' semantics:
 	1. pop bool from stack
 	2. if true, run next word (i.e. do nothing)
@@ -56,9 +50,6 @@ Global TODO
 
 	* in other words, word after 'if' no longer has to be a jump, but if it is
 	  a jump, code will continue to work as it always has
-
-* add bit level operations -- limit to 32 bits
-	* add random number generator
 
 * the L0,L1, etc should become:
 	: L3 LP 3 + ref ;
@@ -70,17 +61,11 @@ write-string, write-char ... basically I/O with ports concept like scheme
 * pick should be 0-based for consistency with other 0-indexed functions
 	* I think I should just add names S0, S0! S1 S1! etc to initlib instead
 
-* add load or import word (in verbii if possible)
-
-* more repl pieces in verbii
-
 * need to extend ,,del (or maybe just get rid of 'del NAME' and always make del stack-based??)
   to delete entries from more objects:
 	dict STRING ,,del ( delete a key from dictionary )
 	SYMBOL ,,del ( delete a word )
 	list INDEX ,,del ( delete entry from list )
-
-* make sure { .. } :: obj works -- right now just [ .. ] :: obj is accepted
 
 * chicken needs backtraces
 
@@ -89,9 +74,6 @@ write-string, write-char ... basically I/O with ports concept like scheme
 * reorganize tests by category?
  
 ---[   Clean-up   ]------------------------------------------------------
-
-* when compiling to a .b file, should write to temp file and only overwrite .b after it is complete,
-  in case of a crash, or user doing Ctrl-C during compilation, etc. and corrupting .b file.
   
 * chicken - minimize imports across all files
 
@@ -101,9 +83,6 @@ write-string, write-char ... basically I/O with ports concept like scheme
 * read-file should be file-read for consistency with file-exists?, etc.
 
 * need a better way to find lib/ than hardcoding/assuming path in repls
-
-* compiler should insert a 'return' at the end of words to rid of special cases in interpreter
-	* no ... can't do that since lists can be called without any make-word pass to insert the return
 
 * chicken: main interpreter loop -- use while instead of having to place recursive calls everywhere
 
@@ -138,17 +117,10 @@ write-string, write-char ... basically I/O with ports concept like scheme
 	* convert words into indexes so they can be called without lookup at runtime
 		* WORDS in interpreter would then be a list
 
-	* add syntax like:
-		: name @args [ a b c ] @vars [ d e f ]
-		where:
-			* a, b, c are pulled from the stack into locals
-			* d, e, f are added to locals, undefined
-			* names are created: a == 'LP i + ref', a! == 'LP i + set!'
-			* compiler converts names into LP/ref/set! at compile time so no
-			  overhead other than setting args up into locals
-			* compiler emits cleanup code (LP + n LP!) before 'return'
-				* need to add a return at end of all word lists for simplicity
-	
+	* accept : name @( arg ... -- local ... ) as an alternate way to specify
+		@args and @locals. this should be additive so code can also do @locals
+		when more temporaries are needed than make sense to list in the function signature
+
 	* try inlining small functions
 		* the question would be should this be done recursively and to what depth?
 			i.e. 
