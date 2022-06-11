@@ -112,6 +112,8 @@ Expect aaabbbcccdddeeefff: aaabbbcccdddeeefff
 Expect a-ab-bc-cd-de-ef-f a-ab-bc-cd-de-ef-f 
 Expect 1 .. 10: 1 2 3 4 5 6 7 8 9 10 
 Expect 10 .. 1: 10 9 8 7 6 5 4 3 2 1 
+Expect 0a 1b 2c 3d 4e: 
+       0a 1b 2c 3d 4e 
 Expect XYZ 123 ABC !@$ DEF: 
        XYZ 123 ABC !@$ DEF 
 Expect abc 432 xyz &%# def: 
@@ -172,5 +174,10 @@ Expect: 789 Gur DHVPX oebja SBK whzcf bire gur YNML qbt *#%
 Expect: 789 The QUICK brown FOX jumps over the LAZY dog *#& 
         789 The QUICK brown FOX jumps over the LAZY dog *#& 
 Expect true:  true 
+abcde 
+ab%09de%09fe 
+ab%10cd%13ef 
+ab%37de%37%37fg 
+ab%32cd%32ef 
 END STACK: => 
 

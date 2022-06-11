@@ -349,6 +349,9 @@ clear
 "Expect 10 .. 1:" .
 [ 1 2 3 4 5 6 7 8 9 10 ] [ . ] for-each-reverse CR
 
+"Expect 0a 1b 2c 3d 4e:" . CR
+"      " . "abcde" { ( i elem ) over str puts . drop } for-each-i CR
+
 : to-upper ( string -- first char of string as uppercase [unchanged if not alphabetic] )
 	ord
 	dup 97 < if >>not-lower
@@ -585,6 +588,16 @@ swap . . CR
 void open-as-stdout
 "Expect true: " .
 "temp-out.txt" file-read parse-int 123456 == . CR
+
+\ for some earlier compiler bugs in the serializer
+\ note: i do NOT have "Expect ..." strings here since if there is an error in
+\ serialization, it would likely affect those strings too so that could give
+\ a false positive if both get messed up in the same way.
+"abcde" serialize-escape-string . CR
+"ab" 9 chr + "de" + 9 chr + "fe" + serialize-escape-string . CR
+"ab" 10 chr + "cd" + 13 chr + "ef" + serialize-escape-string . CR
+"ab%de%%fg" serialize-escape-string . CR
+"ab cd ef" serialize-escape-string . CR
 
 "END STACK:" . .S CR
 

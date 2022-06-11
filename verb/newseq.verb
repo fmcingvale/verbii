@@ -20,112 +20,18 @@
 \ filter ran in 1.4759841999912169 seconds
 \ new-filter ran in 0.45552580000367016 seconds
 
-\ for each item in seq, call func as:
-\	( seq[i] -- )
-: new-for-each ( seq func -- )
-	@args [ seq func ]
-	@locals [ i ]
-	0 i!
-	@loop
-		i seq length >= if >>done 
-		seq i get func call 
-		i 1 + i! <<loop
-	@done 
-		;
 
-: new-for-each-reverse ( seq func -- )
-	@args [ seq func ]
-	@locals [ i ]
-	seq length 1 - i!
-	@loop
-		i 0 < if >>done 
-		seq i get func call 
-		i 1 - i! <<loop
-	@done 
-		;
 
-\ call func for each item of list as:
-\	( list[i] -- out )
-\ make a newlist from the 'out' values
-: new-map-list ( list func -- newlist )
-	@args [ list func ]
-	@locals [ i newlist ]
-	0 i!
-	[ ] newlist!
-	@loop
-		i list length >= if >>done 
-		list i get func call
-		newlist swap append newlist!
-		i 1 + i! <<loop
-	@done
-		newlist
-		;
+
+
+
 	
-\ call func for each char of string as:
-\	( str[i] -- out )
-\ make a newlist from the 'out' values
-: new-map-string ( str func -- newstring )
-	@args [ str func ]
-	@locals [ i newstr ]
-	0 i!
-	"" newstr!
-	@loop
-		i str length >= if >>done 
-		str i get func call
-		newstr swap + newstr!
-		i 1 + i! <<loop
-	@done
-		newstr
-		;
 
-: new-map ( seq func -- newseq )
-	@args [ seq func ]
-	seq list? if >>list 
-	seq string? if >>string 
-	"Bad sequence in map:" seq str + error
 
-	@list seq func new-map-list return
-	@string seq func new-map-string return
-	;
 
-\ fold - left fold
-\	func: called as: ( accum elem -- new-accum ) where accum is the accumulated value and
-\		  elem is the next element to be added to the accumulator.
-\		  func must leave updated accum on stack
-\	init: initial value for accumulator
-\
-\ 	pseudocode:
-\		acc = func(acc, seq[0])
-\		acc = func(acc, seq[1])
-\		.
-\		acc = func(acc, seq[n-1])
-: new-fold ( seq func init -- accum )
-	@args [ seq func init ]
-	@locals [ accum i ]
-	init accum!
-	0 i!
-	@loop
-		i seq length >= if >>done 
-		accum seq i get func call accum!
-		i 1 + i! <<loop
-	@done
-		accum
-	;
 
-: new-filter ( seq func -- truelist )
-	@args [ seq func ]
-	@locals [ truelist i ]
-	[ ] truelist!
-	0 i!
-	@loop
-		i seq length >= if >>done 
-		seq i get func call not if >>next 
-		truelist seq i get append
-	@next
-		i 1 + i! <<loop
-	@done
-		truelist
-	;
+
+
 
 
 "Items (for-each):" . CR
