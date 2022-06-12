@@ -22,7 +22,7 @@ var JSON_READER_POS 1
 	;
 
 : json-reader-open-file ( filename -- ; open file for parsing JSON )
-	read-file json-reader-open-string
+	file-read json-reader-open-string
 	;
 
 : json-reader-peek-char ( -- c ; peek next char [as string] from JSON text )

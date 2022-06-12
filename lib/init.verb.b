@@ -523,10 +523,6 @@ W all?
 L 2
 y all
 y return
-W file-read
-L 2
-y read-file
-y return
 W whitespace?
 L 6
 i 0
@@ -1346,7 +1342,7 @@ y make-list
 y return
 W stream-reader-open-file
 L 3
-y read-file
+y file-read
 y stream-reader-open-string
 y return
 W stream-reader-peek-char

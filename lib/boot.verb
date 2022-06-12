@@ -33,7 +33,7 @@
 
 	\ load patches file -- .verb only for now, add caching later once this is working
 	
-	"../lib/patches.verb" read-file 
+	"../lib/patches.verb" file-read
 	\ compile & load words into interpreter
 	true set-allow-overwrite-words
 	compile-and-load-string
@@ -73,7 +73,7 @@
 
 	\ ignore any .b file - load source file and compile
 	@nocache
-		read-file
+		file-read
 		compile-and-load-string
 		;
 	

@@ -217,8 +217,8 @@ def builtin_puts(I, obj):
 def builtin_wordlist(I):
 	I.push(list(I.WORDS.keys()))
 
-def builtin_readfile(I):
-	filename = popString(I, "read-file")
+def builtin_file_read(I):
+	filename = popString(I, "file-read")
 	I.push(LangString(open(filename, 'r').read()))
 
 def builtin_make_list(I):
@@ -611,9 +611,7 @@ BUILTINS = {
 
 	'file-write': ([], builtin_file_write),
 	'file-append': ([], builtin_file_append),
-	# backwards compat ...
-	'read-file': ([], builtin_readfile),
-	'file-read': ([], builtin_readfile),
+	'file-read': ([], builtin_file_read),
 	'file-delete': ([], builtin_file_delete),
 	
 }

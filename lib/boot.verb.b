@@ -19,7 +19,7 @@ y deserialize-and-run
 s ../lib/compiler.verb.b
 y deserialize-and-run
 s ../lib/patches.verb
-y read-file
+y file-read
 b true
 y set-allow-overwrite-words
 y compile-and-load-string
@@ -63,7 +63,7 @@ y >>nocache
 y cached-compile-and-load
 y return
 y @nocache
-y read-file
+y file-read
 y compile-and-load-string
 y return
 W import

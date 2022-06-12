@@ -14,7 +14,7 @@ y set!
 y return
 W reader-open-file
 L 3
-y read-file
+y file-read
 y reader-open-string
 y return
 W reader-peek-char

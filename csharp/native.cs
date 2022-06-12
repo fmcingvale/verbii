@@ -322,7 +322,7 @@ class Builtins {
 		}
 	}
 
-	public static void read_file(Interpreter intr) {
+	public static void file_read(Interpreter intr) {
 		string filename = popString(intr,"read-file");
 		var text = System.IO.File.ReadAllText(filename);
 		intr.push(new LangString(text));
@@ -792,9 +792,7 @@ class Builtins {
 
 		{"file-write", file_write},
 		{"file-append", file_append},
-		// backward compat ...
-		{"read-file", read_file},
-		{"file-read", read_file},
+		{"file-read", file_read},
 		{"file-delete", file_delete},
 			
 	};

@@ -327,7 +327,7 @@
 
 (import (chicken file posix))
 
-(define (builtin-read-file intr filename)
+(define (builtin-file-read intr filename)
 	(let* ((fileIn (file-open filename open/rdonly))
 			(text (car (file-read fileIn (file-size fileIn)))))
 		(push intr (make-String text))))
@@ -563,9 +563,7 @@
 				(let ((F (file-open filename (+ open/wronly open/append open/creat))))
 					(file-write F text)
 					(file-close F))))
-		; backward compat ...
-		(list "read-file"   (list 's) builtin-read-file)
-		(list "file-read"   (list 's) builtin-read-file)
+		(list "file-read"   (list 's) builtin-file-read)
 		(list "file-delete" (list 's) 
 			(lambda (intr filename)
 				(if (regular-file? filename)

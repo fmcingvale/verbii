@@ -746,10 +746,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// the file I/O operations are defined atomically - they open the file, perform an action, and close the file.
 	{"file-write", builtin_file_write},
 	{"file-append", builtin_file_append},
-	// for backward compat for now ...
-	{"read-file", builtin_file_read},
 	// what the above SHOULD be named ...
 	{"file-read", builtin_file_read},
 	{"file-delete", builtin_file_delete},
-	
 };

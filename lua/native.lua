@@ -495,7 +495,7 @@ function builtin_open_as_stdout(intr)
 	end
 end
 
-function builtin_readfile(intr)
+function builtin_file_read(intr)
 	local filename = popString(intr)
 	local f = io.open(filename, "r")
 	if f == nil then
@@ -755,8 +755,6 @@ BUILTINS = {
 
 	["file-write"] = { {}, builtin_file_write},
 	["file-append"] = { {}, builtin_file_append},
-	-- backward compat ...
-	["read-file"] = { {}, builtin_readfile},
-	["file-read"] = { {}, builtin_readfile},
+	["file-read"] = { {}, builtin_file_read},
 	["file-delete"] = { {}, builtin_file_delete},	
 }

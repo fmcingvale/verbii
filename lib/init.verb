@@ -128,7 +128,6 @@ SP SP_EMPTY set!
 \ TODO - find all code using these and change so i can remove these eventually
 : any? any ;
 : all? all ;
-: file-read read-file ;
 
 \ ========================================================================
 \ String functions
@@ -395,7 +394,7 @@ SP SP_EMPTY set!
 
 \ create a new stream for reading from file
 : stream-reader-open-file ( filename -- stream )
-	read-file stream-reader-open-string
+	file-read stream-reader-open-string
 	;
 
 \ since doing a series of reads is such a common operation,

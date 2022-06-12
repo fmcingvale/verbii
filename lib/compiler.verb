@@ -31,7 +31,7 @@ var READER_POS 1
 	;
 
 : reader-open-file ( filename )
-	read-file reader-open-string
+	file-read reader-open-string
 	;
 
 \
