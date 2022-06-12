@@ -582,13 +582,6 @@ swap . . CR
 "       " .
 [ rot13-char ] map . CR
 
-\ simple test of open-as-stdout
-"temp-out.txt" open-as-stdout
-"123456" puts
-void open-as-stdout
-"Expect true: " .
-"temp-out.txt" file-read parse-int 123456 == . CR
-
 \ for some earlier compiler bugs in the serializer
 \ note: i do NOT have "Expect ..." strings here since if there is an error in
 \ serialization, it would likely affect those strings too so that could give
@@ -601,3 +594,42 @@ void open-as-stdout
 
 "END STACK:" . .S CR
 
+\ ---- file I/O testing ------
+
+"temp-out.txt" file-delete
+"Expect false:" . "temp-out.txt" file-exists? . CR
+\ make sure deleting non-existant file doesn't raise an error
+"temp-out.txt" file-delete
+
+"temp-out.txt" "hello-file-write" file-write
+"Expect hello-file-write:" . "temp-out.txt" file-read . CR
+
+"Expect true:" . "temp-out.txt" file-exists? . CR
+"temp-out.txt" file-delete
+"Expect false:" . "temp-out.txt" file-exists? . CR
+
+\ make sure append creates file
+"temp-out.txt" "*hello" file-append
+"Expect true:" . "temp-out.txt" file-exists? . CR
+"temp-out.txt" "*file" file-append
+"temp-out.txt" "*append" file-append
+
+"Expect *hello*file*append:" . "temp-out.txt" file-read . CR
+
+\ finally, use write to create (without deleting first!), then append more
+
+"Expect true:" . "temp-out.txt" file-exists? . CR
+"temp-out.txt" "//hello" file-write
+"temp-out.txt" "//file" file-append
+"temp-out.txt" "//write+append" file-append
+
+"Expect //hello//file//write+append:" . "temp-out.txt" file-read . CR
+
+\ without deleting, make sure open-as-stdout creates as new
+"temp-out.txt" open-as-stdout
+"hello" puts
+"-----" puts
+"stdout" puts
+void open-as-stdout
+
+"Expect hello-----stdout:" . "temp-out.txt" file-read . CR
