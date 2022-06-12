@@ -1,4 +1,4 @@
-L 81
+L 78
 W depth
 L 7
 y SP_EMPTY
@@ -421,7 +421,7 @@ y over
 y swap
 y get
 y return
-W any
+W any?
 L 45
 y >L
 y dup
@@ -468,7 +468,7 @@ y +
 y LP!
 b false
 y return
-W all
+W all?
 L 45
 y >L
 y dup
@@ -514,14 +514,6 @@ i 3
 y +
 y LP!
 b true
-y return
-W any?
-L 2
-y any
-y return
-W all?
-L 2
-y all
 y return
 W whitespace?
 L 6

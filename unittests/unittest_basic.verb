@@ -534,15 +534,15 @@ L0 ref
 L1 ref
 LP 2 + LP! \ clean up locals
 
-( tests of 'any' )
-clear "abcde" { "e" == } any
-clear "01234" { "9" == } any
-clear 10 20 30 40 4 make-list { 30 > } any
-clear 10 20 30 40 4 make-list { 0 <  } any
+( tests of any? and all? )
+clear "abcde" { "e" == } any?
+clear "01234" { "9" == } any?
+clear 10 20 30 40 4 make-list { 30 > } any?
+clear 10 20 30 40 4 make-list { 0 <  } any?
 
-clear "mnopqr" dup { "m" >= } all swap { "r" <= } all and
-clear "1234.567" dup { "0" >= } all swap { "9" <= } all and
-clear "1234567" dup { "0" >= } all swap { "9" <= } all and
+clear "mnopqr" dup { "m" >= } all? swap { "r" <= } all? and
+clear "1234.567" dup { "0" >= } all? swap { "9" <= } all? and
+clear "1234567" dup { "0" >= } all? swap { "9" <= } all? and
 
 clear
 ( closures )

@@ -131,7 +131,7 @@ var READER_POS 1
 	;
 
 : any-digits? ( string|symbol -- true|false; does string/symbol contain ANY digits? )
-	{ digit? } any
+	{ digit? } any?
 	;
 
 : ltrim-char ( string char -- if char (single-char string) is at front of string, remove it )

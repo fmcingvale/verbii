@@ -95,7 +95,7 @@ SP SP_EMPTY set!
 : +get ( same as get but leaves obj on stack )
 	over swap get ;
 
-: any ( sequence predicate -- true|false if ANY member of sequence satisfies predicate (lambda) )
+: any? ( sequence predicate -- true|false if ANY member of sequence satisfies predicate (lambda) )
 	>L dup length >L 0 >L ( L0=index, L1=length, L2=predicate )
 	@loop ( sequence )
 			( 3 .L CR )
@@ -109,7 +109,7 @@ SP SP_EMPTY set!
 		drop LP 3 + LP! false return
 	;
 
-: all ( sequence predicate -- true|false if ALL members of sequence satisfy predicate (lambda) )
+: all? ( sequence predicate -- true|false if ALL members of sequence satisfy predicate (lambda) )
 	>L dup length >L 0 >L ( L0=index, L1=length, L2=predicate )
 	@loop ( sequence )
 			( 3 .L CR )
@@ -123,11 +123,6 @@ SP SP_EMPTY set!
 	@allTrue
 		drop LP 3 + LP! true return
 	;
-
-\ this is what I should have named these ...
-\ TODO - find all code using these and change so i can remove these eventually
-: any? any ;
-: all? all ;
 
 \ ========================================================================
 \ String functions

@@ -962,21 +962,21 @@ hello there world
 => [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ] 
 >> LP 2 + LP! \ clean up locals
 => [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ] 
->> ( tests of 'any' )
+>> ( tests of any? and all? )
 => [ 10 20 30 40 50 60 ] [ 10 20 30 ] [ 40 50 60 ] 
->> clear "abcde" { "e" == } any
+>> clear "abcde" { "e" == } any?
 => <true> 
->> clear "01234" { "9" == } any
+>> clear "01234" { "9" == } any?
 => <false> 
->> clear 10 20 30 40 4 make-list { 30 > } any
+>> clear 10 20 30 40 4 make-list { 30 > } any?
 => <true> 
->> clear 10 20 30 40 4 make-list { 0 <  } any
+>> clear 10 20 30 40 4 make-list { 0 <  } any?
 => <false> 
->> clear "mnopqr" dup { "m" >= } all swap { "r" <= } all and
+>> clear "mnopqr" dup { "m" >= } all? swap { "r" <= } all? and
 => <true> 
->> clear "1234.567" dup { "0" >= } all swap { "9" <= } all and
+>> clear "1234.567" dup { "0" >= } all? swap { "9" <= } all? and
 => <false> 
->> clear "1234567" dup { "0" >= } all swap { "9" <= } all and
+>> clear "1234567" dup { "0" >= } all? swap { "9" <= } all? and
 => <true> 
 >> clear
 => 

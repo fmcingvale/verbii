@@ -199,7 +199,7 @@ L 3
 F
 L 1
 y digit?
-y any
+y any?
 y return
 W ltrim-char
 L 22
