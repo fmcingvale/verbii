@@ -13,6 +13,7 @@ class Builtins {
 	public static LangList NATIVE_CMDLINE_ARGS = new LangList();
 	public static bool ALLOW_OVERWRITING_WORDS = false;
 	public static bool EXIT_ON_EXCEPTION = true;
+	public static bool STACKTRACE_ON_EXCEPTION = true;
 	public static long STARTUP_TIME_MSEC = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
 	public static StreamWriter FP_STDOUT = StreamWriter.Null;
 
@@ -688,6 +689,28 @@ class Builtins {
 		intr.push(new LangString(s));
 	}
 
+	public static void file_write(Interpreter intr) {
+		var text = popString(intr,"file-write");
+		var filename = popString(intr,"file-write");
+		var fout = new System.IO.StreamWriter(filename, false);
+		fout.Write(text);
+		fout.Close();
+	}
+
+	public static void file_append(Interpreter intr) {
+		var text = popString(intr,"file-append");
+		var filename = popString(intr,"file-append");
+		var fout = new System.IO.StreamWriter(filename, true);
+		fout.Write(text);
+		fout.Close();
+	}
+
+	public static void file_delete(Interpreter intr) {
+		var filename = popString(intr,"file-delete");
+		if(File.Exists(filename))
+			File.Delete(filename);
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -736,7 +759,6 @@ class Builtins {
 		{".dumpword", dumpword},
 		{"error", intr => throw new LangError(popString(intr,"error")) },
 		{"cmdline-args", intr => intr.push(NATIVE_CMDLINE_ARGS)},
-		{"read-file", read_file},
 		{"make-closure", make_closure},
 		{"self", self_get},
 		{"self!", self_set},
@@ -760,11 +782,20 @@ class Builtins {
 		{"file-mtime", intr => intr.push(new LangInt(File.GetLastWriteTime(popString(intr,"file-mtime")).Ticks))},
 		{"set-allow-overwrite-words", intr => ALLOW_OVERWRITING_WORDS = popBool(intr,"set-allow-overwrite-words")},
 		{"set-exit-on-exception", intr => EXIT_ON_EXCEPTION = popBool(intr,"set-exit-on-exception")},
+		{"set-stacktrace-on-exception", intr => STACKTRACE_ON_EXCEPTION = popBool(intr,"set-stacktrace-on-exception")},
 		{"deserialize", deserialize},
 		{"prompt", prompt},
 		{"open-as-stdout", open_as_stdout},
 
 		{"time-string", time_string},
 		{"floor", intr => intr.push(new LangInt((long)Math.Floor(popFloatOrInt(intr,"floor"))))},
+
+		{"file-write", file_write},
+		{"file-append", file_append},
+		// backward compat ...
+		{"read-file", read_file},
+		{"file-read", read_file},
+		{"file-delete", file_delete},
+			
 	};
 }

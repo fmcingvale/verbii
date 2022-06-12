@@ -80,7 +80,9 @@ if __name__ == '__main__':
 			break
 		except LangError as exc:
 			errmsg = "*** " + exc.msg + " ***"
-			print_backtrace(intr)
+			if native.STACKTRACE_ON_EXCEPTION:
+				print_backtrace(intr)
+				
 			print(errmsg)
 			if native.EXIT_ON_EXCEPTION:
 				sys.exit(1)

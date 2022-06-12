@@ -58,6 +58,7 @@
 (import simple-exceptions) ; with-exn-handler
 
 (import (chicken process-context))
+(import simple-loops)
 
 ;(import srfi-193) ; command line ... is this not in a base chicken library??
 ;(import (chicken file))
@@ -80,23 +81,26 @@
 						; anything else goes to script
 						(llist-push-back NATIVE_CMDLINE_ARGS (make-String arg)))))) (cdr (argv))))
 
-	(let ((intr (make-Interpreter)))
-		(handle-exceptions exn
-			(cond
-				; for verbii (lang-error) print string (usercode error)
-				(((exception-of? 'lang-error) exn) 
-					(print (message exn))
-					; TODO -- stop or continue based on EXIT_ON_EXCEPTION
-					(exit 1))
-				; for scheme errors (i.e. bugs in the interpreter, not user code,
-				; re-raise the error to show the full traceback)
-				(else (abort exn)))
-			;(print "Compile ...")
-			;(print "About to run ...")
-			(deserialize-and-run intr BOOTFILE)
-			; ran OK if we made it here, return null
-			'())))
-						
+	(let ((done #f))
+		(do-while (not done)
+		(let ((intr (make-Interpreter)))
+			(handle-exceptions exn
+				(cond
+					; for verbii (lang-error) print string (usercode error)
+					(((exception-of? 'lang-error) exn) 
+						; TODO -- stack trace
+						(print (message exn))
+						; stop or continue based on EXIT_ON_EXCEPTION
+						(set! done EXIT_ON_EXCEPTION))
+					; for scheme errors (i.e. bugs in the interpreter, not user code,
+					; re-raise the error to show the full traceback - don't try and continue)
+					(else (abort exn)))
+				;(print "Compile ...")
+				;(print "About to run ...")
+				(deserialize-and-run intr BOOTFILE)
+				; if i made it here, then the above ran OK, so exit now
+				(set! done #t))))))
+							
 (main)
 
 

@@ -27,6 +27,9 @@ bool ALLOW_OVERWRITING_WORDS = false;
 // to restart on exceptions (default is to exit)
 bool EXIT_ON_EXCEPTION = true;
 
+// should a stacktrace be printed on exception?
+bool STACKTRACE_ON_EXCEPTION = true;
+
 std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
 
 static VINT popInt(Interpreter *intr, const char *errmsg) {
@@ -231,7 +234,9 @@ static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &) con
 #include <iostream>
 #include <fstream>
 
-static void builtin_readfile(Interpreter *intr) {
+// ( filename -- text )
+// reads ALL text from filename
+static void builtin_file_read(Interpreter *intr) {
 	const char *filename = popString(intr, "read-file missing filename");
 	ifstream fileIn(filename, ios::binary);
 	if(fileIn.rdstate() != ios_base::goodbit) {
@@ -602,6 +607,41 @@ static void builtin_time_string(Interpreter *intr) {
 	intr->push(newString(buf));
 }
 
+// ( filename string -- )
+// write string to filename, overwriting existing file
+static void builtin_file_write(Interpreter *intr) {
+	string text = popString(intr,"file-write");
+	string filename = popString(intr,"file-write");
+	FILE *fp = fopen(filename.c_str(), "w");
+	if(!fp)
+		throw LangError("Unable to open file for writing: " + filename);
+
+	fputs(text.c_str(), fp);
+	fclose(fp);
+}
+
+// ( filename string -- )
+// append string to end of file (or start new file)
+static void builtin_file_append(Interpreter *intr) {
+	string text = popString(intr,"file-append");
+	string filename = popString(intr,"file-append");
+	FILE *fp = fopen(filename.c_str(), "a");
+	if(!fp)
+		throw LangError("Unable to open file for appending: " + filename);
+		
+	fputs(text.c_str(), fp);
+	fclose(fp);
+}
+
+#include <cstdio>
+
+// ( filename -- )
+// delete file if it exists (no error if it does not exist)
+static void builtin_file_delete(Interpreter *intr) {
+	string filename = popString(intr,"file-append");
+	remove(filename.c_str());
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -665,7 +705,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{".loadc", builtin_loadc},
 	{"cmdline-args", builtin_cmdline_args},
 
-	{"read-file", builtin_readfile},
 	{"make-closure", builtin_make_closure},
 	{"self", builtin_self_get},
 	{"self!", builtin_self_set},
@@ -694,6 +733,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"prompt", builtin_prompt},
 	{"set-exit-on-exception", [](Interpreter *intr){EXIT_ON_EXCEPTION = popBool(intr);}},
 	{"set-allow-overwrite-words", [](Interpreter *intr){ALLOW_OVERWRITING_WORDS = popBool(intr);}},
+	{"set-stacktrace-on-exception", [](Interpreter *intr){STACKTRACE_ON_EXCEPTION = popBool(intr);}},
 
 	// more words added while making the random module
 	{"time-string", builtin_time_string},
@@ -702,4 +742,14 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// in an integer context
 	{"floor", [](Interpreter *intr){intr->push(newInt((VINT)floor(popFloatOrInt(intr,"floor"))));}},
 
+	// instead of introducing another language-specific object that has to be wrapped (FILE*, file handle, etc.),
+	// the file I/O operations are defined atomically - they open the file, perform an action, and close the file.
+	{"file-write", builtin_file_write},
+	{"file-append", builtin_file_append},
+	// for backward compat for now ...
+	{"read-file", builtin_file_read},
+	// what the above SHOULD be named ...
+	{"file-read", builtin_file_read},
+	{"file-delete", builtin_file_delete},
+	
 };

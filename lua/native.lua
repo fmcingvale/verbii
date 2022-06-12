@@ -13,6 +13,7 @@ local POSIX = require("posix") -- luaposix
 NATIVE_CMDLINE_ARGS = {}
 ALLOW_OVERWRITING_WORDS = false
 EXIT_ON_EXCEPTION = true
+STACKTRACE_ON_EXCEPTION = true
 
 -- file to write like stdout
 local FILE_STDOUT = io.stdout
@@ -647,6 +648,29 @@ function builtin_prompt(intr)
 	end
 end
 
+function builtin_file_write(intr)
+	local text = popString(intr)
+	local filename = popString(intr)
+	local f = io.open(filename, "w")
+	f:write(text)
+	f:close()
+end
+
+function builtin_file_append(intr)
+	local text = popString(intr)
+	local filename = popString(intr)
+	local f = io.open(filename, "a")
+	f:write(text)
+	f:close()
+end
+
+function builtin_file_delete(intr)
+	local filename = popString(intr)
+	if file_exists(filename) then
+		os.remove(filename)
+	end
+end
+
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -697,7 +721,6 @@ BUILTINS = {
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},
 
-	["read-file"] = { {}, builtin_readfile},
 	["make-closure"] = { {}, builtin_make_closure},
 	["self"] = { {}, builtin_self_get},
 	["self!"] = { {}, builtin_self_set},
@@ -725,8 +748,15 @@ BUILTINS = {
 	["prompt"] = { {}, builtin_prompt},
 	["set-exit-on-exception"] = { {}, function(intr) EXIT_ON_EXCEPTION = popBool(intr) end},
 	["set-allow-overwrite-words"] = { {}, function(intr) ALLOW_OVERWRITING_WORDS = popBool(intr) end},
-
+	["set-stacktrace-on-exception"] = { {}, function(intr) STACKTRACE_ON_EXCEPTION = popBool(intr) end},
+	
 	["time-string"] = { {}, function(intr) intr:push(new_String(POSIX.strftime("%Y-%m-%d %H:%M:%S",POSIX.localtime()))) end},
 	["floor"] = { {}, function(intr) intr:pushInt(math.floor(popFloatOrInt(intr))) end},
 
+	["file-write"] = { {}, builtin_file_write},
+	["file-append"] = { {}, builtin_file_append},
+	-- backward compat ...
+	["read-file"] = { {}, builtin_readfile},
+	["file-read"] = { {}, builtin_readfile},
+	["file-delete"] = { {}, builtin_file_delete},	
 }

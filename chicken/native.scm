@@ -38,6 +38,7 @@
 (define NATIVE_CMDLINE_ARGS (new-lang-list))
 (define ALLOW_OVERWRITING_WORDS #f)
 (define EXIT_ON_EXCEPTION #t)
+(define STACKTRACK_ON_EXCEPTION #t)
 
 (define FP_STDOUT '()) ; null for normal stdout, non-null for file
 
@@ -430,6 +431,7 @@
 (import (chicken bitwise))
 (import (chicken time))
 (import (chicken time posix))
+(import (chicken file))
 
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
@@ -499,7 +501,7 @@
 				(cond
 					((Void? filename)) ; nothing, already reset to stdout above
 					((String? filename)
-						(set! FP_STDOUT (file-open (value filename) (+ open/wronly open/creat))))
+						(set! FP_STDOUT (file-open (value filename) (+ open/wronly open/creat open/trunc))))
 					(else
 						(lang-error 'open-as-stdout "Expecting filename or obj but got:" filename)))))
 				
@@ -509,7 +511,6 @@
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
-		(list "read-file"   (list 's) builtin-read-file)
 		(list "cmdline-args" '() (lambda (intr) (push intr NATIVE_CMDLINE_ARGS)))
 		; as above, must deepcopy list
 		(list "make-closure" (reverse (list '* '*)) make-closure)
@@ -543,11 +544,33 @@
 					(deserialize-stream intr fileIn))))
 		(list "set-allow-overwrite-words" (list 'b) (lambda (intr b) (set! ALLOW_OVERWRITING_WORDS b)))
 		(list "set-exit-on-exception" (list 'b) (lambda (intr b) (set! EXIT_ON_EXCEPTION b)))
+		; stacktraces don't work yet on chicken though ...
+		(list "set-stacktrace-on-exception" (list 'b) (lambda (intr b) (set! STACKTRACK_ON_EXCEPTION b)))
 		(list "prompt" (list 's) builtin-prompt)
 
 		(list "time-string" '() (lambda (intr) (push intr 
 			(make-String (time->string (seconds->local-time (current-seconds)) "%Y-%m-%d %H:%M:%S")))))
 		(list "floor" '() builtin-floor)
+
+		(list "file-write" (list 's 's)
+			(lambda (intr filename text)
+				(let ((F (file-open filename (+ open/wronly open/creat open/trunc))))
+					(file-write F text)
+					(file-close F))))
+
+		(list "file-append" (list 's 's)
+			(lambda (intr filename text)
+				(let ((F (file-open filename (+ open/wronly open/append open/creat))))
+					(file-write F text)
+					(file-close F))))
+		; backward compat ...
+		(list "read-file"   (list 's) builtin-read-file)
+		(list "file-read"   (list 's) builtin-read-file)
+		(list "file-delete" (list 's) 
+			(lambda (intr filename)
+				(if (regular-file? filename)
+					(delete-file filename))))
+				
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

@@ -85,7 +85,9 @@ public class MainProgram
 			}
 			catch (LangError err) {
 				var errmsg = "*** " + err.Message + " ***";
-				MinRepl.print_backtrace(intr);
+				if(Builtins.STACKTRACE_ON_EXCEPTION)
+					MinRepl.print_backtrace(intr);
+					
 				Console.WriteLine(errmsg);
 				if(Builtins.EXIT_ON_EXCEPTION)
 					break;

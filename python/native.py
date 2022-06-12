@@ -19,6 +19,7 @@ import time, sys
 NATIVE_CMDLINE_ARGS = []
 ALLOW_OVERWRITE_WORDS = False
 EXIT_ON_EXCEPTION = True
+STACKTRACE_ON_EXCEPTION = True
 
 STARTUP_TIME = time.time()
 
@@ -457,6 +458,10 @@ def builtin_set_allow_overwrite_words(I, flag):
 	global ALLOW_OVERWRITE_WORDS
 	ALLOW_OVERWRITE_WORDS = flag
 
+def builtin_set_stacktrace_on_exception(I, flag):
+	global STACKTRACE_ON_EXCEPTION
+	STACKTRACE_ON_EXCEPTION = flag
+	
 def builtin_deserialize(I):
 	from deserialize import deserialize_stream
 	fileIn = open(popString(I,"deserialize"), "r")
@@ -494,6 +499,25 @@ def builtin_open_as_stdout(I):
 		FILE_STDOUT = open(obj.s, "w")
 	else:
 		raise LangError("Unknown arg to open-as-stdout:" + fmtStackPrint(obj))
+
+def builtin_file_write(I):
+	text = popString(I,'file-write')
+	filename = popString(I,'file-write')
+	f = open(filename, 'w')
+	f.write(text)
+	f.close()
+
+def builtin_file_append(I):
+	text = popString(I,'file-append')
+	filename = popString(I,'file-append')
+	f = open(filename, 'a')
+	f.write(text)
+	f.close()
+
+def builtin_file_delete(I):
+	filename = popString(I,'file-delete')
+	if os.path.isfile(filename):
+		os.unlink(filename)
 
 import os
 # the interpreter pops & checks the argument types, making the code shorter here
@@ -552,7 +576,6 @@ BUILTINS = {
 	'void': ([], lambda I: I.push(LangVoid())),
 	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 	'.dumpword': ([], lambda I: I.push(deepcopy(I.lookupWordOrFail(popSymbol(I))))),
-	'read-file': ([], builtin_readfile),
 	'make-closure': ([], builtin_make_closure),
 	'self': ([], builtin_self_get),
 	'self!': ([], builtin_self_set),
@@ -581,8 +604,17 @@ BUILTINS = {
 	'prompt': ([], builtin_prompt),
 	'set-exit-on-exception': ([bool], builtin_set_exit_on_exception),
 	'set-allow-overwrite-words': ([bool], builtin_set_allow_overwrite_words),
+	'set-stacktrace-on-exception': ([bool], builtin_set_stacktrace_on_exception),
 
 	'time-string': ([], lambda I: I.push(LangString(time.strftime("%Y-%m-%d %H:%M:%S")))),
 	'floor': ([], lambda I: I.push(int(floor(popIntOrFloat(I))))),
+
+	'file-write': ([], builtin_file_write),
+	'file-append': ([], builtin_file_append),
+	# backwards compat ...
+	'read-file': ([], builtin_readfile),
+	'file-read': ([], builtin_readfile),
+	'file-delete': ([], builtin_file_delete),
+	
 }
 

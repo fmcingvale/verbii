@@ -95,7 +95,9 @@ int main(int argc, char *argv[]) {
 		}
 		catch (LangError &err) {
 			auto errstr = "*** " + string(err.what()) + " ***";
-			print_backtrace(intr);
+			if(STACKTRACE_ON_EXCEPTION)
+				print_backtrace(intr);
+				
 			printf("%s\n", errstr.c_str());
 			// see if boot.verb requested to exit on exception or run again
 			if(EXIT_ON_EXCEPTION)

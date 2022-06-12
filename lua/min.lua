@@ -94,12 +94,15 @@ while true do
 			end
 		else
 			local errstr = "*** " .. string.sub(error, #match+1) .. " ***"
-			print_backtrace(intr)
+			if STACKTRACE_ON_EXCEPTION then
+				print_backtrace(intr)
+			end
 			print(errstr)
 			if EXIT_ON_EXCEPTION then
 				os.exit(1)
 			end
 		end
+	else
+		break -- ran successfully, end
 	end
-	break -- ran successfully, end
 end
