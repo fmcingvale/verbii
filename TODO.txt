@@ -37,8 +37,6 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
-* boot.verb.b needs to be able to run the error test cases
-
 * i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
   NAME can be defined to get value and NAME! to set value. if arrays are needed then
   just store a list to NAME
@@ -54,9 +52,6 @@ Global TODO
 * the L0,L1, etc should become:
 	: L3 LP 3 + ref ;
 	: L3! LP 3 + set! ;
-
-* add open-input-file, open-output-file, open-string, read-line, read-char, 
-write-string, write-char ... basically I/O with ports concept like scheme
 
 * pick should be 0-based for consistency with other 0-indexed functions
 	* I think I should just add names S0, S0! S1 S1! etc to initlib instead
@@ -79,12 +74,8 @@ write-string, write-char ... basically I/O with ports concept like scheme
 
 * check all places (in all ports) where files are opened to make sure any errors are returned
   as verbii errors and don't crash the host language
-  
-* read-file should be file-read for consistency with file-exists?, etc.
 
 * need a better way to find lib/ than hardcoding/assuming path in repls
-
-* chicken: main interpreter loop -- use while instead of having to place recursive calls everywhere
 
 * More error checking of input types in library/tests/demos
 

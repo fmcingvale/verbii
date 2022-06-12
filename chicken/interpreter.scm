@@ -26,6 +26,7 @@
 (import miscmacros) ; inc! dec! 
 (import srfi-69) ; hash-tables
 (import (chicken gc)) ; memory-statistics
+(import simple-loops)
 
 (import langtypes)
 (import errors)
@@ -324,111 +325,102 @@
 	(intr-code-set! intr objlist)
 	(intr-codepos-set! intr 0)
 	(intr-closure-set! intr '())
-	(let run-loop ((obj (nextObj intr)))
-		;(print "RUN OBJ: " (fmtStackPrint obj))
-		(cond
-			((Void? obj)
-				;(print "RETURN OR EXIT:")
-				; either return or exit
-				(if (havePushedFrames intr)
-					(begin
-						(code-return intr)
-						(run-loop (nextObj intr)))
-					; else set self not running & exit
-					(intr-code-set! intr '())
-				))
-			; push everything except lists/symbols/void (see c++ notes for more)
-			((integer? obj) (push-int intr obj) (run-loop (nextObj intr)))
-			((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj)
-					(Closure? obj) (Dict? obj))
-				(push intr obj)
-				(run-loop (nextObj intr)))
-
-			; list literals are deepcopied (see DESIGN-NOTES.txt)
-			((List? obj)
-				(push intr (deepcopy obj))
-				(run-loop (nextObj intr)))
-
-			; symbols do the most stuff ...
-			((Symbol? obj) ; obj is a string
+	(let ((exit-loop #f))
+		(do-while (not exit-loop)
+			(let ((obj (nextObj intr)))
+				;(print "RUN OBJ: " (fmtStackPrint obj))
 				(cond
-					((char=? (string-ref obj 0) #\')
-						; remove one level of quoting and push
-						(push intr (string-drop obj 1))
-						(run-loop (nextObj intr)))
-					((string=? obj "return")
-						; as above - return or exit
+					((Void? obj)
+						;(print "RETURN OR EXIT:")
+						; either return or exit
 						(if (havePushedFrames intr)
-							(begin
-								(code-return intr)
-								(run-loop (nextObj intr)))
+							(code-return intr)
 							; else set self not running & exit
-							(intr-code-set! intr '())
-						))
-					; if
-					((string=? obj "if")
-						(let ((target (nextSymbolOrFail intr "if"))
-								(bval (popTypeOrFail intr boolean? "true|false" 'if)))
-							; this only repositions the reader
-							(if bval (do-jump intr target))
-							; else - keep running with next object
-							(run-loop (nextObj intr))))
-					; call
-					((string=? obj "call")
-						; pop lambda or list and call
-						(let ((L (pop intr)))
-							(cond
-								((Lambda? L)
-									; TODO - tail call elimination??
-									(code-call intr (lambda-llist L) '())
-									(run-loop (nextObj intr)))
-								((List? L)
-									(code-call intr L '())
-									(run-loop (nextObj intr)))
-								((Closure? L)
-									(code-call intr (Closure-llist L) L)
-									(run-loop (nextObj intr)))
-								(else
-									(lang-error 'call "Expecting lambda or list but got:" L)))))
+							(begin
+								(intr-code-set! intr '())
+								(set! exit-loop #t))))
+					; push everything except lists/symbols/void (see c++ notes for more)
+					((integer? obj) (push-int intr obj))
+					((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj)
+							(Closure? obj) (Dict? obj))
+						(push intr obj))
 
-					; builtin (native) functions
-					((hash-table-exists? BUILTINS obj)
-						;(print "CALL BUILTIN: " obj)
-						(let* ((type-fn (hash-table-ref BUILTINS obj))
-								(args (pop-typed-objs intr (car type-fn) (string->symbol obj))))
+					; list literals are deepcopied (see DESIGN-NOTES.txt)
+					((List? obj)
+						(push intr (deepcopy obj)))
 
-							;(print "POP ARGLIST: " (car type-fn))
-							;(print "ARGS:" args)
-							;(print "RUN BUILTIN: " obj (cadr type-fn))
-							(apply (cadr type-fn) (cons intr args)))
-						(run-loop (nextObj intr)))
-					; user-defined word
-					((hash-table-exists? (_WORDS intr) obj)
-						;(print "CALL USERWORD: " obj)
-						; tail-call elimination
-						(let ((next (peekObj intr)))
-							(if (or (Void? next) 
-									(and (Symbol? next) (string=? next "return")))
-								; end of list or return - don't need to come back here
+					; symbols do the most stuff ...
+					((Symbol? obj) ; obj is a string
+						(cond
+							((char=? (string-ref obj 0) #\')
+								; remove one level of quoting and push
+								(push intr (string-drop obj 1)))
+							((string=? obj "return")
+								; as above - return or exit
 								(if (havePushedFrames intr)
+									(code-return intr)
+									; else set self not running & exit
 									(begin
-										(code-return intr)
-										(nr-tail-calls-set! intr (+ 1 (nr-tail-calls intr)))))))
-						(code-call intr (hash-table-ref (_WORDS intr) obj) '())
-						(run-loop (nextObj intr)))
-					
-					; <<NAME and >>NAME
-					((or (is-forward-jump? obj) (is-backward-jump? obj))
-						(do-jump intr obj)
-						(run-loop (nextObj intr)))
+										(intr-code-set! intr '())
+										(set! exit-loop #t))))
+							; if
+							((string=? obj "if")
+								(let ((target (nextSymbolOrFail intr "if"))
+										(bval (popTypeOrFail intr boolean? "true|false" 'if)))
+									; this only repositions the reader
+									(if bval (do-jump intr target))))
+									; else - keep running with next object
+									
+							; call
+							((string=? obj "call")
+								; pop lambda or list and call
+								(let ((L (pop intr)))
+									(cond
+										((Lambda? L)
+											; TODO - tail call elimination??
+											(code-call intr (lambda-llist L) '()))
+										((List? L)
+											(code-call intr L '()))
+										((Closure? L)
+											(code-call intr (Closure-llist L) L))
+										(else
+											(lang-error 'call "Expecting lambda or list but got:" L)))))
 
-					; @name -- jump target, ignore
-					((char=? (string-ref obj 0) #\@)
-						(run-loop (nextObj intr)))
-					
+							; builtin (native) functions
+							((hash-table-exists? BUILTINS obj)
+								;(print "CALL BUILTIN: " obj)
+								(let* ((type-fn (hash-table-ref BUILTINS obj))
+										(args (pop-typed-objs intr (car type-fn) (string->symbol obj))))
+
+									;(print "POP ARGLIST: " (car type-fn))
+									;(print "ARGS:" args)
+									;(print "RUN BUILTIN: " obj (cadr type-fn))
+									(apply (cadr type-fn) (cons intr args))))
+
+							; user-defined word
+							((hash-table-exists? (_WORDS intr) obj)
+								;(print "CALL USERWORD: " obj)
+								; tail-call elimination
+								(let ((next (peekObj intr)))
+									(if (or (Void? next) 
+											(and (Symbol? next) (string=? next "return")))
+										; end of list or return - don't need to come back here
+										(if (havePushedFrames intr)
+											(begin
+												(code-return intr)
+												(nr-tail-calls-set! intr (+ 1 (nr-tail-calls intr)))))))
+								(code-call intr (hash-table-ref (_WORDS intr) obj) '()))
+							
+							; <<NAME and >>NAME
+							((or (is-forward-jump? obj) (is-backward-jump? obj))
+								(do-jump intr obj))
+
+							; @name -- jump target, ignore
+							((char=? (string-ref obj 0) #\@))
+							
+							(else
+								(lang-error 'intepreter "Unknown word" obj))))
 					(else
-						(lang-error 'intepreter "Unknown word" obj))))
-			(else
-				(lang-error 'interpreter "Unknown word" obj)))))
+						(lang-error 'interpreter "Unknown word" obj)))))))
 
 ) ; end of module
