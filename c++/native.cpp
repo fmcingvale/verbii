@@ -40,6 +40,7 @@ static VINT popInt(Interpreter *intr, const char *errmsg) {
 	return obj.asInt();
 }
 
+#if 0 // turned off since currently unused
 static double popFloat(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isFloat()) {
@@ -47,6 +48,7 @@ static double popFloat(Interpreter *intr, const char *errmsg) {
 	}
 	return obj.asFloat();
 }
+#endif 
 
 static double popFloatOrInt(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
@@ -82,6 +84,7 @@ static Object popList(Interpreter *intr, const char *errmsg) {
 	return obj;
 }
 
+#if 0 // turned off since unused
 static Object popDict(Interpreter *intr, const char *where) {
 	Object obj = intr->pop();
 	if(!obj.isDict()) {
@@ -89,6 +92,7 @@ static Object popDict(Interpreter *intr, const char *where) {
 	}
 	return obj;
 }
+#endif
 
 static void pushInt(Interpreter *intr, VINT i) {
 	intr->push(newInt(i));
@@ -444,6 +448,7 @@ static void builtin_loadc(Interpreter *intr) {
 }
 
 static void builtin_cmdline_args(Interpreter *intr) {
+	//cout << "*** cmdline-args *** " << native_cmdline_args.fmtStackPrint() << endl;
 	intr->push(native_cmdline_args);
 }
 
@@ -749,4 +754,8 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// what the above SHOULD be named ...
 	{"file-read", builtin_file_read},
 	{"file-delete", builtin_file_delete},
+
+	{"sys-platform", [](Interpreter *intr){intr->push(newString(
+		 string("g++ ") + to_string(__GNUC__) + "." + 
+		 	to_string(__GNUC_MINOR__) + "." + to_string(__GNUC_PATCHLEVEL__)));}},
 };

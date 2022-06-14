@@ -1,5 +1,5 @@
 --[[
-	repl - run code interactively, run unittests, or run programs.
+	Verbii frontend -- only loads & runs boot.verb.b
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 

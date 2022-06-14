@@ -1,12 +1,12 @@
 #!/bin/bash
 
 PRODUCTION=1
-# define which repl is considered the production compiler (all should produce identical output,
+# define which verbii port is considered the production compiler (all should produce identical output,
 # so it's really just a matter of which one is easiest to run)
 #
 # i usually implement new things in the c++ compiler first, so that is a primary reason why
-# the c++ repl is the default
-REPL='../c++/repl'
+# the c++ port is the default
+VERBII='../c++/repl'
 
 # a sanity check in case this was run inadvertently ...
 if [ $PRODUCTION -eq 1 ]; then
@@ -45,7 +45,7 @@ then
 		# (PROBABLY this was only needed when the caching code was first added via patches.verb,
 		# to get around the chicken-and-egg problem of being unable to load patches.verb.b,
 		# but doesn't hurt to leave it in)
-		$REPL ../verb/compile.verb -nocache -- ../lib/$name.verb > ../lib/$name.verb.b.temp
+		$VERBII ../verb/compile.verb -nocache -- ../lib/$name.verb > ../lib/$name.verb.b.temp
 	done
 	# *after* all are compiled, copy the temp files over the .b files
 	for name in ${Libraries[@]}; do

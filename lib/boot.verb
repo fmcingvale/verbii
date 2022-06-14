@@ -42,36 +42,6 @@
 	'__main__ ,,del
 	false set-allow-overwrite-words
 	;
-
-\ run read-eval-print loop
-\
-\ at this point, the compiler/init must be loaded, so i can use any words now
-: repl ( -- )
-	\ set flags instead of assuming defaults are in effect --
-	\ i do NOT want host to exit on exception, but restart me
-	false set-exit-on-exception
-	\ show stacktraces
-	true set-stacktrace-on-exception
-
-	"Verbii (mini)" . CR
-	@loop
-		">> " prompt
-		dup void? if >>eof
-		\ ,q and quit also exit
-		dup "quit" == if >>exit
-		dup ",q" == if >>exit
-		\ "GOT: " . . CR
-		compile-and-load-string
-		safe-run-and-delete-main \ run __main__ then delete it
-		.S
-		<<loop
-	@exit
-		drop
-		CR "Exiting" . CR return
-	@eof
-		drop
-		CR "Exiting on EOF" . CR
-	;
 	
 \ load filename, respecting NOCACHE setting
 : load-file-maybe-cached ( filename -- )
@@ -113,154 +83,45 @@
 		drop
 	;
 
-\ load & run file (whole program mode)
-: run-file ( filename -- )
-	\ i want to exit on exceptions to avoid infinite loops
-	true set-exit-on-exception
-	\ show stacktraces
-	true set-stacktrace-on-exception
-
-	load-file-maybe-cached
-	\ same trick as above to delete __main__ before running
-	'__main__ .dumpword
-	del __main__
-	call
-	;
-
-\ run in test mode (like non-interactive repl)
-\ -- keeps going after errors so it can run testcases with intentional errors
-\ -- this uses the TEST_MODE_* globals vars -- cannot use @args and @locals here since
-\ -- they would clash with any tests that use locals
-: run-test ( filename -- )
-	TEST_MODE_FILENAME set!
-	\ i want to restart on errors so i can continue after the line that crashed
-	false set-exit-on-exception
-	\ do NOT show stacktraces since i may be running an error case -- I only want to see
-	\ the error message -- stack traces are not required to match between platforms.
-	\ if a test case crashes, just run without -test to see stacktraces.
-	false set-stacktrace-on-exception
-
-	0 TEST_MODE_CURLINE set!
-	0 TEST_MODE_STARTLINE set!
-	\ am i restarting after a previous crash?
-	TEST_MODE_FILENAME ref ".lastline" + file-exists? not if >>open-input
-	\ read last line# i *tried* to run -- restart at NEXT line since
-	\ the last line must have crashed
-	TEST_MODE_FILENAME ref ".lastline" + file-read parse-int 1 + TEST_MODE_STARTLINE set!
-		\ "RESTARTING AT LINE:" . start-lineno . CR
-	@open-input
-	\ create & store my stream to stream-in
-	TEST_MODE_FILENAME ref stream-reader-open-file TEST_MODE_STREAM set!
-	@loop
-		TEST_MODE_STREAM ref stream-reader-next-line nip ( line )
-		TEST_MODE_CURLINE ref 1 + TEST_MODE_CURLINE set!
-		\ if i haven't reached start-lineno, then skip and continue
-		TEST_MODE_CURLINE ref TEST_MODE_STARTLINE ref < if >>skip
-		\ remember that this was the last line# i *tried* to run
-		TEST_MODE_FILENAME ref ".lastline" + TEST_MODE_CURLINE ref str file-write		
-			\ "** LINE:" . dup . CR
-			\ "RUNNING LINE#: " . cur-lineno . CR
-		dup void? if >>done \ eof
-		dup string-empty? if >>skip \ skip blank lines
-		\ print line i'm about to run
-		dup ">>" . . CR
-		\ compile & run
-		compile-and-load-string
-		safe-run-and-delete-main
-		\ print stack result
-		.S
-		<<loop
-	@skip ( line )
-		drop <<loop
-	@done ( line )
-		\ remove .lastline file since I succeeded
-		TEST_MODE_FILENAME ref ".lastline" + file-delete
-		drop
-		;
-
 \ first, must init interpreter for anything else to work
 \ (no userwords are loaded yet .. no compiler, no init lib)
 init-interpreter
-
-\ the following TEST_MODE_* vars belong to run-test above, but I have to 
-\ put it here since it would not compile it it was above init-interpreter ...
-\
-\ normally this would be a bad usage of a global, but in test mode
-\ i have to stay completely out of the stack & locals for the tests to
-\ run correctly so this is the only real option to store my working vars
-var TEST_MODE_FILENAME 1
-var TEST_MODE_STREAM 1
-var TEST_MODE_STARTLINE 1
-var TEST_MODE_CURLINE 1
 
 \ this belongs with 'import' but again it cannot be parsed sitting up there
 var IMPORTED_MODULES 1
 ,,new-dict IMPORTED_MODULES set!
 
-\ parsed from cmdline args - set defaults
-var FILENAME 1
-void FILENAME set!
-
+\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
 var NOCACHE 1
 false NOCACHE set!
 
-var TESTMODE 1
-false TESTMODE set!
+var SCRIPT_ARGS 1
 
-var BADARGS 1
-false BADARGS set!
-
-\ parse cmdline args
-cmdline-args 
-{ 
-	\ "ARG:" . dup . CR 
+[ ] >L ( L0 = new script args being built )
+0 
+@parse-cmdline ( i )
+	dup cmdline-args length >= if >>done 
+	cmdline-args over get ( i arg[i] )
+		\ "BOOT ARG:" . .S CR
+	dup "--" == if >>got-dashdash \ ignore everything after --
 	dup "-nocache" == if >>set-nocache
-	dup "-test" == if >>set-testmode
-	dup file-exists? if >>set-filename
-	\ else, don't know what it is
-	"Unrecognized command line argument: " swap + . CR
-	true BADARGS set! return
+	\ keep other args
+	L0 ref swap append L0 set!
+	1 + <<parse-cmdline
+@set-nocache ( i arg[i] )
+	drop
+	true NOCACHE set! 1 + <<parse-cmdline
+@got-dashdash ( i "--" )
+	drop
+	cmdline-args swap -1 slice L0 ref swap + L0 set! >>end
+@done ( i )
+	drop
+@end
+L> SCRIPT_ARGS set!
 
-	@set-nocache
-		drop
-		true NOCACHE set! return
-	@set-testmode
-		drop
-		true TESTMODE set! return
-	@set-filename
-		FILENAME ref void? not if >>have-filename
-		FILENAME set! return
-	@have-filename
-		"Extra filename given on command line: " swap + . CR
-		true BADARGS set! return
-} 
-for-each
+\ "FILTERED SCRIPT ARGS:" . SCRIPT_ARGS ref . CR
 
-\ want to do a clean exit instead of throwing error so
-\ host side doesn't restart me and i loop on the same error
-BADARGS ref if >>exit 
+"../lib/repl.verb" load-file-maybe-cached 
+safe-run-and-delete-main
 
-\ "GOT ARGS:" . CR
-\ "	Filename:" . FILENAME ref . CR
-\ "	Nocache:" . NOCACHE ref . CR
-
-FILENAME ref void? if >>do-repl
-\ got filename -- did I get -test or not?
-TESTMODE ref if >>do-test-mode
-
-\ no -test - run FILENAME as a program
-FILENAME ref run-file >>exit
-
-\ got -test - run filename as a test
-@do-test-mode
-	FILENAME ref run-test >>exit
-
-\ no filename, run interactive repl loop
-@do-repl
-	repl
-	\ fall through to exit
-@exit
-	return
-
-
-
+repl-main

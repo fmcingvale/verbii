@@ -432,6 +432,7 @@
 (import (chicken time))
 (import (chicken time posix))
 (import (chicken file))
+(import (chicken platform))
 
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
@@ -568,6 +569,9 @@
 			(lambda (intr filename)
 				(if (regular-file? filename)
 					(delete-file filename))))
+
+		(list "sys-platform" '()
+			(lambda (intr) (push intr (make-String (string-append "Chicken " (chicken-version))))))
 				
 	))
 

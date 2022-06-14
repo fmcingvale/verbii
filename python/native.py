@@ -614,5 +614,6 @@ BUILTINS = {
 	'file-read': ([], builtin_file_read),
 	'file-delete': ([], builtin_file_delete),
 	
+	'sys-platform': ([], lambda I: I.push(LangString("Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro)))),
 }
 

@@ -795,5 +795,7 @@ class Builtins {
 		{"file-read", file_read},
 		{"file-delete", file_delete},
 			
+		// can't find a (portable) way to get more platform info ...
+		{"sys-platform", intr => intr.push(new LangString("C#"))},
 	};
 }

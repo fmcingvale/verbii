@@ -1,5 +1,5 @@
 /*
-	min.cs - minimal frontend that only loads & runs boot.verb.b
+	main.cs - Verbii frontend that only loads & runs boot.verb.b
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */

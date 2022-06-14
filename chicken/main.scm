@@ -1,5 +1,5 @@
 ;;;==================================================================================
-;;; minimal frontend that only loads and runs boot.verb.b
+;;; Verbii frontend -- only loads and runs boot.verb.b
 ;;;
 ;;; Copyright (c) 2022 Frank McIngvale, see LICENSE
 ;;;==================================================================================

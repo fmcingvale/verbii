@@ -757,4 +757,6 @@ BUILTINS = {
 	["file-append"] = { {}, builtin_file_append},
 	["file-read"] = { {}, builtin_file_read},
 	["file-delete"] = { {}, builtin_file_delete},	
+
+	["sys-platform"] = { {}, function(intr) intr:push(new_String(_VERSION)) end},
 }

@@ -1,0 +1,174 @@
+
+\ run read-eval-print loop
+\
+\ at this point, the compiler/init must be loaded, so i can use any words now
+: repl ( -- )
+	\ set flags instead of assuming defaults are in effect --
+	\ i do NOT want host to exit on exception, but restart me
+	false set-exit-on-exception
+	\ show stacktraces
+	true set-stacktrace-on-exception
+
+	"Verbii (" sys-platform + ")" + . CR
+	@loop
+		">> " prompt
+		dup void? if >>eof
+		\ ,q and quit also exit
+		dup "quit" == if >>exit
+		dup ",q" == if >>exit
+		\ "GOT: " . . CR
+		compile-and-load-string
+		safe-run-and-delete-main \ run __main__ then delete it
+		.S
+		<<loop
+	@exit
+		drop
+		CR "Exiting" . CR return
+	@eof
+		drop
+		CR "Exiting on EOF" . CR
+	;
+
+\ load & run file (whole program mode)
+: run-file ( filename -- )
+	\ i want to exit on exceptions to avoid infinite loops
+	true set-exit-on-exception
+	\ show stacktraces
+	true set-stacktrace-on-exception
+
+	load-file-maybe-cached
+	\ same trick as above to delete __main__ before running
+	'__main__ .dumpword
+	del __main__
+	call
+	;
+
+\ run in test mode (like non-interactive repl)
+\ -- keeps going after errors so it can run testcases with intentional errors
+\ -- **NOTE**-- cannot use @args and @locals here since they would clash with
+\ any tests that use locals
+\
+\ normally this would be a bad usage of a global, but in test mode
+\ i have to stay completely out of the stack & locals for the tests to
+\ run correctly so this is the only real option to store my working vars
+var TEST_MODE_FILENAME 1
+var TEST_MODE_STREAM 1
+var TEST_MODE_STARTLINE 1
+var TEST_MODE_CURLINE 1
+
+: run-test ( filename -- )
+	TEST_MODE_FILENAME set!
+	\ i want to restart on errors so i can continue after the line that crashed
+	false set-exit-on-exception
+	\ do NOT show stacktraces since i may be running an error case -- I only want to see
+	\ the error message -- stack traces are not required to match between platforms.
+	\ if a test case crashes, just run without -test to see stacktraces.
+	false set-stacktrace-on-exception
+
+	0 TEST_MODE_CURLINE set!
+	0 TEST_MODE_STARTLINE set!
+	\ am i restarting after a previous crash?
+	TEST_MODE_FILENAME ref ".lastline" + file-exists? not if >>open-input
+	\ read last line# i *tried* to run -- restart at NEXT line since
+	\ the last line must have crashed
+	TEST_MODE_FILENAME ref ".lastline" + file-read parse-int 1 + TEST_MODE_STARTLINE set!
+		\ "RESTARTING AT LINE:" . start-lineno . CR
+	@open-input
+	\ create & store my stream to stream-in
+	TEST_MODE_FILENAME ref stream-reader-open-file TEST_MODE_STREAM set!
+	@loop
+		TEST_MODE_STREAM ref stream-reader-next-line nip ( line )
+		TEST_MODE_CURLINE ref 1 + TEST_MODE_CURLINE set!
+		\ if i haven't reached start-lineno, then skip and continue
+		TEST_MODE_CURLINE ref TEST_MODE_STARTLINE ref < if >>skip
+		\ remember that this was the last line# i *tried* to run
+		TEST_MODE_FILENAME ref ".lastline" + TEST_MODE_CURLINE ref str file-write		
+			\ "** LINE:" . dup . CR
+			\ "RUNNING LINE#: " . cur-lineno . CR
+		dup void? if >>done \ eof
+		dup string-empty? if >>skip \ skip blank lines
+		\ print line i'm about to run
+		dup ">>" . . CR
+		\ compile & run
+		compile-and-load-string
+		safe-run-and-delete-main
+		\ print stack result
+		.S
+		<<loop
+	@skip ( line )
+		drop <<loop
+	@done ( line )
+		\ remove .lastline file since I succeeded
+		TEST_MODE_FILENAME ref ".lastline" + file-delete
+		drop
+		;
+
+\ parsed from cmdline args - set defaults
+var FILENAME 1
+void FILENAME set!
+
+var TESTMODE 1
+false TESTMODE set!
+
+var BADARGS 1
+false BADARGS set!
+
+: repl-main
+	\ parse SCRIPT_ARGS and filter out my options
+	[ ] >L ( L0 = new script args being built )
+	0
+	@parse-script-args
+		dup SCRIPT_ARGS ref length >= if >>done 
+		SCRIPT_ARGS ref over get ( i arg[i] )
+			\ "REPL ARG:" . .S CR
+		dup "--" == if >>got-dashdash \ everything after -- goes to script i'm running
+		dup "-test" == if >>set-testmode
+		dup file-exists? if >>set-filename
+		
+		\ want to do a clean exit instead of throwing error so
+		\ host side doesn't restart me and i loop on the same error
+		"Unrecognized option: " swap + . CR >>exit
+
+	@set-testmode ( i arg[i] )
+		drop
+		true TESTMODE set! 1 + <<parse-script-args
+	@got-dashdash ( i "--" )
+		drop
+		\ these are the args for the script to be run, excluding the '--'
+		SCRIPT_ARGS ref swap 1 + -1 slice L0 ref swap + L0 set! >>end
+	@set-filename ( i filename )
+		FILENAME ref void? not if >>have-filename
+		FILENAME set! 1 + <<parse-script-args
+	@have-filename
+		"Extra filename given on command line: " swap + . CR
+		\ want to do a clean exit instead of throwing error so
+		\ host side doesn't restart me and i loop on the same error
+		>>exit
+	@done ( i )
+		drop
+	@end
+	L> SCRIPT_ARGS set!
+		\ "REPL FILTERED ARGS:" . SCRIPT_ARGS ref . CR
+
+	\ "GOT ARGS:" . CR
+	\ "	Filename:" . FILENAME ref . CR
+	\ "	Nocache:" . NOCACHE ref . CR
+
+	FILENAME ref void? if >>do-repl
+	\ got filename -- did I get -test or not?
+	TESTMODE ref if >>do-test-mode
+
+	\ no -test - run FILENAME as a program
+	FILENAME ref run-file >>exit
+
+	\ got -test - run filename as a test
+	@do-test-mode
+		FILENAME ref run-test >>exit
+
+	\ no filename, run interactive repl loop
+	@do-repl
+		repl
+		\ fall through to exit
+	@exit
+		return
+	;

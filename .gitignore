@@ -35,3 +35,8 @@ csharp/min.pdb
 csharp/temp-out.txt
 python/temp-out.txt
 verb/temp-out.txt
+c++/verbii
+chicken/verbii
+csharp/verbii
+csharp/verbii.pdb
+lib/repl.verb.b
