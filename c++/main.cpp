@@ -66,7 +66,8 @@ int main(int argc, char *argv[]) {
 
 	bool SHOW_RUN_STATS = false;
 	bool DO_PROFILING = false;
-	native_cmdline_args = newList();
+	// collect args that should be passed on to boot.verb, filtering out mine
+	auto cmdline_args = newList();
 
 	// catch only the flags that have to be implemented natively
 	// pass the rest through as-is to boot.verb code
@@ -79,7 +80,7 @@ int main(int argc, char *argv[]) {
 			SHOW_RUN_STATS = true; // -profile implies -stats
 		}
 		else {
-			native_cmdline_args.data.objlist->push_back(newString(argv[i]));
+			cmdline_args.data.objlist->push_back(newString(argv[i]));
 		}
 	}
 	
@@ -88,6 +89,9 @@ int main(int argc, char *argv[]) {
 		try {
 			intr = new Interpreter();
 			intr->PROFILE_CALLS = DO_PROFILING;
+			// boot.verb expects cmdline args on top of stack on entry
+			intr->push(cmdline_args);
+			//printf("STACK BEFORE BOOT: %s\n", intr->reprStack().c_str());
 			deserialize_and_run(intr, BOOTFILE);
 			if(SHOW_RUN_STATS)
 				intr->print_stats();

@@ -70,6 +70,8 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
   
+* remove cmdline-args from native.* after new boot stable using SCRIPT-ARGS instead
+
 * chicken - minimize imports across all files
 
 * check all places (in all ports) where files are opened to make sure any errors are returned

@@ -758,4 +758,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"sys-platform", [](Interpreter *intr){intr->push(newString(
 		 string("g++ ") + to_string(__GNUC__) + "." + 
 		 	to_string(__GNUC_MINOR__) + "." + to_string(__GNUC_PATCHLEVEL__)));}},
+
+	{"depth", [](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
+
 };

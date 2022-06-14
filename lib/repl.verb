@@ -114,12 +114,12 @@ var BADARGS 1
 false BADARGS set!
 
 : repl-main
-	\ parse SCRIPT_ARGS and filter out my options
+	\ parse SCRIPT-ARGS and filter out my options
 	[ ] >L ( L0 = new script args being built )
 	0
 	@parse-script-args
-		dup SCRIPT_ARGS ref length >= if >>done 
-		SCRIPT_ARGS ref over get ( i arg[i] )
+		dup SCRIPT-ARGS ref length >= if >>done 
+		SCRIPT-ARGS ref over get ( i arg[i] )
 			\ "REPL ARG:" . .S CR
 		dup "--" == if >>got-dashdash \ everything after -- goes to script i'm running
 		dup "-test" == if >>set-testmode
@@ -135,7 +135,7 @@ false BADARGS set!
 	@got-dashdash ( i "--" )
 		drop
 		\ these are the args for the script to be run, excluding the '--'
-		SCRIPT_ARGS ref swap 1 + -1 slice L0 ref swap + L0 set! >>end
+		SCRIPT-ARGS ref swap 1 + -1 slice L0 ref swap + L0 set! >>end
 	@set-filename ( i filename )
 		FILENAME ref void? not if >>have-filename
 		FILENAME set! 1 + <<parse-script-args
@@ -147,8 +147,9 @@ false BADARGS set!
 	@done ( i )
 		drop
 	@end
-	L> SCRIPT_ARGS set!
-		\ "REPL FILTERED ARGS:" . SCRIPT_ARGS ref . CR
+	\ set the filtered SCRIPT-ARGS that the next script will see now
+	L> SCRIPT-ARGS set!
+		\ "REPL FILTERED ARGS:" . SCRIPT-ARGS ref . CR
 
 	\ "GOT ARGS:" . CR
 	\ "	Filename:" . FILENAME ref . CR

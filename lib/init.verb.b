@@ -1,13 +1,4 @@
-L 78
-W depth
-L 7
-y SP_EMPTY
-y ref
-y SP
-y -
-i 1
-y -
-y return
+L 77
 W .
 L 5
 y str
@@ -1525,11 +1516,5 @@ y drop
 y void
 y return
 W __main__
-L 7
-y 'SP_EMPTY
-i 1
-y ,,var
-y SP
-y SP_EMPTY
-y set!
+L 1
 y return

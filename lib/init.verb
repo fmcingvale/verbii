@@ -6,13 +6,6 @@
 	***       Changing this file can easily break the entire system!        ***
 )
 
-( assume this file is the first thing loaded at startup, so I can track stack
-  depth myself instead of relying on a builtin interpreter word )
-var SP_EMPTY 1
-SP SP_EMPTY set!
-
-: depth SP_EMPTY ref SP - 1 - ;
-
 : . str puts 32 .c ;
 : CR ( -- , prints CR LF ) 10 .c ;
 : clear ( xn ... x1 -- ) SP depth + 1 - SP! ;
