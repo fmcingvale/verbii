@@ -87,6 +87,9 @@ if __name__ == '__main__':
 			print(errmsg)
 			if native.EXIT_ON_EXCEPTION:
 				sys.exit(1)
+
+	if showstats:
+		intr.print_stats()
 				
 		
 	

@@ -104,6 +104,8 @@
 					(push intr cmdline-args)
 					(deserialize-and-run intr BOOTFILE)
 					; if i made it here, then the above ran OK, so exit now
+					(if SHOW_RUNTIME_STATS
+						(print-stats intr))
 					(set! done #t)))))))
 								
 (main)

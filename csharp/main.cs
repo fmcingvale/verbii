@@ -81,6 +81,8 @@ public class MainProgram
 				// boot.verb expects cmdline args on top of stack
 				intr.push(args_to_script);
 				MinRepl.deserialize_and_run(intr, MinRepl.BOOTFILE);
+				if(MinRepl.SHOW_RUNTIME_STATS)
+					intr.printStats();
 				break;
 			}
 			catch (LangError err) {
@@ -92,6 +94,6 @@ public class MainProgram
 				if(Builtins.EXIT_ON_EXCEPTION)
 					break;
 			} 
-		}
+		}	
     }
 }

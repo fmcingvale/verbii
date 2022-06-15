@@ -57,8 +57,8 @@ class Interpreter(object):
 
 		print("\n==== Runtime Stats ====")
 		print("* General:")
-		print("  Builtin _words: {0}".format(len(BUILTINS)))
-		print("  User-defined _words: {0}".format(len(self._WORDS)))
+		print("  Builtin words: {0}".format(len(BUILTINS)))
+		print("  User-defined words: {0}".format(len(self._WORDS)))
 		print("  Max stack depth: {0}".format(self.SP_EMPTY - self.min_run_SP))
 		print("  Max locals depth: {0}".format(self.LP_EMPTY - self.min_run_LP))
 		print("  Max callstack depth: {0}".format(self.max_callstack))

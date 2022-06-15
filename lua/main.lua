@@ -102,6 +102,9 @@ while true do
 			end
 		end
 	else
+		if SHOW_RUNTIME_STATS then
+			intr:print_stats()
+		end
 		break -- ran successfully, end
 	end
 end
