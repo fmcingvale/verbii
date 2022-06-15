@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.IO;
 
 class Builtins {
-	public static LangList NATIVE_CMDLINE_ARGS = new LangList();
 	public static bool ALLOW_OVERWRITING_WORDS = false;
 	public static bool EXIT_ON_EXCEPTION = true;
 	public static bool STACKTRACE_ON_EXCEPTION = true;
@@ -758,7 +757,6 @@ class Builtins {
 		{"make-symbol", make_symbol},
 		{".dumpword", dumpword},
 		{"error", intr => throw new LangError(popString(intr,"error")) },
-		{"cmdline-args", intr => intr.push(NATIVE_CMDLINE_ARGS)},
 		{"make-closure", make_closure},
 		{"self", self_get},
 		{"self!", self_set},

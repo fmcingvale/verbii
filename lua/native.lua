@@ -10,7 +10,6 @@ require("langtypes")
 local POSIX = require("posix") -- luaposix
 
 -- these are globals
-NATIVE_CMDLINE_ARGS = {}
 ALLOW_OVERWRITING_WORDS = false
 EXIT_ON_EXCEPTION = true
 STACKTRACE_ON_EXCEPTION = true
@@ -26,10 +25,6 @@ function get_usec_time()
 end
 
 local STARTUP_TIME = get_usec_time()
-
-function set_native_cmdline_args(args)
-	NATIVE_CMDLINE_ARGS = args
-end
 
 function int_divmod(a, b)
 	-- see notes in C++ implementation of this function.
@@ -719,8 +714,7 @@ BUILTINS = {
 	[".dumpword"] = { {}, function(intr) intr:push(deepcopy(intr:lookupWordOrFail(popSymbol(intr)))) end},
 	["void"] = { {}, function(intr) intr:push(new_Void()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
-	["cmdline-args"] = { {}, function(intr) intr:push(NATIVE_CMDLINE_ARGS) end},
-
+	
 	["make-closure"] = { {}, builtin_make_closure},
 	["self"] = { {}, builtin_self_get},
 	["self!"] = { {}, builtin_self_set},

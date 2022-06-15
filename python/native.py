@@ -16,7 +16,6 @@ from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 import time, sys
 
 # has to be set externally
-NATIVE_CMDLINE_ARGS = []
 ALLOW_OVERWRITE_WORDS = False
 EXIT_ON_EXCEPTION = True
 STACKTRACE_ON_EXCEPTION = True
@@ -574,7 +573,6 @@ BUILTINS = {
 	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),
 	'void': ([], lambda I: I.push(LangVoid())),
-	'cmdline-args': ([], lambda I: I.push(NATIVE_CMDLINE_ARGS)),
 	'.dumpword': ([], lambda I: I.push(deepcopy(I.lookupWordOrFail(popSymbol(I))))),
 	'make-closure': ([], builtin_make_closure),
 	'self': ([], builtin_self_get),

@@ -18,8 +18,6 @@ using namespace std;
 // file to write output
 static FILE *fp_stdout = stdout;
 
-Object native_cmdline_args;
-
 // whether make-word is allowed to overwrite existing words
 bool ALLOW_OVERWRITING_WORDS = false;
 
@@ -447,11 +445,6 @@ static void builtin_loadc(Interpreter *intr) {
 	deserialize_stream(intr, fileIn);
 }
 
-static void builtin_cmdline_args(Interpreter *intr) {
-	//cout << "*** cmdline-args *** " << native_cmdline_args.fmtStackPrint() << endl;
-	intr->push(native_cmdline_args);
-}
-
 static void builtin_make_closure(Interpreter *intr) {
 	Object state = intr->pop();
 	Object obj = intr->pop();
@@ -708,8 +701,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"void", [](Interpreter *intr){intr->push(newVoid());}},
 	
 	{".loadc", builtin_loadc},
-	{"cmdline-args", builtin_cmdline_args},
-
+	
 	{"make-closure", builtin_make_closure},
 	{"self", builtin_self_get},
 	{"self!", builtin_self_set},

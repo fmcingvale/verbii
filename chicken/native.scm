@@ -35,7 +35,6 @@
 (import interpreter)
 (import deserializer)
 
-(define NATIVE_CMDLINE_ARGS (new-lang-list))
 (define ALLOW_OVERWRITING_WORDS #f)
 (define EXIT_ON_EXCEPTION #t)
 (define STACKTRACK_ON_EXCEPTION #t)
@@ -512,7 +511,6 @@
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
-		(list "cmdline-args" '() (lambda (intr) (push intr NATIVE_CMDLINE_ARGS)))
 		; as above, must deepcopy list
 		(list "make-closure" (reverse (list '* '*)) make-closure)
 		(list "self"		'() builtin-self-get)
