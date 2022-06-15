@@ -8,8 +8,6 @@ if [ $os = "Msys" ];
 then
 	REPL="./verbii.exe"
 else
-	# comment/uncomment one to switch between old repl & new frontend
-	#REPL="./repl"
 	REPL="./verbii"
 fi
 

@@ -20,7 +20,7 @@ GC_LIBS = -lgc -lgccpp
 # this optimization level works fine under Ubuntu
 CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
 
-all: verbii repl
+all: verbii
 
 %.o: %.cpp $(HEADERS)
 	g++ $(CFLAGS) -Wall -c $< -o $@
@@ -29,10 +29,7 @@ libverbii.a: $(LIB_OBJS)
 	ar rvs libverbii.a $(LIB_OBJS)
 
 clean:
-	rm -f *.exe gmon.out *.o *.a repl test
+	rm -f *.exe gmon.out *.o *.a verbii
 
-repl: repl.cpp libverbii.a
-	g++ $(CFLAGS) -Wall -o repl repl.cpp libverbii.a $(GC_LIBS)
-	
 verbii: main.cpp libverbii.a
 	g++ $(CFLAGS) -Wall -o verbii main.cpp libverbii.a $(GC_LIBS)
