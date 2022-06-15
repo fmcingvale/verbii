@@ -37,6 +37,14 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* can vars be done completely with closures/self??
+	- if so then:
+		- phase 1: rewrite existing vars in closure style (can be done a little at a time)
+		- phase 2: once that is done, remove existing var framework
+					- eliminate allocate functions in interpreters
+
+* runtime is very wrong in c++ port (try verb/n128.verb for example)
+
 * i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
   NAME can be defined to get value and NAME! to set value. if arrays are needed then
   just store a list to NAME
@@ -69,8 +77,6 @@ Global TODO
 * reorganize tests by category?
  
 ---[   Clean-up   ]------------------------------------------------------
-  
-* remove cmdline-args from native.* after new boot stable using SCRIPT-ARGS instead
 
 * chicken - minimize imports across all files
 
@@ -93,8 +99,6 @@ Global TODO
 
 * why do interpreters check for symbols last in main loop? symbols account for about 70-80% of
   code (going by boot/init/compiler .b files) so shouldn't they be checked first?
-
-* change minimized frontends to main frontends once stable
 
 * compiler.verb -- in byte-compile, all words for __main__ get pushed to stack and then
   a huge list made at the end. this leads to stack overflows for large files (like the unittests

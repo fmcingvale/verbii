@@ -83,50 +83,61 @@
 		drop
 	;
 
-\ first, must init interpreter for anything else to work
-\ (no userwords are loaded yet .. no compiler, no init lib)
-init-interpreter
+: boot-main
+	\ first, must init interpreter for anything else to work
+	\ (no userwords are loaded yet .. no compiler, no init lib)
+	init-interpreter
 
-	\ "AT INIT INTERPRETER, STACK:" . .S CR
+		\ "AT INIT INTERPRETER, STACK:" . .S CR
 
-\ this belongs with 'import' but again it cannot be parsed sitting up there
-var IMPORTED_MODULES 1
-,,new-dict IMPORTED_MODULES set!
+	\ *VERY BAD VERBII STYLE HERE* ... out of necessity
+	\ (1) vars should not be declared inside a function
+	\		* since boot-main only runs once, it's ok here
+	\ (2) they are out of place .. see below
 
-\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
-var NOCACHE 1
-false NOCACHE set!
+	\ this belongs with 'import' but again it cannot be parsed sitting up there
+	var IMPORTED_MODULES 1
+	,,new-dict IMPORTED_MODULES set!
 
-\ args that get passed to repl (and on to other scripts after that)
-var SCRIPT-ARGS 1
+	\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
+	var NOCACHE 1
+	false NOCACHE set!
 
->L ( L1 = cmdline args -- pushed from host )
-[ ] >L ( L0 = new script args being built )
-0 
-@parse-cmdline ( i )
-	dup L1 ref length >= if >>done 
-	L1 ref over get ( i arg[i] )
-		\ "BOOT ARG:" . .S CR
-	dup "--" == if >>got-dashdash \ ignore everything after --
-	dup "-nocache" == if >>set-nocache
-	\ keep other args
-	L0 ref swap append L0 set!
-	1 + <<parse-cmdline
-@set-nocache ( i arg[i] )
-	drop
-	true NOCACHE set! 1 + <<parse-cmdline
-@got-dashdash ( i "--" )
-	drop
-	L1 ref swap -1 slice L0 ref swap + L0 set! >>end
-@done ( i )
-	drop
-@end
-L> SCRIPT-ARGS set!
-LP 1 + LP! \ drop cmdline-args from locals
+	\ args that get passed to repl (and on to other scripts after that)
+	var SCRIPT-ARGS 1
 
-	\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
+	>L ( L1 = cmdline args -- pushed from host )
+	[ ] >L ( L0 = new script args being built )
+	0 
+	@parse-cmdline ( i )
+		dup L1 ref length >= if >>done 
+		L1 ref over get ( i arg[i] )
+			\ "BOOT ARG:" . .S CR
+		dup "--" == if >>got-dashdash \ ignore everything after --
+		dup "-nocache" == if >>set-nocache
+		\ keep other args
+		L0 ref swap append L0 set!
+		1 + <<parse-cmdline
+	@set-nocache ( i arg[i] )
+		drop
+		true NOCACHE set! 1 + <<parse-cmdline
+	@got-dashdash ( i "--" )
+		drop
+		L1 ref swap -1 slice L0 ref swap + L0 set! >>end
+	@done ( i )
+		drop
+	@end
+	L> SCRIPT-ARGS set!
+	LP 1 + LP! \ drop cmdline-args from locals
 
-"../lib/repl.verb" load-file-maybe-cached 
-safe-run-and-delete-main
+		\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
 
-repl-main
+	"../lib/repl.verb" load-file-maybe-cached 
+	safe-run-and-delete-main
+
+	repl-main
+	;
+
+\ all code is in words except for this so that anything above can be adjusted via patches.verb
+boot-main
+

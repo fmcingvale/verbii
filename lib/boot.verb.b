@@ -1,4 +1,4 @@
-L 6
+L 7
 W safe-run-and-delete-main
 L 6
 y '__main__
@@ -75,7 +75,7 @@ y return
 y @already-imported
 y drop
 y return
-W __main__
+W boot-main
 L 88
 y init-interpreter
 y 'IMPORTED_MODULES
@@ -164,4 +164,8 @@ s ../lib/repl.verb
 y load-file-maybe-cached
 y safe-run-and-delete-main
 y repl-main
+y return
+W __main__
+L 2
+y boot-main
 y return
