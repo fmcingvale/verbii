@@ -63,8 +63,7 @@ public class MainProgram
 				MinRepl.SHOW_RUNTIME_STATS = true;
 			}
 			else if(args[i] == "--") {
-				// rest of args go to script
-				++i;
+				// rest of args (including '--') go to script
 				while(i < args.Length) {
 					args_to_script.objlist.Add(new LangString(args[i++]));
 				}
@@ -75,11 +74,12 @@ public class MainProgram
 				args_to_script.objlist.Add(new LangString(args[i]));
 			}			
 		}
-		Builtins.NATIVE_CMDLINE_ARGS = args_to_script;
-
+		
 		while(true) {
 			var intr = new Interpreter();
 			try {
+				// boot.verb expects cmdline args on top of stack
+				intr.push(args_to_script);
 				MinRepl.deserialize_and_run(intr, MinRepl.BOOTFILE);
 				break;
 			}

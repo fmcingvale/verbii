@@ -54,28 +54,29 @@ if __name__ == '__main__':
 	showstats = False
 	import native
 	# build list of args to pass to boot.verb
-	native.NATIVE_CMDLINE_ARGS = []
+	cmdline_args = []
 	for i,arg in enumerate(sys.argv[1:]):
 		#print("ARG:",arg)
 		if arg == '-stats':
 			showstats = True
 		elif arg == '--':
-			# anything after '--' is ignored
-			import native
+			# once I find '--', pass everything else (including '--') to boot.verb
 			# this will be pushed directly, so make into list of string objects
-			for narg in sys.argv[i+2:]:
-				native.NATIVE_CMDLINE_ARGS.append(LangString(narg))
+			for narg in sys.argv[i+1:]:
+				cmdline_args.append(LangString(narg))
 
 			#print("CMDLINE ARGS TO SCRIPT:",sys.argv[i+2:])
 			break
 		else:
 			# unknown - pass to script
-			native.NATIVE_CMDLINE_ARGS.append(LangString(arg))
+			cmdline_args.append(LangString(arg))
 
 	intr = None
 	while True:
 		try:
 			intr = Interpreter()
+			# boot expects cmdline args on top of stack
+			intr.push(cmdline_args)
 			deserialize_and_run(intr, BOOTFILE)
 			break
 		except LangError as exc:

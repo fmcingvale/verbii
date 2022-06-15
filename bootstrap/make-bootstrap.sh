@@ -6,7 +6,7 @@ PRODUCTION=1
 #
 # i usually implement new things in the c++ compiler first, so that is a primary reason why
 # the c++ port is the default
-VERBII='../c++/repl'
+VERBII='../c++/verbii'
 
 # a sanity check in case this was run inadvertently ...
 if [ $PRODUCTION -eq 1 ]; then
@@ -26,6 +26,8 @@ fi
 
 if [ "$line" == "YES" ]; 
 then
+	echo ""
+	echo "Building with $VERBII"
 	echo ""
 	declare -a Libraries=("boot" "init" "compiler")	
 	# do this in two steps:

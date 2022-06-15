@@ -67,40 +67,45 @@
 ;(repl)
 
 (define (main)
-	(let ((rest-to-script #f))
-		(set! NATIVE_CMDLINE_ARGS (new-lang-list))
-		(for-each (lambda (arg)
-			; once i get '--' all the remaining args go to NATIVE_CMDLINE_ARGS
-			(if rest-to-script
-				(llist-push-back NATIVE_CMDLINE_ARGS (make-String arg))
-				; else process as normal
-				(cond
-					((string=? arg "-stats") (set! SHOW_RUNTIME_STATS #t))
-					((string=? arg "--") (set! rest-to-script #t)) ; rest go to NATIVE_CMDLINE_ARGS
-					(else
-						; anything else goes to script
-						(llist-push-back NATIVE_CMDLINE_ARGS (make-String arg)))))) (cdr (argv))))
+	(let ((cmdline-args (new-lang-list)))
+		(let ((rest-to-script #f))
+			(for-each (lambda (arg)
+				; once i get '--' all the remaining args go to NATIVE_CMDLINE_ARGS
+				(if rest-to-script
+					(llist-push-back cmdline-args (make-String arg))
+					; else process as normal
+					(cond
+						((string=? arg "-stats") (set! SHOW_RUNTIME_STATS #t))
+						((string=? arg "--") 
+							; the '--' stays in the list passed to boot.verb
+							(llist-push-back cmdline-args (make-String arg))
+							(set! rest-to-script #t)) ; rest go to NATIVE_CMDLINE_ARGS
+						(else
+							; anything else goes to script
+							(llist-push-back cmdline-args (make-String arg)))))) (cdr (argv))))
 
-	(let ((done #f))
-		(do-while (not done)
-		(let ((intr (make-Interpreter)))
-			(handle-exceptions exn
-				(cond
-					; for verbii (lang-error) print string (usercode error)
-					(((exception-of? 'lang-error) exn) 
-						; TODO -- stack trace
-						(print (message exn))
-						; stop or continue based on EXIT_ON_EXCEPTION
-						(set! done EXIT_ON_EXCEPTION))
-					; for scheme errors (i.e. bugs in the interpreter, not user code,
-					; re-raise the error to show the full traceback - don't try and continue)
-					(else (abort exn)))
-				;(print "Compile ...")
-				;(print "About to run ...")
-				(deserialize-and-run intr BOOTFILE)
-				; if i made it here, then the above ran OK, so exit now
-				(set! done #t))))))
-							
+		(let ((done #f))
+			(do-while (not done)
+			(let ((intr (make-Interpreter)))
+				(handle-exceptions exn
+					(cond
+						; for verbii (lang-error) print string (usercode error)
+						(((exception-of? 'lang-error) exn) 
+							; TODO -- stack trace
+							(print (message exn))
+							; stop or continue based on EXIT_ON_EXCEPTION
+							(set! done EXIT_ON_EXCEPTION))
+						; for scheme errors (i.e. bugs in the interpreter, not user code,
+						; re-raise the error to show the full traceback - don't try and continue)
+						(else (abort exn)))
+					;(print "Compile ...")
+					;(print "About to run ...")
+					; boot.verb expects cmdline args on top of stack
+					(push intr cmdline-args)
+					(deserialize-and-run intr BOOTFILE)
+					; if i made it here, then the above ran OK, so exit now
+					(set! done #t)))))))
+								
 (main)
 
 

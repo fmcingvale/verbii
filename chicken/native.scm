@@ -572,6 +572,9 @@
 
 		(list "sys-platform" '()
 			(lambda (intr) (push intr (make-String (string-append "Chicken " (chicken-version))))))
+
+		(list "depth" '()
+			(lambda (intr) (push intr (- (intr-SP_EMPTY intr) (intr-SP intr)))))
 				
 	))
 

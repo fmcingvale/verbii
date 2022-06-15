@@ -63,8 +63,7 @@ for i=1,#arg do
 	if arg[i] == "-stats" then
 		SHOW_RUNTIME_STATS = true
 	elseif arg[i] == "--" then
-		-- rest of args go to script
-		i = i + 1
+		-- rest of args (including '--') go to boot.verb
 		while i <= #arg do
 			table.insert(args_to_script, new_String(arg[i]))
 			i = i + 1
@@ -76,11 +75,11 @@ for i=1,#arg do
 	end
 end
 
-set_native_cmdline_args(args_to_script)
-
 local intr = nil
 while true do
 	intr = new_Interpreter()
+	-- boot.verb expects cmdline args on top of stack
+	intr:push(args_to_script)
 	local result,error = pcall(deserialize_and_run, intr, BOOTFILE)
 	if result == false then
 		-- match sequence >>> to strip out filename from error message that lua added
