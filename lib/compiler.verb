@@ -272,19 +272,44 @@ var TRIPLEQUOTE 1
 	@done ( list )
 	;
 
+\ assumes @( was just read, parses until ) as an object list, prepended with ,,declargs
+: syntax-parse-decl-arglist
+	@locals [ outlist ]
+	',,declargs 1 make-list outlist!
+	@loop
+		syntax-next
+		dup void? if >>eof
+		dup ') == if >>done
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside @(" error
+	@done
+		drop outlist
+	;
+	
+\ assumes ':' was just read
 : syntax-define-word
-	syntax-next ( name should be next )
+	@locals [ SP-start name ]
+	syntax-next ( name must dbe next )
 	dup symbol? not if >>badname
 	\ call syntax-next repeatedly until ';' is found. this will leave all parsed
 	\ words on stack that i'll then make into a list. easy way to do this is remember
 	\ starting value of SP then subtract from SP at end to get # of items parsed.
-	>L SP >L   ( L0=starting SP, L1=name )
+	name! SP SP-start!
 	@loop
 	syntax-next ( get next processed object )
 	dup void? if >>eof
+	dup '@( == if >>arglist \ ) <- freaks out notepad++ styling here
 	dup '; == if >>endword
 	dup list? if >>list \ lists may need special handling, see below
 	<<loop
+	@arglist ( obj )
+		\ i do not check here to see if i have multiple @( .. ) constructs; that can
+		\ be handled at the rewrite stage
+		drop
+		syntax-parse-decl-arglist <<loop
+		
 	\ when i get a list i need to see if it is [ ,,inline ... ] and flatten it if so
 	@list ( list )
 		flatten-if-inline <<loop
@@ -293,11 +318,10 @@ var TRIPLEQUOTE 1
 	@eof "Unexpected end of input looking for ';'" error
 	@endword
 	drop ( drop ; )
-	L> SP - 1 - ( calc number of items )
+	SP-start SP - 1 - ( calc number of items )
 	make-list
-	L> 
 	( save names & compiled words )
-	save-defined-word
+	name save-defined-word
 	syntax-next ( save-defined-word has no return value, so return NEXT object )
 	;
 
@@ -439,7 +463,7 @@ var TRIPLEQUOTE 1
 		dup symbol->string L1 ref " " + swap + L1 set! 
 
 		dup ') == if >>closeparen
-		dup '( == if >>openparen
+		dup '( == if >>openparen \ ) <- to stop notepad++ highlighter from messing up
 		drop <<loop ( discard and continue )
 	@closeparen
 		LP ref 1 - LP set!
@@ -554,60 +578,131 @@ var TRIPLEQUOTE 1
 	COMPILED_NAMELISTS ref swap append drop
 	;
 
-\ given a compiled objlist, if it is of the form:
-\	@args ARGLIST @locals LOCALLIST 
-\ then rewrite objlist to do:
-\	- pop #ARGLIST args from stack into locals
-\	- reserve #LOCALLIST locals
-\	- for even name N in ARGLIST and LOCALLIST, create
+\ take a list: [ ,,declargs arg ... -- local ... ]
+\ and return lists of [ arg ... ] and [ local ... ]
+: compile-split-declargs ( list -- args locals )
+	@args [ list ]
+	@locals [ i args locals parsing-locals ]
+	[ ] args!
+	[ ] locals!
+	false parsing-locals! \ have i seen the '--' ?
+	1 i! \ skip ,,declargs
+	@loop
+		i list length >= if >>done
+		list i get '-- == if >>got-dashes 
+		\ else add to either args or locals list
+		parsing-locals if >>add-to-locals
+		args list i get append args! >>next \ add to args
+	@add-to-locals ( obj )
+		locals list i get append locals! >>next \ add to locals 
+	@got-dashes
+		true parsing-locals! \ switch to parsing locals, fall through to next
+	@next
+		i 1 + i! <<loop
+	@done 
+		args locals
+		;
+		
+\ takes a compiled objlist and collects:
+\	[ ,,declargs arg .. -- local .. ] => args & locals
+\		(the compiler generates this from @( arg ... -- local ... )
+\	@args [ ... ] => args
+\	@locals [ ... ] => locals
+\
+\ returns rewritten objlist with the @args & @locals removed.
+\
+\ it is valid to have BOTH @( ... ) and @args/@locals -- the names will be
+\ merged into a single args/locals lists
+: compile-collect-args-locals ( objlist -- new-objlist args locals )
+	@args [ objlist ]
+	@locals [ new-objlist args locals i ]
+		\ "COMPILE COLLECT ARGS LOCALS:" . .S CR
+		\ "	objlist:" . objlist str . CR
+	[ ] new-objlist!
+	[ ] args!
+	[ ] locals!
+	0 i!
+	@loop
+		objlist i get ( objlist[i] )
+		dup void? if >>done \ i >= length
+		dup list? if >>check-list
+		dup '@args == if >>args-list 
+		dup '@locals == if >>locals-list
+		\ else regular obj, copy to new list
+		>>keep-obj
+	@check-list ( obj )
+		\ see if this is [ ,,declargs ... ]
+		dup length 0 == if >>keep-obj
+		dup 0 get ',,declargs != if >>keep-obj
+		\ it is ,,declargs, so split into args,locals
+		compile-split-declargs ( args locals )
+		locals swap + locals!  \ append locals & args to my lists 
+		args swap + args! >>next
+	@keep-obj ( list )
+		new-objlist swap append new-objlist! >>next
+	@args-list ( obj )
+		drop
+		\ just saw @args so a list must be next
+		i 1 + i!
+		objlist i get
+		dup void? if >>missing-args \ end of input
+		dup list? not if >>missing-args 
+		\ add list to anything collected so far from @( .. )
+		args swap + args! >>next
+	@missing-args
+		"Expecting list after @args in:" objlist str + error
+	@locals-list ( obj )
+		drop
+		\ list must be next
+		i 1 + i!
+		objlist i get
+		dup void? if >>missing-locals
+		dup list? not if >>missing-locals
+		\ add to any existing locals from @( .. )
+		locals swap + locals! >>next 
+	@missing-locals
+		"Expecting list after @locals in:" objlist str + error
+	@next
+		i 1 + i! <<loop
+	@done ( void )
+		drop new-objlist args locals
+		;
+		
+\ takes a compiled object list and a list of names 'args' and 'locals'
+\
+\ rewrites objlist to do:
+\	- pop #args from stack into locals
+\	- reserve #locals in local stack
+\	- for every name N in ARGLIST and LOCALLIST, create
 \		mappings:
 \			N -> LP i + ref 
 \			N! -> LP i + set!
 \	- replace all instances of N and N! in objlist with above mappings
-: compile-rewrite-args-locals ( objlist -- new-objlist )
+: compile-rewrite-args-locals ( objlist args locals -- new-objlist )
+	@args [ objlist args locals ]
+	@locals [ namemap new-objlist ]
+		\ "REWRITE ARGS LOCALS:" . CR
+		\	"	objlist:" . objlist . CR
+		\	"	args:" . args . CR
+		\	"	locals:" . locals . CR
+	,,new-dict namemap! \ dict mapping names -> code replacements
+	[ ] new-objlist! \ rewritten objlist with names replaced with code sequences
+	
 	@begin
-	\ locals:
-	\	L0: ARGLIST
-	\	L1: LOCALLIST
-	\	L2: dict mapping names -> code replacements
-	\	L3: new-objlist
-	LP 4 - LP!
-		\ does it have '@args ARGLIST'?
-		dup length 2 < if >>no-args
-		dup 0 get '@args != if >>no-args
-		dup 1 get list? not if >>bad-args-list 
-		dup 1 get LP set! \ store ARGLIST to L0
-		2 -1 slice >>check-locals \ drop @args ARGLIST and continue
-
-	@bad-args-list ( objlist )
-		1 get str "List required after @args but got:" swap + error
-	@no-args ( objlist )
-		[ ] LP set! \ set ARGLIST to empty
-
-	@check-locals ( objlist )
-		\ does it have '@locals LIST
-		dup length 2 < if >>no-locals
-		dup 0 get '@locals != if >>no-locals
-		dup 1 get list? not if >>bad-locals-list 
-		dup 1 get LP 1 + set! \ store LOCALS to L1
-		2 -1 slice >>process \ drop @locals LIST and continue
-
-	@bad-locals-list ( objlist )
-		1 get str "List required after @locals but got:" swap + error
-	@no-locals ( objlist )
-		[ ] LP 1 + set! \ set LOCALS to empty
-
-	@process ( objlist )
 		\ "Got @args:" . L0 ref . CR
 		\ "Got @locals:" . L1 ref . CR
 		\ "Code now:" . dup . CR
 
-		\ if I have NO @args nor @locals, then do not modify objlist -- no need for
+		\ optimization -- if I have NO @args nor @locals, then do not modify objlist -- no need for
 		\ code to setup/teardown frame when no named vars being used
-		L0 ref length 0 ==
-		L1 ref length 0 ==
-		and if >>exit
+		args length 0 ==
+		locals length 0 ==
+		and not if >>process
+		
+		\ no args & locals so output original list
+		objlist new-objlist! >>exit
 
+	@process
 		\ make locals layout:
 		\	N+M-1: locals[M-1]
 		\	...
@@ -617,12 +712,13 @@ var TRIPLEQUOTE 1
 		\	...
 		\	1: args[1]
 		\	0: args[0]
-		[ ] make-dict L2 set! \ make dict mapping names -> code
+		
 		\ process @args first:
 		\	for each arg "N" at index i, create two symbols:
 		\		"N" -> LP i + ref
 		\		"N!" -> LP i + set!
-		L0 ref ( objlist args )
+			\ "PROCESS ARGS:" . CR
+		args
 		{
 			( called with: i name ; self bound to mapping dict )
 			str 2dup over 'LP swap '+ 'ref 4 make-list ( i name i name [ 'LP i '+ 'ref ] )
@@ -630,14 +726,14 @@ var TRIPLEQUOTE 1
 			over 'LP swap '+ 'set! 4 make-list ( i name [ 'LP i '+ 'set! ] )
 			swap "!" + swap ( i name! [ 'LP i '+ 'set! ] )
 			self -rot put ( i dict ) drop drop
-		} L2 ref :: ( bind lambda+dict -- dict already saved in L2 so don't need a copy here )
+		} namemap :: ( bind namemap to function )
 		for-each-i 
-			\ "MAPPINGS after adding @args:" . L2 ref . CR
+			\ "MAPPINGS after adding @args:" . namemap . CR
 		\ basically same thing for locals now, with offset:
 		\	for each local "N" at index i, create two symbols:
 		\		"N" -> LP i + #args + ref
 		\		"N!" -> LP i + #args + set!
-		L1 ref ( objlist locals )
+		locals
 		{
 			( called with: i name ; self bound to [ dict #args ] )
 			str 2dup over self 1 get + 'LP swap '+ 'ref 4 make-list ( i name i name [ 'LP i+#args '+ 'ref ] )
@@ -645,14 +741,14 @@ var TRIPLEQUOTE 1
 			over self 1 get + 'LP swap '+ 'set! 4 make-list ( i name [ 'LP i+#args '+ 'set! ] )
 			swap "!" + swap ( i name! [ 'LP i+#args '+ 'set! ] )
 			self 0 get -rot put ( i dict ) drop drop
-		} L2 ref L0 ref length 2 make-list :: ( bind lambda with [ dict #args ] )
+		} namemap args length 2 make-list :: ( bind lambda with [ dict #args ] )
 		for-each-i 
 			\ "MAPPINGS after adding @locals:" . L2 ref . CR
 		\ add a mapping with code for 'return' (LP #args+#locals + LP!)
-		L2 ref "return" 'LP L0 ref length L1 ref length + '+ 'LP! 'return 5 make-list put drop
-			\ "MAPPINGS after adding 'return':" . L2 ref . CR
-		\ create new objlist by replacing all mapped symbols
-		( objlist )
+		namemap "return" 'LP args length locals length + '+ 'LP! 'return 5 make-list put namemap!
+			\ "MAPPINGS after adding 'return':" . namemap . CR
+		\ finally, create new objlist by replacing all mapped symbols
+		objlist
 		{
 			\ called with: ( accum elem ) ; self bound to mapping dict
 
@@ -664,18 +760,16 @@ var TRIPLEQUOTE 1
 
 			@copy ( accum elem )
 				append return \ append to new list as-is
-		} L2 ref :: ( bind self to mapping dict )
+		} namemap :: ( bind self to mapping dict )
 	 	\ "READY TO FOLD:" . .S CR
 		\ initial value is stack setup: [ LP #locals - LP! ] then one >L for each @arg
-		'LP L1 ref length '- 'LP! 4 make-list
-		[ '>L append ] L0 ref length repeat
-		fold >>exit
+		'LP locals length '- 'LP! 4 make-list
+		[ '>L append ] args length repeat
+		fold new-objlist!
 
 	@exit
-		\ clean up my locals
-		LP 4 + LP!
-		\ "FOLDED:" . . CR
-	;
+		new-objlist
+		;
 
 \ take a parsed objlist, presumably from byte-compile, and perform finalization:
 \	* ensure objlist ends with 'return'
@@ -683,6 +777,7 @@ var TRIPLEQUOTE 1
 \
 \ returns a new list, does NOT modify objlist
 : compile-finalize-word ( objlist -- newlist )
+		\ "FINALIZE WORD:" . .S CR
 	dup length 0 > if >>not-empty
 	\ objlist is empty; newlist is [ return ]
 	drop 'return 1 make-list >>transform-args-locals
@@ -697,9 +792,14 @@ var TRIPLEQUOTE 1
 		'return append
 
 	@transform-args-locals ( objlist )
+		\ split @( .. ), @args and @locals from objlist
+		compile-collect-args-locals ( new-objlist args locals )
+			\ "AFTER COLLECTING:" . .S CR
+		\ turn names into code sequences
 		compile-rewrite-args-locals
+			\ "AFTER REWRITING:" . .S CR
 	;
-
+	
 var COMPILED_NAMELISTS 1
 
 \ take the parsed COMPILED_NAMELISTS and perform finalization on the words.
