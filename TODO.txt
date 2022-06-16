@@ -43,7 +43,7 @@ Global TODO
 		- phase 2: once that is done, remove existing var framework
 					- eliminate allocate functions in interpreters
 
-* runtime is very wrong in c++ port (try verb/n128.verb for example)
+* run-time is very wrong in c++ port (try verb/n128.verb for example)
 
 * i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
   NAME can be defined to get value and NAME! to set value. if arrays are needed then

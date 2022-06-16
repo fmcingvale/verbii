@@ -633,3 +633,22 @@ swap . . CR
 void open-as-stdout
 
 "Expect hello-----stdout:" . "temp-out.txt" file-read . CR
+
+( test variations of @( .. ), @args, @locals )
+
+: test-1 ( a b c -- z ) * + ;
+
+: test-2 ( a b c -- z ) @args [ a b c ] a b c * + ;
+
+: test-3 ( a b c -- z ) @args [ a b c ] @locals [ z ] a b c * + z! z ;
+
+: test-4 @( a b c ) a b c * + ;
+
+: test-5 @( a b c -- x y ) a b c * + x! a b c + * y! x y ;
+
+"Expect 610:" . 10 20 30 test-1 . CR
+"Expect 1220:" . 20 30 40 test-2 . CR
+"Expect 205:" . 5 10 20 test-3 . CR
+"Expect 155:" . 15 7 20 test-4 . CR
+
+"Expect [ 891 6375 ]:" . 85 62 13 test-5 2 make-list . CR
