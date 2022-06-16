@@ -300,6 +300,9 @@ drop dup 8 get
 drop dup -1 get
 drop dup -3 get
 drop dup -9 get
+\ out of bounds => void
+drop dup 9 get
+drop dup -10 get
 clear
 
 'klmnopqrst
@@ -309,6 +312,9 @@ drop dup 9 get
 drop dup -4 get
 drop dup -1 get
 drop dup -10 get
+\ as above, check out of bounds cases
+drop dup 10 get
+drop dup -11 get
 clear
 
 ( length operator )
@@ -388,6 +394,9 @@ drop dup 5 get
 drop dup -1 get
 drop dup -3 get
 drop dup -6 get
+\ out of bounds -> void
+drop dup 6 get
+drop dup -7 get
 clear
 
 ( list put )
@@ -439,6 +448,7 @@ clear
 dup
 "uuu" get
 drop
+\ bad key -> void
 dup "zyzyz" get
 drop
 "xyz" 888 put

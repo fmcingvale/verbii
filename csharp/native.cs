@@ -565,9 +565,10 @@ class Builtins {
 				var s = (obj as LangString)!.value;
 				if(index < 0) index += s.Length; // index<0 counts from end
 				if(index < 0 || index >= s.Length)
-					throw new LangError("Index out of bounds in get");
-				// assumes length is limited to 32 bits
-				intr.push(new LangString(s.Substring((int)index,1)));
+					intr.push(new LangVoid()); // out of bounds == void
+				else
+					// assumes length is limited to 32 bits
+					intr.push(new LangString(s.Substring((int)index,1)));
 			}
 			else
 				throw new LangError("Expecting index in get but got: " + indexOrKey.fmtStackPrint());
@@ -578,9 +579,10 @@ class Builtins {
 				var s = (obj as LangSymbol)!.value;
 				if(index < 0) index += s.Length; // index<0 counts from end
 				if(index < 0 || index >= s.Length)
-					throw new LangError("Index out of bounds in get");
-				// assumes length is limited to 32 bits
-				intr.push(new LangSymbol(s.Substring((int)index,1)));
+					intr.push(new LangVoid()); // out of bounds == void
+				else
+					// assumes length is limited to 32 bits
+					intr.push(new LangSymbol(s.Substring((int)index,1)));
 			}
 			else
 				throw new LangError("Expecting index in get but got: " + indexOrKey.fmtStackPrint());
@@ -592,10 +594,10 @@ class Builtins {
 				var list = (obj as LangList)!;
 				if(index < 0) index += list.objlist.Count; // index<0 counts from end
 				if(index < 0 || index >= list.objlist.Count)
-					throw new LangError("Index out of bounds in put");
-
-				// note list sizes are limited to 32-bits
-				intr.push(list.objlist[(int)index]);
+					intr.push(new LangVoid()); // out of bounds == void
+				else
+					// note list sizes are limited to 32-bits
+					intr.push(list.objlist[(int)index]);
 			}
 			else
 				throw new LangError("Expecting index in put but got: " + indexOrKey.fmtStackPrint());

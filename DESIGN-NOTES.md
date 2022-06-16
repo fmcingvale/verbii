@@ -1,6 +1,34 @@
 
 Random design notes on why things are the way that they are ...
 
+void vs null
+----------------------------
+
+Originally there was a void type that was *only* used internally. It was used
+to indicate a 'nothing' value since null is not nothing (a good example is parsing
+JSON where null is a literal - it is more natural to have a void value that means
+EOF (or similar) and null is the literal null value.
+
+My initial decision was to make void *never* show up in verbii code. However, over time
+I saw the usefulness of void in verbii code just like in the host language -- to differentiate
+'null' (an actual object) from 'nothing'.
+
+Some way that void is currently used:
+	- as above, to differentiate 'null' from EOF in several places like parsing functions
+	- trying to get a nonexistent key from a dictionary => void
+		- so there is no need for a 'key-exists?' type native function
+	- trying to get from a string/symbol/list wwith an out-of-bounds index returns void
+		- this makes looping simpler in many cases -- no need to check against length,
+		  just do list[i++] until void is returned.
+	_ NOT YET IMPLEMENTED: void will eventually be used to delete items from dicts/lists instead
+		of having seperate deletion functions
+		
+Consequences of void:
+	- void can NEVER be a valid stored object
+		- you can't tell the difference between a void stored in a list/dict from 
+			trying to access a non-existent index/key
+		- this is BY DESIGN and will not change
+
 List literals & deepcopying:
 ----------------------------
 

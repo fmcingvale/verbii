@@ -423,13 +423,13 @@ def builtin_get(I):
 	if isSymbol(obj) or isList(obj):
 		if not isInt(index): raise LangError("get requires index, got: " + fmtStackPrint(index))
 		if index < 0: index += len(obj) # negative indexes
-		if index < 0 or index >= len(obj): raise LangError("Index out of range in get")
-		I.push(obj[index])
+		if index < 0 or index >= len(obj): I.push(LangVoid()) # out of bounds -> void
+		else: I.push(obj[index])
 	elif isString(obj):
 		if not isInt(index): raise LangError("get requires index, got: " + fmtStackPrint(index))
 		if index < 0: index += len(obj.s) # negative indexes
-		if index < 0 or index >= len(obj.s): raise LangError("Index out of range in get")
-		I.push(LangString(obj.s[index]))
+		if index < 0 or index >= len(obj.s): I.push(LangVoid()) # out of bounds -> void
+		else: I.push(LangString(obj.s[index]))
 	elif isDict(obj):
 		if not isString(index): raise LangError("get requires string key, got: " + fmtStackPrint(index))
 		if index not in obj:

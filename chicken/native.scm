@@ -370,7 +370,7 @@
 			(if (< index 0)
 				(set! index (+ index (len obj)))) ; negative index adjustment
 			(if (or (< index 0) (>= index (len obj)))
-				(lang-error 'get "Index out of range in get")
+				(push intr (make-Void)) ; out of bounds == void
 				(push intr (substring obj index (+ index 1)))))
 		
 		((String? obj)
@@ -379,7 +379,7 @@
 			(if (< index 0)
 				(set! index (+ index (len obj)))) ; negative index adjustment
 			(if (or (< index 0) (>= index (len obj)))
-				(lang-error 'get "Index out of range in get")
+				(push intr (make-Void)) ; out of bounds == void
 				(push intr (make-String (substring (value obj) index (+ index 1))))))
 		
 		((List? obj)
@@ -388,7 +388,7 @@
 			(if (< index 0)
 				(set! index (+ index (len obj)))) ; negative index adjustment
 			(if (or (< index 0) (>= index (len obj)))
-				(lang-error 'get "Index out of range in get")
+				(push intr (make-Void)) ; out of bounds == void
 				(push intr (dynvector-ref (List-objlist obj) index))))
 					
 		((Dict? obj)

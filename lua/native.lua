@@ -537,7 +537,7 @@ function builtin_get(intr)
 		end
 		if index < 0 then index = index + #obj.value end -- negative index counts from end
 		if index < 0 or index >= #obj.value then
-			error(">>>Index out of range in get")
+			intr:push(new_Void()) -- out of bounds == void
 		else
 			intr:push(new_String(string.sub(obj.value, index+1, index+1)))
 		end
@@ -547,7 +547,7 @@ function builtin_get(intr)
 		end
 		if index < 0 then index = index + #obj end
 		if index < 0 or index >= #obj then
-			error(">>>Index out of range in get")
+			intr:push(new_Void()) -- out of bounds == void
 		else
 			intr:push(string.sub(obj, index+1, index+1))
 		end
@@ -557,7 +557,7 @@ function builtin_get(intr)
 		end
 		if index < 0 then index = index + #obj end
 		if index < 0 or index >= #obj then
-			error(">>>Index out of range in get")
+			intr:push(new_Void()) -- out of bounds == void
 		else
 			intr:push(obj[index+1])
 		end

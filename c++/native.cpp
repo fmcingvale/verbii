@@ -277,6 +277,9 @@ static void builtin_slice(Interpreter *intr) {
 //		i<0 counts from end
 // ( dict key -- dict[key] )
 //		key must be a string
+//
+// FOR ALL - returns void if index out of bounds or key does not exist
+// only raises error if index/key of wrong type
 static void builtin_get(Interpreter *intr) {
 	auto indexOrKey = intr->pop();
 	auto obj = intr->pop();
@@ -286,14 +289,17 @@ static void builtin_get(Interpreter *intr) {
 		int index = indexOrKey.asInt();
 		if(index < 0) 
 			index += obj.length(); // allow negative indexes to count from end
-		if(index < 0 || index >= obj.length())
-			throw LangError("index out of range in get: index=" + to_string(index) + " obj=" + obj.fmtStackPrint());
-		if(obj.isString())
-			intr->push(newString(obj.asString()+index, 1));
-		else if(obj.isSymbol())
-			intr->push(newSymbol(obj.asSymbol()+index, 1));
-		else if(obj.isList())
-			intr->push(obj.asList()->at(index));
+		if(index < 0 || index >= obj.length()) {
+			intr->push(newVoid()); // out of bounds == void
+		}
+		else {
+			if(obj.isString())
+				intr->push(newString(obj.asString()+index, 1));
+			else if(obj.isSymbol())
+				intr->push(newSymbol(obj.asSymbol()+index, 1));
+			else if(obj.isList())
+				intr->push(obj.asList()->at(index));
+		}
 	}
 	else if(obj.isDict()) {
 		if(!indexOrKey.isString())
