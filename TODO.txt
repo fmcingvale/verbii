@@ -43,6 +43,8 @@ Global TODO
 		- phase 2: once that is done, remove existing var framework
 					- eliminate allocate functions in interpreters
 
+	- requires that userwords can be closures -- changes to hosts 
+	
 * run-time is very wrong in c++ port (try verb/n128.verb for example)
 
 * i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
