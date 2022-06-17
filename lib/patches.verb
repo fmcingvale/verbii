@@ -10,6 +10,162 @@
 
 ( ------ init ----------- )
 
+\ true|false if ANY member of sequence satisfies test function
+: any? @( sequence test -- anytrue )
+	@locals [ i ]
+	0 i!
+	@loop
+		i sequence length >= if >>noneFound \ at end of sequence
+		sequence i get test call \ pass i'th item to test
+		if >>gotTrue \ found a true item, done
+		i 1 + i! <<loop \ else ++i and continue
+	@gotTrue
+		true return
+	@noneFound
+		false return
+	;
+	
+\ true|false if ALL members of sequence satisfy test
+: all? @( sequence test -- alltrue )
+	@locals [ i ]
+	0 i!
+	@loop
+		i sequence length >= if >>allTrue \ end of sequence, didn't find any false
+		sequence i get test call \ pass seq[i] to test
+		if >>gotTrue 
+		\ got one false item, so result is false
+		false return
+	@gotTrue
+		i 1 + i! <<loop \ got true; ++i and continue
+	@allTrue
+		true return
+	;
+	
+\ call func NR times -- does not touch stack; func can use stack in any way
+: repeat @( func NR -- )
+	\ lambda is allowed to use stack, but not locals, so store my
+	\ parameters in locals
+	@loop
+		NR 0 <= if >>done 
+		func call \ call func - stack is in same state as last call to fund
+		NR 1 - NR! <<loop
+	@done
+		;
+	
+: for-each @( seq func -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		seq i get func call
+		i 1 + i! <<loop
+	@done 
+		;
+	
+: for-each-reverse @( seq func -- )
+	@locals [ i ]
+	seq length 1 - i!
+	@loop
+		i 0 < if >>done 
+		seq i get func call 
+		i 1 - i! <<loop
+	@done 
+		;
+	
+: for-each-i @( seq func -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		i seq i get func call 
+		i 1 + i! <<loop
+	@done 
+		;
+
+: fold @( seq func init -- accum )
+	@locals [ i ]
+	init accum!
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		accum seq i get func call accum!
+		i 1 + i! <<loop
+	@done
+		accum
+	;
+	
+: map-list @( list func -- newlist )
+	@locals [ i ]
+	0 i!
+	[ ] newlist!
+	@loop
+		i list length >= if >>done 
+		list i get func call
+		newlist swap append newlist!
+		i 1 + i! <<loop
+	@done
+		newlist
+		;
+		
+: map-string @( str func -- newstr )
+	@locals [ i ]
+	0 i!
+	"" newstr!
+	@loop
+		i str length >= if >>done 
+		str i get func call
+		newstr swap + newstr!
+		i 1 + i! <<loop
+	@done
+		newstr
+		;
+		
+: map @( seq func -- newseq )
+	seq list? if >>list 
+	seq string? if >>string 
+	"Bad sequence in map:" seq str + error
+
+	@list seq func map-list return
+	@string seq func map-string return
+	;
+	
+: filter-list @( list func -- truelist )
+	@locals [ i ]
+	[ ] truelist!
+	0 i!
+	@loop
+		i list length >= if >>done 
+		list i get func call not if >>next 
+		truelist list i get append truelist!
+	@next
+		i 1 + i! <<loop
+	@done
+		truelist
+	;
+
+: filter-string @( str func -- truestring )
+	@locals [ i ]
+	"" truestring!
+	0 i!
+	@loop
+		i str length >= if >>done 
+		str i get func call not if >>next 
+		truestring str i get + truestring!
+	@next
+		i 1 + i! <<loop
+	@done
+		truestring
+	;
+
+: filter ( sequence func -- new-sequence )
+	over list? if >>list 
+	over string? if >>string
+	drop "Bad sequence in filter: " swap str + error
+
+	@list filter-list return 
+	@string filter-string return
+	;
+	
 ( ------ compiler ------- )
 	
 ( ------ misc ------- )
