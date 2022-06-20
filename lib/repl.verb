@@ -38,7 +38,7 @@
 
 	load-file-maybe-cached
 	\ same trick as above to delete __main__ before running
-	'__main__ .dumpword
+	'__main__ .dumpword \ <- for syntax highlight error
 	del __main__
 	call
 	;
@@ -135,7 +135,7 @@ false BADARGS set!
 	@got-dashdash ( i "--" )
 		drop
 		\ these are the args for the script to be run, excluding the '--'
-		SCRIPT-ARGS ref swap 1 + -1 slice L0 ref swap + L0 set! >>end
+		SCRIPT-ARGS ref swap 1 + -1 slice LP ref swap + LP set! >>end
 	@set-filename ( i filename )
 		FILENAME ref void? not if >>have-filename
 		FILENAME set! 1 + <<parse-script-args

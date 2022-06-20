@@ -12,6 +12,8 @@
 \ value would be +/- 2^127. Here there is no difference in range for signed
 \ vs unsigned ... essentially this is 129 bit math)
 
+\ Python 19.0-19.7
+
 var START_TIME 1
 run-time START_TIME set!
 
@@ -62,21 +64,21 @@ run-time START_TIME set!
 	{ hex-char-to-int swap 16 * + } 0 fold
 	;
 
-: n128-add ( a b -- r ; add two 128 bit numbers, producing 128 bit result )
-	n128-new >L ( L0 = result )
-	8 0
-	@addloop ( a b i carry )
-		over 0 < if >>done ( stop on i<0 )
-		4 pick 3 pick get ( a b i c a[i] )
-		4 pick 4 pick get ( a b i c a[i] b[i] )
-		+ + ( a b i a[i]+b[i]+c )
-		65536 /mod ( a b i sum% sum// )
-		-rot ( a b sum// i sum% ; sum// is new carry )
-		L0 ref 3 pick rot ( a b sum// i r i sum% )
-		put drop ( a b sum// i )
-		1 - swap <<addloop ( a b i-1 sum// )
-	@done ( a b i c )
-		SP 4 + SP! L> ( clear stack and leave r )
+\ add two 128 bit numbers, producing 128 bit result
+: n128-add @( a b -- r )
+	@locals [ i carry ]
+	n128-new r!
+	8 i!
+	0 carry!
+	@addloop
+		i 0 < if >>done \ stop when i<0
+		a i get b i get carry + + ( sum = a[i] + b[i] + carry )
+		65536 /mod ( sum% sum// )
+		carry! \ sum// is new carry
+		r i rot put r! \ r[i] = sum%
+		i 1 - i! <<addloop
+	@done
+		r
 		;
 
 "0123456789abcdefABCDEF" { "char:" . dup . "value:" . hex-char-to-int . CR } for-each
@@ -91,49 +93,50 @@ run-time START_TIME set!
 
 : ddd . .S CR  ;
 
-: n128-from-hex ( hex -- n ; parse hex into n128 value )
+\ parse hex string into n128 value
+: n128-from-hex @( hex -- nr )
+	@locals [ negative ]
 	\ see if there's a sign
-	dup 0 get "-" == if >>negative-sign
-	dup 0 get "+" == if >>positive-sign
+	hex 0 get "-" == if >>negative-sign
+	hex 0 get "+" == if >>positive-sign
 	\ else no sign == +
-	false >L ( L0 == true if negative )
+	false negative!
 	>>pad
 	@negative-sign
-		true >L
-		1 -1 slice \ remove sign
+		true negative!
+		hex 1 -1 slice hex! \ remove sign
 		>>pad
 	@positive-sign
-		false >L
-		1 -1 slice \ remove sign
+		false negative!
+		hex 1 -1 slice hex! \ remove sign
 		
 	\ each digit is 16 bits -- 4 hex chars -- so make sure length is a multiple of 4
 	@pad
-	dup length 4 mod 0 == if >>ready
-	"0" swap + \ prepend "0" until correct
+		hex length 4 mod 0 == if >>ready
+		"0" hex + hex! \ prepend "0" until correct length
 	<<pad
 	@ready
-		\ "ready" ddd
-	[ ] swap ( N hex )
-	@loop ( N hex )
-		\ "loop" ddd
-		dup length 0 == if >>done
-		\ "A" ddd
-		dup 0 get hex-char-to-int 16 * ( N h h[0]*16 )
-		over 1 get hex-char-to-int + 16 * ( N h h[0]*256+h[1]*16 )
-		over 2 get hex-char-to-int + 16 * ( N h h[0]*4096+h[1]*256+h[2]*16 )
-		over 3 get hex-char-to-int + ( N h h[0]*4096+h[1]*256+h[2]*16+h[3] )
-		rot swap append swap ( N h )
-		4 -1 slice ( N h[4:] )
+	[ ] nr!
+	@loop
+		hex length 0 == if >>done
+		hex 0 get hex-char-to-int 16 * ( h[0]*16 )
+		hex 1 get hex-char-to-int + 16 * ( h[0]*256+h[1]*16 )
+		hex 2 get hex-char-to-int + 16 * ( h[0]*4096+h[1]*256+h[2]*16 )
+		hex 3 get hex-char-to-int + ( h[0]*4096+h[1]*256+h[2]*16+h[3] )
+		nr swap append nr! \ append digit to nr
+		
+		hex 4 -1 slice hex! \ hex=hex[4:]
 		<<loop
 	@done ( N hex )
-		drop
-		\ front-pad to 9 16-bit digits
-		[ 0 0 0 0 0 0 0 0 ] swap + -9 -1 slice
+		\ front-pad nr to 9 16-bit digits
+		[ 0 0 0 0 0 0 0 0 ] nr + -9 -1 slice nr!
 		\ if negative, negate
-		L> if >>negate
-		return
-		@negate n128-negate
+		negative if >>negate
+		nr return
+		@negate nr n128-negate
 		;
+
+"*** Test n128-from-hex ********************" . CR
 
 [ 	[ "1234abcd5678cdef" [ 0 0 0 0 0 4660 43981 22136 52719 ] ]
 	[ "1234abcd5678cd" [ 0 0 0 0 0 18 13483 52566 30925 ] ]
@@ -205,12 +208,14 @@ run-time START_TIME set!
 	{ dup . CR n128-from-hex n128-to-hex . CR } for-each
  
  \ test adding
+ "*** Test Add ********************" . CR
+ 
  \ checked in python
  [ 	[ "12345678" "abcdef98" "0000|0000.0000.0000.0000.0000.0000.be02.4610" ] 
 	[ "a58d3c2f52bedf65" "83bcda51a4ebf987" "0000|0000.0000.0000.0001.294a.1680.f7aa.d8ec" ] 
 	[ "0a91b7703990df1f6847c0c0fe054e2a" "0ee9071bca817da22d26d97aa4cb54d0" "0000|197a.be8c.0412.5cc1.956e.9a3b.a2d0.a2fa" ]
 	]
-	{ unmake drop "Expect:" . . CR "       " . n128-from-hex swap n128-from-hex n128-add n128-to-hex . CR }
+	{ unmake drop "Expect:" . . CR "           " . n128-from-hex swap n128-from-hex n128-add n128-to-hex . CR }
 	for-each
 
 \ left shift in multiples of 16-bits
@@ -249,33 +254,28 @@ run-time START_TIME set!
 "abcd" n128-from-hex 8 n128-shl-x16 n128-to-hex . CR
 
 \ negate n128 value *IN PLACE*
-: n128-negate ( n -- n )
+: n128-negate @( nr -- negated )
+	@locals [ i carry ]
 	\ invert all bits first (including sign value)
-		\ "Inverting" ddd
-	8
-	@notloop ( n i )
-		dup 0 < if >>add1 ( loop until i<0 )
-		2dup 2dup get bit-not 65535 bit-and put drop ( n i )
-		1 - <<notloop
+	8 i!
+	@notloop
+		i 0 < if >>add1 ( loop until i<0 )
+		\ nr[i] = (~nr[i]) & 0xffff
+		nr i get bit-not 65535 bit-and nr i rot put nr!
+		i 1 - i! <<notloop
 	@add1
-	drop ( n )
-	\ "ready add 1" ddd
 	\ add 1 in-place (do it here instead of modifying main add function)
-	8 1
-	@addloop ( n i carry )
-			\ "addloop" ddd
-		over 0 < if >>done
-		3 pick 3 pick get + ( n i c+n[i] )
-			\ "n i c+n[i]" ddd
-		65536 /mod ( n i c+n[i]%65536 c+n[i]//65536 )
-			\ "n i sum% sum//" ddd
-		>L ( n i sum% ; L0=carry )
-			\ "n i sum%" ddd
-		3 pick 3 pick rot put drop ( n i )
-			\ "n i" ddd
-		1 - L> <<addloop ( n i-1 sum// )
-	@done ( n i carry )
-		drop drop
+	8 i!
+	1 carry!
+	@addloop
+		i 0 < if >>done
+		nr i get carry + ( sum = n[i] + carry )
+		65536 /mod ( sum% sum// )
+		carry! ( sum// -> carry )
+		nr i rot put nr! ( nr[i] = sum% )
+		i 1 - i! <<addloop 
+	@done 
+		nr
 		;
 
 "*** Test Negate ****************************" . CR
@@ -323,76 +323,57 @@ run-time START_TIME set!
 \
 \ a is n128, b is 16-bit value - both are assumed to be positive so
 \ caller should negate if needed and adjust afterwards
-: n128-mul-16 ( a b -- a*b ; )
-	\ sanity check a
-	over 0 get 0 != if >>badA
-	\ sanity check b
-	dup dup 0 <
-	swap 65535 > 
-	or if >>badB
+: n128-mul-16 @( a b -- product )
+	@locals [ i carry ]
+	\ check that a is positive
+	a 0 get 0 != if >>badA \ sign != 0
+	\ check that b is 16-bits and positive
+	b 0 < b 65535 > or if >>badB
 
-		\ "e" ddd
-	\ to hold result
-	n128-new >L ( a b ; L0=result )
+	\ set product to zero
+	n128-new product!
 
 	\ multiply b across all digits of a
-	8 0
-	@loop ( a b i carry )
-			\ "loop" ddd
-		over 0 < if >>done ( loop until i<0 )
-		4 pick 3 pick get ( a b i c a[i] )
-			\ "before mul" ddd
-		4 pick * + ( a b i a[i]*b+c )
-			\ "after * +" ddd
+	8 i!
+	0 carry!
+	@loop
+		i 0 < if >>done \ loop until i<0
+		a i get b * carry + ( sum = a[i]*b + carry )
 		\ split into 16-bit digit + carry
-		65536 /mod ( a b i sum% sum// )
-			\ "split" ddd
-		-rot ( a b sum// i sum% )
-		2dup L0 ref -rot ( a b sum// i sum% r i sum% )
-			\ "before put" ddd
-		put 
-			\ "after put" ddd
-			drop drop ( a b sum// i )
-			\ "after drops" ddd
-		1 - swap ( a b i-1 sum// )
-		<<loop
+		65536 /mod ( sum% sum// )
+		carry! \ carry=sum//
+		product i rot put product! \ product[i] = sum%
+		i 1 - i! <<loop
+		
+	@badA
+		"Negative A not allowed in n128-mul-16: " a n128-to-hex + error
 
-	@badA ( a b )
-		drop n128-to-hex
-		"Negative A not allowed in n128-mul-16: " swap + error
+	@badB
+		"B is > 16-bits in n128-mul-16: " b str + error
 
-	@badB ( a b )
-		"B is > 16-bits in n128-mul-16: " swap str + error
-
-	@done ( a b i c )
-		SP 4 + SP! \ clear stack
-		L> ( r )
+	@done
+		product
 		;
 
 \ a*b where a & b are both n128. a & b are assumed to be positive, and result will always
 \ have sign word set to 0000
-: n128-mul ( a b -- a*b )
-	n128-new >L ( L0 = result )
-	8
+: n128-mul @( a b -- product )
+	@locals [ i ]
+	n128-new product!
+	8 i!
 	\ multiply each 16-bit word of b against a, shifting and summing into result
-	@loop ( a b i )
-		dup 1 < if >>done ( only have to multiply b[1:8], not sign digit since assumed >0 )
-		2dup get ( a b i b[i] )
-		4 pick swap ( a b i a b[i] )
-		n128-mul-16 ( a b i a*b[i] )
-			\ "after mul-16" ddd
+	@loop
+		i 1 < if >>done \ only have to multiply b[1:8], not sign digit since assumed >0
+		a b i get n128-mul-16 ( p=a*b[i] )
 		\ shift left by (8-i)*16-bits and add to result
-		8 3 pick - ( a b i a*b[i] 8-i )
-		n128-shl-x16 ( a b i (a*b[i])<<(8-i)*16 )
-			\ "after shift" ddd
-		L0 ref swap n128-add L0 set! ( a b i ) 
-			\ "@ 1-" ddd
-		1 - <<loop
-	@done ( a b i )
-		SP 3 + SP! ( clean stack )
-		L> ( get result )
-		0 0 put ( set sign to 0, per assumption at top )
+		8 i - n128-shl-x16 ( p << (8-i) )
+		product swap n128-add product! \ add to product
+		i 1 - i! <<loop
+	@done
+		product 0 0 put product! \ set sign to 0, per assumption at top
+		product
 		;
+
 
 : testMul16 ( ASTR b )
 	"ASTR = " . over . CR
@@ -463,7 +444,7 @@ var FNV128-OFFSET 1
 	fold
 	;
 
-"*** FNV hashing ..." . CR 
+"*** FNV-128 hashing ..." . CR 
 [
 	\ test cases generated at: https://www.toolkitbay.com/tkb/tool/FNV-1
 	[ "The quick brown fox jumped over the lazy dog."

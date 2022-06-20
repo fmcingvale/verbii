@@ -689,8 +689,8 @@ var TRIPLEQUOTE 1
 	[ ] new-objlist! \ rewritten objlist with names replaced with code sequences
 	
 	@begin
-		\ "Got @args:" . L0 ref . CR
-		\ "Got @locals:" . L1 ref . CR
+		\ "Got @args:" . LP ref . CR
+		\ "Got @locals:" . LP 1 + ref . CR
 		\ "Code now:" . dup . CR
 
 		\ optimization -- if I have NO @args nor @locals, then do not modify objlist -- no need for
@@ -728,7 +728,6 @@ var TRIPLEQUOTE 1
 			self -rot put ( i dict ) drop drop
 		} namemap :: ( bind namemap to function )
 		for-each-i 
-			\ "MAPPINGS after adding @args:" . namemap . CR
 		\ basically same thing for locals now, with offset:
 		\	for each local "N" at index i, create two symbols:
 		\		"N" -> LP i + #args + ref
@@ -743,7 +742,7 @@ var TRIPLEQUOTE 1
 			self 0 get -rot put ( i dict ) drop drop
 		} namemap args length 2 make-list :: ( bind lambda with [ dict #args ] )
 		for-each-i 
-			\ "MAPPINGS after adding @locals:" . L2 ref . CR
+			\ "MAPPINGS after adding @locals:" . L ref . CR
 		\ add a mapping with code for 'return' (LP #args+#locals + LP!)
 		namemap "return" 'LP args length locals length + '+ 'LP! 'return 5 make-list put namemap!
 			\ "MAPPINGS after adding 'return':" . namemap . CR
@@ -834,7 +833,7 @@ var COMPILED_NAMELISTS 1
 
 	\ i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
 	\ save starting SP so I can count at the end
-	SP >L ( L0=SP at start )
+	SP >L ( f=SP at start )
 	@loop
 	( read all parsed objects then make into a list )
 	syntax-next

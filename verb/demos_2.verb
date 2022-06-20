@@ -28,16 +28,17 @@
 
 ( reverse a list )
 
-: reverse-list ( list -- reversed-list )
-	0 make-list >L ( build new list in L0 )
-	0
-	@loop ( list i )
-		2dup swap length >= if >>done ( if i >= length then done )
-		2dup -1 swap - get ( get with negative index )
-		L0 ref swap append drop ( appends to existing object, so don't need to re-save to L0 )
-		1 + <<loop
+: reverse-list @( list -- reversed )
+	@locals [ i ]
+	[ ] reversed!
+	0 i!
+	@loop
+		i list length >= if >>done \ if i >= length then done
+		list -1 i - get \ get with negative index
+		reversed swap append reversed!
+		i 1 + i! <<loop
 	@done
-		2drop L>
+		reversed
 		;
 
 11 22 33 44 55 66 77 88 99 9 make-list
@@ -51,17 +52,18 @@
 
 ( reverse a string )
 
-: reverse-string ( string -- reversed-string )
-	( same basic idea as reverse-list except strings are immutable so a little different )
-	0 make-string >L ( build new string in L0 )
-	0
-	@loop ( string i )
-		2dup swap length >= if >>done ( if i >= length then done )
-		2dup -1 swap - get ( get with negative index )
-		L0 ref swap + L0 set! ( makes new string, so save back to L0 )
-		1 + <<loop
+: reverse-string @( string -- reversed )
+	( same basic idea as reverse-list except strings are immutable so used + instead of append )
+	@locals [ i ]
+	"" reversed!
+	0 i!
+	@loop
+		i string length >= if >>done
+		string -1 i - get
+		reversed swap + reversed!
+		i 1 + i! <<loop
 	@done
-		2drop L>
+		reversed
 		;
 
 "ABCDEFG"

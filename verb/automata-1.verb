@@ -10,56 +10,53 @@
 \	1. form 3-bit number from i-1,i,i+1 elements
 \	2. use as index into rules table to get next value of i'th element
 \
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
 
 \ uncomment one of these to turn on/off debugging
 
 \ : ddd ( msg -- ; print msg + stack trace ) . .S CR ;
 : ddd drop ;
 
-: wrapped-index ( list index -- list adjusted-index; index wraps around )
-		"W A" ddd
-	dup 0 < if >>negative 
-	2dup swap length >= if >>overflow
-		"W A OK" ddd
-	return ( index is OK )
+\ wrap index based on length of list
+: wrapped-index @( list index -- adjusted-index )
+	index 0 < if >>negative 
+	index list length >= if >>overflow
+	index return ( index is OK )
 	@negative
-		over length + return
+		index list length + return
 	@overflow
-		over length -
+		index list length -
 		;
 
+\ get value from wrapped index
+: wrapped-get @( list index -- value )
+	list list index wrapped-index get
+	;
+
 \ get 3-bit value (as above) for i'th list entry
-: get-encoded-state ( list i -- 3-bit code )
+: get-encoded-state @( list i -- code )
 	\ 3-bit value = list[i-1] * 4 + list[i] * 2 + list[i+1]
 	\ (the i-1,i+1 are wrapped around as needed)
-	2dup 1 - wrapped-index ( list i list [i-1]/wrapped )
-		"A" ddd
-	get 4 * >L ( list i ; L0=[i-1]*4 )
-		"B" ddd
-	2dup get 2 * L> + >L ( list i ; L0=[i-1]*4+[i]*2 )
-	1 + wrapped-index
-	get L> + ( code )
+	list i 1 - wrapped-get 4 *
+	list i wrapped-get 2 *
+	list i 1 + wrapped-get + +
 	;
 
 \ given a current state as a list, and a rule set, calculate the next state
-: next-state ( state rules -- new-state )
-	[ ] >L >L ( L1 = new-state, L0 = rules )
-	0
-	@loop ( state i )
-		2dup swap length >= if >>done
-			"NS A" ddd
-		2dup get-encoded-state ( state i encoded )
-			"NS B" ddd
-		L0 ref swap get ( state i rule )
-			"NS C" ddd
-		L1 ref swap ( state i newstate rule )
-			"NS D" ddd
-		append ( state i newstate )
-			"NS E" ddd
-		drop 1 + <<loop
-
+: next-state @( state rules -- new-state )
+	@locals [ i ]
+	[ ] new-state!
+	0 i!
+	@loop
+		i state length >= if >>done
+		state i get-encoded-state ( code )
+		rules swap get ( rules[code] )
+		new-state swap append new-state! \ append rules[code] to new-state
+		i 1 + i! <<loop
+		
 	@done
-		2drop L1 ref LP 2 + LP! ( new-state )
+		new-state
 		;
 
 : state2diagram ( state -- diagram )
@@ -81,27 +78,25 @@ next-state dup . CR
 state2diagram . CR
 
 \ run nr loops of automata with initial state & rules
-: run-automata ( state rules nr -- )
-	@loop ( state rules nr )
-		dup 0 == if >>done
-		-rot ( nr state rules )
-		over state2diagram . CR ( print current state )
-		tuck next-state ( nr rules newstate )
-		swap rot 1 - ( newstate rules nr-1 )
+: run-automata @( state rules nr -- )
+	@loop
+		nr 0 == if >>done
+		state state2diagram . CR \ print current state
+		state rules next-state state! \ update to next state
+		nr 1 - nr!
 		<<loop
 	@done
-		drop drop drop
+		
 	;
 
 \ make a new state vector with a single 1 in center
 \ (returned state will always be odd sized)
-: make-new-state ( length )
-	2 // >L ( L0 = length//2 )
+: make-new-state @( length )
 	
-	0 [ dup ] L0 ref 1 - repeat
+	0 { dup } length 2 // 1 - repeat
 	1
-	0 [ dup ] L0 ref 1 - repeat
-	L0 ref 2 * 1 + make-list LP 1 + LP!
+	0 { dup } length 2 // 1 - repeat
+	length 1 + make-list
 	;
 	
 \ state
