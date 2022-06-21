@@ -454,29 +454,31 @@ var TRIPLEQUOTE 1
 		drop
 		;
 
-: syntax-comment ( assumes open paren just read )
-	"" >L 1 >L ( L0 = nesting, L1 = comment text )
+\ parse ( ... ) comment, with nesting. assumes "(" was just read.
+: syntax-comment
+	@locals [ nesting comment-text ]
+	"" comment-text!
+	1 nesting!
 	@loop
 		reader-next ( puts symbol on stack )
 		dup void? if >>eof
 		( add to comment text )
-		dup symbol->string L1 ref " " + swap + L1 set! 
+		dup symbol->string comment-text " " + swap + comment-text! 
 
 		dup ') == if >>closeparen
 		dup '( == if >>openparen \ ) <- to stop notepad++ highlighter from messing up
 		drop <<loop ( discard and continue )
 	@closeparen
-		LP ref 1 - LP set!
-		LP ref 0 == if >>end
+		nesting 1 - nesting!
+		nesting 0 == if >>end
 		drop <<loop
 	@openparen
-		LP ref 1 + LP set!
+		nesting 1 + nesting!
 		drop <<loop
 	@end
-		LP 2 + LP! ( clean up locals )
 		drop return
 	@eof
-		L1 ref 0 40 slice
+		comment-text 0 40 slice
 		"Unexpected end of input inside comment: " swap + error
 	;
 	
@@ -833,7 +835,7 @@ var COMPILED_NAMELISTS 1
 
 	\ i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
 	\ save starting SP so I can count at the end
-	SP >L ( f=SP at start )
+	SP >L ( L0=SP at start )
 	@loop
 	( read all parsed objects then make into a list )
 	syntax-next
@@ -843,11 +845,7 @@ var COMPILED_NAMELISTS 1
 	@list
 	\ **TODO** change this to use flatten-if-inline
 	\ check for [ ,,inline ... ] and flatten
-	dup length 0 == if <<loop
-	dup 0 get ',,inline == if >>flatten
-	<<loop
-	@flatten
-		1 -1 slice unmake drop <<loop
+	flatten-if-inline <<loop
 	@done
 	drop
 	( count # items added to stack and make list )
