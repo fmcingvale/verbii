@@ -455,6 +455,10 @@ drop
 "bbb" 444 put
 clear
 
+[ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict
+length
+clear
+
 ( string / symbol make/unmake )
 clear
 65 66 67 68 4 make-string

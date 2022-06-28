@@ -107,6 +107,14 @@ clear
 1 2 == 2 3 == ==
 1 1 == 2 1 == ==
 
+clear
+
+( void only equal to void )
+2 void ==
+void 2 ==
+void void ==
+clear
+
 ( > )
 -12 8 >
 100 2 >

@@ -798,6 +798,12 @@ and		now		with			tabs
 => { "bbb" => 444 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 } 
 >> clear 
 => 
+>> [ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict 
+=> { "bbb" => 555 "eee" => 999 "uuu" => 333 "zzz" => 444 } 
+>> length 
+=> 4 
+>> clear 
+=> 
 >> ( string / symbol make/unmake ) 
 => 
 >> clear 

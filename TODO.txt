@@ -37,6 +37,10 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* call needs to change to ONLY allow lambdas -- can still build dynamic code with lists, just use make-lambda instead
+  of being able to call list directly. this removes ambiguity in the compiler (when doing name translation & closures)
+  about whether a list is code or data.
+  
 * can vars be done completely with closures/self??
 	- if so then:
 		- phase 1: rewrite existing vars in closure style (can be done a little at a time)
@@ -79,6 +83,8 @@ Global TODO
 * reorganize tests by category?
  
 ---[   Clean-up   ]------------------------------------------------------
+
+* collect-args-locals should give error on duplicated names
 
 * chicken - minimize imports across all files
 
