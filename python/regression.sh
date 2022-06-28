@@ -4,16 +4,18 @@
 
 mkdir -p ../unittests/RESULTS/python
 
+# use -nocache like other ports
+
 echo "Core ..."
-./verbii -test ../unittests/unittest_core.verb > ../unittests/RESULTS/python/actual_unittest_core.txt
+./verbii -test -nocache ../unittests/unittest_core.verb > ../unittests/RESULTS/python/actual_unittest_core.txt
 echo "Basic ..."
-./verbii -test ../unittests/unittest_basic.verb > ../unittests/RESULTS/python/actual_unittest_basic.txt
+./verbii -test -nocache ../unittests/unittest_basic.verb > ../unittests/RESULTS/python/actual_unittest_basic.txt
 echo "Errors ..."
-./verbii -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/python/actual_unittest_errors.txt
+./verbii -test -nocache ../unittests/unittest_errors.verb > ../unittests/RESULTS/python/actual_unittest_errors.txt
 
 # demos are full programs, so run without -test
 echo "Demo ..."
-./verbii ../unittests/unittest_demo.verb > ../unittests/RESULTS/python/actual_unittest_demo.txt
+./verbii -nocache ../unittests/unittest_demo.verb > ../unittests/RESULTS/python/actual_unittest_demo.txt
 
 echo "Math ..."
-./verbii ../unittests/demo_math.verb > ../unittests/RESULTS/python/actual_demo_math.txt
+./verbii -nocache ../unittests/demo_math.verb > ../unittests/RESULTS/python/actual_demo_math.txt

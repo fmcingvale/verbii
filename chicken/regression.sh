@@ -10,16 +10,18 @@ mkdir -p ../unittests/RESULTS/chicken
 CMD="./verbii"
 make
 
+# like other ports, use -nocache here
+
 echo "Core ..."
-$CMD -test ../unittests/unittest_core.verb > ../unittests/RESULTS/chicken/actual_unittest_core.txt
+$CMD -test -nocache ../unittests/unittest_core.verb > ../unittests/RESULTS/chicken/actual_unittest_core.txt
 echo "Basic ..."
-$CMD -test ../unittests/unittest_basic.verb > ../unittests/RESULTS/chicken/actual_unittest_basic.txt
+$CMD -test -nocache ../unittests/unittest_basic.verb > ../unittests/RESULTS/chicken/actual_unittest_basic.txt
 echo "Errors ..."
-$CMD -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/chicken/actual_unittest_errors.txt
+$CMD -test -nocache ../unittests/unittest_errors.verb > ../unittests/RESULTS/chicken/actual_unittest_errors.txt
 
 # demos are full programs, so run without -test
 echo "Demo ..."
-$CMD ../unittests/unittest_demo.verb > ../unittests/RESULTS/chicken/actual_unittest_demo.txt
+$CMD -nocache ../unittests/unittest_demo.verb > ../unittests/RESULTS/chicken/actual_unittest_demo.txt
 
 echo "Math ..."
-$CMD ../unittests/demo_math.verb > ../unittests/RESULTS/chicken/actual_demo_math.txt
+$CMD -nocache ../unittests/demo_math.verb > ../unittests/RESULTS/chicken/actual_demo_math.txt

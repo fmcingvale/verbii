@@ -82,15 +82,13 @@ static Object popList(Interpreter *intr, const char *errmsg) {
 	return obj;
 }
 
-#if 0 // turned off since unused
 static Object popDict(Interpreter *intr, const char *where) {
 	Object obj = intr->pop();
 	if(!obj.isDict()) {
-		throw LangError(string(where) + " requires list, got: " + obj.fmtStackPrint());
+		throw LangError(string(where) + " requires dict, got: " + obj.fmtStackPrint());
 	}
 	return obj;
 }
-#endif
 
 static void pushInt(Interpreter *intr, VINT i) {
 	intr->push(newInt(i));
@@ -469,7 +467,7 @@ static void builtin_self_get(Interpreter *intr) {
 	if(!intr->closure)
 		throw LangError("Attempting to reference unbound self");
 	
-	intr->push(intr->closure->state);
+		intr->push(intr->closure->state);
 }
 
 static void builtin_self_set(Interpreter *intr) {
@@ -646,6 +644,17 @@ static void builtin_file_delete(Interpreter *intr) {
 	remove(filename.c_str());
 }
 
+// NOT required to be sorted
+static void builtin_keys(Interpreter *intr) {
+	auto obj = popDict(intr, "keys");
+	auto dict = obj.asDict();
+	auto keys = newList();
+	for(const auto& pair: *dict)
+		keys.asList()->push_back(newString(pair.first));
+
+	intr->push(keys);
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -759,4 +768,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 
 	{"depth", [](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
 
+	{"keys", builtin_keys},
 };

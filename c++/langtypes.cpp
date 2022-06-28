@@ -173,6 +173,7 @@ bool Object::opEqual(const Object &other) const {
 		case TYPE_CLOSURE: return false; // same for closures
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
+		case TYPE_VOID: return other.type == TYPE_VOID;
 		// lists are deep compared, via opEqual at each element
 		case TYPE_LIST:	{
 			if(other.type != TYPE_LIST)

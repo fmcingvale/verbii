@@ -198,6 +198,15 @@ function popList(intr)
 	end
 end
 
+function popDict(intr)
+	local obj = intr:pop()
+	if isDict(obj) then
+		return obj
+	else
+		error(">>>Expecting dict but got: " .. fmtStackPrint(obj))
+	end
+end
+
 function popBool(intr)
 	local obj = intr:pop()
 	if isBool(obj) then
@@ -292,6 +301,8 @@ function test_equal(a, b)
 		return isBool(b) and a==b
 	elseif isLambda(a) then
 		return false -- lambdas never compare equal, even if same object
+	elseif isVoid(a) then
+		return isVoid(b)
 	elseif isList(a) then
 		if not isList(b) then
 			return false
@@ -666,6 +677,11 @@ function builtin_file_delete(intr)
 	end
 end
 
+function builtin_keys(intr)
+	local dict = popDict(intr)
+	intr:push(dictKeys(dict))
+end
+
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -753,4 +769,6 @@ BUILTINS = {
 	["file-delete"] = { {}, builtin_file_delete},	
 
 	["sys-platform"] = { {}, function(intr) intr:push(new_String(_VERSION)) end},
+
+	["keys"] = { {}, builtin_keys },
 }

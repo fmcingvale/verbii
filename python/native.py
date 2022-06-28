@@ -136,6 +136,13 @@ def popList(I):
 	else:
 		raise LangError("Expecting list but got: " + fmtStackPrint(obj))
 
+def popDict(I):
+	obj = I.pop()
+	if isDict(obj):
+		return obj
+	else:
+		raise LangError("Expecting dict but got: " + fmtStackPrint(obj))
+
 def builtin_add(I):
 	b = I.pop()
 	a = I.pop()
@@ -235,6 +242,7 @@ def test_equal(a,b):
 	elif isSymbol(a): return isSymbol(b) and a==b
 	elif isString(a): return isString(b) and a.s == b.s
 	elif isLambda(a): return False # lambdas are never equal, even if its the same object
+	elif isVoid(a): return isVoid(b)
 	elif isList(a):
 		if not isList(b): return False
 		if len(a) != len(b): return False
@@ -517,7 +525,7 @@ def builtin_file_delete(I):
 	filename = popString(I,'file-delete')
 	if os.path.isfile(filename):
 		os.unlink(filename)
-
+	
 import os
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
@@ -613,5 +621,7 @@ BUILTINS = {
 	'file-delete': ([], builtin_file_delete),
 	
 	'sys-platform': ([], lambda I: I.push(LangString("Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro)))),
+
+	'keys': ([], lambda I: I.push(list(popDict(I)))),
 }
 

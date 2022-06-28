@@ -87,6 +87,15 @@ class Builtins {
 		return list;
 	}
 
+	public static LangDict popDict(Interpreter intr, string where) {
+		var obj = intr.pop();
+		var d = obj as LangDict;
+		if(d == null)
+			throw new LangError("Expecting dict (in " + where + ") but got: " + obj.fmtStackPrint());
+		else
+			return d;
+	}
+
 	public static void add(Interpreter intr) {
 		var b = intr.pop();
 		var a = intr.pop();
@@ -350,6 +359,8 @@ class Builtins {
 		else if(a is LangSymbol) { 
 			return b is LangSymbol && ((a as LangSymbol).value == (b as LangSymbol).value);
 		}
+		else if(a is LangVoid)
+			return b is LangVoid;
 		// lists are deep compared with test_equal() on each element
 		else if(a is LangList) {
 			var aList = a as LangList;
@@ -712,6 +723,16 @@ class Builtins {
 			File.Delete(filename);
 	}
 
+	public static void keys(Interpreter intr) {
+		var dict = popDict(intr,"keys");
+		var list = new LangList();
+		foreach(KeyValuePair<string,LangObject> pair in dict.dict) {
+			// no ordering requirement
+			list.objlist.Add(new LangString(pair.Key));
+		}
+		intr.push(list);
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -797,5 +818,7 @@ class Builtins {
 			
 		// can't find a (portable) way to get more platform info ...
 		{"sys-platform", intr => intr.push(new LangString("C#"))},
+
+		{"keys", keys},
 	};
 }

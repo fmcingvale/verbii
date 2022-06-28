@@ -201,6 +201,9 @@ public class LangDict : LangObject {
 		s += "}";
 		return s;
 	}
+
+	public override bool hasLength() { return true; }
+	public override int getLength() { return dict.Count; }
 }
 
 public class LangList : LangObject {

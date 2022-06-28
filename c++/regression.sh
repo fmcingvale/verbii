@@ -19,16 +19,19 @@ mkdir -p ../unittests/RESULTS/c++
 
 echo "*** Running with $REPL ..."
 
+# use -nocache since that gives a more stressful test and avoid issues with e.g. tests crashing and
+# leaving corrupted .b files
+
 echo "Core ..."
-$REPL -test ../unittests/unittest_core.verb > ../unittests/RESULTS/c++/actual_unittest_core.txt
+$REPL -test -nocache ../unittests/unittest_core.verb > ../unittests/RESULTS/c++/actual_unittest_core.txt
 echo "Basic ..."
-$REPL -test ../unittests/unittest_basic.verb > ../unittests/RESULTS/c++/actual_unittest_basic.txt
+$REPL -test -nocache ../unittests/unittest_basic.verb > ../unittests/RESULTS/c++/actual_unittest_basic.txt
 echo "Errors ..."
-$REPL -test ../unittests/unittest_errors.verb > ../unittests/RESULTS/c++/actual_unittest_errors.txt
+$REPL -test -nocache ../unittests/unittest_errors.verb > ../unittests/RESULTS/c++/actual_unittest_errors.txt
 
 # demos are complete programs, so no -test
 echo "Demo ..."
-$REPL ../unittests/unittest_demo.verb > ../unittests/RESULTS/c++/actual_unittest_demo.txt
+$REPL -nocache ../unittests/unittest_demo.verb > ../unittests/RESULTS/c++/actual_unittest_demo.txt
 
 echo "Math ..."
-$REPL ../unittests/demo_math.verb > ../unittests/RESULTS/c++/actual_demo_math.txt
+$REPL -nocache ../unittests/demo_math.verb > ../unittests/RESULTS/c++/actual_demo_math.txt

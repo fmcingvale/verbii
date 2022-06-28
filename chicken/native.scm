@@ -102,6 +102,7 @@
 		((boolean? A)
 			(and (boolean? B) (eq? A B)))
 		((Lambda? A) #f) ; lambdas never equal to anything else even themselves
+		((Void? A) (Void? B))
 		((List? A)
 			(cond
 				((not (List? B)) #f)
@@ -231,9 +232,13 @@
 	(or (String? obj) (Symbol? obj) (List? obj)))
 
 (define (builtin-length intr obj)
-	(if (is-sequence? obj)
-		(push-int intr (len obj))
-		(lang-error 'length "Object does not support 'length': " obj)))
+	(cond
+		((is-sequence? obj)
+			(push-int intr (len obj)))
+		((Dict? obj)
+			(push-int intr (hash-table-size (Dict-table obj))))
+		(else
+			(lang-error 'length "Object does not support 'length': " obj))))
 
 (define (builtin-slice intr obj index nr)
 	; ported from c#
@@ -427,6 +432,14 @@
 		(else
 			(lang-error 'make-closure "make-closure expects list or lambda, got:" obj))))
 
+(define (builtin-keys intr)
+	(let ((dict (popTypeOrFail intr Dict? "dict" 'keys))
+			(newlist (new-lang-list)))
+		(hash-table-walk (Dict-table dict)
+			(lambda (k v)
+				(llist-push-back newlist (make-String k))))
+		(push intr newlist)))
+
 (import (chicken bitwise))
 (import (chicken time))
 (import (chicken time posix))
@@ -573,6 +586,8 @@
 
 		(list "depth" '()
 			(lambda (intr) (push intr (- (intr-SP_EMPTY intr) (intr-SP intr)))))
+
+		(list "keys" '() builtin-keys)
 				
 	))
 
