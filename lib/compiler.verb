@@ -194,6 +194,20 @@ var READER_POS 1
 	unmake make-string float-string?
 	;
 
+\ add each name to dict with value set to size of dict at time name was added
+\ (i.e. adding [ "a" "b" "c" ] to an empty dict gives a=0, b=1, c=2)
+\ note: symbols are accepted and converted to strings
+: dict-add-indexed-names @( dict names -- dict-out )
+	@locals [ i ]
+	0 i!
+	@loop
+		i names length >= if >>done 
+		dict names i get str dict length put drop \ dict[name[i]] = len(dict)
+		i 1 + i! <<loop
+	@done
+		dict
+	;
+	
 ( make literal """ which is not parseable itself )
 var TRIPLEQUOTE 1
 34 34 34 3 make-symbol TRIPLEQUOTE set!
@@ -206,6 +220,7 @@ var TRIPLEQUOTE 1
 	dup '( == if >>comment
 	dup '\ == if >>line-comment
 	dup '{ == if >>lambda
+	dup '@{ == if >>closure
 	dup '[ == if >>list
 	dup ': == if >>worddef
 	dup 'def == if >>worddef ( synonym for ':' )
@@ -241,6 +256,8 @@ var TRIPLEQUOTE 1
 		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
 	@lambda
 		drop syntax-lambda return
+	@closure
+		drop syntax-closure return
 	@list
 		drop syntax-list return
 	@triplestring
@@ -495,6 +512,24 @@ var TRIPLEQUOTE 1
 		drop ( discard char and return )
 	;
 
+\ parses @{ .. } into [ ,,closure ... ]
+\
+\ assumes @{ was just read, parses until } as an object list, prepended with ,,closure
+: syntax-closure
+	@locals [ outlist ]
+	',,closure 1 make-list outlist!
+	@loop
+		syntax-next
+		dup void? if >>eof
+		dup '} == if >>done
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside @{" error
+	@done
+		drop outlist
+	;
+	
 : serialize-escape-string ( string -- string with whitespace escaped )
 	{ 
 		( char )
@@ -670,134 +705,217 @@ var TRIPLEQUOTE 1
 		drop new-objlist args locals
 		;
 		
-\ takes a compiled object list and a list of names 'args' and 'locals'
+\ rewrites an objlist to translate arg/local names including capturing outer vars (closures)
 \
-\ rewrites objlist to do:
-\	- pop #args from stack into locals
-\	- reserve #locals in local stack
-\	- for every name N in ARGLIST and LOCALLIST, create
-\		mappings:
-\			N -> LP i + ref 
-\			N! -> LP i + set!
-\	- replace all instances of N and N! in objlist with above mappings
-: compile-rewrite-args-locals ( objlist args locals -- new-objlist )
-	@args [ objlist args locals ]
-	@locals [ namemap new-objlist ]
-		\ "REWRITE ARGS LOCALS:" . CR
-		\	"	objlist:" . objlist . CR
-		\	"	args:" . args . CR
-		\	"	locals:" . locals . CR
-	,,new-dict namemap! \ dict mapping names -> code replacements
-	[ ] new-objlist! \ rewritten objlist with names replaced with code sequences
+\ selfmap should be set to an empty dict at the toplevel
+\
+\ ASSUMPTIONS:
+\	1. objlist must come from a lambda, not a plain list (rewriting ensures a return is at the end 
+\	   	of new objlist, so has to be assumed to be code)
+\	2. closures must be marked with @{ ... } ; will NOT transform unmarked lambdas since they might
+\		be used in other binding constructs
+\	3. does NOT (yet) rewrite lists so dynamic code cannot use @args/@lists nor create closures
+\		(user code can manually do closures with :: of course)
+\
+\ does these things:
+\	1. scans objlist (non-recursively) for @args, @locals, and/or [ ,,declargs ... ]
+\	2. if NO names found in above search, then objlist is returned as-is and changed=false
+\		(no names at THIS level, means no captures can happen here or anywhere underneath)
+\	3. rewrite objlist to do:
+\		a. alloc locals (LP nr - LP!)
+\		b. pop args (L> L> ...)
+\		c. rewrite symbols to their code sequences:
+\			(i) if name in args/locals, rewrite to (LP i + ref) or (LP i + set!)
+\			(ii) if name in selfmap, rewrite to (self i get) or (self i rot put)
+\		d. if an inner lambda is found ( @{ ... } -- @ is required for backward compat with { .. } obj :: code )
+\			(i) recursively rewrite lambda, passing selfmap + my args+locals as its selfmap
+\			(ii) add binding of selfmap + my locals as self for inner lambda
+: compile-rewrite-args-locals @( objlist selfmap -- new-objlist )
+	@locals [ argnames localnames local-refmap local-setmap i self-setmap ]
+		\ "REWRITE-ARGS-LOCALS OBJLIST:" . objlist . CR
+		\ "SELFMAP:" . selfmap . CR
+		
+	\ ensure objlist ends with a 'return', or add one
+	objlist -1 get 'return == if >>scan-args-locals
+	objlist deepcopy ( don't modify original ) 'return append objlist!
 	
-	@begin
-		\ "Got @args:" . LP ref . CR
-		\ "Got @locals:" . LP 1 + ref . CR
-		\ "Code now:" . dup . CR
-
-		\ optimization -- if I have NO @args nor @locals, then do not modify objlist -- no need for
-		\ code to setup/teardown frame when no named vars being used
-		args length 0 ==
-		locals length 0 ==
-		and not if >>process
-		
-		\ no args & locals so output original list
-		objlist new-objlist! >>exit
-
-	@process
-		\ make locals layout:
-		\	N+M-1: locals[M-1]
-		\	...
-		\	N+1: locals[1]
-		\	N: locals[0]
-		\	N-1: args[N-1]
-		\	...
-		\	1: args[1]
-		\	0: args[0]
-		
-		\ process @args first:
-		\	for each arg "N" at index i, create two symbols:
-		\		"N" -> LP i + ref
-		\		"N!" -> LP i + set!
-			\ "PROCESS ARGS:" . CR
-		args
-		{
-			( called with: i name ; self bound to mapping dict )
-			str 2dup over 'LP swap '+ 'ref 4 make-list ( i name i name [ 'LP i '+ 'ref ] )
-			self -rot put ( i name i dict ) drop drop
-			over 'LP swap '+ 'set! 4 make-list ( i name [ 'LP i '+ 'set! ] )
-			swap "!" + swap ( i name! [ 'LP i '+ 'set! ] )
-			self -rot put ( i dict ) drop drop
-		} namemap :: ( bind namemap to function )
-		for-each-i 
-		\ basically same thing for locals now, with offset:
-		\	for each local "N" at index i, create two symbols:
-		\		"N" -> LP i + #args + ref
-		\		"N!" -> LP i + #args + set!
-		locals
-		{
-			( called with: i name ; self bound to [ dict #args ] )
-			str 2dup over self 1 get + 'LP swap '+ 'ref 4 make-list ( i name i name [ 'LP i+#args '+ 'ref ] )
-			self 0 get -rot put ( i name i dict ) drop drop
-			over self 1 get + 'LP swap '+ 'set! 4 make-list ( i name [ 'LP i+#args '+ 'set! ] )
-			swap "!" + swap ( i name! [ 'LP i+#args '+ 'set! ] )
-			self 0 get -rot put ( i dict ) drop drop
-		} namemap args length 2 make-list :: ( bind lambda with [ dict #args ] )
-		for-each-i 
-			\ "MAPPINGS after adding @locals:" . L ref . CR
-		\ add a mapping with code for 'return' (LP #args+#locals + LP!)
-		namemap "return" 'LP args length locals length + '+ 'LP! 'return 5 make-list put namemap!
-			\ "MAPPINGS after adding 'return':" . namemap . CR
-		\ finally, create new objlist by replacing all mapped symbols
+	@scan-args-locals
+		\ scan objlist for , @( ... ), @args, @locals
 		objlist
+		compile-collect-args-locals localnames! argnames! new-objlist!
+			\ "AFTER COLLECT: ARGS=" . argnames . "LOCALS=" . localnames . "OBJLIST=" . new-objlist . CR
+
+		\ note: even if i have no @args/@locals, i can still have names that resolve to selfmap
+		
+		\ set objlist to rewritten list without @args/@locals
+		new-objlist objlist!
+		\ clear new-objlist now
+		[ ] new-objlist!
+		
+		\ make preamble code to:
+		\	1. alloc spaces for @locals
+		\	2. pop args to locals
+		\ note this will put args starting at LP and locals starting at LP + #args
+		
+		\ 1. alloc locals (LP #localnames - LP!)
+		localnames length 0 == if >>popargs \ omit code if no locals
+		'LP localnames length '- 'LP! 4 make-list new-objlist!
+	@popargs
+		\ 2. push args to locals (adding code to new-objlist)
+		argnames { ( accum elem ) drop '>L append } new-objlist fold new-objlist! 
+		
+		\ make a map of arg|local name -> index into locals
+		[ ] make-dict argnames localnames + dict-add-indexed-names local-refmap!
+			\ "MADE NAMEMAP:" . local-refmap . CR
+		\ map a map of name! as well to replace setters
+		[ ] make-dict 
+			argnames { str "!" + } map 
+			localnames { str "!" + } map 
+			+ dict-add-indexed-names local-setmap!
+			\ "MADE SETTER MAP:" . local-setmap . CR
+		
+		\ for each name in selfmap, make name! in self-setmap with same index
+		[ ] make-dict self-setmap!
+		selfmap
 		{
-			\ called with: ( accum elem ) ; self bound to mapping dict
-
-			\ only process symbols
-			dup symbol? not if >>copy \ not symbol, leave it as-is
-			self over str get void? if >>copy \ not in mapping dict, copy as-is
-			\ replace with mapping
-			self swap str get + return
-
-			@copy ( accum elem )
-				append return \ append to new list as-is
-		} namemap :: ( bind self to mapping dict )
-	 	\ "READY TO FOLD:" . .S CR
-		\ initial value is stack setup: [ LP #locals - LP! ] then one >L for each @arg
-		'LP locals length '- 'LP! 4 make-list
-		[ '>L append ] args length repeat
-		fold new-objlist!
-
-	@exit
+			( key val ; self self-setmap )
+			self -rot swap "!" + swap put drop
+		} self-setmap :: for-each-dict
+			\ "SET-SETMAP:" . self-setmap . CR
+		
+	\ rewrite objlist replacing arg|local symbols with appropriate code sequences and creating
+	\ closures as needed
+	0 i!
+	@rewrite-loop
+			\ "REWRITE LOOP, NEW NOW:" . new-objlist . CR
+			\ "REWRITE LOOP STACK:" . .S CR
+		i objlist length >= if >>done 
+		objlist i get symbol? if >>symbol
+		objlist i get list? if >>list
+		\ everything else, copy as-is
+	@copy-element
+		new-objlist objlist i get append new-objlist! >>next
+		
+	@symbol
+		objlist i get 'return == if >>rewrite-return
+		\ is symbol (as string) in local-refmap?
+		local-refmap objlist i get str get void? not if >>rewrite-local-ref
+		\ is symbol (as string) in selfmap?
+		selfmap objlist i get str get void? not if >>rewrite-self-ref
+		\ check for local setter
+		local-setmap objlist i get str get void? not if >>rewrite-local-set
+		\ check for self setter
+		self-setmap objlist i get str get void? not if >>rewrite-self-set
+		
+		\ else not in either list, keep as-is
+		<<copy-element
+		
+	@rewrite-local-ref
+		\ add (LP i + ref) to new-objlist
 		new-objlist
-		;
+		'LP local-refmap objlist i get str get '+ 'ref 4 make-list
+		+ new-objlist! >>next
+		
+	@rewrite-local-set
+		\ add (LP i + set!) to new-objlist
+		new-objlist
+		'LP local-setmap objlist i get str get '+ 'set! 4 make-list
+		+ new-objlist! >>next
+	
+	@rewrite-self-ref
+		\ add (self i get) to new-objlist
+		new-objlist
+		'self selfmap objlist i get str get 'get 3 make-list
+		+ new-objlist! >>next
+	
+	@rewrite-self-set
+		\ add (self i rot put) to new-objlist
+		new-objlist
+		'self self-setmap objlist i get str get 'rot 'put 4 make-list
+		+ new-objlist! >>next
+		
+	@rewrite-return
+			\ "******* REWRITE RETURN ************" . CR
+		
+		\ if no args/locals then skip -- no frame to remove
+		argnames length localnames length + 0 == if >>simple-return
+		
+		\ replace return with code to remove local frame
+		new-objlist
+		'LP argnames length localnames length + '+ 'LP! 'return 5 make-list
+		+ new-objlist! >>next
+		
+	@simple-return
+		\ no frame, so just keep return
+		new-objlist 'return append new-objlist! >>next
+		
+	@list
+		\ look for [ ,,closure ... ] (parsed from @{ .. })
+		objlist i get length 2 < if <<copy-element \ list too short, can't be closure
+		objlist i get 0 get ',,closure != if <<copy-element \ not [ ,,closure .. ] so just copy element
+		\ recursively parse list, passing a selfmap that is my selfmap + my locals
+		selfmap deepcopy \ don't alter my selfmap
+		( inner-selfmap )
+		argnames dict-add-indexed-names \ add arg names first -- they are first on locals stack
+		localnames dict-add-indexed-names \ .. then locals
+		( inner-selfmap )
+		objlist i get 1 -1 slice \ remove ,,closure
+		swap ( objlist inner-selfmap )
+			\ "** PARSE INNER LAMBDA:" . CR
+		compile-rewrite-args-locals ( new-objlist )
+			\ "** INNER REWROTE:" . over . CR
+		make-lambda \ turn new-objlist back into lambda
+		new-objlist swap append new-objlist! \ add lambda to new-objlist
+		\ now create code to make runtime binding for new lambda
+		\ want self = [ self0 .. selfN arg0 .. argN local0 .. localN ]
+		\ so code will be:
+		\	[ ] self + ( shallow-copy self )
+		\	#args #locals + copy-locals-to-list + ( self + locals ) ::
+		
+		\ NOTE! have to check for empty selfmap since referencing a non-existent self is an error
+		selfmap length 0 == if >>no-selfmap
+		
+		\ case 1: my self is bound so concatenate my locals to self
+		0 'make-list 'self '+ argnames length localnames length + 'copy-locals-to-list '+ '::
+		8 make-list new-objlist swap + new-objlist! \ add self-making code to new-objlist
+		>>next
+		
+	@no-selfmap
+		\ case 2: no selfmap so just pass on my locals
+		argnames length localnames length + 'copy-locals-to-list '::
+		3 make-list new-objlist swap + new-objlist! \ add self-making code to new-objlist
+		>>next
+		
+	@next
+		i 1 + i! <<rewrite-loop
+	
+	@done
+		new-objlist return
+	;
 
 \ take a parsed objlist, presumably from byte-compile, and perform finalization:
 \	* ensure objlist ends with 'return'
-\	* transform @args [ .. ] and @locals [ .. ] into code
+\	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
 \
 \ returns a new list, does NOT modify objlist
 : compile-finalize-word ( objlist -- newlist )
 		\ "FINALIZE WORD:" . .S CR
-	dup length 0 > if >>not-empty
+	\ dup length 0 > if >>not-empty
 	\ objlist is empty; newlist is [ return ]
-	drop 'return 1 make-list >>transform-args-locals
+	\ drop 'return 1 make-list >>transform-args-locals
 
-	@not-empty ( objlist )
-		dup -1 get 'return != if >>add-return
+	\ @not-empty ( objlist )
+	\ 	dup -1 get 'return != if >>add-return
 		\ already has return at end
-		>>transform-args-locals
+	\ 	>>transform-args-locals
 
-	@add-return ( objlist )
-		deepcopy \ don't modify original
-		'return append
+	\ @add-return ( objlist )
+	\ 	deepcopy \ don't modify original
+	\ 	'return append
 
 	@transform-args-locals ( objlist )
-		\ split @( .. ), @args and @locals from objlist
-		compile-collect-args-locals ( new-objlist args locals )
-			\ "AFTER COLLECTING:" . .S CR
 		\ turn names into code sequences
-		compile-rewrite-args-locals
+		[ ] make-dict ( toplevel has empty selfmap ) compile-rewrite-args-locals
 			\ "AFTER REWRITING:" . .S CR
 	;
 	

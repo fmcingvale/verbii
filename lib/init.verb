@@ -119,6 +119,20 @@
 		true return
 	;
 
+\ copy first nr locals into list [ LP LP+1 LP+2 ... ]
+: copy-locals-to-list ( nr -- list )
+	\ cannot use @( .. ) params since that would mess up the locals
+	[ ]
+	0
+	@loop ( nr list i )
+		dup SP 3 + ref ( nr list i i nr ) >= if >>done
+		dup LP + ref ( nr list i Li )
+		SP 2 + ref swap ( nr list i list Li ) append drop ( nr list i )
+		1 + ( nr list i+1 ) <<loop
+	@done ( nr list i )
+		drop nip
+	;	
+	
 \ ========================================================================
 \ String functions
 \ ========================================================================
@@ -239,6 +253,18 @@
 	@done 
 		;
 	
+\ variant of for-each that calls func with ( key val )
+: for-each-dict @( dict func -- )
+	@locals [ i keylist ]
+	dict keys keylist!
+	0 i!
+	@loop
+		i keylist length >= if >>done 
+		keylist i get dup dict swap get func call
+		i 1 + i! <<loop
+	@done 
+		;
+		
 \ fold - left fold
 \	func: called as: ( accum elem -- new-accum ) where accum is the accumulated value and
 \		  elem is the next element to be added to the accumulator.
