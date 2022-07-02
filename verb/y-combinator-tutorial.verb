@@ -1,0 +1,316 @@
+
+\ Deriving the Y-combinator step by step.
+\
+\ This is basically a verbii translation of "The Y Combinator Explained in Python",
+\ but I don't go into all the textual details. I diverge a little bit to better fit
+\ Verbii style, however it's almost all the same. To read the full story, see the
+\ original here: https://lptk.github.io/programming/2019/10/15/simple-essence-y-combinator.html
+
+\ Let's start by defining the factorial function in traditional recursive style:
+
+: fact-0 @( n )
+	n 0 == if >>zero
+	n 1 - fact-0 n * return \ result = n * fact(n-1)
+	@zero 1 return \ fact(0) == 1
+	;
+	
+"* Normal recursive fact function:" . CR
+"fact(5) [120]:" . 5 fact-0 . CR
+"fact(8) [40320]:" . 8 fact-0 . CR
+
+\ Note that 'fact' has to know its own name in order to call
+\ itself recursively. What we want is a way to allow a lambda
+\ (unnamed function) to call itself recursively. So naively it would
+\ look like:
+\ 	{ @args [ n ]
+\		n 0 == 1 if >>zero
+\		n 1 - ??? n * return
+\		@zero 1 return
+\	}
+\
+\ The huge problem is shown by ??? -- the lambda doesn't have a name, so
+\ how can it call itself?
+\
+\ The trick is to pass the lambda to itself as an argument so it can call itself.
+\ So that means our lambda should look like ...
+\
+\ 	{ @args [ myself n ]
+\		n 0 == 1 if >>zero
+\		n 1 - myself call n * return
+\		@zero 1 return
+\	}
+\
+\ So the ??? has gone away but how does the lambda get the 'myself' argument?
+\
+
+\ Let's start with a simple function:
+\	- f takes a callable (g) as an argument
+\	- g in turn also takes a callable as its argument
+
+: f @( g )
+	"in f" . CR
+	\ for now, assume g doesn't use its argument and just pass an empty lambda
+	{ } g call
+	;
+	
+"* Expect 'in f' then 'in g':" . CR
+\ make a lambda that just prints "in g"
+@{
+	@args [ x ]
+	"in g" . CR
+}
+f \ pass that to f as the g argument
+
+\ now the first trick - instead of passing another lambda to f, pass f to itself.
+\ note that i need to pass a lambda, not a word, so just use { f }
+"* Calling f(f), expect 'in f' twice:" . CR
+{ f } f 
+
+\ now we're going to add two things:
+\	1. instead of calling 'g' directly, we're going to return a lambda that does it when called
+\	2. instead of passing an empty lambda to g, we're going to pass g to itself
+: f2 @( g )
+	"in f2" . CR
+	@{ g g call }
+	;
+
+\ the first time I call f2, it will print "in f2" then return a lambda ...
+"* Expect 'in f2':" . CR
+{ f2 } f2
+\ now i have basically a self replicating lambda on the stack
+"* Expect 'in f2' 4 times:" . CR
+call \ each time i call it, it prints 'in f2' and gives me back another lambda
+call
+call
+call
+drop \ don't need the lambda anymore
+
+\ lets go one further step (not in the original) -- lets lift the { g g call } out of
+\ the inner lambda and let it run freely.
+: f3 @( g n )
+	"in f3, n=" . n . CR
+	n 0 == if >>done
+	g n 1 - g call return \ g(g,n-1)
+	@done
+	;
+
+"* Countdown (#1) 10..1:" . CR
+{ f3 } 10 f3
+
+"* Countdown (#2) 10..1:" . CR
+	
+\ * another step not in the original *
+\ the above still invites cheating since the function f3 knows its name.
+\ so lets rewrite it as an unnamed lambda
+@{
+	@args [ g n ]
+	\ note the rest of this is the same
+	"in f4, n=" . n . CR
+	n 0 == if >>done
+	g n 1 - g call return \ g(g,n-1)
+	@done
+}
+
+\ ok NOW we have a function that cannot possibly call itself without some help.
+\ i also can't do something like { f3 } 10 f3 since the lambda is unnamed.
+\ however this is actually really simple ... instead of having a word that we call
+\ by writing its name, we just call the lambda.
+\
+\ the pattern we want is: LAMBDA ARG LAMBDA call
+\ lambda is already on the stack so ...
+dup 10 swap ( now: lambda 10 lambda ) call
+
+"* Countdown?? (#3):" . CR
+
+\ now lets split up the lambda taking [ g n ] into a two lambdas - one taking g and one taking n.
+\ formally, this is called currying and will make sense shortly ...
+@{
+	\ outer lambda takes g
+	@args [ g ]
+	@{
+		\ inner lambda takes n
+		@args [ n ]
+		\ this part is the same
+		"in f5, n=" . n . CR
+		n 0 == if >>done
+		\ ** NOTE! IMPORTANT CHANGE HERE! **
+		\ i CANNOT call g(g,n) like before, since G now only takes one arg (itself).
+		\ so lets break this down ...
+		g g call \ call g(g) - this returns a new lambda which takes N
+		n 1 - swap call \ call new lambda(n-1)
+		return
+		@done
+	}
+}
+
+\ so again we have LAMBDA on the top of the stack, but our previous calling
+\ sequence (LAMBDA n LAMBDA call) won't work since the LAMBDA now takes only 
+\ a single argument G. So the call now is just (LAMBDA LAMBDA call), so lets
+\ do that ...
+dup ( now: LAMBDA LAMBDA ) call
+
+"* The end!?" . CR
+
+\ hmmm ... that didn't do anything. that's because the lambda taking G now returns
+\ another lambda taking N (in which the G is remembered). so we make one more
+\ call to THAT lambda, passing N to kick off the countdown ...
+"* Countdown (#4):" . CR
+
+\ the lambda is still on the stack from above
+10 swap ( now: 10 LAMBDA ) call
+
+"* The end!" . CR
+
+\ ** end of digression, now we dovetail back into the original, but still using
+\ ** the countdown example
+
+\ SO ... the above is actually the Y combinator in action, just not written like
+\ a traditional Y formula (yet).
+
+\ first lets make a function to make the recursive function -- this will get rid
+\ of the first 'dup call' line above
+: make-recur @( f ) f f call ;
+
+\ rewriting with make-recur ...
+
+"* Countdown (#5):" . CR
+
+@{
+	\ renaming G to REC since this is for our recursive call below
+	@args [ rec ]
+	@{
+		@args [ n ]
+		\ this part is the same
+		"in f6, n=" . n . CR
+		n 0 == if >>done
+		rec rec call \ call rec(rec) - this returns a new lambda which takes N
+		n 1 - swap call \ call new lambda(n-1)
+		return
+		@done
+	}
+}
+make-recur
+10 swap call
+
+\ that still has the weird 'rec rec call' that seems awkward - would be 
+\ nicer looking to do rec(n-1) instead of (rec(rec))(n-1)
+
+\ so lets make a nicer version of make-recur ...
+
+\ the original Python code is:
+\	mkrec_nice = (lambda g:
+\   		mkrec(lambda rec:
+\ 			    g(lambda y: rec(rec)(y))))
+	
+: make-recur-nice @( g )
+	\ arg to make-recur	
+	@{
+		@args [ rec ]
+		\ arg to g
+		\ NOTE! the original does (rec(rec))(y) -- here I don't need the parameter
+		\ so it's omitted, but can't forget the 2nd call so it's not just (rec(rec)) but (rec(rec))()
+		@{ rec rec call call }
+		g call
+	} make-recur
+	;
+	
+\ rewriting using make-recur-nice:
+
+"* Countdown (#6):" . CR
+
+@{
+	@args [ rec ]
+	@{
+		@args [ n ]
+		\ this part is the same
+		"in f7, n=" . n . CR
+		n 0 == if >>done
+		\ now instead of the weird: rec rec call n 1 - swap call
+		\ we have:
+		n 1 - rec call \ arg, then function, just like normal verbii code
+		return
+		@done
+	}
+}
+make-recur-nice
+10 swap call
+		
+\ since make-recur would just be 'dup call' if it was inline, let's do that ...
+
+: make-recur-nice-2 @( g )
+	@{
+		@args [ rec ]
+		@{ rec rec call call }
+		g call
+	} dup call
+	;
+	
+\ so once again ...
+"* Countdown (#7):" . CR
+
+@{
+	@args [ rec ]
+	@{
+		@args [ n ]
+			"in f8, n=" . n . CR
+			n 0 == if >>done
+			n 1 - rec call
+			return
+		@done
+	}
+}
+make-recur-nice-2
+10 swap call
+
+\ and there we have it! our make-recur-nice-2 *is* the Y combinator (in the original article,
+\ it was the Z combinator since it took an extra parameter to pass to g. without that param,
+\ it is the Y combinator.
+
+\ we can write it as a 1-liner, omitting the commentary ...
+: Y @( g ) @{ @args [ rec ] @{ rec rec call call } g call } dup call ;
+
+\ final tests ...
+
+"* Countdown (THE FINAL!):" . CR
+
+@{
+	@args [ rec ]
+	@{
+		@args [ n ]
+			"in f8, n=" . n . CR
+			n 0 == if >>done 	\ stop when n==0
+			n 1 - rec call 		\ else call rec(n-1)
+		@done
+	}
+}
+Y
+10 swap call
+
+\ ... and how about a factorial function like in the original article ...
+"* Some factorials ..." . CR
+
+@{
+	@args [ rec ]
+	@{
+		@args [ n ]
+			n 0 == if >>zero 	\ stop on n==0
+			n 1 - rec call n *	\ else return n * rec(n-1)
+			return
+		@zero
+			1 return
+	}
+}
+Y
+
+\ *TODO* once words are closures, I'll be able to do: 'fact make-word, then call fact as a function.
+\
+\ for now, use a var & call it ...
+var fact 1
+fact set!
+
+"3! (6):" . 3 fact ref call . CR
+"4! (24):" . 4 fact ref call . CR
+"5! (120):" . 5 fact ref call . CR
+"6! (720):" . 6 fact ref call . CR
+"7! (5040):" . 7 fact ref call . CR
+"11! (39916800):" . 11 fact ref call . CR
