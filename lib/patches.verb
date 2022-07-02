@@ -10,6 +10,23 @@
 
 ( ------ init ----------- )
 
+\ for i=start .. start+incr*(count-1), call fn with args ( i )
+\
+\ note: count is used instead of an end value to simplify boundary conditions
+: for-range @( fn start incr count )
+	@locals [ i ]
+	
+	0 i!
+	@loop
+		count 0 <= if >>done
+		\ call fn with start+i on top of stack
+		i start + fn call
+		i incr + i!
+		count 1 - count!
+		<<loop
+	@done
+	;
+	
 ( ------ compiler ------- )
 
 \ rewrites an objlist to translate arg/local names including capturing outer vars (closures)
