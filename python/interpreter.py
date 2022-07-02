@@ -228,7 +228,103 @@ class Interpreter(object):
 			if stephook is not None:
 				stephook(self, word)
 
-			if isVoid(word):
+			# symbols are the most common object in code, so check those first
+			if isSymbol(word):
+				# quoted symbols - remove one level of quoting and push symbol
+				if word[0] == "'":
+					self.push(word[1:])
+					continue
+
+				# string are symbols
+				elif word == "return":
+					# return from word by popping back to previous wordlist (if not at toplevel)
+					if self.havePushedFrames():
+						self.code_return()
+					else:
+						self.code = None # mark self as not running
+						return # top level return exits program
+				
+					continue
+			
+				elif word == "if":
+					# true jump is required
+					true_jump = self.nextCodeObj()
+					
+					cond = self.pop()
+					if cond != True and cond != False:
+						raise LangError("'if' expects true or false but got: " + str(cond))
+				
+					# this just repositions the reader
+					if cond:
+						self.do_jump(true_jump)
+					
+					# else, continue with next instruction
+					continue
+
+				elif word[:2] == ">>" or word[:2] == "<<":
+					self.do_jump(word)
+					continue
+
+				elif word[0] == "@":
+					# jump target -- ignore
+					continue
+
+				elif word == "call":
+					# see if top of stack is Lambda or list
+					obj = self.pop()
+					if isLambda(obj):
+						#print("CALLING LAMBDA:",obj.wordlist)
+						# now this is just like calling a userword, below
+						# TODO -- tail call elimination??
+						self.code_call(obj.objlist)
+					elif isList(obj):
+						# call list like lambda
+						self.code_call(obj)
+					elif isClosure(obj):
+						# like above but sets closure
+						self.code_call(obj.objlist, obj)
+					else:				
+						raise LangError("call expects a lambda or list, but got: " + fmtStackPrint(obj))
+
+					continue
+			
+				# builtins, then userwords
+
+				elif word in BUILTINS:
+					argtypes,func = BUILTINS[word]
+					if (self.SP + len(argtypes)) > self.SP_EMPTY:
+						raise LangError("Stack underflow")
+
+					args = []
+					#print("CALL WORD:",word)
+					#print("ARGTYPES:",argtypes)
+					for t in reversed(argtypes):
+						v = self.pop()
+						#print("POPPED",v,t)
+						if type(v) != t and t != object:
+							raise LangError("Expecting type " + str(t) + " but got type " + str(type(v)) + " ({0}) for word {1}".format(v,word))
+
+						args.insert(0,v)
+
+					# func gets Interpreter as first arg
+					args.insert(0,self)
+					func(*args)
+					continue
+
+				elif word in self._WORDS:
+					# tail call elimination
+					if isVoid(self.peekNextCodeObj()) or self.peekNextCodeObj() == "return":
+						# no need to come back here, so go ahead and pop my call frame before
+						# calling word -- callstack will never grow on recursive tail-calls now
+						if self.havePushedFrames():
+							self.code_return()
+							self.nr_tailcalls += 1 # stats
+
+					# execute word by pushing its wordlist and continuing
+					self.code_call(self._WORDS[word])
+					continue
+
+			elif isVoid(word):
 				# i could be returning from a word that had no 'return',
 				# so do return, if possible
 				if self.havePushedFrames():
@@ -242,108 +338,14 @@ class Interpreter(object):
 			#print(" => " + self.reprStack())
 								
 			# all objects excepts lists, void & symbols are pushed here -- see c++ notes for this
-			if isNumeric(word) or isString(word) or isLambda(word) or isBool(word) or \
+			elif isNumeric(word) or isString(word) or isLambda(word) or isBool(word) or \
 				isNull(word) or isClosure(word) or isDict(word):
 				self.push(word)
 				continue
 
 			# list literals are deepcopied (see DESIGN-NOTES.txt)
-			if isList(word):
+			elif isList(word):
 				self.push(deepcopy(word))
-				continue
-
-			# quoted symbols - remove one level of quoting and push symbol
-			if word[0] == "'":
-				self.push(word[1:])
-				continue
-
-			# string are symbols
-			if word == "return":
-				# return from word by popping back to previous wordlist (if not at toplevel)
-				if self.havePushedFrames():
-					self.code_return()
-				else:
-					self.code = None # mark self as not running
-					return # top level return exits program
-			
-				continue
-		
-			if word == "if":
-				# true jump is required
-				true_jump = self.nextCodeObj()
-				
-				cond = self.pop()
-				if cond != True and cond != False:
-					raise LangError("'if' expects true or false but got: " + str(cond))
-			
-				# this just repositions the reader
-				if cond:
-					self.do_jump(true_jump)
-				
-				# else, continue with next instruction
-				continue
-
-			if word[:2] == ">>" or word[:2] == "<<":
-				self.do_jump(word)
-				continue
-
-			if word[0] == "@":
-				# jump target -- ignore
-				continue
-
-			if word == "call":
-				# see if top of stack is Lambda or list
-				obj = self.pop()
-				if isLambda(obj):
-					#print("CALLING LAMBDA:",obj.wordlist)
-					# now this is just like calling a userword, below
-					# TODO -- tail call elimination??
-					self.code_call(obj.objlist)
-				elif isList(obj):
-					# call list like lambda
-					self.code_call(obj)
-				elif isClosure(obj):
-					# like above but sets closure
-					self.code_call(obj.objlist, obj)
-				else:				
-					raise LangError("call expects a lambda or list, but got: " + fmtStackPrint(obj))
-
-				continue
-		
-			# builtins, then userwords
-
-			if word in BUILTINS:
-				argtypes,func = BUILTINS[word]
-				if (self.SP + len(argtypes)) > self.SP_EMPTY:
-					raise LangError("Stack underflow")
-
-				args = []
-				#print("CALL WORD:",word)
-				#print("ARGTYPES:",argtypes)
-				for t in reversed(argtypes):
-					v = self.pop()
-					#print("POPPED",v,t)
-					if type(v) != t and t != object:
-						raise LangError("Expecting type " + str(t) + " but got type " + str(type(v)) + " ({0}) for word {1}".format(v,word))
-
-					args.insert(0,v)
-
-				# func gets Interpreter as first arg
-				args.insert(0,self)
-				func(*args)
-				continue
-
-			if word in self._WORDS:
-				# tail call elimination
-				if isVoid(self.peekNextCodeObj()) or self.peekNextCodeObj() == "return":
-					# no need to come back here, so go ahead and pop my call frame before
-					# calling word -- callstack will never grow on recursive tail-calls now
-					if self.havePushedFrames():
-						self.code_return()
-						self.nr_tailcalls += 1 # stats
-
-				# execute word by pushing its wordlist and continuing
-				self.code_call(self._WORDS[word])
 				continue
 
 			raise LangError("Unknown word " + word)

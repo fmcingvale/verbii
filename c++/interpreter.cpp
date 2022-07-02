@@ -330,7 +330,123 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		// another consideration is how often words run -- better to have the most commonly run
 		// words here since 'if(word == ...)' is a lot faster than a map lookup. But .. again ..
 		// no hard and fast rule about it.
-		if(obj.isVoid()) {
+
+		if(obj.isSymbol()) {
+			if(obj.isSymbol("'",1)) {
+				// quoted symbol - remove one level of quoting and push
+				push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));
+				continue;
+			}
+			
+			if(obj.isSymbol("return")) {
+				// return from word by popping back to previous wordlist (if not at toplevel)
+				//if(syntax->hasPushedObjLists()) {	
+				//	syntax->popObjList();
+				//}
+				if(havePushedFrames()) {
+					code_return();
+				}
+				else {
+					code = NULL;
+					return; // return from top level exits program
+				}
+				continue;
+			}
+
+			if(obj.isSymbol("if")) {
+				// true jump is next
+				auto true_jump = nextSymbolOrFail("expecting jump after 'if'");
+				//cout << "TRUE_JUMP: " << true_jump << endl;
+				Object cond = pop();
+				//cout << "POPPED COND: " << cond.repr() << endl;
+				if(!cond.isBool()) {
+					throw LangError("'if' requires true|false but got: " + cond.fmtStackPrint());
+				}
+				// this doesn't run the jump, it just repositions the stream
+				if(cond.asBool()) {
+					// no need to actually skip false jump since i'll be looking for '@'
+					do_jump(true_jump.asSymbol());
+				}
+				// if false, just continue with next instruction
+				continue;
+			}
+
+			if(obj.isSymbol(">>",2) || obj.isSymbol("<<",2)) {
+				do_jump(obj.asSymbol());
+				continue;
+			}
+
+			if(obj.isSymbol("@",1)) {
+				// jump target -- ignore
+				continue;
+			}
+
+			if(obj.isSymbol("call")) {
+				// top of stack must be a lambda OR a list
+				auto val = pop();
+				if(val.isLambda()) {
+					// now this is just like calling a userword, below
+					// TODO -- tail call elimination??
+					//syntax->pushObjList(val.asLambda());
+					code_call(val.asLambda());
+				}
+				else if(val.isList()) {
+					// same as above
+					code_call(val.asList());
+				}
+				else if(val.isClosure()) {
+					// as above but with self
+					code_call(val.asClosureFunc(), val.data.closure);
+				}
+				else {
+					throw LangError("call expects a lambda, but got: " + val.fmtStackPrint());
+				}
+				continue;
+			}
+
+			// builtins, then userwords
+			if(obj.isSymbol()) {
+				auto bltin = BUILTINS.find(obj.asSymbol());
+				if(bltin != BUILTINS.end()) {
+					bltin->second(this);
+					if(PROFILE_CALLS) {
+						auto w = WORD_CALLS.find(obj.asSymbol());
+						if(w == WORD_CALLS.end())
+							WORD_CALLS[obj.asSymbol()] = 1; // new entry
+						else
+							WORD_CALLS[obj.asSymbol()] += 1;
+					}
+					continue;
+				}
+				
+				ObjList *wordlist = lookup_word(obj.asSymbol());
+				if(wordlist) {
+					// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
+					// i don't need to come back here, so pop my wordlist first to stop stack from growing
+					#if 1 // can turn off to test without tail call elimination, if desired
+					if(peekNextCodeObj().isVoid() || peekNextCodeObj().isSymbol("return")) {
+						if(havePushedFrames()) { // in case i'm at the toplevel
+							code_return();
+							++nr_tailcalls;
+						}
+					}
+					#endif
+					// execute word by pushing its objlist and continuing
+					code_call(wordlist);
+					//syntax->pushObjList(wordlist);
+					if(PROFILE_CALLS) {
+						auto w = WORD_CALLS.find(obj.asSymbol());
+						if(w == WORD_CALLS.end())
+							WORD_CALLS[obj.asSymbol()] = 1; // new entry
+						else
+							WORD_CALLS[obj.asSymbol()] += 1;
+					}
+					continue;
+				}
+			}
+		}
+		
+		else if(obj.isVoid()) {
 			// i could be returning from a word that had no 'return',
 			// so pop words like i would if it were a return
 
@@ -359,7 +475,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		
 		// check for literal objects that just get pushed 
 		// ORIGINAL ASSUMPTION (see below) -- ONLY objects that have a parseable form need to be here
-		if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool() ||
+		else if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool() ||
 			obj.isNull()) {
 			push(obj);
 			continue;
@@ -367,7 +483,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 
 		// if object was created from a list literal ( [ ... ] ), then it must be deepcopied
 		// (see DESIGN-NOTES.md)
-		if(obj.isList()) {
+		else if(obj.isList()) {
 			push(obj.deepcopy());
 			continue;
 		}
@@ -378,126 +494,11 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		//
 		// i'm breaking these two cases out separately to point out why this is needed since it
 		// wasn't obvious to me at the time
-		#if 1
-		if(obj.isClosure() || obj.isDict()) {
+		else if(obj.isClosure() || obj.isDict()) {
 			push(obj);
 			continue;
 		}
-		#endif
-
-		if(obj.isSymbol("'",1)) {
-			// quoted symbol - remove one level of quoting and push
-			push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));
-			continue;
-		}
 		
-		if(obj.isSymbol("return")) {
-			// return from word by popping back to previous wordlist (if not at toplevel)
-			//if(syntax->hasPushedObjLists()) {	
-			//	syntax->popObjList();
-			//}
-			if(havePushedFrames()) {
-				code_return();
-			}
-			else {
-				code = NULL;
-				return; // return from top level exits program
-			}
-			continue;
-		}
-
-		if(obj.isSymbol("if")) {
-			// true jump is next
-			auto true_jump = nextSymbolOrFail("expecting jump after 'if'");
-			//cout << "TRUE_JUMP: " << true_jump << endl;
-			Object cond = pop();
-			//cout << "POPPED COND: " << cond.repr() << endl;
-			if(!cond.isBool()) {
-				throw LangError("'if' requires true|false but got: " + cond.fmtStackPrint());
-			}
-			// this doesn't run the jump, it just repositions the stream
-			if(cond.asBool()) {
-				// no need to actually skip false jump since i'll be looking for '@'
-				do_jump(true_jump.asSymbol());
-			}
-			// if false, just continue with next instruction
-			continue;
-		}
-
-		if(obj.isSymbol(">>",2) || obj.isSymbol("<<",2)) {
-			do_jump(obj.asSymbol());
-			continue;
-		}
-
-		if(obj.isSymbol("@",1)) {
-			// jump target -- ignore
-			continue;
-		}
-
-		if(obj.isSymbol("call")) {
-			// top of stack must be a lambda OR a list
-			auto val = pop();
-			if(val.isLambda()) {
-				// now this is just like calling a userword, below
-				// TODO -- tail call elimination??
-				//syntax->pushObjList(val.asLambda());
-				code_call(val.asLambda());
-			}
-			else if(val.isList()) {
-				// same as above
-				code_call(val.asList());
-			}
-			else if(val.isClosure()) {
-				// as above but with self
-				code_call(val.asClosureFunc(), val.data.closure);
-			}
-			else {
-				throw LangError("call expects a lambda, but got: " + val.fmtStackPrint());
-			}
-			continue;
-		}
-
-		// builtins, then userwords
-		if(obj.isSymbol()) {
-			auto bltin = BUILTINS.find(obj.asSymbol());
-			if(bltin != BUILTINS.end()) {
-				bltin->second(this);
-				if(PROFILE_CALLS) {
-					auto w = WORD_CALLS.find(obj.asSymbol());
-					if(w == WORD_CALLS.end())
-						WORD_CALLS[obj.asSymbol()] = 1; // new entry
-					else
-						WORD_CALLS[obj.asSymbol()] += 1;
-				}
-				continue;
-			}
-			
-			ObjList *wordlist = lookup_word(obj.asSymbol());
-			if(wordlist) {
-				// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
-				// i don't need to come back here, so pop my wordlist first to stop stack from growing
-				#if 1 // can turn off to test without tail call elimination, if desired
-				if(peekNextCodeObj().isVoid() || peekNextCodeObj().isSymbol("return")) {
-					if(havePushedFrames()) { // in case i'm at the toplevel
-						code_return();
-						++nr_tailcalls;
-					}
-				}
-				#endif
-				// execute word by pushing its objlist and continuing
-				code_call(wordlist);
-				//syntax->pushObjList(wordlist);
-				if(PROFILE_CALLS) {
-					auto w = WORD_CALLS.find(obj.asSymbol());
-					if(w == WORD_CALLS.end())
-						WORD_CALLS[obj.asSymbol()] = 1; // new entry
-					else
-						WORD_CALLS[obj.asSymbol()] += 1;
-				}
-				continue;
-			}
-		}
-
 		throw LangError(string("Unknown word ") + obj.fmtDisplay());
 	}
 }

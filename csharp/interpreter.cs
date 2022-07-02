@@ -318,37 +318,6 @@ public class Interpreter {
 				debug_hook(this, obj);
 			}
 
-			if(obj is LangVoid) {
-				//Console.WriteLine("GOT VOID");
-				// i could be returning from a word that had no 'return',
-				// so pop words like i would if it were a return
-				if(havePushedFrames()) {
-					code_return();
-					continue;
-				}
-				else {
-					code = null; // mark self as not running
-					return;
-				}
-			}
-
-			//Console.WriteLine("STACK NOW: " + reprStack());
-			//Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
-
-			// all object types except lists, symbols & void are pushed here (see c++ notes for more)
-			if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
-					obj is LangBool || obj is LangNull || obj is LangClosure || obj is LangDict) {
-				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
-				push(obj);
-				continue;
-			}
-
-			// list literals are deepcopied (see DESIGN-NOTES.md)
-			if(obj is LangList) {
-				push(obj.deepcopy());
-				continue;
-			}
-
 			if (obj is LangSymbol) {
 				var sym = obj as LangSymbol;	
 
@@ -446,6 +415,38 @@ public class Interpreter {
 					continue;
 				}
 			}
+
+			else if(obj is LangVoid) {
+				//Console.WriteLine("GOT VOID");
+				// i could be returning from a word that had no 'return',
+				// so pop words like i would if it were a return
+				if(havePushedFrames()) {
+					code_return();
+					continue;
+				}
+				else {
+					code = null; // mark self as not running
+					return;
+				}
+			}
+
+			//Console.WriteLine("STACK NOW: " + reprStack());
+			//Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
+
+			// all object types except lists, symbols & void are pushed here (see c++ notes for more)
+			else if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
+					obj is LangBool || obj is LangNull || obj is LangClosure || obj is LangDict) {
+				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
+				push(obj);
+				continue;
+			}
+
+			// list literals are deepcopied (see DESIGN-NOTES.md)
+			else if(obj is LangList) {
+				push(obj.deepcopy());
+				continue;
+			}
+
 			throw new LangError("Unknown word " + obj.fmtDisplay());
 		}
 	}

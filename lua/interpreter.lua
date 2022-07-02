@@ -257,32 +257,6 @@ function Interpreter:run(objlist, stephook)
 			stephook(self,word)
 		end
 		
-		if isVoid(obj) then
-			--print("RETURNING FROM WORD")
-			-- i could be returning from a word that had no 'return',
-			-- so pop words like i would if it were a return
-			if self:havePrevFrames() then
-				self:code_return()
-				goto MAINLOOP
-			else
-				self.code = nil -- mark self as no longer running
-				return
-			end
-		end
-
-		-- push everything here excepts lists/symbols/void -- see c++ notes for more
-		if isInt(obj) or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isBool(obj) or isNull(obj) or isClosure(obj) or isDict(obj) then
-			self:push(obj)
-			goto MAINLOOP
-		end
-
-		-- list literals are deepcopied (see DESIGN-NOTES.md)
-		if isList(obj) then
-			self:push(deepcopy(obj))
-			goto MAINLOOP
-		end
-
 		if isSymbol(obj) then
 			if string.sub(obj, 1, 1) == "'" then
 				-- quoted symbol, remove one level of quoting
@@ -383,6 +357,32 @@ function Interpreter:run(objlist, stephook)
 				--print("CALL USERWORD:" .. fmtStackPrint(obj))
 				goto MAINLOOP
 			end
+		end
+
+		if isVoid(obj) then
+			--print("RETURNING FROM WORD")
+			-- i could be returning from a word that had no 'return',
+			-- so pop words like i would if it were a return
+			if self:havePrevFrames() then
+				self:code_return()
+				goto MAINLOOP
+			else
+				self.code = nil -- mark self as no longer running
+				return
+			end
+		end
+
+		-- push everything here excepts lists/symbols/void -- see c++ notes for more
+		if isInt(obj) or isFloat(obj) or isString(obj) or isLambda(obj) or
+			isBool(obj) or isNull(obj) or isClosure(obj) or isDict(obj) then
+			self:push(obj)
+			goto MAINLOOP
+		end
+
+		-- list literals are deepcopied (see DESIGN-NOTES.md)
+		if isList(obj) then
+			self:push(deepcopy(obj))
+			goto MAINLOOP
 		end
 
 		error(">>>Unknown word " .. fmtDisplay(obj))

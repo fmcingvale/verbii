@@ -330,26 +330,7 @@
 			(let ((obj (nextObj intr)))
 				;(print "RUN OBJ: " (fmtStackPrint obj))
 				(cond
-					((Void? obj)
-						;(print "RETURN OR EXIT:")
-						; either return or exit
-						(if (havePushedFrames intr)
-							(code-return intr)
-							; else set self not running & exit
-							(begin
-								(intr-code-set! intr '())
-								(set! exit-loop #t))))
-					; push everything except lists/symbols/void (see c++ notes for more)
-					((integer? obj) (push-int intr obj))
-					((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj)
-							(Closure? obj) (Dict? obj))
-						(push intr obj))
-
-					; list literals are deepcopied (see DESIGN-NOTES.txt)
-					((List? obj)
-						(push intr (deepcopy obj)))
-
-					; symbols do the most stuff ...
+					; symbols are the most common, so check for them first
 					((Symbol? obj) ; obj is a string
 						(cond
 							((char=? (string-ref obj 0) #\')
@@ -420,6 +401,26 @@
 							
 							(else
 								(lang-error 'intepreter "Unknown word" obj))))
+
+					((Void? obj)
+						;(print "RETURN OR EXIT:")
+						; either return or exit
+						(if (havePushedFrames intr)
+							(code-return intr)
+							; else set self not running & exit
+							(begin
+								(intr-code-set! intr '())
+								(set! exit-loop #t))))
+					; push everything except lists/symbols/void (see c++ notes for more)
+					((integer? obj) (push-int intr obj))
+					((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj)
+							(Closure? obj) (Dict? obj))
+						(push intr obj))
+
+					; list literals are deepcopied (see DESIGN-NOTES.txt)
+					((List? obj)
+						(push intr (deepcopy obj)))
+
 					(else
 						(lang-error 'interpreter "Unknown word" obj)))))))
 
