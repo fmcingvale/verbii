@@ -1,0 +1,125 @@
+
+\ Root-finding algorithms.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ Rosetta task: http://rosettacode.org/wiki/Roots_of_a_function
+
+\ Secant method
+\ ref: https://en.wikipedia.org/wiki/Secant_method
+
+\ find root of function f, with initial guesses x0 & x1, repeats
+\ until it finds zero within +/- eps or maxloops exceeded, to
+\ prevent endless loop if solution diverges.
+\
+\ returns root xn or void on divergence.
+: find-root-secant @( f x0 x1 eps maxloops -- xn )
+	@locals [ xn1 xn2 ] \ x[n-1], x[n-2]
+	
+	\ x[n-2] = x0; x[n-1] = x1
+	x0 xn2!
+	x1 xn1!
+	
+	@loop
+		maxloops 0 <= if >>diverges 
+
+		xn1 xn2 -
+		xn1 f call xn2 f call -
+		/
+		xn1 f call *
+		xn1 swap -
+		xn!
+		
+		\ abs(f(x[n])) <= abs(eps)?
+		xn f call abs eps abs <= if >>done
+
+		\ "Guess:" . xn . CR
+
+		xn1 xn2!
+		xn xn1!
+
+		maxloops 1 - maxloops!
+		<<loop
+	
+	@done
+		xn return
+		
+	@diverges void \ solution diverged
+	;
+
+: sign @( x -- sign )
+	x 0 < if >>negative
+	1 return
+	@negative -1 return
+	;
+
+\ Bisection method
+\ ref: https://en.wikipedia.org/wiki/Bisection_method
+
+: find-root-bisect @( f a b eps maxloops -- root )
+	@locals [ c ]
+
+	\ check that a & b start on opposite sides of the root
+	a f call b f call sign == if >>bad-interval
+
+	@loop
+		maxloops 0 <= if >>diverges
+		maxloops 1 - maxloops!
+
+		a b + 2 / c!
+
+		c f call abs eps abs < if >>done
+
+		\ "Guess:" . c . CR
+
+		a f call sign c f call sign == if >>keep-b
+		b f call sign c f call sign == if >>keep-a
+		\ should never happen but if i get here it means
+		\ a & b ended up on the same side of the root so 
+		\ i can never converge
+		>>diverges
+		
+	@keep-a c b! <<loop
+	@keep-b c a! <<loop
+	@done c return
+	@diverges void return
+	;
+
+\ round so that results show up as integers
+6 f.setprec
+
+"* Secant method ..." . CR
+\ f = (x-2)*(x+4)
+@{ @args [ x ] x 2 - x 4 + * }
+"Expect 2:" . 1 3 0.0000001 100 find-root-secant . CR
+
+@{ @args [ x ] x 2 - x 4 + * }
+"Expect -4:" . -2 -6 0.0000001 100 find-root-secant . CR
+
+\ f = (x-10)*(x+5)*(x+15)
+@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+"Expect 10:" . 8 12 0.0000001 100 find-root-secant . CR
+
+@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+"Expect -5:" . -1 -8 0.0000001 100 find-root-secant . CR
+
+@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+"Expect -15:" . -16 -14 0.0000001 100 find-root-secant . CR
+
+"* Bisection method ..." . CR
+\ f = (x-2)*(x+4)
+@{ @args [ x ] x 2 - x 4 + * }
+"Expect 2:" . -0.3 3.1 0.0000001 100 find-root-bisect . CR
+
+@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+"Expect -15:" . -8.1 -25.5 0.0000001 100 find-root-bisect . CR
+
+\ f = (x-10)*(x+5)*(x+15)
+@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+"Expect 10:" . 5.1 15.3 0.0000001 100 find-root-bisect . CR
+
+@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+"Expect -5:" . 2.4 -8.77 0.0000001 100 find-root-bisect . CR
+
+@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+"Expect -15:" . -35.7 -8.1 0.0000001 100 find-root-bisect . CR
