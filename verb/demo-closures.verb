@@ -1,0 +1,212 @@
+
+\ Demonstrate closures and some non-obvious side effects.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ first, here is a plain lambda - it does not capture anything so can
+\ only work with stack value, no named variables.
+{ "Hello lambda!" . CR }
+\ run it with 'call'
+call
+
+\ make a lambda taking 3 stack args A,B,C and returns A+B*C 
+"Expect 5+6*7 = 47:" .
+5 6 7 { * + } call . CR
+
+\ plain (non-capturing) lambdas work fine for simple functions, but
+\ as you add more arguments and more complexity in the function, the
+\ stack shuffling becomes unwieldy. so named variables help a lot
+\ with readabiliy.
+\
+\ here is the same function as above, written as a closure:
+"Expect 5+6*7 = 47:" . 
+5 6 7 \ push args to stack
+@{  \ the @{ indicates this should be compiled as a closure, not a plain lambda
+
+	\ args are automatically popped from the stack and can be referred to with names
+	@args [ A B C ] 
+	\ return A+B*C
+	B C * A +
+} call . CR
+
+\ of course, such a trivial function doesn't really need named variable, but that
+\ demonstrates the basic usage
+
+\ closures get interesting when you use them to store state information.
+\ for example, lets make an accumulator factory
+\	ref: http://rosettacode.org/wiki/Accumulator_factory
+\
+\ an accumulator factory works like this:
+\	f = make-accumulator(11) -> create accumulator function with initial sum=11
+\	f(10) -> returns 21 (i.e. 11+10)
+\	f(20) -> returns 41 (i.e. 11+10+20)
+\	f(50) -> returns 91 (i.e. 11+10+20+50)
+
+"* Accumulator factory" . CR
+
+: make-accumulator @( initval )
+	\ return a lambda that, when called with a numeric argument, adds the argument
+	\ to its sum and returns the new sum
+	@{
+		@args [ n ]
+		initval n + initval! \ update my sum
+		initval \ return new sum
+	}
+	;
+	
+\ lets make several accumulators and store them in variables to show that they
+\ are independent from each other
+var acc1 1
+var acc2 1
+var acc3 1
+11 make-accumulator acc1 set! \ acc1 start with initval=11
+33 make-accumulator acc2 set! \ acc2 start with initval=33
+100 make-accumulator acc3 set! \ acc3 start with initval=100
+
+\ lets show the intial values first by adding zeros
+"acc1 init = " . 0 acc1 ref call . CR
+"acc2 init = " . 0 acc2 ref call . CR
+"acc3 init = " . 0 acc3 ref call . CR
+
+"STACK:" . .S CR
+
+"Adding 20 to each ..." . CR
+"acc1 init = " . 20 acc1 ref call . CR
+"acc2 init = " . 20 acc2 ref call . CR
+"acc3 init = " . 20 acc3 ref call . CR
+
+"Adding 100 to each ..." . CR
+"acc1 init = " . 100 acc1 ref call . CR
+"acc2 init = " . 100 acc2 ref call . CR
+"acc3 init = " . 100 acc3 ref call . CR
+
+\ the accumulator factory works because the inner closure captures the VALUE of
+\ initval that was passed to its outer scope and saves it for future calls.
+\ therefore, closures capture state as you would expect in other languages.
+
+\ remember: in verbii there are no variables - the @args/@locals are names attached
+\ to values in THAT scope only. here is a demonstration of the difference:
+
+: weirdfunc @( x )
+	@locals [ f1 f2 ]
+	"Hello weirdfunc! x=" . x . CR
+	\ lets make two closures that capture x (by VALUE!) and store
+	\ them to locals f1 and f2
+	@{
+		"Closure-1 begin, x=" . x . CR
+		"Adding 11" . CR
+		x 11 + x!
+		"Closure-1 end, x=" . x . CR		
+	} f1! \ store this closure to f1
+	
+	@{
+		"Closure-2 begin, x=" . x . CR
+		"Adding 100" . CR
+		x 100 + x!
+		"Closure-2 end, x=" . x . CR		
+	} f2! \ store this closure to f2
+	
+	"--- Run closure-1:" . CR f1 call
+	"--- Run closure-2:" . CR f2 call
+	
+	"weirdfunc end, x=" . x . CR
+	;
+	
+\ you probably saw some non-obvious things here:
+\	1. Closure-1 and closure-2 values of x are independent of each other.
+\	2. The outer x in weirdfunc is not affected by closure-1 nor closure-2
+\
+\ this is why it is important to remember:
+\	1. @{ .. } is *NOT* a nested function like in many languages.
+\		- it is an INDEPENDENT scope that captures the names + initial VALUES
+\		  from its outer scope
+\	2. changes to VALUES  are not seen in the outer scope
+\
+\ now instead of VALUES lets look at OBJECTS. verbii has two OBJECT types: lists and dictionaries
+\ lets make a weird-list-func to demonstrate ...
+
+: weird-list-func @( mylist )
+	@locals [ f1 f2 ]
+	"Hello weird-list-func, my list is:" . mylist . CR
+	\ again lets make two closures that do something with mylist and store them
+	@{
+		"closure-1 list begin:" . mylist . CR
+		"append 'abc'" . CR
+		mylist "abc" append mylist!
+		"closure-1 list end:" . mylist . CR
+	} f1!
+	
+	@{
+		"closure-2 list begin:" . mylist . CR
+		"append 'xyz'" . CR
+		mylist "xyz" append mylist!
+		"closure-2 list end:" . mylist . CR
+	} f2!
+	
+	"--- calling closure 1:" . CR
+	f1 call
+	"--- calling closure 2:" . CR
+	f2 call
+	
+	"-- weird-list-func end list:" . mylist . CR
+	;
+	
+44 weirdfunc
+
+\ make a list and pass a copy to weird-list func
+[ 11 22 33 ] dup 
+weird-list-func
+\ what happened to the copy still on the stack?
+"--- back in caller, list=" . . CR
+
+\ this behavior may be more like what you would expect -- the SAME list
+\ is seen/modified in the caller, in weird-list-func and in the 2 closures.
+\
+\ this demonstrates that OBJECTS are passed by reference, not value. so if 
+\ you want a VALUE to be seen by all scopes, you can put the value into a 
+\ list or dictionary as a container and the container will maintain its 
+\ identity in all scopes.
+
+\ another demonstration --this shows that the same name can be defined in an outer
+\ and inner scope and the inner name will be seen in the inner scope ...
+
+: scope-test-1 @( i )
+	"scope test outer i =" . i . CR
+	@{
+		@args [ i ]
+		"inner scope i =" . i . CR
+	}
+	;
+	
+10 scope-test-1 \ outer sees i=10
+20 swap call    \ inner sees i=20
+
+\ i think it is helpful to think of verbii closures as their own separate functions.
+\ that is, when you see code like:
+\
+\		10 a! 20 b! 30 c!
+\		@{ ... captures a,b,c by *VALUE* }
+\
+\ think of it like:
+\		: thing @( a b c ) ... do stuff with a,b,c ... ;
+\
+\ and somewhere else:
+\		10 a! 20 b! 30 c!
+\		a b c thing
+\
+\ here, it should be obvious that changing a,b,c in thing() should NOT change the values in
+\ the caller. 
+\
+\ but say you passed objects:
+\		[ .. ] a! [ .. ] b! [ .. ] c!
+\		a b c thing
+\
+\ THEN you would expect thing() to be able to change the lists and the caller see the changes.
+\
+\ this is exactly how verbii closures work.
+
+
+
+
+
+
