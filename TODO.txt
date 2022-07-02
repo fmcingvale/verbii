@@ -37,6 +37,22 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* add (something like) boxed values so that non-object types can be shared across scopes.
+	so e.g.:
+		"" s!
+		@{
+			.. do something with s ..
+		}
+		.. changes to s not seen by outer scope
+		
+	add something like:
+		"" boxed s! \ now s is a container holding a string
+		@{
+			s get \ get boxed value
+			s "hello" put \ change value in box
+		}
+		now 's get' will see changes from inner scope
+			
 * call needs to change to ONLY allow lambdas -- can still build dynamic code with lists, just use make-lambda instead
   of being able to call list directly. this removes ambiguity in the compiler (when doing name translation & closures)
   about whether a list is code or data.
