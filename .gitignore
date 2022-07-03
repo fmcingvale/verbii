@@ -40,3 +40,4 @@ chicken/verbii
 csharp/verbii
 csharp/verbii.pdb
 lib/repl.verb.b
+verb/chess/*.verb.b
