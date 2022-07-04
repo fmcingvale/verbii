@@ -1,133 +1,7 @@
 \ Simple chess engine - purely for fun, not practicality :-)
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
-
-\ should be in init
-
-\ is c an uppercase letter?
-: isupper? @( c ) 
-	c ord 65 >= c ord 90 <= and ;
 	
-\ is c an uppercase letter?
-: islower? @( c )
-	c ord 97 >= c ord 122 <= and ;
-	
-\ convert char c to lowercase, if it is a letter
-: tolower @( c -- lowercase )
-	c isupper? if >>is-upper
-	c return \ not uppercase, return c as is
-	@is-upper
-		c ord 65 - 97 + chr
-	;
-
-\ convert char c to uppercase, if it is a letter
-: toupper @( c -- uppercase )
-	c islower? if >>is-lower
-	c return \ not uppercase, return call
-	@is-lower
-		c ord 97 - 65 + chr
-	;
-	
-\ convert string to lowercase
-: string-lower @( s -- lowercase )
-	s { tolower } map
-	;
-
-\ convert string to uppercase	
-: string-upper @( s -- lowercase )
-	s { toupper } map
-	;
-
-: unittest-string-lower @( s )
-	"STRING:" . s . CR
-	"LOWER:" . s string-lower . CR
-	;
-	
-: unittest-string-upper @( s )
-	"STRING:" . s . CR
-	"UPPER:" . s string-upper . CR
-	;
-	
-\ find index of first item in sequence that satisfies test or void if none 
-: find @( seq test -- index )
-	0 index!
-	@loop
-		index seq length >= if >>not-found
-		seq index get test call if >>found 
-		index 1 + index! <<loop
-	@found index return
-	@not-found void
-	;
-
-: unittest-find
-	"Expect 2:" . "giant flying balloonz" { "a" == } find . CR
-	"Expect 0:" . "giant flying balloonz" { "g" == } find . CR
-	"Expect 6:" . "giant flying balloonz" { "f" == } find . CR
-	"Expect 20:" . "giant flying balloonz" { "z" == } find . CR
-	"Expect void:" . "giant flying balloonz" { "G" == } find . CR
-	;
-	
-\ split text into parts separated by one or more chars from delims (a string or list of chars).
-\ any leading/trailing delims are trimmed. this function does NOT make empty parts.
-: string-split @( text delims -- parts )
-	@locals [ i c piece ]
-	[ ] parts!
-	0 i!
-	"" piece!
-	@loop
-		text i get c!
-		c void? if >>got-end \ end of string
-		delims @{ c == } find void? not if >>got-delim \ found delimiter
-		\ not a delim, add to piece
-		piece c + piece! >>next
-	@got-delim
-		\ if i've been building a piece, add to parts and reset piece
-		piece length 0 > if >>push-piece
-		\ else this in the middle of other delimiters, so just keep going
-		>>next
-	@push-piece
-		parts piece append parts!
-		"" piece!
-		>>next
-	@next
-		i 1 + i! <<loop
-	@got-end
-		\ if i have a piece, add it to parts
-		piece length 0 == if >>done 
-		parts piece append parts!
-	@done
-		parts
-	;
-	
-: unittest-string-split
-	"Expect [ abc def ghi ]:" . "abc;def:ghi/jkl" ":/;" string-split . CR
-	"Expect [ opq rst uvw xyz ]:" . ";/:://:opq;;//;rst;:::uvw:;;/xyz//////:://;" ":/;" string-split . CR
-	"Expect [ ]:" . ":://;;;;//;/;;/:" ":/;" string-split . CR
-	"Expect [ w x y z ]:" . "//;;/;w:::;/x///:::;y::///::z///:::;" ":/;" string-split . CR
-	;
-	
- "AbcDE 12345 xyZ #@" unittest-string-lower
- "AbcDE 12345 xyZ #@" unittest-string-upper
- unittest-find
-
-\ make a variable with a getter and setter:
-\	name gets data stored in var
-\	name! sets data stored in var
-: make-var @( name initval )
-	@locals [ addr ]
-	1 alloc addr! \ alloc storage
-	initval addr set! \ save initval
-	
-	\ make:
-	\	name = get data @ addr
-	\	name! = set data @ addr
-	
-	\ make word: : NAME addr ref ;
-	addr 'ref 2 make-list name make-word
-	\ make word: : NAME! addr set! ;
-	addr 'set! 2 make-list name '! + make-word
-	;
-
 \ chess code starts here
 	
 \ pieces
@@ -181,7 +55,7 @@
 	@locals [ ip ]
 	PIECE-CHARS @{ char toupper == } find ip! \ find index into PIECE_CHARS
 	ip void? if >>bad-char
-	char isupper? if >>white
+	char upper? if >>white
 	ip BLACK return 
 	@white ip WHITE return
 	@bad-char "Bad piece character:" char str + error
