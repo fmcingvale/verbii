@@ -652,3 +652,74 @@ void open-as-stdout
 "Expect 155:" . 15 7 20 test-4 . CR
 
 "Expect [ 891 6375 ]:" . 85 62 13 test-5 2 make-list . CR
+
+\ trying some new stuff with a more formal unittest structure ...
+
+: unittest-expect @( expect actual )
+	expect actual == if >>ok
+	"*** ERROR *** expecting " . expect . "but got" . actual . CR return
+	@ok "    " . expect . "==" . actual . ": ok" . CR
+	;
+	
+\ make sure unittest-expect is working
+"* unittest-expect ..." . CR
+18 18 unittest-expect
+"hello" "hello" unittest-expect
+true true unittest-expect
+'world 'world unittest-expect
+4.125 4.125 unittest-expect
+"---THE FOLLOWING LINES SHOULD ALL BE ERRORS---" . CR
+18 19 unittest-expect
+"hello" "hellop" unittest-expect
+"hello" 'hello unittest-expect
+false true unittest-expect
+'world 'worl unittest-expect
+4.125 5.75 unittest-expect
+"---END OF EXPECTED ERRORS ------------------" . CR
+
+\ string upper/lower test cases as:
+\	[ test-string as-upper as-lower ]
+"* string upper/lower ..." . CR
+[
+	[ "AbCDef" "ABCDEF" "abcdef" ]
+	[ "AbcDE 12345 xyZ #@" "ABCDE 12345 XYZ #@" "abcde 12345 xyz #@" ]
+] 
+@{ unmake drop 
+	@{ @args [ s-test s-upper s-lower ]
+		s-upper s-test string-upper unittest-expect
+		s-lower s-test string-lower unittest-expect
+	} call
+} for-each
+
+"* find / strings ..." . CR
+[
+	\ string char expect-index
+	[ "giant flying balloonz" "a" 2 ]
+	[ "giant flying balloonz" "g" 0 ]
+	[ "giant flying balloonz" "f" 6 ]
+	[ "giant flying balloonz" "z" 20 ]
+	\ void isn't a literal so put null in list and catch it below
+	[ "giant flying balloonz" "G" null ]
+]
+@{ unmake drop
+	@{ @args [ string char index ]
+		index null? if >>expect-void 
+		index string @{ char == } find unittest-expect return
+		@expect-void
+		void string @{ char == } find unittest-expect
+	} call
+} for-each
+
+"* string-split ..." . CR
+[
+	\ string delims expect-list
+	[ "abc;def:ghi/jkl" ":/;" [ "abc" "def" "ghi" "jkl" ] ]
+	[ ";/:://:opq;;//;rst;:::uvw:;;/xyz//////:://;" ":/;" [ "opq" "rst" "uvw" "xyz" ] ]
+	[ ":://;;;;//;/;;/:" ":/;" [ ] ]
+	[ "//;;/;w:::;/x///:::;y::///::z///:::;" ":/;" [ "w" "x" "y" "z" ] ]
+]
+@{ unmake drop
+	@{ @args [ string delims expect ]
+		expect string delims string-split unittest-expect
+	} call
+} for-each

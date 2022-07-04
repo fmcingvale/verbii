@@ -194,3 +194,33 @@ Expect 1220: 1220
 Expect 205: 205 
 Expect 155: 155 
 Expect [ 891 6375 ]: [ 891 6375 ] 
+* unittest-expect ... 
+     18 == 18 : ok 
+     hello == hello : ok 
+     true == true : ok 
+     world == world : ok 
+     4.125 == 4.125 : ok 
+---THE FOLLOWING LINES SHOULD ALL BE ERRORS--- 
+*** ERROR *** expecting  18 but got 19 
+*** ERROR *** expecting  hello but got hellop 
+*** ERROR *** expecting  hello but got hello 
+*** ERROR *** expecting  false but got true 
+*** ERROR *** expecting  world but got worl 
+*** ERROR *** expecting  4.125 but got 5.75 
+---END OF EXPECTED ERRORS ------------------ 
+* string upper/lower ... 
+     ABCDEF == ABCDEF : ok 
+     abcdef == abcdef : ok 
+     ABCDE 12345 XYZ #@ == ABCDE 12345 XYZ #@ : ok 
+     abcde 12345 xyz #@ == abcde 12345 xyz #@ : ok 
+* find / strings ... 
+     2 == 2 : ok 
+     0 == 0 : ok 
+     6 == 6 : ok 
+     20 == 20 : ok 
+     <*void*> == <*void*> : ok 
+* string-split ... 
+     [ abc def ghi jkl ] == [ abc def ghi jkl ] : ok 
+     [ opq rst uvw xyz ] == [ opq rst uvw xyz ] : ok 
+     [ ] == [ ] : ok 
+     [ w x y z ] == [ w x y z ] : ok 

@@ -676,6 +676,18 @@ and		now		with			tabs
 => <true> <false> <false> <false> <true> <false> 
 >> clear 
 => 
+>> ( list deepcopying ) 
+=> 
+>> [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] dup 
+=> [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] 
+>> deepcopy 
+=> [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] 
+>> \ should not affect original 
+=> [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] 
+>> "a" append 
+=> [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] [ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 "a" ] 
+>> clear 
+=> 
 >> ( list get ) 
 => 
 >> [ 11 22 33 44 55 66 ] 
@@ -796,6 +808,24 @@ and		now		with			tabs
 => { "bbb" => 555 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 } 
 >> "bbb" 444 put 
 => { "bbb" => 444 "eee" => 999 "uuu" => 333 "xyz" => 888 "zzz" => 444 } 
+>> clear 
+=> 
+>> \ * TODO * need to check keys function, but keys is not required to sort names, so 
+=> 
+>> \ will have to either sort them myself (otherwise text results won't match across platforms) 
+=> 
+>> \ or do a find on each key to test if it is there 
+=> 
+>> ( dictionary deepcopy ) 
+=> 
+>> [ [ "aaa" 1 ] [ "bbb" 2 ] [ "ccc" 3 ] ] make-dict dup 
+=> { "aaa" => 1 "bbb" => 2 "ccc" => 3 } { "aaa" => 1 "bbb" => 2 "ccc" => 3 } 
+>> deepcopy 
+=> { "aaa" => 1 "bbb" => 2 "ccc" => 3 } { "aaa" => 1 "bbb" => 2 "ccc" => 3 } 
+>> \ should not affect original 
+=> { "aaa" => 1 "bbb" => 2 "ccc" => 3 } { "aaa" => 1 "bbb" => 2 "ccc" => 3 } 
+>> "zzz" 10 put 
+=> { "aaa" => 1 "bbb" => 2 "ccc" => 3 } { "aaa" => 1 "bbb" => 2 "ccc" => 3 "zzz" => 10 } 
 >> clear 
 => 
 >> [ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict 

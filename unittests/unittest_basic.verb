@@ -386,6 +386,13 @@ clear
 ==
 clear
 
+( list deepcopying )
+[ 1 [ 2 3 [ 4 [ 5 6 ] 7 ] 8 ] 9 ] dup
+deepcopy
+\ should not affect original
+"a" append
+clear
+
 ( list get )
 [ 11 22 33 44 55 66 ]
 dup 2 get
@@ -453,6 +460,17 @@ dup "zyzyz" get
 drop
 "xyz" 888 put
 "bbb" 444 put
+clear
+
+\ * TODO * need to check keys function, but keys is not required to sort names, so
+\ will have to either sort them myself (otherwise text results won't match across platforms)
+\ or do a find on each key to test if it is there
+
+( dictionary deepcopy )
+[ [ "aaa" 1 ] [ "bbb" 2 ] [ "ccc" 3 ] ] make-dict dup
+deepcopy
+\ should not affect original
+"zzz" 10 put
 clear
 
 [ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict
