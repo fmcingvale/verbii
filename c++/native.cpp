@@ -467,7 +467,7 @@ static void builtin_self_get(Interpreter *intr) {
 	if(!intr->closure)
 		throw LangError("Attempting to reference unbound self");
 	
-		intr->push(intr->closure->state);
+	intr->push(intr->closure->state);
 }
 
 static void builtin_self_set(Interpreter *intr) {
