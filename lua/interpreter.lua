@@ -217,7 +217,7 @@ end
 function Interpreter:lookupWordOrFail(name)
 	local list = self:lookupWord(name)
 	if list == nil then
-		error(">>>No such word: " + name)
+		error(">>>No such word: " .. name)
 	end
 	return list
 end
