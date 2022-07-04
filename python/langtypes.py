@@ -113,7 +113,7 @@ def fmtDisplay(obj):
 		s = "{ "
 		# have to sort keys to give identical output across languages
 		for k in sorted(obj.keys()):
-			s += '"' + k + '" => ' + fmtDisplay(obj[k]) + " "
+			s += '"' + fmtDisplay(k) + '" => ' + fmtDisplay(obj[k]) + " "
 		s += "}"
 		return s
 	elif isString(obj):
