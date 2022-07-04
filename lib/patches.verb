@@ -8,8 +8,92 @@
 \
 ( ------ boot ----------- )
 
+\ make a variable with a getter and setter:
+\	'name' gets data stored in var
+\	'name!' sets data stored in var
+: make-var @( name initval )
+	@locals [ addr ]
+	1 alloc addr! \ alloc storage
+	initval addr set! \ save initval
+	
+	\ make:
+	\	name = get data @ addr
+	\	name! = set data @ addr
+	
+	\ make word: : NAME addr ref ;
+	addr 'ref 2 make-list name make-word
+	\ make word: : NAME! addr set! ;
+	addr 'set! 2 make-list name '! + make-word
+	;
+	
 ( ------ init ----------- )
 
+\ is c an uppercase letter?
+: upper? @( c ) 
+	c ord 65 >= c ord 90 <= and ;
+	
+\ is c an uppercase letter?
+: lower? @( c )
+	c ord 97 >= c ord 122 <= and ;
+	
+\ convert char c to lowercase, if it is a letter
+: tolower @( c -- lowercase )
+	c upper? if >>is-upper
+	c return \ not uppercase, return c as is
+	@is-upper
+		c ord 65 - 97 + chr
+	;
+
+\ convert char c to uppercase, if it is a letter
+: toupper @( c -- uppercase )
+	c lower? if >>is-lower
+	c return \ not uppercase, return call
+	@is-lower
+		c ord 97 - 65 + chr
+	;
+	
+\ convert string to lowercase
+: string-lower @( s -- lowercase )
+	s { tolower } map
+	;
+
+\ convert string to uppercase	
+: string-upper @( s -- lowercase )
+	s { toupper } map
+	;
+	
+\ split text into parts separated by one or more chars from delims (a string or list of chars).
+\ any leading/trailing delims are trimmed. this function does NOT make empty parts.
+: string-split @( text delims -- parts )
+	@locals [ i c piece ]
+	[ ] parts!
+	0 i!
+	"" piece!
+	@loop
+		text i get c!
+		c void? if >>got-end \ end of string
+		delims @{ c == } find void? not if >>got-delim \ found delimiter
+		\ not a delim, add to piece
+		piece c + piece! >>next
+	@got-delim
+		\ if i've been building a piece, add to parts and reset piece
+		piece length 0 > if >>push-piece
+		\ else this in the middle of other delimiters, so just keep going
+		>>next
+	@push-piece
+		parts piece append parts!
+		"" piece!
+		>>next
+	@next
+		i 1 + i! <<loop
+	@got-end
+		\ if i have a piece, add it to parts
+		piece length 0 == if >>done 
+		parts piece append parts!
+	@done
+		parts
+	;
+	
 \ for i=start .. start+incr*(count-1), call fn with args ( i )
 \
 \ note: count is used instead of an end value to simplify boundary conditions
@@ -27,6 +111,17 @@
 	@done
 	;
 	
+\ find index of first item in sequence that satisfies test or void if none 
+: find @( seq test -- index )
+	0 index!
+	@loop
+		index seq length >= if >>not-found
+		seq index get test call if >>found 
+		index 1 + index! <<loop
+	@found index return
+	@not-found void
+	;
+
 ( ------ compiler ------- )
 
 \ rewrites an objlist to translate arg/local names including capturing outer vars (closures)
@@ -56,8 +151,8 @@
 \			(ii) add binding of selfmap + my locals as self for inner lambda
 : compile-rewrite-args-locals @( objlist selfmap -- new-objlist )
 	@locals [ argnames localnames local-refmap local-setmap i self-setmap ]
-		\ "REWRITE-ARGS-LOCALS OBJLIST:" . objlist . CR
-		\ "SELFMAP:" . selfmap . CR
+		\ "1 REWRITE-ARGS-LOCALS OBJLIST:" . objlist . CR
+		\ "2 SELFMAP:" . selfmap . CR
 		
 	\ ensure objlist ends with a 'return', or add one
 	objlist -1 get 'return == if >>scan-args-locals
@@ -100,11 +195,13 @@
 		
 		\ for each name in selfmap, make name! in self-setmap with same index
 		[ ] make-dict self-setmap!
+			\ "2.1 BEFORE FOR-EACH-DICT SELFMAP = " . selfmap . CR
 		selfmap
 		{
 			( key val ; self self-setmap )
 			self -rot swap "!" + swap put drop
 		} self-setmap :: for-each-dict
+			\ "2.2 AFTER FOR-EACH-DICT SELFMAP = " . selfmap . CR
 			\ "SET-SETMAP:" . self-setmap . CR
 		
 	\ rewrite objlist replacing arg|local symbols with appropriate code sequences and creating
@@ -183,15 +280,20 @@
 		objlist i get length 2 < if <<copy-element \ list too short, can't be closure
 		objlist i get 0 get ',,closure != if <<copy-element \ not [ ,,closure .. ] so just copy element
 		\ recursively parse list, passing a selfmap that is my selfmap + my locals
+			\ "2.3 SELFMAP BEFORE DEEPCOPY:" . selfmap . CR
 		selfmap deepcopy \ don't alter my selfmap
+			\ "2.4 SELFMAP AFTER DEEPCOPY:" . selfmap . CR
 		( inner-selfmap )
+			\ "GOT ,,closure -- argnames = " . argnames . CR
 		argnames dict-add-indexed-names \ add arg names first -- they are first on locals stack
 		localnames dict-add-indexed-names \ .. then locals
 		( inner-selfmap )
 		objlist i get 1 -1 slice \ remove ,,closure
 		swap ( objlist inner-selfmap )
 			\ "** PARSE INNER LAMBDA:" . CR
+			\ "3 BEFORE INNER REWRITE, SELFMAP = " . selfmap . CR
 		compile-rewrite-args-locals ( new-objlist )
+			\ "4 AFTER INNER REWRITE, SELFMAP = " . selfmap . CR
 			\ "** INNER REWROTE:" . over . CR
 		make-lambda \ turn new-objlist back into lambda
 		new-objlist swap append new-objlist! \ add lambda to new-objlist
@@ -201,6 +303,7 @@
 		\	[ ] self + ( shallow-copy self )
 		\	#args #locals + copy-locals-to-list + ( self + locals ) ::
 		
+			
 		\ NOTE! have to check for empty selfmap since referencing a non-existent self is an error
 		selfmap length 0 == if >>no-selfmap
 		
