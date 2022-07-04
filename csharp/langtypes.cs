@@ -204,6 +204,14 @@ public class LangDict : LangObject {
 
 	public override bool hasLength() { return true; }
 	public override int getLength() { return dict.Count; }
+
+	public override LangObject deepcopy() {
+		var d = new LangDict();
+		foreach(KeyValuePair<string,LangObject> pair in dict)
+			d.dict[pair.Key] = pair.Value;
+
+		return d;
+	}
 }
 
 public class LangList : LangObject {
