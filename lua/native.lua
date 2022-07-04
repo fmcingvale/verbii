@@ -574,7 +574,7 @@ function builtin_get(intr)
 		end
 	elseif isDict(obj) then
 		if not isString(index) then
-			error(">>>get (dict) expects string key")
+			error(">>>get (dict) expects string key, got: " .. fmtStackPrint(index))
 		elseif obj.dict[index.value] == nil then
 			intr:push(new_Void()) -- return void when key doesn't exist
 		else
@@ -604,6 +604,8 @@ function builtin_put(intr)
 		if not isString(index) then
 			error(">>>put expects string key")
 		else
+			-- NOTE! key stored as the lua string, NOT verbii string, so have
+			-- to convert back as needed (e.g. in keys() function)
 			dest.dict[index.value] = obj
 			intr:push(dest)
 		end
@@ -679,7 +681,7 @@ end
 
 function builtin_keys(intr)
 	local dict = popDict(intr)
-	intr:push(dictKeys(dict))
+	intr:push(dictKeysStringObjects(dict))
 end
 
 -- this is global so interpreter can access

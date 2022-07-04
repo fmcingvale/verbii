@@ -209,7 +209,7 @@ function fmtDisplayObjlist(objlist,open_delim,close_delim)
 	return s
 end
 
--- get keys from a Dict object
+-- get keys from a Dict object as lua strings
 function dictKeys(obj)
 	local keys = {}
 	for k,v in pairs(obj.dict) do
@@ -222,6 +222,17 @@ end
 function sortedDictKeys(obj)
 	local keys = dictKeys(obj)
 	table.sort(keys)
+	return keys
+end
+
+-- gets keys string a Dict as a list of verbii strings
+-- (duplicates dictKeys but this is better than making a
+-- string list THEN making a verbii string list)
+function dictKeysStringObjects(obj)
+	local keys = {}
+	for k,v in pairs(obj.dict) do
+		table.insert(keys,new_String(k))
+	end
 	return keys
 end
 
@@ -344,9 +355,9 @@ function deepcopy(obj)
 	elseif isList(obj) then
 		return deepcopyObjlist(obj)
 	elseif isDict(obj) then
-		local ndict = {}
+		local ndict = new_Dict()
 		for k,v in pairs(obj.dict) do
-			ndict[k] = deepcopy(v)
+			ndict.dict[k] = deepcopy(v)
 		end
 		return ndict
 	else
