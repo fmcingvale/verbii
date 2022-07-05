@@ -726,14 +726,14 @@ var TRIPLEQUOTE 1
 \		b. pop args (L> L> ...)
 \		c. rewrite symbols to their code sequences:
 \			(i) if name in args/locals, rewrite to (LP i + ref) or (LP i + set!)
-\			(ii) if name in selfmap, rewrite to (self i get) or (self i rot put)
+\			(ii) if name in selfmap, rewrite to (self i get) or (self i rot put drop)
 \		d. if an inner lambda is found ( @{ ... } -- @ is required for backward compat with { .. } obj :: code )
 \			(i) recursively rewrite lambda, passing selfmap + my args+locals as its selfmap
 \			(ii) add binding of selfmap + my locals as self for inner lambda
 : compile-rewrite-args-locals @( objlist selfmap -- new-objlist )
 	@locals [ argnames localnames local-refmap local-setmap i self-setmap ]
-		\ "REWRITE-ARGS-LOCALS OBJLIST:" . objlist . CR
-		\ "SELFMAP:" . selfmap . CR
+		\ "1 REWRITE-ARGS-LOCALS OBJLIST:" . objlist . CR
+		\ "2 SELFMAP:" . selfmap . CR
 		
 	\ ensure objlist ends with a 'return', or add one
 	objlist -1 get 'return == if >>scan-args-locals
@@ -776,11 +776,13 @@ var TRIPLEQUOTE 1
 		
 		\ for each name in selfmap, make name! in self-setmap with same index
 		[ ] make-dict self-setmap!
+			\ "2.1 BEFORE FOR-EACH-DICT SELFMAP = " . selfmap . CR
 		selfmap
 		{
 			( key val ; self self-setmap )
 			self -rot swap "!" + swap put drop
 		} self-setmap :: for-each-dict
+			\ "2.2 AFTER FOR-EACH-DICT SELFMAP = " . selfmap . CR
 			\ "SET-SETMAP:" . self-setmap . CR
 		
 	\ rewrite objlist replacing arg|local symbols with appropriate code sequences and creating
@@ -798,12 +800,17 @@ var TRIPLEQUOTE 1
 		
 	@symbol
 		objlist i get 'return == if >>rewrite-return
+		\ NOTE: local scope is checked BEFORE outer scope so that the inner scope can redefine
+		\ names and see the intended (local) value instead of the outer one
+		\ example:
+		\		: fn @( n ) @{ @args [ n ] <- here, n and n! should see the LOCAL names not the outer n, n! }
+		
 		\ is symbol (as string) in local-refmap?
 		local-refmap objlist i get str get void? not if >>rewrite-local-ref
-		\ is symbol (as string) in selfmap?
-		selfmap objlist i get str get void? not if >>rewrite-self-ref
 		\ check for local setter
 		local-setmap objlist i get str get void? not if >>rewrite-local-set
+		\ is symbol (as string) in selfmap?
+		selfmap objlist i get str get void? not if >>rewrite-self-ref
 		\ check for self setter
 		self-setmap objlist i get str get void? not if >>rewrite-self-set
 		
@@ -829,9 +836,9 @@ var TRIPLEQUOTE 1
 		+ new-objlist! >>next
 	
 	@rewrite-self-set
-		\ add (self i rot put) to new-objlist
+		\ add (self i rot put drop) to new-objlist
 		new-objlist
-		'self self-setmap objlist i get str get 'rot 'put 4 make-list
+		'self self-setmap objlist i get str get 'rot 'put 'drop 5 make-list
 		+ new-objlist! >>next
 		
 	@rewrite-return
@@ -854,15 +861,20 @@ var TRIPLEQUOTE 1
 		objlist i get length 2 < if <<copy-element \ list too short, can't be closure
 		objlist i get 0 get ',,closure != if <<copy-element \ not [ ,,closure .. ] so just copy element
 		\ recursively parse list, passing a selfmap that is my selfmap + my locals
+			\ "2.3 SELFMAP BEFORE DEEPCOPY:" . selfmap . CR
 		selfmap deepcopy \ don't alter my selfmap
+			\ "2.4 SELFMAP AFTER DEEPCOPY:" . selfmap . CR
 		( inner-selfmap )
+			\ "GOT ,,closure -- argnames = " . argnames . CR
 		argnames dict-add-indexed-names \ add arg names first -- they are first on locals stack
 		localnames dict-add-indexed-names \ .. then locals
 		( inner-selfmap )
 		objlist i get 1 -1 slice \ remove ,,closure
 		swap ( objlist inner-selfmap )
 			\ "** PARSE INNER LAMBDA:" . CR
+			\ "3 BEFORE INNER REWRITE, SELFMAP = " . selfmap . CR
 		compile-rewrite-args-locals ( new-objlist )
+			\ "4 AFTER INNER REWRITE, SELFMAP = " . selfmap . CR
 			\ "** INNER REWROTE:" . over . CR
 		make-lambda \ turn new-objlist back into lambda
 		new-objlist swap append new-objlist! \ add lambda to new-objlist
@@ -872,6 +884,7 @@ var TRIPLEQUOTE 1
 		\	[ ] self + ( shallow-copy self )
 		\	#args #locals + copy-locals-to-list + ( self + locals ) ::
 		
+			
 		\ NOTE! have to check for empty selfmap since referencing a non-existent self is an error
 		selfmap length 0 == if >>no-selfmap
 		

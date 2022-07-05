@@ -137,6 +137,7 @@
 \ String functions
 \ ========================================================================
 
+
 : whitespace? ( string -- bool; is first char of string whitespace? )
 	0 get ord ( get as ascii )
 	32 <= ( treat everthing <= space as whitespace )
@@ -188,6 +189,72 @@
 	1 make-string
 	;
 
+\ is c an uppercase letter?
+: upper? @( c ) 
+	c ord 65 >= c ord 90 <= and ;
+	
+\ is c an uppercase letter?
+: lower? @( c )
+	c ord 97 >= c ord 122 <= and ;
+	
+\ convert char c to lowercase, if it is a letter
+: tolower @( c -- lowercase )
+	c upper? if >>is-upper
+	c return \ not uppercase, return c as is
+	@is-upper
+		c ord 65 - 97 + chr
+	;
+
+\ convert char c to uppercase, if it is a letter
+: toupper @( c -- uppercase )
+	c lower? if >>is-lower
+	c return \ not uppercase, return call
+	@is-lower
+		c ord 97 - 65 + chr
+	;
+	
+\ convert string to lowercase
+: string-lower @( s -- lowercase )
+	s { tolower } map
+	;
+
+\ convert string to uppercase	
+: string-upper @( s -- lowercase )
+	s { toupper } map
+	;
+	
+\ split text into parts separated by one or more chars from delims (a string or list of chars).
+\ any leading/trailing delims are trimmed. this function does NOT make empty parts.
+: string-split @( text delims -- parts )
+	@locals [ i c piece ]
+	[ ] parts!
+	0 i!
+	"" piece!
+	@loop
+		text i get c!
+		c void? if >>got-end \ end of string
+		delims @{ c == } find void? not if >>got-delim \ found delimiter
+		\ not a delim, add to piece
+		piece c + piece! >>next
+	@got-delim
+		\ if i've been building a piece, add to parts and reset piece
+		piece length 0 > if >>push-piece
+		\ else this in the middle of other delimiters, so just keep going
+		>>next
+	@push-piece
+		parts piece append parts!
+		"" piece!
+		>>next
+	@next
+		i 1 + i! <<loop
+	@got-end
+		\ if i have a piece, add it to parts
+		piece length 0 == if >>done 
+		parts piece append parts!
+	@done
+		parts
+	;
+	
 \ ========================================================================
 \ Iteration/looping/functional programming
 \ ========================================================================
@@ -265,6 +332,34 @@
 	@done 
 		;
 		
+\ for i=start .. start+incr*(count-1), call fn with args ( i )
+\
+\ note: count is used instead of an end value to simplify boundary conditions
+: for-range @( fn start incr count )
+	@locals [ i ]
+	
+	0 i!
+	@loop
+		count 0 <= if >>done
+		\ call fn with start+i on top of stack
+		i start + fn call
+		i incr + i!
+		count 1 - count!
+		<<loop
+	@done
+	;
+	
+\ find index of first item in sequence that satisfies test or void if none 
+: find @( seq test -- index )
+	0 index!
+	@loop
+		index seq length >= if >>not-found
+		seq index get test call if >>found 
+		index 1 + index! <<loop
+	@found index return
+	@not-found void
+	;
+
 \ fold - left fold
 \	func: called as: ( accum elem -- new-accum ) where accum is the accumulated value and
 \		  elem is the next element to be added to the accumulator.
