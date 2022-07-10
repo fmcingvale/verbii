@@ -16,7 +16,7 @@
 using namespace std;
 
 // file to write output
-static FILE *fp_stdout = stdout;
+static FILE *fp_stdout = NULL;
 
 // whether make-word is allowed to overwrite existing words
 bool ALLOW_OVERWRITING_WORDS = false;
@@ -29,6 +29,62 @@ bool EXIT_ON_EXCEPTION = true;
 bool STACKTRACE_ON_EXCEPTION = true;
 
 std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
+
+#include <iostream>
+#include <sys/stat.h>
+#include <malloc.h>
+using namespace std;
+
+bool file_exists(const string &filename) {
+	struct stat st;
+	if(stat(filename.c_str(),&st)<0)
+		return false;
+
+	return S_ISREG(st.st_mode) != 0;
+}
+
+int file_size(const string &filename) {
+	struct stat st;
+	if(stat(filename.c_str(),&st)<0)
+		throw LangError("Trying to get size of nonexistent file: " + filename);
+
+	return (int)st.st_size;
+}
+
+void file_write(const string &filename, const string &text) {
+	FILE *fp = fopen(filename.c_str(),"w");
+	if(!fp)
+		throw LangError("Unable to create file: " + filename);
+
+	fwrite(text.c_str(),sizeof(char),text.size(),fp);
+	fclose(fp);
+}
+
+void file_append(const string &filename, const string &text) {
+	FILE *fp = fopen(filename.c_str(),"a");
+	if(!fp)
+		throw LangError("Unable to append to file: " + filename);
+
+	fwrite(text.c_str(),sizeof(char),text.size(),fp);
+	fclose(fp);
+}
+
+string file_read(const string &filename) {
+	if(!file_exists(filename))
+		throw LangError("Trying to read nonexistent file: " + filename);
+
+	char *buf;
+	int nr = file_size(filename);
+	buf = (char*)x_malloc(nr*sizeof(char));
+	
+	FILE *fp = fopen(filename.c_str(), "r");
+	int r = fread(buf, sizeof(char), nr, fp);
+	if(r != nr)
+		throw LangError("Bad number of bytes read from " + filename);
+	
+	fclose(fp);
+	return string(buf, nr);
+}
 
 static VINT popInt(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
@@ -142,9 +198,17 @@ static void builtin_make_word(Interpreter *intr) {
 
 static void builtin_printchar(Interpreter *intr) {
 	int c = (int)popInt(intr, "Bad printchar arg");
-	putc(c, fp_stdout);
-	if(c == 10 || c == 13) {
-		fflush(fp_stdout);
+	if(fp_stdout != NULL) {
+		putc(c, fp_stdout);
+		if(c == 10 || c == 13) {
+			fflush(fp_stdout);
+		}
+	}
+	else {
+		printf("%c", c);
+		if(c == 10 || c == 13) {
+			fflush(stdout);
+		}
 	}
 }
 
@@ -238,18 +302,12 @@ static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &) con
 // reads ALL text from filename
 static void builtin_file_read(Interpreter *intr) {
 	const char *filename = popString(intr, "read-file missing filename");
-	ifstream fileIn(filename, ios::binary);
-	if(fileIn.rdstate() != ios_base::goodbit) {
+	if(!file_exists(filename))
 		throw LangError("No such file in read-file: " + string(filename));
-	}
-	fileIn.seekg(0, ios::end);
-	size_t len = fileIn.tellg();
-	fileIn.seekg(0, ios::beg);
-	char *buf = (char*)x_malloc(len);
-	fileIn.read(buf, len);
-	fileIn.close();
-
-	intr->push(newString(buf, len, true)); // give pointer away
+	
+	string text = file_read(filename);
+	
+	intr->push(newString(text));
 }
 
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
@@ -532,11 +590,7 @@ static void builtin_new_dict(Interpreter *intr) {
 
 static void builtin_file_exists(Interpreter *intr) {
 	auto filename = popString(intr,"file-exists?");
-	struct stat st;
-	if(stat(filename, &st) < 0)
-		intr->push(newBool(false));
-	else
-		intr->push(newBool(S_ISREG(st.st_mode) != 0));
+	intr->push(newBool(file_exists(filename)));
 }
 
 static void builtin_file_mtime(Interpreter *intr) {
@@ -556,13 +610,19 @@ static void builtin_file_mtime(Interpreter *intr) {
 static void builtin_open_as_stdout(Interpreter *intr) {
 	auto obj = intr->pop();
 	if(obj.isVoid()) {
-		if(fp_stdout!=stdout) {
+		if(fp_stdout!=NULL) {
+			fflush(fp_stdout);
 			fclose(fp_stdout);
-			fp_stdout = stdout;
+			fp_stdout = NULL;
 		}
 	}
-	else if(obj.isString())
+	else if(obj.isString()) {
+		if(fp_stdout != NULL) {
+			fflush(fp_stdout);
+			fclose(fp_stdout);
+		}
 		fp_stdout = fopen(obj.asString(), "w");
+	}
 	else
 		throw LangError("Unknown arg to open-as-stdout: " + obj.fmtStackPrint());
 }
@@ -606,12 +666,7 @@ static void builtin_time_string(Interpreter *intr) {
 static void builtin_file_write(Interpreter *intr) {
 	string text = popString(intr,"file-write");
 	string filename = popString(intr,"file-write");
-	FILE *fp = fopen(filename.c_str(), "w");
-	if(!fp)
-		throw LangError("Unable to open file for writing: " + filename);
-
-	fputs(text.c_str(), fp);
-	fclose(fp);
+	file_write(filename, text);
 }
 
 // ( filename string -- )
@@ -619,12 +674,7 @@ static void builtin_file_write(Interpreter *intr) {
 static void builtin_file_append(Interpreter *intr) {
 	string text = popString(intr,"file-append");
 	string filename = popString(intr,"file-append");
-	FILE *fp = fopen(filename.c_str(), "a");
-	if(!fp)
-		throw LangError("Unable to open file for appending: " + filename);
-		
-	fputs(text.c_str(), fp);
-	fclose(fp);
+	file_append(filename, text);
 }
 
 #include <cstdio>
@@ -656,7 +706,14 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"f.setprec", [](Interpreter *intr) { FLOAT_PRECISION = popInt(intr, "Bad arg to f.setprec");}},
 	{".c", builtin_printchar},
 	{"puts", [](Interpreter *intr) 
-		{fprintf(fp_stdout, "%s", popString(intr, "bad puts arg"));}},
+		{
+			if(fp_stdout!=NULL)
+				fprintf(fp_stdout, "%s", popString(intr,"puts"));
+			else
+				printf("%s", popString(intr,"puts"));
+				
+			
+		}},
 	
 	// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
 	//          implemented natively anyways for internal error printing, so
