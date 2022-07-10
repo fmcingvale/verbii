@@ -441,14 +441,6 @@ static void builtin_dumpword(Interpreter *intr) {
 	intr->push(newList(deepcopy(wordlist)));
 }
 
-#include "deserialize.hpp"
-
-static void builtin_loadc(Interpreter *intr) {
-	const char *filename = popString(intr, "Bad filename for .loadc");
-	ifstream fileIn(filename);
-	deserialize_stream(intr, fileIn);
-}
-
 static void builtin_make_closure(Interpreter *intr) {
 	Object state = intr->pop();
 	Object obj = intr->pop();
@@ -714,8 +706,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"parse-int", [](Interpreter *intr){intr->push(parseInt(popStringOrSymbol(intr)));}},
 	{"parse-float", [](Interpreter *intr){intr->push(parseFloat(popStringOrSymbol(intr)));}},
 	{"void", [](Interpreter *intr){intr->push(newVoid());}},
-	
-	{".loadc", builtin_loadc},
 	
 	{"make-closure", builtin_make_closure},
 	{"self", builtin_self_get},
