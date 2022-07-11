@@ -332,35 +332,35 @@ Hello world!
 >> ( -- lambdas -- ) 
 => 
 >> { 4 5 6 } 
-=> <{ 4 5 6 }> 
+=> <{ 4 5 6 'return }> 
 >> call 
 => 4 5 6 
 >> clear 
 => 
 >> { 1 2 3 { 7 8 9 } 4 5 6 } 
-=> <{ 1 2 3 <{ 7 8 9 }> 4 5 6 }> 
+=> <{ 1 2 3 <{ 7 8 9 'return }> 4 5 6 'return }> 
 >> call 
-=> 1 2 3 <{ 7 8 9 }> 4 5 6 
+=> 1 2 3 <{ 7 8 9 'return }> 4 5 6 
 >> 3 ndrop 
-=> 1 2 3 <{ 7 8 9 }> 
+=> 1 2 3 <{ 7 8 9 'return }> 
 >> call 
 => 1 2 3 7 8 9 
 >> clear 
 => 
 >> { 111 222 333 } 
-=> <{ 111 222 333 }> 
+=> <{ 111 222 333 'return }> 
 >> dup 
-=> <{ 111 222 333 }> <{ 111 222 333 }> 
+=> <{ 111 222 333 'return }> <{ 111 222 333 'return }> 
 >> dup 
-=> <{ 111 222 333 }> <{ 111 222 333 }> <{ 111 222 333 }> 
+=> <{ 111 222 333 'return }> <{ 111 222 333 'return }> <{ 111 222 333 'return }> 
 >> call 
-=> <{ 111 222 333 }> <{ 111 222 333 }> 111 222 333 
+=> <{ 111 222 333 'return }> <{ 111 222 333 'return }> 111 222 333 
 >> 3 ndrop 
-=> <{ 111 222 333 }> <{ 111 222 333 }> 
+=> <{ 111 222 333 'return }> <{ 111 222 333 'return }> 
 >> call 
-=> <{ 111 222 333 }> 111 222 333 
+=> <{ 111 222 333 'return }> 111 222 333 
 >> 3 ndrop 
-=> <{ 111 222 333 }> 
+=> <{ 111 222 333 'return }> 
 >> call 
 => 111 222 333 
 >> clear 
@@ -372,17 +372,17 @@ Hello world!
 >> ( called with cmd on TOS ) 
 => 
 >> { 1 == if >>one "blue" . return @one "ocean" . } 
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. 'return }> 
 >> { 1 == if >>one "green" . return @one "grass" . } 
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. 'return }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. 'return }> 
 >> { 1 == if >>one "red" . return @one "rose" . } 
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }> <{ 1 '== 'if '>>one "red" '. 'return '@one "rose" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. 'return }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. 'return }> <{ 1 '== 'if '>>one "red" '. 'return '@one "rose" '. 'return }> 
 >> saything 
 The rose is red 
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. 'return }> <{ 1 '== 'if '>>one "green" '. 'return '@one "grass" '. 'return }> 
 >> saything 
 The grass is green 
-=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. }> 
+=> <{ 1 '== 'if '>>one "blue" '. 'return '@one "ocean" '. 'return }> 
 >> saything 
 The ocean is blue 
 => 
@@ -875,13 +875,13 @@ and		now		with			tabs
 [ 10 20 'hello #11.5 ] 
 => 
 >> { 1 2 3 a b c } repr . CR 
-<{ 1 2 3 'a 'b 'c }> 
+<{ 1 2 3 'a 'b 'c 'return }> 
 => 
 >> [ 10 20 30 x y z ] 'abc :: repr . CR 
 <{ 10 20 30 'x 'y 'z } :: 'abc> 
 => 
 >> { 11 22 33 x y z } 'abc :: repr . CR \ test all ways of using :: 
-<{ 11 22 33 'x 'y 'z } :: 'abc> 
+<{ 11 22 33 'x 'y 'z 'return } :: 'abc> 
 => 
 >> 'a-long-symbol repr . CR 
 'a-long-symbol 
@@ -913,13 +913,13 @@ false
 [ 10 20 hello 11.5 ] 
 => 
 >> { 1 2 3 a b c } str . CR 
-<{ 1 2 3 a b c }> 
+<{ 1 2 3 a b c return }> 
 => 
 >> [ 10 20 30 x y z ] 'abc :: str . CR 
 <{ 10 20 30 x y z } :: abc> 
 => 
 >> { 11 22 33 x y z } 'abc :: str . CR 
-<{ 11 22 33 x y z } :: abc> 
+<{ 11 22 33 x y z return } :: abc> 
 => 
 >> 'a-long-symbol str . CR 
 a-long-symbol 
@@ -931,11 +931,11 @@ hello there world
 <null> 
 => 
 >> { 10 20 30 40 } 
-=> <{ 10 20 30 40 }> 
+=> <{ 10 20 30 40 'return }> 
 >> unmake 
-=> [ 10 20 30 40 ] 
+=> [ 10 20 30 40 'return ] 
 >> unmake 
-=> 10 20 30 40 4 
+=> 10 20 30 40 'return 5 
 >> clear 
 => 
 >> ( type testing ) 

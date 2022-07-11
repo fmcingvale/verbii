@@ -432,7 +432,7 @@ dup dup dup
 
 ( -- unmake must create new list on unmaking lambdas to prevent modification --- )
 "* unmake lambda" . CR
-"Expect <{ 11 22 33 44 }> [ 11 22 88888 44 ]" . CR
+"Expect <{ 11 22 33 44 return }> [ 11 22 88888 44 return ]" . CR
 "      " . { 11 22 33 44 } dup unmake 2 88888 put swap . . CR
 clear 
 
