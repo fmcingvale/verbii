@@ -10,6 +10,17 @@
 	
 ( ------ init ----------- )
 
+\ join a list of strings by separator string
+: string-join ( list separator -- string )
+	@args [ list sep ]
+	list
+	@{ @args [ accum elem ]
+		accum length 0 == if >>skip \ skip separator before first string
+		accum sep + elem + return
+		@skip elem return
+	} "" fold
+	;
+	
 ( ------ compiler ------- )
 \ Patches file, loaded at startup.
 \

@@ -723,3 +723,14 @@ false true unittest-expect
 		expect string delims string-split unittest-expect
 	} call
 } for-each
+
+"* string-join ..." . CR
+
+"Expect abc:" . 
+[ "abc" ] "xyz" string-join . CR
+
+"Expect wxyz:" . 
+[ "w" "x" "y" "z" ] "" string-join . CR
+
+"Expect abc^^def^^ghi:" . 
+[ "abc" "def" "ghi" ] "^^" string-join . CR
