@@ -147,10 +147,9 @@
 		\ for each name in selfmap, make name! in self-setmap with same index
 		[ ] make-dict self-setmap!
 		selfmap
-		{
-			( key val ; self self-setmap )
-			self -rot swap "!" + swap put drop
-		} self-setmap :: for-each-dict
+		@{ @args [ key val ]
+			self-setmap key "!" + val put drop
+		} for-each-dict
 		
 	\ rewrite objlist replacing arg|local symbols with appropriate code sequences and creating
 	\ closures as needed
