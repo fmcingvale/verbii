@@ -100,6 +100,8 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* deprecate calling lists as code -- make-lambda should be required first
+
 * change all verbii code to use make-var instead of var then get rid of old ,,var/var -- can replace with make-var based function
 
 * collect-args-locals should give error on duplicated names
