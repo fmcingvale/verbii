@@ -6,6 +6,9 @@
 \	
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 \
+\ TIP: When changing compiler code, always run with -nocache flag,
+\      else compiler would never run when finding .b files.
+
 ( ------ boot ----------- )
 	
 ( ------ init ----------- )
@@ -22,16 +25,6 @@
 	;
 	
 ( ------ compiler ------- )
-\ Patches file, loaded at startup.
-\
-\ To keep this small (since it is parsed on every startup), docs are
-\ in bootstrap/READ-ME-BEFORE-RUNNING.txt. MAKE SURE to read that before
-\ editing any of the files in lib/
-\	
-\ Copyright (c) 2022 Frank McIngvale, see LICENSE
-\
-\ TIP: When changing compiler code, always run with -nocache flag,
-\      else compiler would never run when finding .b files.
 
 ( ------ boot ----------- )
 	
