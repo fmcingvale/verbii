@@ -11,6 +11,350 @@
 ( ------ init ----------- )
 
 ( ------ compiler ------- )
+\ Patches file, loaded at startup.
+\
+\ To keep this small (since it is parsed on every startup), docs are
+\ in bootstrap/READ-ME-BEFORE-RUNNING.txt. MAKE SURE to read that before
+\ editing any of the files in lib/
+\	
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+\ TIP: When changing compiler code, always run with -nocache flag,
+\      else compiler would never run when finding .b files.
+
+( ------ boot ----------- )
+	
+( ------ init ----------- )
+
+( ------ compiler ------- )
+
+\ parse { .. } and return lambda
+\	- assumes { was just read & dropped by caller
+\	- appends 'return to end, if not already present
+: syntax-lambda
+	0 make-list 
+	@loop
+		\ note - any inner lambdas will be handled automatically by syntax-next,
+		\ so don't have to check for "{" here
+		syntax-next
+		dup void? if >>eof
+		dup '} == if >>closebrace
+		append ( else append to list and continue ) <<loop
+	@eof
+		"Unexpected end of input inside { .. }" error
+	@closebrace
+		drop \ drop '} 
+		dup -1 get 'return == if >>done \ return already present
+		'return append \ add return to end
+	@done
+		make-lambda return
+		;
+
+\ parses @{ .. } into [ ,,closure ... ]
+\
+\ assumes @{ was just read, parses until } as an object list, prepended with ,,closure
+\ 
+\ ensures there is a 'return at the end
+: syntax-closure
+	@locals [ outlist ]
+	',,closure 1 make-list outlist!
+	@loop
+		syntax-next
+		dup void? if >>eof
+		dup '} == if >>done
+		dup '@( == if >>arglist \ ) <- paren to fix notepad++ syntax highlighting
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@arglist
+		\ like with define word, don't worry about tracking if i already
+		\ got @( .. ), just parse it for now and will handle later
+		drop
+		syntax-parse-decl-arglist 
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside @{" error
+	@done
+		drop \ drop '}
+		\ ensure 'return is at end
+		outlist -1 get 'return == if >>exit
+		outlist 'return append outlist! \ add return
+	@exit
+		outlist
+	;
+
+\ rewrites an objlist to translate arg/local names including capturing outer vars (closures)
+\
+\ selfmap should be set to an empty dict at the toplevel
+\
+\ ASSUMPTIONS:
+\	1. If objlist from { .. } or @{ .. } it must end with a 'return (the normal parsing code handles this)
+\		[eventually rewriting of lists will be possible, so can't assume objlist is code and add the return here]
+\	2. closures must be marked with @{ ... } ; will NOT transform unmarked lambdas since they might
+\		be used in other binding constructs
+\	3. does NOT (yet) rewrite lists so dynamic code cannot use @args/@lists nor create closures
+\		(user code can manually do closures with :: of course)
+\
+\ does these things:
+\	1. scans objlist (non-recursively) for @args, @locals, and/or [ ,,declargs ... ]
+\	2. rewrite objlist to do:
+\		a. alloc locals (LP nr - LP!)
+\		b. pop args (L> L> ...)
+\		c. rewrite symbols to their code sequences:
+\			(i) if name in args/locals, rewrite to (LP i + ref) or (LP i + set!)
+\			(ii) if name in selfmap, rewrite to (self i get) or (self i rot put drop)
+\		d. if an inner lambda is found ( @{ ... } -- @ is required for backward compat with { .. } obj :: code )
+\			(i) recursively rewrite lambda, passing selfmap + my args+locals as its selfmap
+\			(ii) add binding of selfmap + my locals as self for inner lambda
+: compile-rewrite-args-locals @( objlist selfmap -- new-objlist )
+	@locals [ argnames localnames local-refmap local-setmap i self-setmap ]
+			
+		\ scan objlist for , @( ... ), @args, @locals
+		objlist
+		compile-collect-args-locals localnames! argnames! new-objlist!
+			
+		\ note: even if i have no @args/@locals, i can still have names that resolve to selfmap
+		\       - could also have inner closures that take their own args
+
+		\ set objlist to rewritten list without @args/@locals
+		new-objlist objlist!
+		\ clear new-objlist now
+		[ ] new-objlist!
+		
+		\ make preamble code to:
+		\	1. alloc spaces for @locals
+		\	2. pop args to locals
+		\ note this will put args starting at LP and locals starting at LP + #args
+		
+		\ 1. alloc locals (LP #localnames - LP!)
+		localnames length 0 == if >>popargs \ omit code if no locals
+		'LP localnames length '- 'LP! 4 make-list new-objlist!
+	@popargs
+		\ 2. push args to locals (adding code to new-objlist)
+		argnames { ( accum elem ) drop '>L append } new-objlist fold new-objlist! 
+		
+		\ make a map of arg|local name -> index into locals
+		[ ] make-dict argnames localnames + dict-add-indexed-names local-refmap!
+		\ make a map of name! as well to replace setters
+		[ ] make-dict 
+			argnames { str "!" + } map 
+			localnames { str "!" + } map 
+			+ dict-add-indexed-names local-setmap!
+		
+		\ for each name in selfmap, make name! in self-setmap with same index
+		[ ] make-dict self-setmap!
+		selfmap
+		{
+			( key val ; self self-setmap )
+			self -rot swap "!" + swap put drop
+		} self-setmap :: for-each-dict
+		
+	\ rewrite objlist replacing arg|local symbols with appropriate code sequences and creating
+	\ closures as needed
+	0 i!
+	@rewrite-loop
+		i objlist length >= if >>done 
+		objlist i get symbol? if >>symbol
+		objlist i get list? if >>list
+		\ everything else, copy as-is
+	@copy-element
+		new-objlist objlist i get append new-objlist! >>next
+		
+	@symbol
+		objlist i get 'return == if >>rewrite-return
+		\ NOTE: local scope is checked BEFORE outer scope so that the inner scope can redefine
+		\ names and see the intended (local) value instead of the outer one
+		\ example:
+		\		: fn @( n ) @{ @args [ n ] <- here, n and n! should see the LOCAL names not the outer n, n! }
+		
+		\ is symbol (as string) in local-refmap?
+		local-refmap objlist i get str get void? not if >>rewrite-local-ref
+		\ check for local setter
+		local-setmap objlist i get str get void? not if >>rewrite-local-set
+		\ is symbol (as string) in selfmap?
+		selfmap objlist i get str get void? not if >>rewrite-self-ref
+		\ check for self setter
+		self-setmap objlist i get str get void? not if >>rewrite-self-set
+		
+		\ else not in either list, keep as-is
+		<<copy-element
+		
+	@rewrite-local-ref
+		\ add (LP i + ref) to new-objlist
+		new-objlist
+		'LP local-refmap objlist i get str get '+ 'ref 4 make-list
+		+ new-objlist! >>next
+		
+	@rewrite-local-set
+		\ add (LP i + set!) to new-objlist
+		new-objlist
+		'LP local-setmap objlist i get str get '+ 'set! 4 make-list
+		+ new-objlist! >>next
+	
+	@rewrite-self-ref
+		\ add (self i get) to new-objlist
+		new-objlist
+		'self selfmap objlist i get str get 'get 3 make-list
+		+ new-objlist! >>next
+	
+	@rewrite-self-set
+		\ add (self i rot put drop) to new-objlist
+		new-objlist
+		'self self-setmap objlist i get str get 'rot 'put 'drop 5 make-list
+		+ new-objlist! >>next
+		
+	@rewrite-return
+		\ if no args/locals then skip -- no frame to remove
+		argnames length localnames length + 0 == if >>simple-return
+		
+		\ replace return with code to remove local frame
+		new-objlist
+		'LP argnames length localnames length + '+ 'LP! 'return 5 make-list
+		+ new-objlist! >>next
+		
+	@simple-return
+		\ no frame, so just keep return
+		new-objlist 'return append new-objlist! >>next
+		
+	@list
+		\ look for [ ,,closure ... ] (parsed from @{ .. })
+		objlist i get length 2 < if <<copy-element \ list too short, can't be closure
+		objlist i get 0 get ',,closure == if >>rewrite-inner-closure \ got [ ,,closure .. ]
+		<<copy-element \ not a special list, so just copy element
+
+	@rewrite-inner-closure
+		\ recursively parse list, passing a selfmap that is my selfmap + my locals
+		selfmap deepcopy \ don't alter my selfmap
+		( inner-selfmap )
+		argnames dict-add-indexed-names \ add arg names first -- they are first on locals stack
+		localnames dict-add-indexed-names \ .. then locals
+		( inner-selfmap )
+		objlist i get 1 -1 slice \ remove ,,closure
+		swap ( objlist inner-selfmap )
+		compile-rewrite-args-locals ( new-objlist )
+		make-lambda \ turn new-objlist back into lambda
+		new-objlist swap append new-objlist! \ add lambda to new-objlist
+		\ now create code to make runtime binding for new lambda
+		\ want self = [ self0 .. selfN arg0 .. argN local0 .. localN ]
+		\ so code will be:
+		\	[ ] self + ( shallow-copy self )
+		\	#args #locals + copy-locals-to-list + ( self + locals ) ::
+			
+		\ NOTE! have to check for empty selfmap since referencing a non-existent self is an error
+		selfmap length 0 == if >>inner-closure-no-selfmap
+		
+		\ case 1: my self is bound so concatenate my locals to self
+		0 'make-list 'self '+ argnames length localnames length + 'copy-locals-to-list '+ '::
+		8 make-list new-objlist swap + new-objlist! \ add self-making code to new-objlist
+		>>next
+		
+	@inner-closure-no-selfmap
+		\ case 2: no selfmap so just pass on my locals
+		argnames length localnames length + 'copy-locals-to-list '::
+		3 make-list new-objlist swap + new-objlist! \ add self-making code to new-objlist
+		>>next
+		
+	@next
+		i 1 + i! <<rewrite-loop
+	
+	@done
+		new-objlist return
+	;
+
+\ parse next word from input into runnable object
+: syntax-next ( -- obj )
+	reader-next
+		 \ "syntax-next:" . dup . CR
+	dup void? if >>void
+	dup '( == if >>comment
+	dup '\ == if >>line-comment
+	dup '{ == if >>lambda
+	dup '@{ == if >>closure
+	dup '[ == if >>list
+	dup '@[ == if >>capture-list
+	dup ': == if >>worddef
+	dup 'def == if >>worddef ( synonym for ':' )
+	dup 'var == if >>var
+	dup 'del == if >>del
+	dup 'true == if >>true-literal
+	dup 'false == if >>false-literal
+	dup 'null == if >>null-literal
+
+	( look for triple-quoted string first )
+	dup 0 3 slice TRIPLEQUOTE ref == if >>triplestring
+	( now single quoted string )
+	dup 0 get '" == if >>string ( "... )
+	\ test for correct format before passing to parse-int or parse-float since those functions
+	\ will happily parse something like "123abc" as 123 )
+	dup int-symbol? if >>integer
+	dup float-symbol? if >>float
+	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
+	@nomatch
+		( leave unprocessed word on stack )
+		return
+	@void
+		return ( leave void on stack )
+	@worddef
+		drop syntax-define-word return
+	@var
+		drop syntax-var return
+	@del
+		drop syntax-del return
+	@comment
+		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
+	@line-comment
+		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
+	@lambda
+		drop syntax-lambda return
+	@closure
+		drop syntax-closure return
+	@list
+		drop syntax-list return
+	@capture-list
+		drop syntax-capture-list return
+	@triplestring
+		( call syntax-triple-string with first piece on stack )
+		syntax-triple-string return
+	@string
+		( call syntax-string with first piece on stack )
+		syntax-string return
+	@integer
+		parse-int return
+	@float
+		parse-float return
+	@float-literal ( #NN.NN form )
+		1 -1 slice parse-float return
+	@true-literal drop true return
+	@false-literal drop false return
+	@null-literal drop null return
+	;
+
+\ parses @[ .. ] into [ ,,inline ... ]
+\
+\ assumes @[ was just read, parses until ] as an object list, prepended with ,,inline
+\
+\ expanding literal lists back into stack operations allows variable (name) substitution to work
+\ on them. obviously slower that literal lists that are just deepcopied on instantiation.
+: syntax-capture-list
+	@locals [ outlist ]
+	',,inline 1 make-list outlist!
+	@loop
+		syntax-next
+		dup void? if >>eof
+		dup '] == if >>done
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside @[" error
+	@done
+		drop 
+		\ add code to remake list at runtime (so captures will
+		\ have been evaluated first)
+		outlist outlist length 1 - append 'make-list append outlist!
+		outlist
+	;
+
+( ------ misc ------- )
+\ "System startup time: " . run-time str . CR
 
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR
