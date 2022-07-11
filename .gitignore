@@ -41,3 +41,4 @@ csharp/verbii
 csharp/verbii.pdb
 lib/repl.verb.b
 verb/chess/*.verb.b
+verb/.vscode/settings.json
