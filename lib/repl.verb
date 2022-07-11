@@ -40,7 +40,7 @@
 	\ same trick as above to delete __main__ before running
 	'__main__ .dumpword \ <- for syntax highlight error
 	del __main__
-	call
+	make-lambda call
 	;
 
 \ run in test mode (like non-interactive repl)

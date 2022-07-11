@@ -11,6 +11,17 @@
 
 ( ------ boot ----------- )
 	
+\ safely run currently loaded __main__ and delete it
+: safe-run-and-delete-main ( -- )
+	\ the __main__ I'm about to run might want to redefine __main__ itself 
+	\ (maybe it loads another module, etc.), so do a little trick: 
+	\ first dump __main__ to a list, delete __main__, then make the dumped
+	\ list into a lambda and run it
+	'__main__ .dumpword
+	del __main__
+	make-lambda call
+	;
+	
 ( ------ init ----------- )
 
 \ join a list of strings by separator string
