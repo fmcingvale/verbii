@@ -349,13 +349,13 @@ clear
 
 clear
 ( list literals )
-[ 11 22 33 ]
+[ 11 22 33 ] make-lambda
 call
 clear
 : aaa + ;
 : bbb - ;
 : ccc * ;
-[ 10 20 30 40 bbb ccc aaa ]
+[ 10 20 30 40 bbb ccc aaa ] make-lambda
 call
 clear
 del aaa
@@ -364,11 +364,6 @@ del ccc
 
 ( show that literals are correctly handled in literal lists )
 [ 11 [ hello "world of fun" ] [ 4.25 #8.125 ] [ true false null ] void another-symbol ]
-clear
-
-( show that lists are callable )
-[    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ] 
-call
 clear
 
 ( deep list comparisons )
@@ -591,7 +586,7 @@ clear
 \ the changes are visible afterwards in var
 var MYSTATE 1
 0 make-list MYSTATE set!
-[ self 99 append drop self 88 append drop self 77 append drop ] MYSTATE ref make-closure
+{ self 99 append drop self 88 append drop self 77 append drop } MYSTATE ref make-closure
 call
 "Expect [ 99 88 77 ]:" . MYSTATE ref . CR
 
@@ -657,12 +652,12 @@ clear
 
 \ this was a bug in the interpreters -- bad assumption that closures & dicts didn't need to be
 \ pushed as literals ...
-10 20 [ 111 222 333 ] 77 :: 30 40 5 make-list
+10 20 [ 111 222 333 ] 77 :: 30 40 5 make-list make-lambda
 call
 clear
 111 222 [ 33 44 55 ] 888 :: 333 444 5 make-list make-lambda
 call
 clear
-11 22 [ ] make-dict 33 44 5 make-list
+11 22 [ ] make-dict 33 44 5 make-list make-lambda
 call
 clear

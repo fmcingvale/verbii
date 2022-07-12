@@ -610,8 +610,8 @@ and		now		with			tabs
 => 
 >> ( list literals ) 
 => 
->> [ 11 22 33 ] 
-=> [ 11 22 33 ] 
+>> [ 11 22 33 ] make-lambda 
+=> <{ 11 22 33 }> 
 >> call 
 => 11 22 33 
 >> clear 
@@ -622,8 +622,8 @@ and		now		with			tabs
 => 
 >> : ccc * ; 
 => 
->> [ 10 20 30 40 bbb ccc aaa ] 
-=> [ 10 20 30 40 'bbb 'ccc 'aaa ] 
+>> [ 10 20 30 40 bbb ccc aaa ] make-lambda 
+=> <{ 10 20 30 40 'bbb 'ccc 'aaa }> 
 >> call 
 => -190 
 >> clear 
@@ -638,14 +638,6 @@ and		now		with			tabs
 => 
 >> [ 11 [ hello "world of fun" ] [ 4.25 #8.125 ] [ true false null ] void another-symbol ] 
 => [ 11 [ 'hello "world of fun" ] [ #4.25 #8.125 ] [ <true> <false> <null> ] 'void 'another-symbol ] 
->> clear 
-=> 
->> ( show that lists are callable ) 
-=> 
->> [    [ [ 2 8 + ] call ] call [ 12 8 + [ 40 10 - ] call ] call ]  
-=> [ [ [ 2 8 '+ ] 'call ] 'call [ 12 8 '+ [ 40 10 '- ] 'call ] 'call ] 
->> call 
-=> 10 20 30 
 >> clear 
 => 
 >> ( deep list comparisons ) 
@@ -1062,8 +1054,8 @@ hello there world
 => 
 >> 0 make-list MYSTATE set! 
 => 
->> [ self 99 append drop self 88 append drop self 77 append drop ] MYSTATE ref make-closure 
-=> <{ 'self 99 'append 'drop 'self 88 'append 'drop 'self 77 'append 'drop } :: [ ]> 
+>> { self 99 append drop self 88 append drop self 77 append drop } MYSTATE ref make-closure 
+=> <{ 'self 99 'append 'drop 'self 88 'append 'drop 'self 77 'append 'drop 'return } :: [ ]> 
 >> call 
 => 
 >> "Expect [ 99 88 77 ]:" . MYSTATE ref . CR 
@@ -1180,8 +1172,8 @@ Expect 3850888180: 3850888180
 => 
 >> \ pushed as literals ... 
 => 
->> 10 20 [ 111 222 333 ] 77 :: 30 40 5 make-list 
-=> [ 10 20 <{ 111 222 333 } :: 77> 30 40 ] 
+>> 10 20 [ 111 222 333 ] 77 :: 30 40 5 make-list make-lambda 
+=> <{ 10 20 <{ 111 222 333 } :: 77> 30 40 }> 
 >> call 
 => 10 20 <{ 111 222 333 } :: 77> 30 40 
 >> clear 
@@ -1192,8 +1184,8 @@ Expect 3850888180: 3850888180
 => 111 222 <{ 33 44 55 } :: 888> 333 444 
 >> clear 
 => 
->> 11 22 [ ] make-dict 33 44 5 make-list 
-=> [ 11 22 { } 33 44 ] 
+>> 11 22 [ ] make-dict 33 44 5 make-list make-lambda 
+=> <{ 11 22 { } 33 44 }> 
 >> call 
 => 11 22 { } 33 44 
 >> clear 

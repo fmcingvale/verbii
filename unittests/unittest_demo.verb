@@ -48,7 +48,7 @@
 
 ( create a counter function that remembers its current count )
 : make-countdown ( N -- closure )
-	[ self . self 1 - self! ] swap make-closure
+	{ self . self 1 - self! } swap make-closure
 	;
 
 "Counting down from 10:" .
@@ -62,9 +62,7 @@ CR
 \
 \ message is passed on top of stack when calling closure
 : make-counter-obj ( N -- closure )
-	\ a nice thing with verbii lists -- putting code inside a list looks
-	\ exactly like writing it anywhere else -- no funky quoting required
-	[
+	{
 		( takes message from top of stack )
 		dup 'get == if >>get
 		dup 'tick == if >>tick
@@ -73,14 +71,14 @@ CR
 			drop self return
 		@tick
 			drop self 1 - self!
-	] swap make-closure
+	} swap make-closure
 	;
 
 "Counting down from 20:" .
 20 make-counter-obj
 \ make another closure bound to this counter.
 \ in it, print then decrement counter
-[ 'get self call . 'tick self call ] swap make-closure
+{ 'get self call . 'tick self call } swap make-closure
 \ print & decrement 20 times
 20 repeat
 CR
@@ -311,43 +309,43 @@ clear
 ( -- test fold -- )
 
 "Expect 160:" .
-[ 10 21 32 43 54 ] [ + ] 0 fold . CR
+[ 10 21 32 43 54 ] { + } 0 fold . CR
 ( reverse string )
 "Expect fedcba:" . 
-"abcdef" [ swap + ] "" fold . CR
+"abcdef" { swap + } "" fold . CR
 ( reverse list )
 "Expect [ 99 88 77 66 ]:" . CR
-"      " . [ 66 77 88 99 ] [ 1 make-list swap + ] [ ] fold . CR
+"      " . [ 66 77 88 99 ] { 1 make-list swap + } [ ] fold . CR
 
 ( -- test filter -- )
 
 "Expect [ 6 7 8 9 ]:" . CR  
-"      " . [ 1 2 3 4 5 6 7 8 9 ] [ 5 > ] filter . CR
+"      " . [ 1 2 3 4 5 6 7 8 9 ] { 5 > } filter . CR
 "Expect [ 0 10 30 50 70 ]:" . CR 
-"      " . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
+"      " . [ 0 10 -20 30 -40 50 -60 70 -80 ] { 0 >= } filter . CR
 "Expect [ 0 10 30 50 70 ]:" . CR 
-"      " . [ 0 10 -20 30 -40 50 -60 70 -80 ] [ 0 >= ] filter . CR
-"Expect lmnop:" . "ablcdmenfgohipjk" [ "l" >= ] filter . CR
-"Expect lmnop:" . "ablcdmenfgohipjk" [ "l" >= ] filter . CR
+"      " . [ 0 10 -20 30 -40 50 -60 70 -80 ] { 0 >= } filter . CR
+"Expect lmnop:" . "ablcdmenfgohipjk" { "l" >= } filter . CR
+"Expect lmnop:" . "ablcdmenfgohipjk" { "l" >= } filter . CR
 
 ( -- test map -- )
 
 "Expect [ 3 9 15 21 27 ]:" . CR
 \ make new sequence of 3x each value
-"      " . [ 1 3 5 7 9 ] [ 3 * ] map . CR
+"      " . [ 1 3 5 7 9 ] { 3 * } map . CR
 
 \ triple each char in string
 "Expect aaabbbcccdddeeefff:" . 
-"abcdef" [ dup dup + + ] map . CR
+"abcdef" { dup dup + + } map . CR
 \ chars doubled with - between
 "Expect a-ab-bc-cd-de-ef-f" .
-"abcdef" [ dup "-" swap + + ] map . CR
+"abcdef" { dup "-" swap + + } map . CR
 
 "Expect 1 .. 10:" .
-[ 1 2 3 4 5 6 7 8 9 10 ] [ . ] for-each CR
+[ 1 2 3 4 5 6 7 8 9 10 ] { . } for-each CR
 
 "Expect 10 .. 1:" .
-[ 1 2 3 4 5 6 7 8 9 10 ] [ . ] for-each-reverse CR
+[ 1 2 3 4 5 6 7 8 9 10 ] { . } for-each-reverse CR
 
 "Expect 0a 1b 2c 3d 4e:" . CR
 "      " . "abcde" { ( i elem ) over str puts . drop } for-each-i CR
@@ -369,10 +367,10 @@ clear
 	;
 
 "Expect XYZ 123 ABC !@$ DEF:" . CR
-"      " . "Xyz 123 abC !@$ dEf" [ to-upper ] map . CR
+"      " . "Xyz 123 abC !@$ dEf" { to-upper } map . CR
 
 "Expect abc 432 xyz &%# def:" . CR
-"      " . "AbC 432 xYZ &%# DEf" [ to-lower ] map . CR
+"      " . "AbC 432 xYZ &%# DEf" { to-lower } map . CR
 
 ( https://rosettacode.org/wiki/Partial_function_application )
 
@@ -388,10 +386,10 @@ clear
 \ (doing it as a variable seems more in the spirit of the task than
 \ making it a word)
 var fsf1 1
-[ [ f1 ] map ] fsf1 set!
+{ { f1 } map } fsf1 set!
 \ partially apply f2 to fs to make fsf2
 var fsf2 1
-[ [ f2 ] map ] fsf2 set!
+{ { f2 } map } fsf2 set!
 
 \ test cases
 "Expect [ 0 2 4 6 ]:" . CR 
@@ -472,47 +470,47 @@ dup 4 555 put drop
 swap . . CR
 
 "Count to 5:" . 
-[ 1 2 3 4 5 ] [ . ] for-each CR
+[ 1 2 3 4 5 ] { . } for-each CR
 
 ( - nested for-each - )
 "Count to 9:" . 
-[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] [ [ . ] for-each ] for-each CR
+[ [ 1 2 3 ] [ 4 5 6 ] [ 7 8 9 ] ] { { . } for-each } for-each CR
 
 ( - more fold tests - )
 "Expect ABCDE:" . 
-[ "A" "B" "C" "D" "E" ] [ + ] "" fold . CR
+[ "A" "B" "C" "D" "E" ] { + } "" fold . CR
 
 ( - nested fold - )
 "Expect ABcDEfGHi:" . 
-[ [ "A" "B" "c" ] [ "D" "E" "f" ] [ "G" "H" "i" ] ] [ [ + ] "" fold + ] "" fold . CR
+[ [ "A" "B" "c" ] [ "D" "E" "f" ] [ "G" "H" "i" ] ] { { + } "" fold + } "" fold . CR
 
 ( - nested map - )
 "Expect [ [ 2 4 6 8 ] [ 10 12 14 16 ] ]:" . CR
 "      " . 
-[ [ 1 2 3 4 ] [ 5 6 7 8 ] ] [ [ 2 * ] map ] map . CR
+[ [ 1 2 3 4 ] [ 5 6 7 8 ] ] { { 2 * } map } map . CR
 
 ( - nested filter - )
 ( keep lists with at least 2 elements > 0 )
 "Expect [ [ -32 -8 0 4 12 ] [ 10 20 30 ] ]:" . CR
 "      " . 
-[ [ -32 -8 0 4 12 ] [ -4 -3 -2 -1 0 ] [ 10 20 30 ] ] [ [ 0 > ] filter length 2 >= ] filter . CR
+[ [ -32 -8 0 4 12 ] [ -4 -3 -2 -1 0 ] [ 10 20 30 ] ] { { 0 > } filter length 2 >= } filter . CR
 
 ( - map nested in repeat - )
 "Expect [ 2 4 6 ] [ 4 8 12 ] [ 8 16 24 ] [ 16 32 48 ]:" . CR
 "      " . 
 [ 1 2 3 ]
-[
+{
 	{ 2 * } map dup . 
-] 4 repeat drop CR
+} 4 repeat drop CR
 
 : int-range ( start end -- list ; makes list of integers from start to end [inclusive] by +1 )
-	[ ] -rot 1 swap '<= 2 make-list ( [ ] start 1 [ end != ] ) 
-	[ append ] for-while
+	[ ] -rot 1 swap '<= 2 make-list make-lambda ( [ ] start 1 { end != } ) 
+	{ append } for-while
 	;
 
 "Expect [ 0 .. 10 ]:" . 0 10 int-range . CR
-"Expect [ -10 .. 10, evens ]:" . -10 10 int-range [ even? ] filter . CR
-"Expect [ -10 .. 10, odds ]:" . -10 10 int-range [ odd? ] filter . CR
+"Expect [ -10 .. 10, evens ]:" . -10 10 int-range { even? } filter . CR
+"Expect [ -10 .. 10, odds ]:" . -10 10 int-range { odd? } filter . CR
 
 ( - https://rosettacode.org/wiki/Primality_by_trial_division - )
 
@@ -540,7 +538,7 @@ swap . . CR
 "* primes *" . CR
 "Expect [ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]:" . CR
 "      " .
--100 108 int-range [ prime? ] filter . CR
+-100 108 int-range { prime? } filter . CR
 
 ( https://rosettacode.org/wiki/Rot-13 )
 
@@ -568,19 +566,19 @@ swap . . CR
 
 "Expect: 789 Gur dhvpx oebja sbk whzcf bire gur ynml qbt *#%" . CR
 "       " .
-"789 The quick brown fox jumps over the lazy dog *#&" [ rot13-char ] map dup . CR
+"789 The quick brown fox jumps over the lazy dog *#&" { rot13-char } map dup . CR
 
 "Expect: 789 The quick brown fox jumps over the lazy dog *#&" . CR
 "       " .
-[ rot13-char ] map . CR
+{ rot13-char } map . CR
 
 "Expect: 789 Gur DHVPX oebja SBK whzcf bire gur YNML qbt *#%" . CR
 "       " .
-"789 The QUICK brown FOX jumps over the LAZY dog *#&" [ rot13-char ] map dup . CR
+"789 The QUICK brown FOX jumps over the LAZY dog *#&" { rot13-char } map dup . CR
 
 "Expect: 789 The QUICK brown FOX jumps over the LAZY dog *#&" . CR
 "       " .
-[ rot13-char ] map . CR
+{ rot13-char } map . CR
 
 \ for some earlier compiler bugs in the serializer
 \ note: i do NOT have "Expect ..." strings here since if there is an error in
@@ -723,14 +721,3 @@ false true unittest-expect
 		expect string delims string-split unittest-expect
 	} call
 } for-each
-
-"* string-join ..." . CR
-
-"Expect abc:" . 
-[ "abc" ] "xyz" string-join . CR
-
-"Expect wxyz:" . 
-[ "w" "x" "y" "z" ] "" string-join . CR
-
-"Expect abc^^def^^ghi:" . 
-[ "abc" "def" "ghi" ] "^^" string-join . CR

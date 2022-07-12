@@ -288,10 +288,12 @@
 => 1234 5678 8765 4321 
 >> clear 
 => 
->> ( calling lists ) 
+>> ( stack->list->lambda->call ) 
 => 
 >> 111 222 333 444 '+ '* '- 7 make-list 
 => [ 111 222 333 444 '+ '* '- ] 
+>> make-lambda 
+=> <{ 111 222 333 444 '+ '* '- }> 
 >> call 
 => -172383 
 >> clear 

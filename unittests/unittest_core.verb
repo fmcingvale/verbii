@@ -171,8 +171,9 @@ clear
 300 200 == if >>TRUE 4321 >>END @TRUE 9999 @END
 clear
 
-( calling lists )
+( stack->list->lambda->call )
 111 222 333 444 '+ '* '- 7 make-list
+make-lambda
 call
 clear
 
