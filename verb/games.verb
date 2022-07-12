@@ -241,23 +241,9 @@
 	@exit
 	;
 
-\ get index of first element of seq where func[seq[i]] is true
-\ returns void if not found
-: find ( seq func -- index|void )
-	@args [ seq func ]
-	@locals [ i ]
-	0 i!
-	@loop
-		i seq length >= if >>not-found 
-		seq i get func call if >>found 
-		i 1 + i! <<loop
-	@found i return 
-	@not-found void return
-	;
-
 \ like find but find an exact equal object
 : find-obj ( seq obj -- index|void )
-	'== 2 make-list find \ pass [ obj == ] as the func
+	'== 2 make-list make-lambda find \ pass [ obj == ] as the func
 	;
 
 \ make new list of tuples [ listA[i] listB[i] ]

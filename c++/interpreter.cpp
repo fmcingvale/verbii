@@ -390,16 +390,12 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 					//syntax->pushObjList(val.asLambda());
 					code_call(val.asLambda());
 				}
-				else if(val.isList()) {
-					// same as above
-					code_call(val.asList());
-				}
 				else if(val.isClosure()) {
 					// as above but with self
 					code_call(val.asClosureFunc(), val.data.closure);
 				}
 				else {
-					throw LangError("call expects a lambda, but got: " + val.fmtStackPrint());
+					throw LangError("call expects a lambda or closure, but got: " + val.fmtStackPrint());
 				}
 				continue;
 			}

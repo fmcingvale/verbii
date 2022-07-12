@@ -16,7 +16,7 @@
 		[ "the quick brown fox jumped over the lazy dog" 1191916020 ]
 		[ "the Quick bRown fOx jumPed oveR tHe lAzy doG" 3385321716 ] ]
 
-		[ unmake drop over "Text:" . . CR "Expect:" . . CR "       " . hash-djb2 . CR ] for-each
+		{ unmake drop over "Text:" . . CR "Expect:" . . CR "       " . hash-djb2 . CR } for-each
 	;
 
 : test-hash-fnv-32

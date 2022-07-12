@@ -74,11 +74,11 @@
 	;
 
 "abcd" string-iterator .S CR 
-[
+{
 "DONE?" . iter-done? . CR
 "PEEK" . iter-peek . CR
 "READ" . iter-next . CR
-] 5 repeat
+} 5 repeat
 
 drop 
 

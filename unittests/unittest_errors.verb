@@ -77,8 +77,8 @@ del ggg
 "Testing errors" error
 
 ( reference self when not in a closure )
-[ 1 2 3 self ] call
-[ 1 2 3 self! ] call
+{ 1 2 3 self } call
+{ 1 2 3 self! } call
 
 ( bad jumps )
 : foo1 123 456 + drop >>badlabel 789 10 11 - + ;

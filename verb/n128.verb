@@ -433,12 +433,12 @@ var FNV128-OFFSET 1
 	\	hash = hash * FNV128-PRIME
 
 	\ called with stack: [ hash char ]
-	[ 
+	{ 
 		ord over 8 get ( hash c hash[8] )
 		bit-xor ( hash c^hash[8] )
 		8 swap put ( hash )
 		FNV128-PRIME ref n128-mul ( hash*prime )
-	]
+	}
 	\ init hash = FNV128-OFFSET
 	FNV128-OFFSET ref deepcopy \ deepcopy, otherwise FNV128-OFFSET would be modified
 	fold
@@ -462,33 +462,6 @@ var FNV128-OFFSET 1
 { unmake drop "Text:   " . over . CR "Expect: " . . CR "       " . 
 	fnv-128 n128-to-hex . CR } for-each
 	
-
-\ find: ( list test ) return index of first element of list that satisfies test.
-\       returns -1 if none found
-: find ( list test -- index )
-	0
-	@loop ( list test i )
-		dup 4 pick length >= if >>notfound ( loop until i >= len(list) )
-		3 pick 2 pick get ( list test i list[i] )
-		3 pick call ( list test i result )
-		if >>found
-		1 + <<loop ( list test i+1 )
-	@found ( list test i )
-		nip nip return
-	@notfound
-		drop drop drop -1
-		;
-
-"*** test find" . CR
-"Expect 7: " . 
-[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { 2 > } find . CR
-"Expect 0: " .
-[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { -3 < } find . CR
-"Expect 10: " .
-[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { 5 > } find . CR
-"Expect -1: " .
-[ -4 -3 -2 -1 0 1 2 3 4 5 6 ] { 10 > } find . CR
-
 : n128-compare ( a b -- -1,0 or 1 ; -1: a<b 0: a==b 1: a>b )
 		\ "cmp" ddd
 	2dup 0 get swap 0 get ( a b b[0] a[0] )
@@ -573,7 +546,7 @@ var FNV128-OFFSET 1
 n128-add n128-to-hex . CR
 
 : n128-zero? ( a -- a==0? )
-	{ 0 != } find -1 == 
+	{ 0 != } find void? 
 	;
 
 "Expect true:" . CR
@@ -590,7 +563,7 @@ n128-add n128-to-hex . CR
 	over { 0 > } find
 	\ check for errors
 	dup 0 == if >>got-negative
-	dup -1 == if >>not-found
+	dup void? if >>not-found
 	+ \ a msw+i
 	2dup over length >= ( a m+i a m+i>=len[a] )
 	if >>out-of-bounds
@@ -617,7 +590,7 @@ drop
 		\ "count sigwords" ddd
 	{ 0 > } find
 		\ "find result" ddd
-	dup -1 == if >>not-found
+	dup void? if >>not-found
 	9 swap - return ( 9-i )
 
 	@not-found "Zero not allowed in n128-nr-sigwords" error

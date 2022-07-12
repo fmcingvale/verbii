@@ -1,134 +1,134 @@
->> ( -- test that the correct errors are caught and reported -- )
+>> ( -- test that the correct errors are caught and reported -- ) 
 => 
->> ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+>> ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- ) 
 => 
->> ( -- this is split off from unittest_core since it was -- )
+>> ( -- this is split off from unittest_core since it was -- ) 
 => 
->> ( -- getting hard to read the results with a mix of errors -- )
+>> ( -- getting hard to read the results with a mix of errors -- ) 
 => 
->> ( -- and non-errors -- also now I could add a command line option -- )
+>> ( -- and non-errors -- also now I could add a command line option -- ) 
 => 
->> ( -- along with -test to say stop on errors for the non-error cases -- )
+>> ( -- along with -test to say stop on errors for the non-error cases -- ) 
 => 
->> ( -- another benefit is that the non-error testcases can be run -- )
+>> ( -- another benefit is that the non-error testcases can be run -- ) 
 => 
->> ( -- without -test and can run to completion -- )
+>> ( -- without -test and can run to completion -- ) 
 => 
->> ( -- side note: multiline comments are fine normally, they just have to be single line in -- )
+>> ( -- side note: multiline comments are fine normally, they just have to be single line in -- ) 
 => 
->> ( -- -test mode since it processes one line at a time so it can restart on errors -- )
+>> ( -- -test mode since it processes one line at a time so it can restart on errors -- ) 
 => 
->> ( cause error in math operations )
+>> ( cause error in math operations ) 
 => 
->> 1 +
+>> 1 + 
 *** Stack underflow ***
->> 2 -
+>> 2 - 
 *** Stack underflow ***
->> 3 *
+>> 3 * 
 *** Stack underflow ***
->> 4 /
+>> 4 / 
 *** Stack underflow ***
->> clear
+>> clear 
 => 
->> +
+>> + 
 *** Stack underflow ***
->> ( divide by zero )
+>> ( divide by zero ) 
 => 
->> 4 0 /
+>> 4 0 / 
 *** Divide by zero ***
->> -8 0 /
+>> -8 0 / 
 *** Divide by zero ***
->> ( parsing errors )
+>> ( parsing errors ) 
 => 
->> : aaa 123 456
+>> : aaa 123 456 
 *** Unexpected end of input looking for ';' ***
->> ( bad comment
+>> ( bad comment 
 *** Unexpected end of input inside comment:  bad comment ***
->> ( interpreter errors )
+>> ( interpreter errors ) 
 => 
->> foobarbadword
+>> foobarbadword 
 *** Unknown word foobarbadword ***
->> ( locals underflow )
+>> ( locals underflow ) 
 => 
->> 10 20 30 
+>> 10 20 30  
 => 10 20 30 
->> >L >L >L
+>> >L >L >L 
 => 
->> >L
+>> >L 
 *** Stack underflow ***
->> ( show that trying to redefine a var fails )
+>> ( show that trying to redefine a var fails ) 
 => 
->> var fff 4
+>> var fff 4 
 => 
->> var fff 1
+>> var fff 1 
 *** Trying to redefine name: fff ***
->> ( but deleting it first works )
+>> ( but deleting it first works ) 
 => 
->> var fff 4
+>> var fff 4 
 => 
->> del fff
+>> del fff 
 => 
->> var fff 8
+>> var fff 8 
 => 
->> del fff
+>> del fff 
 => 
->> ( same with words )
+>> ( same with words ) 
 => 
->> : zzz 10 20 30 ;
+>> : zzz 10 20 30 ; 
 => 
->> : zzz 40 50 60 ;
+>> : zzz 40 50 60 ; 
 *** Trying to redefine name: zzz ***
->> ( now delete first so it works )
+>> ( now delete first so it works ) 
 => 
->> : zzz 10 20 30 ;
+>> : zzz 10 20 30 ; 
 => 
->> del zzz
+>> del zzz 
 => 
->> : zzz 40 50 60 ;
+>> : zzz 40 50 60 ; 
 => 
->> del zzz
+>> del zzz 
 => 
->> ( vars & words are in same namespace so can't redefine this way either ... )
+>> ( vars & words are in same namespace so can't redefine this way either ... ) 
 => 
->> var fff 4
+>> var fff 4 
 => 
->> : fff 1 2 3 ;
+>> : fff 1 2 3 ; 
 *** Trying to redefine name: fff ***
->> ( and trying to redefine a word as var )
+>> ( and trying to redefine a word as var ) 
 => 
->> : fff 1 2 3 ;
+>> : fff 1 2 3 ; 
 => 
->> var fff 4
+>> var fff 4 
 *** Trying to redefine name: fff ***
->> ( deleting non existant name should fail )
+>> ( deleting non existant name should fail ) 
 => 
->> del ggg
+>> del ggg 
 *** Trying to delete non-existent name: ggg ***
->> ( end of input inside " )
+>> ( end of input inside " ) 
 => 
->> "hello world oops ...
+>> "hello world oops ... 
 *** Unexpected end of input inside string: "hello world oops ... ***
->> ( end of input inside { .. )
+>> ( end of input inside { .. ) 
 => 
->> { a lambda here uh oh
+>> { a lambda here uh oh 
 *** Unexpected end of input inside { .. } ***
->> ( throw error from script )
+>> ( throw error from script ) 
 => 
->> "Testing errors" error
+>> "Testing errors" error 
 *** Testing errors ***
->> ( reference self when not in a closure )
+>> ( reference self when not in a closure ) 
 => 
->> [ 1 2 3 self ] call
+>> { 1 2 3 self } call 
 *** Attempting to reference unbound self ***
->> [ 1 2 3 self! ] call
+>> { 1 2 3 self! } call 
 *** Attempting to set unbound self ***
->> ( bad jumps )
+>> ( bad jumps ) 
 => 
->> : foo1 123 456 + drop >>badlabel 789 10 11 - + ;
+>> : foo1 123 456 + drop >>badlabel 789 10 11 - + ; 
 => 
->> foo1
+>> foo1 
 *** No such jump: >>badlabel ***
->> : foo2 123 456 + drop <<badlabel 98 76 - ;
+>> : foo2 123 456 + drop <<badlabel 98 76 - ; 
 => 
->> foo2
+>> foo2 
 *** No such jump: <<badlabel ***

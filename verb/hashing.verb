@@ -41,10 +41,10 @@ var FNV32-OFFSET 1
 	\	hash = hash * FNV32-PRIME
 
 	\ called with stack: [ hash char ]
-	[ 
+	{
 		ord bit-xor ( hash^c )
 		FNV32-PRIME ref * ( hash*prime )
-	]
+	}
 	\ init hash = FNV32-OFFSET
 	FNV32-OFFSET ref
 	fold
@@ -59,7 +59,7 @@ var MAX_INT32 1
 \ ref: https://theartincode.stanis.me/008-djb2/ (djb2 hash)
 : hash-djb2 ( string -- hash )
 	\ for each char in string, hash = hash * 33 + c, with initial value 5381
-	[ ord swap 33 * + ] 5381 fold
+	{ ord swap 33 * + } 5381 fold
 	MAX_INT32 ref bit-and ( keep 32 bits only )
 	;
 

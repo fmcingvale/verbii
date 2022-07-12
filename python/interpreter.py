@@ -277,14 +277,11 @@ class Interpreter(object):
 						# now this is just like calling a userword, below
 						# TODO -- tail call elimination??
 						self.code_call(obj.objlist)
-					elif isList(obj):
-						# call list like lambda
-						self.code_call(obj)
 					elif isClosure(obj):
 						# like above but sets closure
 						self.code_call(obj.objlist, obj)
 					else:				
-						raise LangError("call expects a lambda or list, but got: " + fmtStackPrint(obj))
+						raise LangError("call expects a lambda or closure but got: " + fmtStackPrint(obj))
 
 					continue
 			

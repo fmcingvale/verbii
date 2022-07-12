@@ -360,12 +360,10 @@
 										((Lambda? L)
 											; TODO - tail call elimination??
 											(code-call intr (lambda-llist L) '()))
-										((List? L)
-											(code-call intr L '()))
 										((Closure? L)
 											(code-call intr (Closure-llist L) L))
 										(else
-											(lang-error 'call "Expecting lambda or list but got:" L)))))
+											(lang-error 'call "Expecting lambda or closure but got:" L)))))
 
 							; builtin (native) functions
 							((hash-table-exists? BUILTINS obj)

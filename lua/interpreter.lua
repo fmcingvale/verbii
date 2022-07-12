@@ -308,12 +308,10 @@ function Interpreter:run(objlist, stephook)
 					-- now this is just like calling a userword, below
 					-- TODO -- tail call elimination??
 					self:code_call(obj.objlist)
-				elseif isList(obj) then
-					self:code_call(obj)
 				elseif isClosure(obj) then
 					self:code_call(obj.objlist,obj)
 				else
-					error(">>>call expects a lambda, but got: " .. fmtStackPrint(obj))
+					error(">>>call expects a lambda or closure but got: " .. fmtStackPrint(obj))
 				end
 
 				goto MAINLOOP

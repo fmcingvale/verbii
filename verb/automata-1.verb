@@ -60,7 +60,7 @@
 		;
 
 : state2diagram ( state -- diagram )
-	[ 1 == if >>one " " + return @one "*" + ] "" fold
+	{ 1 == if >>one " " + return @one "*" + } "" fold
 	;
 
 [ 0 1 0 0 0 0 0 0 ] 1 get-encoded-state . CR

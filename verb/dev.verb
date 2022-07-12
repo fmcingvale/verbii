@@ -160,7 +160,7 @@ var XORSHIFT_128_STATE 4
 
 : djb2-hash ( string -- hash )
 	\ for each char in string, hash = hash * 33 + c, with initial value 5381
-	[ ord swap 33 * + ] 5381 fold
+	{ ord swap 33 * + } 5381 fold
 	MAX_INT32 ref bit-and ( keep 32 bits only )
 	;
 
@@ -172,4 +172,4 @@ var XORSHIFT_128_STATE 4
 	[ "the quick brown fox jumped over the lazy dog" 1191916020 ]
 	[ "the Quick bRown fOx jumPed oveR tHe lAzy doG" 3385321716 ] ]
 
-	[ unmake drop "Expect:" . . CR "       " . djb2-hash . CR ] for-each
+	{ unmake drop "Expect:" . . CR "       " . djb2-hash . CR } for-each

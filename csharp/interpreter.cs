@@ -376,16 +376,12 @@ public class Interpreter {
 						// TODO -- tail call elimination??
 						code_call(lambda.objlist);
 					}
-					else if(list != null) {
-						// call list like lambda
-						code_call(list.objlist);
-					}
 					else if(closure != null) {
 						// like above but sets closure
 						code_call(closure.objlist, closure);
 					}
 					else {			
-						throw new LangError("call expects a lambda, but got: " + val.fmtStackPrint());
+						throw new LangError("call expects a lambda or closure but got: " + val.fmtStackPrint());
 					}
 					continue;
 				}
