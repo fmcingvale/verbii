@@ -30,10 +30,11 @@
 : safe-run-and-delete-main ( -- )
 	\ the __main__ I'm about to run might want to redefine __main__ itself 
 	\ (maybe it loads another module, etc.), so do a little trick: 
-	\ first dump __main__ to a list, delete __main__, then run the dumped list
+	\ first dump __main__ to a list, delete __main__, then make the dumped
+	\ list into a lambda and run it
 	'__main__ .dumpword
 	del __main__
-	call
+	make-lambda call
 	;
 
 \ load .b file, run its __main__, then delete __main__

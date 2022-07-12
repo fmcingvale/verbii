@@ -165,14 +165,13 @@
 : string-join ( list separator -- string )
 	@args [ list sep ]
 	list
-	\ self is the separator
-	{ ( accum elem ) over length 0 == if >>skip \ skip separator before first string
-		swap self + swap
-		@skip +
-	} sep :: \ bind separator as self to func
-	"" fold
+	@{ @args [ accum elem ]
+		accum length 0 == if >>skip \ skip separator before first string
+		accum sep + elem + return
+		@skip elem return
+	} "" fold
 	;
-
+	
 : string->symbol ( string -- symbol )
 	unmake make-symbol
 	;

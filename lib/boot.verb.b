@@ -54,11 +54,12 @@ y +
 y LP!
 y return
 W safe-run-and-delete-main
-L 6
+L 7
 y '__main__
 y .dumpword
 y '__main__
 y ,,del
+y make-lambda
 y call
 y return
 W deserialize-and-run
@@ -226,6 +227,5 @@ y safe-run-and-delete-main
 y repl-main
 y return
 W __main__
-L 2
+L 1
 y boot-main
-y return

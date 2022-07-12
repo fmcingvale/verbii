@@ -621,7 +621,7 @@ i 0
 y ==
 y return
 W string-join
-L 19
+L 17
 y >L
 y >L
 y LP
@@ -629,23 +629,48 @@ i 0
 y +
 y ref
 F
-L 12
-y over
+L 39
+y >L
+y >L
+y LP
+i 0
+y +
+y ref
 y length
 i 0
 y ==
 y if
 y >>skip
-y swap
-y self
+y LP
+i 0
 y +
-y swap
-y @skip
+y ref
+y self
+i 1
+y get
 y +
 y LP
 i 1
 y +
 y ref
+y +
+y LP
+i 2
+y +
+y LP!
+y return
+y @skip
+y LP
+i 1
+y +
+y ref
+y LP
+i 2
+y +
+y LP!
+y return
+i 2
+y copy-locals-to-list
 y ::
 s 
 y fold
@@ -812,8 +837,9 @@ i 0
 y +
 y ref
 F
-L 1
+L 2
 y tolower
+y return
 y map
 y LP
 i 2
@@ -832,8 +858,9 @@ i 0
 y +
 y ref
 F
-L 1
+L 2
 y toupper
+y return
 y map
 y LP
 i 2
@@ -1907,10 +1934,11 @@ y return
 W make-dict
 L 4
 F
-L 3
+L 4
 y unmake
 y drop
 y put
+y return
 y ,,new-dict
 y fold
 y return
@@ -2119,5 +2147,4 @@ y drop
 y void
 y return
 W __main__
-L 1
-y return
+L 0
