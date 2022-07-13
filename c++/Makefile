@@ -4,12 +4,18 @@ HEADERS = interpreter.hpp native.hpp langtypes.hpp xmalloc.hpp deserialize.hpp
 
 LIB_OBJS = $(LIB_SRC:.cpp=.o)
 
+ifdef REPL_ID # don't try to use libgc on repl.it
+GC_FLAGS =
+GC_LIBS =
+else
+# for other platforms ...
 # uncomment one set of GC_FLAGS/GC_LIBS to enable/disable GC
 #GC_FLAGS = 
 #GC_LIBS = 
 
 GC_FLAGS = -DUSE_GCMALLOC
 GC_LIBS = -lgc -lgccpp
+endif
 
 # uncomment one CFLAGS
 # safe, slow, debugging build
