@@ -2,12 +2,6 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-\ these two should be in another lib ...
-
-\ max unsigned 32-bit value
-\ var MAX_INT32 1
-\ 4294967295 MAX_INT32 set!
-
 "hashing" import
 
 : str.b ( n -- ; get n as binary string )
@@ -33,10 +27,10 @@
 
 \ 32-bit xor-shift pseudo random number generator
 \ ported from: https://en.wikipedia.org/wiki/Xorshift
-var XORSHIFT_32_STATE 1
+'XORSHIFT_32_STATE void make-var
 
 : xorshift32-seed ( n -- ; seed randomizer with seed n )
-	XORSHIFT_32_STATE set!
+	XORSHIFT_32_STATE!
 	;
 
 \ on startup, set default seed using hash of current date/time as string plus current runtime as string.
@@ -46,19 +40,19 @@ var XORSHIFT_32_STATE 1
 time-string " " + run-time str + hash-fnv-32 xorshift32-seed
 
 : xorshift32 ( -- n ; returns random n )
-	XORSHIFT_32_STATE ref ( x )
+	XORSHIFT_32_STATE ( x )
 	dup 13 bit-shl ( x x<<13 )
 	bit-xor ( x ^ x<<13 )
 	dup 17 bit-shr ( x x>>17 )
 	bit-xor ( x ^ x>>17 )
 	dup 5 bit-shl ( x x<<5 )
 	bit-xor ( x ^ x>>5 )
-	dup XORSHIFT_32_STATE set!
+	dup XORSHIFT_32_STATE!
 	( leave state on stack as result )
 	;
 
 : random-xor32 ( -- n ; returns random number between 0..1 )
-	xorshift32 MAX_INT32 ref /
+	xorshift32 MAX_INT32 /
 	;
 
 : randint-xor32 ( a b -- n ; returns random number on the interval [a, b) )

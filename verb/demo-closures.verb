@@ -56,29 +56,26 @@ call
 	
 \ lets make several accumulators and store them in variables to show that they
 \ are independent from each other
-var acc1 1
-var acc2 1
-var acc3 1
-11 make-accumulator acc1 set! \ acc1 start with initval=11
-33 make-accumulator acc2 set! \ acc2 start with initval=33
-100 make-accumulator acc3 set! \ acc3 start with initval=100
-
+'acc1 11 make-accumulator make-var \ acc1 start with initval=11
+'acc2 33 make-accumulator make-var \ acc2 start with initval=33
+'acc3 100 make-accumulator make-var \ acc3 start with initval=100
+ 
 \ lets show the intial values first by adding zeros
-"acc1 init = " . 0 acc1 ref call . CR
-"acc2 init = " . 0 acc2 ref call . CR
-"acc3 init = " . 0 acc3 ref call . CR
+"acc1 init = " . 0 acc1 call . CR
+"acc2 init = " . 0 acc2 call . CR
+"acc3 init = " . 0 acc3 call . CR
 
 "STACK:" . .S CR
 
 "Adding 20 to each ..." . CR
-"acc1 init = " . 20 acc1 ref call . CR
-"acc2 init = " . 20 acc2 ref call . CR
-"acc3 init = " . 20 acc3 ref call . CR
+"acc1 init = " . 20 acc1 call . CR
+"acc2 init = " . 20 acc2 call . CR
+"acc3 init = " . 20 acc3 call . CR
 
 "Adding 100 to each ..." . CR
-"acc1 init = " . 100 acc1 ref call . CR
-"acc2 init = " . 100 acc2 ref call . CR
-"acc3 init = " . 100 acc3 ref call . CR
+"acc1 init = " . 100 acc1 call . CR
+"acc2 init = " . 100 acc2 call . CR
+"acc3 init = " . 100 acc3 call . CR
 
 \ the accumulator factory works because the inner closure captures the VALUE of
 \ initval that was passed to its outer scope and saves it for future calls.

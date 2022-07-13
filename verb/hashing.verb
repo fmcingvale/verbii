@@ -8,10 +8,8 @@
 \ This is much faster than fnv-128 since it uses native 32-bit integers.
 \
 \ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-var FNV32-PRIME 1
-var FNV32-OFFSET 1
-2166136261 FNV32-OFFSET set!
-16777619 FNV32-PRIME set!
+'FNV32-PRIME 16777619 make-var
+'FNV32-OFFSET 2166136261 make-var
 
 \ these conversions should be in another lib ...
 : int4-to-hex ( n -- h ; 4-bit value to hex digit )
@@ -43,24 +41,23 @@ var FNV32-OFFSET 1
 	\ called with stack: [ hash char ]
 	{
 		ord bit-xor ( hash^c )
-		FNV32-PRIME ref * ( hash*prime )
+		FNV32-PRIME * ( hash*prime )
 	}
 	\ init hash = FNV32-OFFSET
-	FNV32-OFFSET ref
+	FNV32-OFFSET
 	fold
 	\ keep 32-bits only
 	4294967295 bit-and ( (hash*prime)&0xffffffff )
 	;
 
 \ max unsigned 32-bit value
-var MAX_INT32 1
-4294967295 MAX_INT32 set!
+'MAX_INT32 4294967295 make-var
 
 \ ref: https://theartincode.stanis.me/008-djb2/ (djb2 hash)
 : hash-djb2 ( string -- hash )
 	\ for each char in string, hash = hash * 33 + c, with initial value 5381
 	{ ord swap 33 * + } 5381 fold
-	MAX_INT32 ref bit-and ( keep 32 bits only )
+	MAX_INT32 bit-and ( keep 32 bits only )
 	;
 
 

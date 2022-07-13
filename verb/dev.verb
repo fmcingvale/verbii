@@ -122,46 +122,50 @@
 "      " . 198237934 3842983493 & . CR
 
 \ max unsigned 32-bit value
-var MAX_INT32 1
-4294967295 MAX_INT32 set!
+'MAX_INT32 4294967295 make-var
 
+\ xorshift-128 random generator
+\ ref: https://en.wikipedia.org/wiki/Xorshift
 
 \ 128-bit xor-shift random number generator
 \ still returns 32-bit result, but keeps 128 bits internally
-var XORSHIFT_128_STATE 4
+'XORSHIFT_128_STATE [ 0 0 0 0 ] make-var
 
-: xorshift128_seed ( a b c d -- ; seeds rng with 4 x 32 bit values )
-	XORSHIFT_128_STATE set!
-	XORSHIFT_128_STATE 1 + set!
-	XORSHIFT_128_STATE 2 + set!
-	XORSHIFT_128_STATE 3 + set!
+\ seeds rng with 4 x 32 bit values
+: xorshift128_seed @( a b c d -- )
+	XORSHIFT_128_STATE 
+	0 a put
+	1 b put
+	2 c put
+	3 d put XORSHIFT_128_STATE!
 	;
 
-: xorshift128 ( -- n ; returns random n )
-	XORSHIFT_128_STATE 3 + ref ( t )
-	XORSHIFT_128_STATE ref ( t s )
-	XORSHIFT_128_STATE 2 + ref XORSHIFT_128_STATE 3 + set! ( t s ; state[3] = state[2] )
-	XORSHIFT_128_STATE 1 + ref XORSHIFT_128_STATE 2 + set! ( t s ; state[2] = state[1] )
-	XORSHIFT_128_STATE 1 + set! ( t ; state[1] = s )
+\ returns random n
+: xorshift128 @( -- n )
+	@locals [ t s ]
+	XORSHIFT_128_STATE 3 get t! \ t = state[3]
+	XORSHIFT_128_STATE 0 get s! \ s  = state[0]
+	XORSHIFT_128_STATE 3 XORSHIFT_128_STATE 2 get put XORSHIFT_128_STATE! \ state[3] = state[2]
+	XORSHIFT_128_STATE 2 XORSHIFT_128_STATE 1 get put XORSHIFT_128_STATE! \ state[2] = state[1]
+	XORSHIFT_128_STATE 1 s put \ state[1] = s
 
-	dup 11 bit-shl ( t t<<11 )
-	bit-xor ( t ^ t<<11 )
-	dup 8 bit-shr ( t t>>8 )
-	bit-xor ( t ^ t>>8 )
-	XORSHIFT_128_STATE 1 + ref dup ( t s s )
-	19 bit-shr ( t s s>>19 )
-	bit-xor bit-xor ( t ^ s ^ s>>19 )
-	dup XORSHIFT_128_STATE set! ( state[0] = t ^ s ^ s^10 )
-	\ leave on stack 
+	t t 11 bit-shl bit-xor t! \ t = t ^ (t<<11)
+	t t 8 bit-shr bit-xor t! \ t = t ^ (t >> 8)
+	
+	\ return state[0] = t ^ s ^ (s >> 19)
+	XORSHIFT_128_STATE 0
+	t s s 19 bit-shr bit-xor bit-xor  
+	put
+	0 get \ leave state[0] on stack
 	;
 	
-\ 1234 5678 9101112 13141516 xorshift128_seed
-\ { xorshift128 dup str.b . . CR } 30 repeat
+1234 5678 9101112 13141516 xorshift128_seed
+{ xorshift128 dup str.b . . CR } 30 repeat
 
 : djb2-hash ( string -- hash )
 	\ for each char in string, hash = hash * 33 + c, with initial value 5381
 	{ ord swap 33 * + } 5381 fold
-	MAX_INT32 ref bit-and ( keep 32 bits only )
+	MAX_INT32 bit-and ( keep 32 bits only )
 	;
 
 [ 	[ "Hello World 12345 ^.^" 24858410 ]

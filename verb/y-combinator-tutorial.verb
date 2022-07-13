@@ -305,12 +305,12 @@ Y
 \ *TODO* once words are closures, I'll be able to do: 'fact make-word, then call fact as a function.
 \
 \ for now, use a var & call it ...
-var fact 1
-fact set!
+'fact void make-var
+fact!
 
-"3! (6):" . 3 fact ref call . CR
-"4! (24):" . 4 fact ref call . CR
-"5! (120):" . 5 fact ref call . CR
-"6! (720):" . 6 fact ref call . CR
-"7! (5040):" . 7 fact ref call . CR
-"11! (39916800):" . 11 fact ref call . CR
+"3! (6):" . 3 fact call . CR
+"4! (24):" . 4 fact call . CR
+"5! (120):" . 5 fact call . CR
+"6! (720):" . 6 fact call . CR
+"7! (5040):" . 7 fact call . CR
+"11! (39916800):" . 11 fact call . CR

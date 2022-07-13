@@ -14,26 +14,7 @@
 
 \ Python 19.0-19.7
 
-var START_TIME 1
-run-time START_TIME set!
-
-\ define shortcuts for direct stack access ... easier than 'pick' and
-\ also allows write access with Sn!
-\
-\ note that the Sn! are +1 more than the Sn to skip over the top of stack
-\ item which is the item being set to the stack ... i think this is more intuitive
-: S0 SP ref ;
-: S0! SP 1 + set! ;
-: S1 SP 1 + ref ;
-: S1! SP 2 + set! ;
-: S2 SP 2 + ref ;
-: S2! SP 3 + set! ;
-: S3 SP 3 + ref ;
-: S3! SP 4 + set! ;
-: S4 SP 4 + ref ;
-: S4! SP 5 + set! ;
-: S5 SP 5 + ref ;
-: S5! SP 6 + set! ;
+'START_TIME run-time make-var
 
 : n128-new ( -- obj ; create a 128 bit number, set to zero )
 	[ 0 0 0 0 0 0 0 0 0 ] \ 8 x 16-bit values + 1 extra for sign
@@ -422,10 +403,8 @@ run-time START_TIME set!
 \ FNV-1a 128-bit hash function
 \
 \ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-var FNV128-PRIME 1
-var FNV128-OFFSET 1
-"6c62272e07bb014262b821756295c58d" n128-from-hex FNV128-OFFSET set!
-"0000000001000000000000000000013B" n128-from-hex FNV128-PRIME set!
+'FNV128-PRIME "0000000001000000000000000000013B" n128-from-hex make-var
+'FNV128-OFFSET "6c62272e07bb014262b821756295c58d" n128-from-hex make-var
 
 : fnv-128 ( text -- hash, as n128 )
 	\ for each byte:
@@ -437,10 +416,10 @@ var FNV128-OFFSET 1
 		ord over 8 get ( hash c hash[8] )
 		bit-xor ( hash c^hash[8] )
 		8 swap put ( hash )
-		FNV128-PRIME ref n128-mul ( hash*prime )
+		FNV128-PRIME n128-mul ( hash*prime )
 	}
 	\ init hash = FNV128-OFFSET
-	FNV128-OFFSET ref deepcopy \ deepcopy, otherwise FNV128-OFFSET would be modified
+	FNV128-OFFSET deepcopy \ deepcopy, otherwise FNV128-OFFSET would be modified
 	fold
 	;
 
@@ -608,7 +587,7 @@ drop
 6 f.setprec
 
 "Script ran in" .
-run-time START_TIME ref - . "seconds" . CR
+run-time START_TIME - . "seconds" . CR
 
 "TOTAL system time" .
 run-time . "seconds" . CR

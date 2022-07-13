@@ -5,6 +5,7 @@
 ( 
 	quick ref:
 		DP = data pointer, index into CELLS
+		IP = instruction pointer, index into CODE
 		>  ++DP
 		<  --DP
 		+  ++(*DP)
@@ -15,86 +16,83 @@
 		]  if contents of current cell are != 0, jump to next instruction after matching [
 )
 
-var NRCELLS 1
-var CELLS 30000
-var DP 1
-var IP 1
-var CODE 1 ( currently running code string )
+'NRCELLS 30000 make-var
+'CELLS void make-var
+'DP 0 make-var
+'IP 0 make-var
+'CODE void make-var \ currently running code string
 
-: fill-cells ( val -- ; fill all cells with val )
-	NRCELLS ref 1 - ( val i=max-index )
-	@loop ( val i )
-	dup 0 < if >>done
-	2dup CELLS + set! ( val i ) 
-	1 - <<loop
-	@done
-	2drop ( drop val & i )
+\ create CELLS list and fill all with val
+: init-cells @( val -- )
+	[ ] CELLS!
+	@{ CELLS val append CELLS! } NRCELLS repeat
 	;
 
-: print-cells ( print all cells, for debugging )
-	0
-	@loop ( i )
-	dup NRCELLS ref >= if >>done
-	dup CELLS + ref . ( i ) 
-	1 + <<loop
-	@done drop
+\ print all cells (debugging)
+: print-cells
+	"Cells:" . CELLS { . } for-each CR
 	;
 
-: jump-forward ( ++IP until matching ] is found; assumes IP is just past the [ )
-	1 ( nesting level )
-	@loop ( level )
-		IP ref CODE ref length >= if >>notfound
-		CODE ref IP ref get ( get next code char )
+\ ++IP until matching ] is found; assumes IP is just past the [
+: jump-forward 
+	@locals [ nesting ]
+	1 nesting!
+	@loop
+		IP CODE length >= if >>notfound
+		CODE IP get ( get next code char )
 		( "LOOKCHAR: " . dup . CR )
 		dup "[" == if >>++level
 		dup "]" == if >>--level
 		( ignore other chars and continue )
 		drop >>next
 
-		@++level drop 1 + >>next
-		@--level ( "@--level: " . .S CR )
-		drop 1 - dup? 0 == if >>done
+		@++level drop nesting 1 + nesting! >>next
+		@--level 
+			drop nesting 1 - nesting! 
+			nesting 0 == if >>done
 			>>next
 
-	@next IP ref 1 + IP set! <<loop
+	@next IP 1 + IP! <<loop
 	@notfound "End of input looking for matching ]" error
 	@done
 	;
 
-: jump-backward ( --IP until matching [[ is found; assumes IP is @ ] )
-	1 ( nesting level )
-	@loop ( level )
-		IP ref 1 - IP set!
-		IP ref 0 < if >>notfound
-		CODE ref IP ref get ( get next code char )
+\ --IP until matching [[ is found; assumes IP is @ ]
+: jump-backward 
+	@locals [ nesting ]
+	1 nesting!
+	@loop
+		IP 1 - IP!
+		IP 0 < if >>notfound
+		CODE IP get ( get next code char )
 		( "LOOKCHAR: " . dup . CR )
 		dup "[" == if >>--level
 		dup "]" == if >>++level
 		( ignore other chars and continue )
 		drop >>next
 
-		@++level drop 1 + >>next
-		@--level ( "@--level: " . .S CR )
-		drop 1 - dup? 0 == if >>done
+		@++level drop nesting 1 + nesting! >>next
+		@--level
+			drop nesting 1 - nesting!
+			nesting 0 == if >>done
 			>>next
 
 	@next <<loop
 	@notfound "End of input looking for matching ]" error
 	@done
 		( "Found it (backwards)" . CR )
-		IP ref 1 + IP set!
+		IP 1 + IP!
 	;
 
-: brain-run ( text -- run text )
+: brain-run @( text -- )
 	"brain-run starting!" . .S CR
-	CODE set! ( store text in CODE )
-	30000 NRCELLS set! ( this must be <= size of CELLS above )
-	0 DP set! ( DP = 0 )
-	0 IP set! ( IP = 0, index into text )
-	0 fill-cells ( clear CELLS )
+	text CODE! ( store text in CODE )
+	0 DP! ( DP = 0 )
+	0 IP! ( IP = 0, index into text )
+	0 init-cells ( create & clear CELLS )
 	@run-loop
-		IP ref CODE ref length >= if >>done ( at end of text? )
-		CODE ref IP ref get ( get next char from text )
+		IP CODE length >= if >>done ( at end of text? )
+		CODE IP get ( get next char from text )
 		( "RUN: " . dup . CR )
 		dup ">" == if >>++dp 
 		dup "<" == if >>--dp
@@ -105,24 +103,24 @@ var CODE 1 ( currently running code string )
 		dup "." == if >>printchar
 		( ignore unknown chars ) >>next
 		
-		@++dp DP ref 1 + DP set! >>next
-		@--dp DP ref 1 - DP set! >>next
-		@++cell DP ref CELLS + dup ref 1 + swap set! >>next
-		@--cell DP ref CELLS + dup ref 1 - swap set! >>next
-		@printchar DP ref CELLS + ref .c >>next
+		@++dp DP 1 + DP! >>next
+		@--dp DP 1 - DP! >>next
+		@++cell CELLS DP get 1 + CELLS DP rot put CELLS! >>next
+		@--cell CELLS DP get 1 - CELLS DP rot put CELLS! >>next
+		@printchar CELLS DP get .c >>next
 		@jump-forward?
-			DP ref CELLS + ref 0 == not if >>next
-			IP ref 1 + IP set!
+			CELLS DP get 0 == not if >>next
+			IP 1 + IP!
 			jump-forward drop <<run-loop
 		@jump-backward?
-			DP ref CELLS + ref 0 != not if >>next
-			IP ref 1 - IP set!
+			CELLS DP get 0 != not if >>next
+			IP 1 - IP!
 			jump-backward drop <<run-loop
 
 		@next
-		drop ( drop char )
-		IP ref 1 + IP set! ( ++IP )
-		<<run-loop
+			drop ( drop char )
+			IP 1 + IP! ( ++IP )
+			<<run-loop
 	@done
 		( "Run complete!" . CR )
 		;

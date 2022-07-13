@@ -11,14 +11,14 @@
 \	* Extra/missing commas in objects are accepted
 \
 
-var JSON_READER_TEXT 1
-var JSON_READER_TEXT_LEN 1
-var JSON_READER_POS 1
+'JSON_READER_TEXT null make-var
+'JSON_READER_TEXT_LEN null make-var
+'JSON_READER_POS null make-var
 
 : json-reader-open-string ( string -- ; open string for parsing JSON )
-	JSON_READER_TEXT set!
-	JSON_READER_TEXT ref length JSON_READER_TEXT_LEN set!
-	0 JSON_READER_POS set!
+	JSON_READER_TEXT!
+	JSON_READER_TEXT length JSON_READER_TEXT_LEN!
+	0 JSON_READER_POS!
 	;
 
 : json-reader-open-file ( filename -- ; open file for parsing JSON )
@@ -26,17 +26,17 @@ var JSON_READER_POS 1
 	;
 
 : json-reader-peek-char ( -- c ; peek next char [as string] from JSON text )
-	JSON_READER_POS ref JSON_READER_TEXT_LEN ref >= if >>eof
+	JSON_READER_POS JSON_READER_TEXT_LEN >= if >>eof
 	
-	JSON_READER_TEXT ref JSON_READER_POS ref get return 
+	JSON_READER_TEXT JSON_READER_POS get return 
 	
 	@eof null
 	;
 
 : json-reader-next-char ( -- c ; read next char from JSON text )
-	JSON_READER_POS ref JSON_READER_TEXT_LEN ref >= if >>eof
-	JSON_READER_TEXT ref JSON_READER_POS ref get
-	JSON_READER_POS ref 1 + JSON_READER_POS set! return
+	JSON_READER_POS JSON_READER_TEXT_LEN >= if >>eof
+	JSON_READER_TEXT JSON_READER_POS get
+	JSON_READER_POS 1 + JSON_READER_POS! return
 	
 	@eof null
 	;
@@ -227,8 +227,7 @@ var JSON_READER_POS 1
 	;
 	
 \ just for fun, show how long script takes to run
-var START_TIME 1
-run-time START_TIME set!
+'START_TIME run-time make-var
 
 "1234" json-parse .S CR
 
@@ -265,5 +264,5 @@ clear
 """ json-parse .S CR
 
 6 f.setprec
-"Script ran in" . run-time START_TIME ref - . "seconds" . CR
+"Script ran in" . run-time START_TIME - . "seconds" . CR
 "TOTAL run time" . run-time . "seconds" . CR
