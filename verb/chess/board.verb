@@ -5,13 +5,13 @@
 \ chess code starts here
 	
 \ pieces
-: P_PAWN 0 ;
-: P_KNIGHT 1 ;
-: P_BISHOP 2 ;
-: P_ROOK 3 ;
-: P_QUEEN 4 ;
-: P_KING 5 ;
-: P_NONE 6 ;
+: P-PAWN 0 ;
+: P-KNIGHT 1 ;
+: P-BISHOP 2 ;
+: P-ROOK 3 ;
+: P-QUEEN 4 ;
+: P-KING 5 ;
+: P-NONE 6 ;
 
 'PIECE-CHARS [ "P" "N" "B" "R" "Q" "K" "." ] make-var
 
@@ -20,22 +20,56 @@
 : BLACK 1 ;
 : other ( side -- other ) 1 + 2 mod ;
 
+\ calls if-true if cond is true else calls if-false
+\ (cond must be a bool)
+: ifelse @( cond if-true if-false )
+	cond if >>true
+	if-false call return
+	@true if-true call
+	;
+
+\ calls if-true if cond is true, else does nothing
+: ifthen @( cond if-true )
+	cond if >>true
+	return \ nothing to do on false
+	@true
+		if-true call
+	;
+
 \ ------ board state -------
 
 \ coordinates: row=0,col=0 is a1; row=0,col=7 is h1; row=7,col=7 is h8
 
-\ pieces list (P_*), 1 for each square
+\ pieces list (P-*), 1 for each square
 'PIECES null make-var
 	
 \ colors list (WHITE|BLACK), 1 for each square
 'COLORS null make-var
 
+\ side to move next - WHITE or BLACK
+'SIDE-TO-MOVE WHITE make-var
+
+\ castling availability (bool) as W-OO, W-OOO, B-OO, B-OOO
+'CASTLING null make-var
+
+\ en-passant target square [0-63] or -1
+'EPSQUARE -1 make-var
+
+\ halfmove number for 50-move rule
+'HALFMOVE 0 make-var
+
+\ fullmove number
+'FULLMOVE 0 make-var
+
 \ must call this at least once to init board state
 : clear-board ( -- ) 
 	[ ] PIECES!
-	{ PIECES P_NONE append drop } 0 1 64 for-range
+	{ PIECES P-NONE append drop } 0 1 64 for-range
 	[ ] COLORS!
 	{ COLORS WHITE append drop } 0 1 64 for-range
+	WHITE SIDE-TO-MOVE!
+	[ true true true true ] CASTLING!
+	-1 EPSQUARE!
 	;
 	
 \ get square (0..63) given row,col
@@ -43,14 +77,36 @@
 	swap 8 * + 
 	;
 	
+\ get row,col from square index
+: square-to-rowcol ( square -- row col )
+	8 /mod swap
+	;
+	
+\ get piece at square
+: piece-at @( square )
+	PIECES square get
+	;
+	
+\ get color at square (only valid if piece != P-NONE)
+: color-at @( square )
+	COLORS square get
+	;
+	
+\ get printable char for given piece & color
+: piece-char @( piece color -- char )
+	color WHITE == if >>white
+	PIECE-CHARS piece get tolower return \ black = lowercase
+	@white PIECE-CHARS piece get
+	;
+	
 \ get printable char for piece at square
 : piece-char-at @( square -- char )
-	COLORS square get WHITE == if >>white
-	PIECE-CHARS PIECES square get get tolower return \ black = lowercase
-	@white PIECE-CHARS PIECES square get get
+	PIECES square get
+	COLORS square get
+		piece-char
 	;
 
-\ parse a piece char into its P_* and color	
+\ parse a piece char into its P-* and color	
 : char-to-piece @( char -- piece color )
 	@locals [ ip ]
 	PIECE-CHARS @{ char toupper == } find ip! \ find index into PIECE_CHARS
@@ -60,6 +116,29 @@
 	@white ip WHITE return
 	@bad-char "Bad piece character:" char str + error
 	;
+
+\ convert square (0..63) to algebraic notation
+: square-to-algebraic @( square )
+	square 8 /mod ( remainder quot )
+	swap "a" ord + chr
+	swap "1" ord + chr +
+	;
+
+\ convert algebraic notation (a1..h8) to square (0..63)
+: algebraic-to-square @( alg )
+	alg string? not if >>bad-alg
+	alg length 2 != if >>bad-alg
+	"abcdefgh" @{ alg 0 get == } find void? if >>bad-alg
+	"12345678" @{ alg 1 get == } find void? if >>bad-alg
+	alg 1 get ord "1" ord - 8 * 
+	alg 0 get ord "a" ord - +
+	return
+
+	@bad-alg
+		"Bad algebraic coordinate:" alg str + error
+	;
+
+: .. str puts ;
 
 : print-board ( -- )
 	@locals [ row col ]
@@ -75,15 +154,46 @@
 			CR
 			row 1 + row! <<loop-row
 	@done-board
+
+	\ side to move
+	"Side to move:" .
+	SIDE-TO-MOVE WHITE == 
+		{ "white" . CR } { "black" . CR } ifelse
+
+	\ castling status
+	"Castling:" .
+	CASTLING 0 get { "K" puts } ifthen
+	CASTLING 1 get { "Q" puts } ifthen
+	CASTLING 2 get { "k" puts } ifthen
+	CASTLING 3 get { "q" puts } ifthen
+	\ if no castling available, print - 
+	CASTLING { } any? not { "-" . } ifthen
+	CR
+	
+	"Ep-Target:" . 
+	EPSQUARE -1 ==
+		{ "None" . }
+		{ EPSQUARE square-to-algebraic . }
+		ifelse CR	
+	
+	"Halfmove:" . HALFMOVE .. ", Fullmove:" . FULLMOVE . CR
 	;
 	
 : put-piece @( square piece color -- )
 	PIECES square piece put 
 	COLORS square color put 
 	;
+
+: square-empty? @( square -- result )
+	PIECES square get P-NONE ==
+	;
 	
+\ put & drop result, since normally putting into an object that
+\ code has saved a ref to
+: put- put drop ;
+
 \ set board state from a FEN string
-: fen-parse-string @( fen -- )
+: set-from-fen @( fen -- )
 	@locals [ parts row col c i ]
 	clear-board
 	\ split string into its fields
@@ -117,24 +227,67 @@
 		"Pieces string too short in FEN:" parts 0 get + error
 		
 	@pieces-ok
+
+	\ parts[1] is "w" or "b" to move next
+	parts 1 get
+	[
+		[ { "w" == } { WHITE SIDE-TO-MOVE! } ]
+		[ { "b" == } { BLACK SIDE-TO-MOVE! } ]
+		[ else { "Bad side to move in FEN string" error } ]
+	]
+	cond
+
+	\ parts[2] is castling availability - any of KQkq-
+	\ set initially to none
+	[ false false false false ] CASTLING!
+		\ K?
+		parts 2 get { "K" == } find void? if >>check-W-OOO
+		CASTLING 0 true put-
+	@check-W-OOO
+		\ Q?
+		parts 2 get { "Q" == } find void? if >>check-B-OO
+		CASTLING 1 true put-
+	@check-B-OO
+		\ k?
+		parts 2 get { "k" == } find void? if >>check-B-OOO
+		CASTLING 2 true put-
+	@check-B-OOO
+		\ q?
+		parts 2 get { "q" == } find void? if >>castling-done
+		CASTLING 3 true put-
+	@castling-done
+
+	\ parts[3] is en-passant target square or '-' if none
+	parts 3 get "-" == 
+		{ -1 EPSQUARE! }
+		@{ parts 3 get algebraic-to-square EPSQUARE! }
+		ifelse
+	
+	\ parts[4] is halfmove number
+	parts 4 get parse-int HALFMOVE!
+		
+	\ parts[5] is fullmove
+	parts 5 get parse-int FULLMOVE!
 	;
 	
 clear-board
 "PIECES:" . PIECES . CR
 "COLORS:" . COLORS . CR
 
-31 P_BISHOP WHITE put-piece 
-19 P_ROOK BLACK put-piece
+31 P-BISHOP WHITE put-piece 
+19 P-ROOK BLACK put-piece
 
 4 "K" char-to-piece put-piece
 
 print-board
 
-"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" fen-parse-string
-
+"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" set-from-fen
 print-board
 
-"rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2" fen-parse-string
+"rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2" set-from-fen
+print-board
+
+"rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b kQ c3 11 24" set-from-fen
 print-board
 
 'FOO 123 make-var
@@ -147,7 +300,197 @@ print-board
 "abcde" FOO!
 "FOO IS:" . FOO . CR
 
+"* test if-else:" . 
+
+3 1 == { "ERROR" . } { "OK!" . } ifelse
+
+3 1 != { "OK!" . } { "ERROR" . } ifelse
+
+CR
+
+\ similar to 'cond' in Scheme
+\
+\ condexprs is a list of [ { .. test .. } { .. call if true .. } ]
+\ with optional element: [ else { .. call if no match .. } ]
+: cond @( elem condexprs -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		condexprs i get void? if >>nomatch
+		condexprs i get 0 get 'else == if >>match 
+		elem condexprs i get 0 get call if >>match
+		i 1 + i! <<loop
+	@nomatch
+		return \ or should it be an error to match no clauses?
+	@match 
+		condexprs i get 1 get call return \ call matching clause
+	;
+
+'C
+[
+	[ { "c" == } { "it is C" . CR } ]
+	[ { "a" == } { "it is A" . CR } ]
+	[ else { "neither A nor B" . CR } ]
+]
+make-var
+
+"a" C cond
+"c" C cond
+"z" C cond
+
+"to algebraic:" . CR
+"6 (g1):" . 6 square-to-algebraic . CR
+"18 (c3):" . 18 square-to-algebraic . CR
+"63 (h8):" . 63 square-to-algebraic . CR
+
+"c3 (18):" . "c3" algebraic-to-square . CR
+"h8 (63):" . "h8" algebraic-to-square . CR
+"g1 (6):" . "g1" algebraic-to-square . CR
+"a1 (0):" . "a1" algebraic-to-square . CR
+
+: valid-rowcol? @( row col )
+	row 0 >=
+	row 8 <
+	col 0 >=
+	col 8 <
+	and and and
+	;
 	
-			
-			
-			
+\ for pieces that have fixed attack spaces relative to their position (kings, knights)
+\
+\ square = square that piece is assumed to be on
+\ moves = list of [ dRow dCol ] (delta row/col) to move from square
+\
+\ this only returns squares that the piece COULD attack; caller must still check if there
+\ is a piece on the square or not
+: gen-fixed-attacks @( square moves -- attacks )
+	@locals [ row col row+ col+ ]
+	[ ] attacks!
+	square square-to-rowcol col! row!
+	moves
+	@{ @( move )
+		\ calc row+dRow, col+dCol and see if that is a valid square
+		row move 0 get + row+!
+		col move 1 get + col+!
+		row+ col+ valid-rowcol? not if >>done
+		\ valid, so add square to attacks
+		attacks row+ col+ square-index append attacks!
+		@done
+	} for-each
+	
+	attacks
+	;
+
+\ generate attacks for king of given side at square (king does not have
+\ to actually be there); these will be ALL squares the king can reach,
+\ regardless of whether something is on the destination square
+'KING-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] [ 1 1 ] [ 1 -1 ] [ -1 1 ] [ -1 -1 ] ] make-var
+
+\ pregenerated list of king attacks indexed by square
+'KING-ATTACKS-BY-SQUARE [ ] make-var
+
+: gen-king-attacks @( square -- attacks )
+	square KING-MOVEDIRS gen-fixed-attacks
+	;
+	
+\ pregenerate KING-ATTACKS-BY-SQUARE
+: gen-all-king-attacks @( ) 
+	[ ] KING-ATTACKS-BY-SQUARE!
+	@{ @( square )
+		KING-ATTACKS-BY-SQUARE
+			square KING-MOVEDIRS gen-fixed-attacks
+			append KING-ATTACKS-BY-SQUARE!
+	} 0 1 64 for-range
+	;
+	
+\ move object
+: new-move @( piece side squareFrom squareTo )
+	\ fields: 
+	\	tag 
+	\	piece
+	\	side
+	\	squareFrom 
+	\	squareTo
+	\	pieceCaptured
+	@[ 'move piece side squareFrom squareTo P-NONE ]
+	;
+	
+\ is obj a move object?
+: move? @( obj )
+	obj list? not if >>no 
+	obj 0 get 'move == if >>yes
+	@no false return
+	@yes true return
+	;
+
+: print-move @( move )
+	move move-piece move move-side piece-char "-" + puts
+	move move-squareFrom square-to-algebraic puts
+	move move-squareTo square-to-algebraic .
+	;
+	
+\ setters/getters -- for efficiency these assume move is valid - caller should
+\ check with move? if unsure before calling these
+: move-piece @( move -- piece ) move 1 get ;
+: move-piece! @( move piece -- move ) move 1 piece put ;
+
+: move-side @( move -- side ) move 2 get ;
+: move-side! @( move side -- move ) move 2 piece put ;
+
+: move-squareFrom @( move -- square ) move 3 get ;
+: move-squareFrom! @( move square -- move' ) move 3 square put ;
+
+: move-squareTo @( move -- square ) move 4 get ;
+: move-squareTo! @( move square -- move' ) move 4 square put ;
+
+: move-pieceCaptured @( move -- piece ) move 5 get ;
+: move-pieceCaptured! @( move piece -- move' ) move 5 piece put ;
+	
+"King @ row=2, col=4 (square 20):" . CR
+2 4 square-index gen-king-attacks . CR
+
+"King @ row=0, col=2 (square 2):" . CR
+0 2 square-index gen-king-attacks . CR
+
+"Making king attack table ..." . CR	
+gen-all-king-attacks
+\ KING-ATTACKS-BY-SQUARE . CR
+
+\ attacks is from gen-fixed-attacks
+: gen-fixed-moves @( piece square attacks side -- moves )
+	[ ] moves!
+	attacks
+	@{ @( squareTo )
+		\ see what is at squareTo
+		squareTo piece-at P-NONE == if >>empty
+		\ not empty - see if its opposing color
+		squareTo color-at side other == if >>capture
+		\ my own piece is on squareTo, so no move generated
+		return
+		@empty
+			\ move to empty square
+			moves
+				piece side square squareTo new-move append moves!
+			return
+		@capture
+			\ gen capture
+			moves
+				piece side square squareTo new-move
+				squareTo piece-at move-pieceCaptured!
+				append moves!
+			return
+	} for-each
+	moves
+	;
+	
+: gen-king-moves @( square side -- moves )
+	P-KING square KING-ATTACKS-BY-SQUARE square get side gen-fixed-moves
+	;
+	
+"2k5/8/8/8/3np3/2NK4/3RB3/8 w - - 0 1" set-from-fen
+print-board
+
+2 3 square-index WHITE gen-king-moves { print-move } for-each
+		
+		
+		
