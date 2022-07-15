@@ -697,6 +697,26 @@ static void builtin_keys(Interpreter *intr) {
 	intr->push(keys);
 }
 
+static void builtin_sqrt(Interpreter *intr) {
+	auto val = popFloatOrInt(intr, "sqrt");
+	if(val < 0)
+		throw LangError("Negative value in sqrt: " + to_string(val));
+	
+	intr->push(newFloat(sqrt(val)));
+}
+
+static void builtin_cos(Interpreter *intr) {
+	intr->push(newFloat(cos(popFloatOrInt(intr, "cos"))));
+}
+
+static void builtin_sin(Interpreter *intr) {
+	intr->push(newFloat(sin(popFloatOrInt(intr, "sin"))));
+}
+
+static void builtin_log(Interpreter *intr) {
+	intr->push(newFloat(log(popFloatOrInt(intr, "log"))));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -816,4 +836,10 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"depth", [](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
 
 	{"keys", builtin_keys},
+
+	// more math functions
+	{"sqrt", builtin_sqrt},
+	{"cos", builtin_cos},
+	{"sin", builtin_sin},
+	{"log", builtin_log}, // natural log
 };
