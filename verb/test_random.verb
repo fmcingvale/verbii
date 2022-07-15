@@ -1,0 +1,62 @@
+\ Unittests for random module
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"random" import
+"stats" import 
+
+: test-random-generator
+	\ 3593953034 xorshift32_seed
+	{ xorshift32 dup str.b . . CR } 20 repeat 
+
+	{ random . CR } 20 repeat
+
+	{ -100 100 randint . } 200 repeat CR
+	;
+
+\ make random integers from 0..19 and count how many of each
+: test-randint-in-bins
+	@locals [ bins v ]
+	\ init bins to zero
+	[ ] bins! @{ bins 0 append bins! } 20 repeat
+	\ get random, ++ its slot value and repeat
+	@{
+		0 20 randint v!
+		bins v get 1 + bins v rot put bins!
+	}
+	\ run N times
+	2000 repeat
+	bins . CR
+	;
+	
+: test-randint-list
+	@locals [ list ]
+	-10 11 20000 randint-list list!
+	"Rand-int list:" . list . CR
+	"Average value:" . list average . CR
+	;
+
+: test-randfloat-list
+	@locals [ list ]
+	-10 10 200 randfloat-list list!
+	"Rand-float list:" . list . CR
+	"Average value:" . list average . CR
+	;
+	
+: test-random-normal
+	@locals [ list ]
+	"* Random-normal:" . CR
+	14 1.5 20000 random-normal-list list!
+	"Mean:" . list average . CR
+	"Stddev:" . list stddev . CR
+	;
+	
+: test-random-module
+	\ test-random-generator
+	\ test-randint-list
+	\ test-randfloat-list
+	\ { test-randint-in-bins } 20 repeat
+	test-random-normal
+	;
+	
+test-random-module

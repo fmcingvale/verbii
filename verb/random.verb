@@ -51,41 +51,77 @@ time-string " " + run-time str + hash-fnv-32 xorshift32-seed
 	( leave state on stack as result )
 	;
 
-: random-xor32 ( -- n ; returns random number between 0..1 )
-	xorshift32 MAX_INT32 /
+\ ==================================================================================
+\ this is the public API -- use names without the -xor32 prefix so the algorithm
+\ could be changed later without breaking compatibility
+\ ==================================================================================
+
+\ returns random number between 0..1 )
+\ ( -- n )
+: random xorshift32 MAX_INT32 / ;
+
+\ Returns random integer on the interval [a, b)
+\ ( a b -- n )
+: randint @( a b -- n )
+	b a - random * a + floor \ floor((b-a)*random + a)
 	;
 
-: randint-xor32 ( a b -- n ; returns random number on the interval [a, b) )
-	over - random-xor32 * + floor ( a b-a )
-	;
-
-: test-random-generator
-	\ 3593953034 xorshift32_seed
-	{ xorshift32 dup str.b . . CR } 20 repeat 
-
-	{ random-xor32 . CR } 20 repeat
-
-	{ -100 100 randint-xor32 . } 200 repeat CR
-	;
-
-: test-randint-in-bins
-	\ make random integers from 0..19 and count how many of each
-	[ ] { 0 append } 20 repeat \ make bins
-	\ get random, ++ its slot value and repeat
-	[ 0 20 randint-xor32 ( v )
-		dup self swap get ( v count )
-		1 + self -rot put ( self v count+1 )
-		drop
-	] swap :: \ bind bins as self
-	\ copy closure so i can retrieve state after this runs
-	dup
-	\ run N times
-	2000 repeat
-	unmake nip \ keep final state on stack
-	. CR
+\ Return random float on the interval [a, b)
+: randfloat @( a b -- n )
+	b a - random * a +
 	;
 	
-: test-random-module
-	test-random-generator
-	{ test-randint-in-bins } 20 repeat
+\ make nr random integers on interval [a,b) and return as list
+: randint-list @( a b nr -- list )
+	[ ] list!
+	@{ list a b randint append list! } nr repeat
+	list
 	;
+	
+\ make nr random floats on interval [a,b) and return as list
+: randfloat-list @( a b nr -- list )
+	[ ] list!
+	@{ list a b randfloat append list! } nr repeat
+	list
+	;
+
+'BOX-MULLER-MEAN void make-var
+'BOX-MULLER-SIGMA void make-var
+'BOX-MULLER-NEXT void make-var
+'PI 3.1415926535897931 make-var
+
+: box-muller-next
+	\ algorithm: https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform
+	@locals [ u0 u1 z0 z1 mag angle ]
+	BOX-MULLER-NEXT void? not if >>return-next
+	random u0!
+	random u1!
+	
+	-2 u0 log * sqrt BOX-MULLER-SIGMA * mag!
+	2 PI * u1 * angle!
+	mag angle cos * BOX-MULLER-MEAN + z0!
+	mag angle sin * BOX-MULLER-MEAN + z1!
+	z1 BOX-MULLER-NEXT!
+	z0 return
+	
+	@return-next BOX-MULLER-NEXT void BOX-MULLER-NEXT!
+	;
+	
+: random-normal-init @( mean sigma )
+	mean BOX-MULLER-MEAN!
+	sigma BOX-MULLER-SIGMA!
+	void BOX-MULLER-NEXT!
+	;
+	
+: random-normal box-muller-next ;
+
+\ make nr normal random floats on interval mean+[0,1) with given sigma and return as list
+: random-normal-list @( mean sigma nr -- list )
+	mean sigma random-normal-init
+	[ ] list!
+	@{ list random-normal append list! } nr repeat
+	list
+	;
+	
+	
+	
