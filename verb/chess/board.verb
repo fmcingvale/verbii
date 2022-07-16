@@ -1,4 +1,6 @@
-\ Simple chess engine - purely for fun, not practicality :-)
+\ Simple chess engine - purely for fun, not practicality :-) Very simple & slow design.
+\ Also this is a semi-real app so makes a better excercise for programming in verbii
+\ versus the shorter demos.
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 	
@@ -19,22 +21,6 @@
 : WHITE 0 ;
 : BLACK 1 ;
 : other ( side -- other ) 1 + 2 mod ;
-
-\ calls if-true if cond is true else calls if-false
-\ (cond must be a bool)
-: ifelse @( cond if-true if-false )
-	cond if >>true
-	if-false call return
-	@true if-true call
-	;
-
-\ calls if-true if cond is true, else does nothing
-: ifthen @( cond if-true )
-	cond if >>true
-	return \ nothing to do on false
-	@true
-		if-true call
-	;
 
 \ ------ board state -------
 
@@ -491,6 +477,6 @@ gen-all-king-attacks
 print-board
 
 2 3 square-index WHITE gen-king-moves { print-move } for-each
-		
+	
 		
 		
