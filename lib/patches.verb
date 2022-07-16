@@ -21,6 +21,22 @@
 	1 savepos put line
 	;
 
+\ calls if-true if cond is true else calls if-false
+\ (cond must be a bool)
+: ifelse @( cond if-true if-false )
+	cond if >>true
+	if-false call return
+	@true if-true call
+	;
+
+\ calls if-true if cond is true, else does nothing
+: ifthen @( cond if-true )
+	cond if >>true
+	return \ nothing to do on false
+	@true
+		if-true call
+	;
+
 ( ------ compiler ------- )
 
 ( ------ misc ------- )
