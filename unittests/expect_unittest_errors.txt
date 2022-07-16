@@ -104,6 +104,10 @@
 => 
 >> del ggg 
 *** Trying to delete non-existent name: ggg ***
+>> ( trying to define a word with the same name as a builtin should fail ) 
+=> 
+>> : error 1 2 3 ; 
+*** Trying to redefine name: error ***
 >> ( end of input inside " ) 
 => 
 >> "hello world oops ... 

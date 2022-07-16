@@ -67,6 +67,9 @@ var fff 4
 ( deleting non existant name should fail )
 del ggg
 
+( trying to define a word with the same name as a builtin should fail )
+: error 1 2 3 ;
+
 ( end of input inside " )
 "hello world oops ...
 

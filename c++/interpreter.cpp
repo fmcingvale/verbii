@@ -279,8 +279,14 @@ bool Interpreter::hasWord(const char *name) {
 	return WORDS.find(name) != WORDS.end();
 }
 
+bool Interpreter::hasBuiltin(const char *name) {
+	return BUILTINS.find(name) != BUILTINS.end();
+}
+
 void Interpreter::defineWord(const char *name, ObjList *objlist, bool allow_overwrite) {
-	if(hasWord(name) && !allow_overwrite)
+	// don't allow defining a name with the same name as a builtin -- the builtin would
+	// still run so user wouldn't know why their code wasn't having an effect
+	if((hasBuiltin(name) || hasWord(name)) && !allow_overwrite)
 		throw LangError("Trying to redefine name: " + string(name));
 
 	WORDS[name] = objlist;

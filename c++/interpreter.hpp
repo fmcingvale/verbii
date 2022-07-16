@@ -65,7 +65,10 @@ class Interpreter {
 
 	void do_jump(const char *jumpword);
 
-	bool hasWord(const char *name);
+	bool hasBuiltin(const char *name);
+
+	// user-defined words
+	bool hasWord(const char *name);	
 	void defineWord(const char *name, ObjList *objlist, bool allow_overwrite);
 	void deleteWord(const char* name);
 	Object getWordlist(); // returns a List
