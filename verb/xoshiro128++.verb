@@ -1,0 +1,56 @@
+
+\ xoshiro128++ PRNG
+\
+\ Based on C code: https://prng.di.unimi.it/xoshiro128plusplus.c
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"numeric" import
+
+'XOSHIRO128PP-STATE void make-var
+
+\ seed with 4 integer values
+: xoshiro128pp-seed @( a b c d )
+	@[ a b c d ] XOSHIRO128PP-STATE!
+	;
+	
+: xoshiro128pp-next
+	@locals [ result t ]
+	\ const uint32_t result = rotl(s[0] + s[3], 7) + s[0];
+	XOSHIRO128PP-STATE 0 get XOSHIRO128PP-STATE 3 get + bit-low32 7 bit-rotl
+	XOSHIRO128PP-STATE 0 get + bit-low32 result!
+	\ const uint32_t t = s[1] << 9;
+	XOSHIRO128PP-STATE 1 get 9 bit-shl t!
+	\ s[2] ^= s[0];
+	XOSHIRO128PP-STATE 2
+		XOSHIRO128PP-STATE 2 get XOSHIRO128PP-STATE 0 get bit-xor
+		put XOSHIRO128PP-STATE!
+		
+	\ s[3] ^= s[1];
+	XOSHIRO128PP-STATE 3
+		XOSHIRO128PP-STATE 3 get XOSHIRO128PP-STATE 1 get bit-xor
+		put XOSHIRO128PP-STATE!
+	
+	\ s[1] ^= s[2];
+	XOSHIRO128PP-STATE 1
+		XOSHIRO128PP-STATE 1 get XOSHIRO128PP-STATE 2 get bit-xor
+		put XOSHIRO128PP-STATE!
+		
+	\ s[0] ^= s[3];
+	XOSHIRO128PP-STATE 0
+		XOSHIRO128PP-STATE 0 get XOSHIRO128PP-STATE 3 get bit-xor
+		put XOSHIRO128PP-STATE!
+		
+	\ s[2] ^= t;
+	XOSHIRO128PP-STATE 2
+		XOSHIRO128PP-STATE 2 get t bit-xor
+		put XOSHIRO128PP-STATE!
+		
+	\ s[3] = rotl(s[3], 11);
+	XOSHIRO128PP-STATE 3
+		XOSHIRO128PP-STATE 3 get 11 bit-rotl 
+		put XOSHIRO128PP-STATE!
+		
+	result
+	;
+	
