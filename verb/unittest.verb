@@ -3,9 +3,39 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-: expect== @( expect actual )
-	expect actual == if >>ok
-	"*** ERROR *** expecting " . expect . "but got" . actual . CR return
-	@ok "    " . expect . "==" . actual . ": ok" . CR
+'UNITTEST-NR-PASS 0 make-var
+'UNITTEST-NR-FAIL 0 make-var
+'UNITTEST-SP0 void make-var
+'UNITTEST-LP0 void make-var
+
+\ must call this once
+: unittest-init
+	\ remember starting values of SP/LP to make sure they match at end
+	SP UNITTEST-SP0!
+	LP UNITTEST-LP0!
 	;
 
+: expect== @( expect actual )
+	expect actual == if >>ok
+		"*** ERROR *** expecting " . expect . "but got" . actual . CR 
+		UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
+		return
+	@ok 
+		"    " . expect . "==" . actual . ": ok" . CR 
+		UNITTEST-NR-PASS 1 + UNITTEST-NR-PASS!
+	;
+
+: unittest-summary
+	"* Summary:" . CR
+	"    Tests passed:" . UNITTEST-NR-PASS . CR
+	"    Test failed:" . UNITTEST-NR-FAIL . CR
+	SP UNITTEST-SP0 ==
+		{ "    Stack: ok" . CR }
+		{ "    ** ERROR ** Items left on stack" . CR }
+		ifelse
+		
+	LP UNITTEST-LP0 ==
+		{ "    Locals: ok" . CR }
+		{ "    ** ERROR ** Items left in locals" . CR }
+		ifelse
+	;
