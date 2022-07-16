@@ -2,8 +2,8 @@
 "unittest" import
 "numeric" import
 
-: unittest-parse-hex
-	"* test parse-hex ..." . CR
+: test-parse-hex
+	"* parse-hex ..." . CR
 	2595453966 "9ab37c0e" parse-hex expect==
 	2068551320 "7b4b9698" parse-hex expect==
 	2503746217 "953c22a9" parse-hex expect==
@@ -16,5 +16,69 @@
 	  11259375   "ABCDEF" parse-hex expect==
 	;
 	
-unittest-parse-hex
+: test-str.hex
+	"* str.hex ..." . CR
+	2882400152 str.hex "abcdef98" expect==
+	2271562428 str.hex "87654abc" expect==
+	4275830784 str.hex "fedc0000" expect==
+	4294967295 str.hex "ffffffff" expect==
+	      2748 str.hex "00000abc" expect==
+		    15 str.hex "0000000f" expect==
+			 0 str.hex "00000000" expect==
+	;
+	
+: test-bit-shr
+	"* bit-shr ..." . CR
+	"0fedcba9" "fedcba98" parse-hex  4 bit-shr str.hex expect==
+	"00fedcba" "fedcba98" parse-hex  8 bit-shr str.hex expect==
+	"000fedcb" "fedcba98" parse-hex 12 bit-shr str.hex expect==
+	"0000fedc" "fedcba98" parse-hex 16 bit-shr str.hex expect==
+	"00000fed" "fedcba98" parse-hex 20 bit-shr str.hex expect==
+	"000000fe" "fedcba98" parse-hex 24 bit-shr str.hex expect==
+	"0000000f" "fedcba98" parse-hex 28 bit-shr str.hex expect==
+	"00000000" "fedcba98" parse-hex 32 bit-shr str.hex expect==
+	;
+	
+: test-bit-shl
+	"* bit-shl ..." . CR
+	"8abcdef0" "98abcdef" parse-hex  4 bit-shl str.hex expect==
+	"abcdef00" "98abcdef" parse-hex  8 bit-shl str.hex expect==
+	"bcdef000" "98abcdef" parse-hex 12 bit-shl str.hex expect==
+	"cdef0000" "98abcdef" parse-hex 16 bit-shl str.hex expect==
+	"def00000" "98abcdef" parse-hex 20 bit-shl str.hex expect==
+	"ef000000" "98abcdef" parse-hex 24 bit-shl str.hex expect==
+	"f0000000" "98abcdef" parse-hex 28 bit-shl str.hex expect==
+	"00000000" "98abcdef" parse-hex 32 bit-shl str.hex expect==
+	;
+
+: test-bit-rotl
+	"* bit-rotl ..." . CR
+	"876abcd9" "9876abcd" parse-hex  4 bit-rotl str.hex expect==
+	"76abcd98" "9876abcd" parse-hex  8 bit-rotl str.hex expect==
+	"6abcd987" "9876abcd" parse-hex 12 bit-rotl str.hex expect==
+	"abcd9876" "9876abcd" parse-hex 16 bit-rotl str.hex expect==
+	"bcd9876a" "9876abcd" parse-hex 20 bit-rotl str.hex expect==
+	"cd9876ab" "9876abcd" parse-hex 24 bit-rotl str.hex expect==
+	"d9876abc" "9876abcd" parse-hex 28 bit-rotl str.hex expect==
+	"9876abcd" "9876abcd" parse-hex 32 bit-rotl str.hex expect==
+	;
+	
+: test-bit-low32
+	"* bit-low32 ..." . CR
+	\ have to test numerically since e.g. str.hex always truncates to 32 bits
+	\ so would not be a valid test
+	188900976391764 bit-low32 4019746388 expect==
+	;
+	
+unittest-init
+
+test-parse-hex
+test-str.hex
+test-bit-shr
+test-bit-shl
+test-bit-rotl
+test-bit-low32
+
+unittest-summary
+
 
