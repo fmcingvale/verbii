@@ -37,6 +37,16 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* i think i need to move to a character instead of word parser .. things like: "\a comment" crash the
+  parser with no explanation of what happened .. so at least char-by-char for these cases:
+	* \a comment
+	* [1 2 3 4]
+	* @[1 2 3 4]
+	* {1 2 3 4}
+	* @{1 2 3 4}
+	
+* add mergesort
+
 * add (something like) boxed values so that non-object types can be shared across scopes.
 	so e.g.:
 		"" s!
@@ -52,20 +62,6 @@ Global TODO
 			s "hello" put \ change value in box
 		}
 		now 's get' will see changes from inner scope
-			
-* call needs to change to ONLY allow lambdas -- can still build dynamic code with lists, just use make-lambda instead
-  of being able to call list directly. this removes ambiguity in the compiler (when doing name translation & closures)
-  about whether a list is code or data.
-  
-* can vars be done completely with closures/self??
-	- if so then:
-		- phase 1: rewrite existing vars in closure style (can be done a little at a time)
-		- phase 2: once that is done, remove existing var framework
-					- eliminate allocate functions in interpreters
-
-	- requires that userwords can be closures -- changes to hosts 
-	
-* run-time is very wrong in c++ port (try verb/n128.verb for example)
 
 * i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
   NAME can be defined to get value and NAME! to set value. if arrays are needed then
@@ -100,8 +96,6 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
 
-* deprecate calling lists as code -- make-lambda should be required first
-
 * change all verbii code to use make-var instead of var then get rid of old ,,var/var -- can replace with make-var based function
 
 * collect-args-locals should give error on duplicated names
@@ -112,7 +106,8 @@ Global TODO
   as verbii errors and don't crash the host language
 
 * need a better way to find lib/ than hardcoding/assuming path in repls
-
+	* also need to find modules in same path as source file without having to run in that directory
+	
 * More error checking of input types in library/tests/demos
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
