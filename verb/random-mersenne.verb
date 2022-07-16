@@ -2,71 +2,65 @@
 \ Mersenne Twister PRNG
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
-
+\
+\ commit [21a9fc5b4d478b] had the MT19937 coefficients as vars.
+\
+\ I changed these to hardcoded values expecting a speedup, however,
+\ it made negligible difference under Python (one of the slower ports).
+\
+\ I think this highlights some optimization needed somewhere else since
+\ changing these to hardcoded should have had more of an effect.
+\
+\ I'm keeping this version however, since it has less namespace pollution without
+\ all the coefficients as global vars.
+\
+\ Python unittest timing (original; cached source) 11.863 11.618 11.671 11.710 11.940
+\                        (hardcoded values)        11.132 11.108 11.374 11.019 11.660
 "numeric" import
 
 \ This implementation was derived from the pseudocode at:
 \ https://en.wikipedia.org/wiki/Mersenne_Twister
 
-\ MT19937 coefficients
-'MT19937-W 32 make-var
-'MT19937-N 624 make-var
-'MT19937-M 397 make-var
-'MT19937-R 31 make-var
-'MT19937-A "9908B0DF" parse-hex make-var
-'MT19937-U 11 make-var
-'MT19937-D "ffffffff" parse-hex make-var
-'MT19937-S 7 make-var
-'MT19937-B "9d2c5680" parse-hex make-var
-'MT19937-T 15 make-var
-'MT19937-C "efc60000" parse-hex make-var
-'MT19937-L 18 make-var
-'MT19937-F 1812433253 make-var
-'MT19937-LOWER-MASK 1 MT19937-R bit-shl 1 - make-var \ lower_mask = (1 << r) - 1
-'MT19937-UPPER-MASK MT19937-LOWER-MASK bit-not make-var
-
 \ state
 'MERSENNE-STATE void make-var
 'MERSENNE-INDEX void make-var
 
-: bit-low32 @( val ) val 4294967295 bit-and ;
-
 \ must be called at least once
 : mersenne-random-seed @( seed )
-	MT19937-N MERSENNE-INDEX!
+	624 MERSENNE-INDEX!
 	@[ seed ] MERSENNE-STATE! \ MT[0] := seed
 	\ for i from 1 to (n - 1)
 	@{ @( i )
 		\ MT[i] := lowest w bits of (f * (MT[i-1] xor (MT[i-1] >> (w-2))) + i)
 		MERSENNE-STATE
-			MERSENNE-STATE i 1 - get MT19937-W 2 - bit-shr 
+			MERSENNE-STATE i 1 - get 30 bit-shr 
 			MERSENNE-STATE i 1 - get bit-xor 
-			MT19937-F * i + bit-low32
+			1812433253 * i + bit-low32
 			append MERSENNE-STATE!		
-	} 1 1 MT19937-N 1 - for-range
+	} 1 1 623 for-range
 	
 	\ "MERSENNE-STATE:" . MERSENNE-STATE . CR
-	"MERSENNE-STATE LEN:" . MERSENNE-STATE length . CR
+	\ "MERSENNE-STATE LEN:" . MERSENNE-STATE length . CR
 	;
 	
 \ get next 32-bit value from generator
 : mersenne-random-extract
 	@locals [ y ]
 	MERSENNE-INDEX void? if >>not-initted
-	MERSENNE-INDEX MT19937-N < if >>ready
+	MERSENNE-INDEX 624 < if >>ready
 	mersenne-random-twist
 		
 	@ready
 		\ y := MT[index]
 		MERSENNE-STATE MERSENNE-INDEX get y!
-		\ y := y xor ((y >> u) and d)
-		y MT19937-U bit-shr MT19937-D bit-and y bit-xor y!
+		\ y := y xor ((y >> u) and d) -- d == 0xffffffff so AND is not needed
+		y 11 bit-shr y bit-xor y!
 		\ y := y xor ((y << s) and b)
-		y MT19937-S bit-shl MT19937-B bit-and y bit-xor y!
+		y 7 bit-shl 2636928640 bit-and y bit-xor y!
 		\ y := y xor ((y << t) and c)
-		y MT19937-T bit-shl MT19937-C bit-and y bit-xor y!
+		y 15 bit-shl 4022730752 bit-and y bit-xor y!
 		\ y := y xor (y >> l)
-		y MT19937-L bit-shr y bit-xor y!
+		y 18 bit-shr y bit-xor y!
 		
 		\ index := index + 1
 		MERSENNE-INDEX 1 + MERSENNE-INDEX!
@@ -83,21 +77,21 @@
 	@{ @( i )
 		@locals [ x xA ]
 		\ int x := (MT[i] and upper_mask) + (MT[(i+1) mod n] and lower_mask)
-		MERSENNE-STATE i get MT19937-UPPER-MASK bit-and
-		MERSENNE-STATE  i 1 + MT19937-N mod get MT19937-LOWER-MASK bit-and
+		MERSENNE-STATE i get 2147483648 bit-and
+		MERSENNE-STATE  i 1 + 624 mod get 2147483647 bit-and
 		+ bit-low32 x!
 		\ xA := x >> 1
 		x 1 bit-shr xA!
 		\ if (x mod 2) != 0
 		x 2 mod 0 == if >>skip-adjust 
 			\ xA := xA xor a
-			xA MT19937-A bit-xor xA!
+			xA 2567483615 bit-xor xA!
 		@skip-adjust
 		\ MT[i] := MT[(i + m) mod n] xor xA
 		MERSENNE-STATE i 
-			MERSENNE-STATE i MT19937-M + MT19937-N mod get xA bit-xor 
+			MERSENNE-STATE i 397 + 624 mod get xA bit-xor 
 			put MERSENNE-STATE!
-	} 0 1 MT19937-N for-range
+	} 0 1 624 for-range
 		
 	0 MERSENNE-INDEX!
 	;
