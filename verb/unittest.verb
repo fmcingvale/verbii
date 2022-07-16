@@ -1,0 +1,11 @@
+
+\ Unittest framework
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: expect== @( expect actual )
+	expect actual == if >>ok
+	"*** ERROR *** expecting " . expect . "but got" . actual . CR return
+	@ok "    " . expect . "==" . actual . ": ok" . CR
+	;
+

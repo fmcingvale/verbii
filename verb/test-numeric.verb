@@ -1,0 +1,20 @@
+
+"unittest" import
+"numeric" import
+
+: unittest-parse-hex
+	"* test parse-hex ..." . CR
+	2595453966 "9ab37c0e" parse-hex expect==
+	2068551320 "7b4b9698" parse-hex expect==
+	2503746217 "953c22a9" parse-hex expect==
+	2235264886 "853b6f76" parse-hex expect==
+	3302115232 "c4d247a0" parse-hex expect==
+	4032181163 "f05633ab" parse-hex expect==
+	1190136849 "46f00c11" parse-hex expect==
+	         0 "00000000" parse-hex expect==
+	4294967295 "ffffffff" parse-hex expect==
+	  11259375   "ABCDEF" parse-hex expect==
+	;
+	
+unittest-parse-hex
+

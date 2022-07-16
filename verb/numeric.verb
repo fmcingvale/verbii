@@ -1,0 +1,35 @@
+ 
+\ Various numeric functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ convert char h from hex to int
+: hex-char-to-int @( h -- i )
+	h "0" >= 
+	h "9" <=
+	and if >>digit 
+
+	h "a" >=
+	h "h" <=
+	and if >>hexlower 
+
+	h "A" >= 
+	h "H" <=
+	and if >>hexupper
+
+	"Bad hex digit: " h + error
+
+	@digit h ord "0" ord - return
+	@hexlower h ord "a" ord - 10 + return
+	@hexupper h ord "A" ord - 10 + return
+	;
+
+\ parse hex string to integer -- hex must NOT have leading "0x"; ONLY hex digits
+: parse-hex @( hex -- i )
+	\ fold
+	hex
+	@{ @( accum h ) 
+		h hex-char-to-int 
+		accum 16 * + 
+	} 0 fold
+	;

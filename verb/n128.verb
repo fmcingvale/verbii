@@ -14,35 +14,12 @@
 
 \ Python 19.0-19.7
 
+"numeric" import
+
 'START_TIME run-time make-var
 
 : n128-new ( -- obj ; create a 128 bit number, set to zero )
 	[ 0 0 0 0 0 0 0 0 0 ] \ 8 x 16-bit values + 1 extra for sign
-	;
-
-: hex-char-to-int ( h -- i ; convert first char of string h from hex to int )
-	0 get ( c )
-	dup "0" >= 
-	over "9" <=
-	and if >>digit 
-
-	dup "a" >=
-	over "h" <=
-	and if >>hexlower 
-
-	dup "A" >= 
-	over "H" <=
-	and if >>hexupper
-
-	"Bad hex digit: " swap + error
-
-	@digit ord "0" ord - return
-	@hexlower ord "a" ord - 10 + return
-	@hexupper ord "A" ord - 10 +
-	;
-
-: hex-to-int ( s -- i ; parse hex string to integer )
-	{ hex-char-to-int swap 16 * + } 0 fold
 	;
 
 \ add two 128 bit numbers, producing 128 bit result
@@ -62,15 +39,6 @@
 		r
 		;
 
-"0123456789abcdefABCDEF" { "char:" . dup . "value:" . hex-char-to-int . CR } for-each
-
-"Test hex-to-int ..." . CR
-[ 	[ "1234" 4660 ]
-	[ "a5b6d3" 10860243 ] 
-	[ "E8B3C1A7" 3904094631 ]
-	[ "FFFFFFFF" 4294967295 ]
-]
-	{ unmake drop "Expect:" . . CR "       " . hex-to-int . CR } for-each
 
 : ddd . .S CR  ;
 
