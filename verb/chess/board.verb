@@ -184,7 +184,7 @@
 	clear-board
 	\ split string into its fields
 	fen " " string-split parts!
-		"FEN PARTS:" . parts . CR
+		\ "FEN PARTS:" . parts . CR
 		
 	\ parse pieces, e.g. "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 	7 row!
@@ -192,13 +192,13 @@
 	0 i!
 	@pieces-loop
 		parts 0 get i get c! \ next char of string
-			"ROW=" . row . "COL=" . col . "CHAR:" . c . CR
+			\ "ROW=" . row . "COL=" . col . "CHAR:" . c . CR
 		c void? if >>pieces-end-string 
 		c digit? if >>pieces-blanks \ got # for blank squares
 		c "/" == if >>pieces-slash
 		\ else it must be a piece for (row,col)
 		row col square-index c char-to-piece 
-			"CHAR TO PIECE:" . dup . CR 
+			\ "CHAR TO PIECE:" . dup . CR 
 			put-piece
 		col 1 + col! >>pieces-next
 	@pieces-blanks
@@ -384,8 +384,30 @@ make-var
 	[ ] KING-ATTACKS-BY-SQUARE!
 	@{ @( square )
 		KING-ATTACKS-BY-SQUARE
-			square KING-MOVEDIRS gen-fixed-attacks
+			square gen-king-attacks
 			append KING-ATTACKS-BY-SQUARE!
+	} 0 1 64 for-range
+	;
+	
+\ generate attacks for knight of given side at square (knight does not have
+\ to actually be there); these will be ALL squares the knight can reach,
+\ regardless of whether something is on the destination square
+'KNIGHT-MOVEDIRS [ [ 2 1 ] [ 2 -1 ] [ -2 1 ] [ -2 -1 ] [ 1 2 ] [ 1 -2 ] [ -1 2 ] [ -1 -2 ] ] make-var
+
+\ pregenerated list of knight attacks indexed by square
+'KNIGHT-ATTACKS-BY-SQUARE [ ] make-var
+
+: gen-knight-attacks @( square -- attacks )
+	square KNIGHT-MOVEDIRS gen-fixed-attacks
+	;
+	
+\ pregenerate KNIGHT-ATTACKS-BY-SQUARE
+: gen-all-knight-attacks @( ) 
+	[ ] KNIGHT-ATTACKS-BY-SQUARE!
+	@{ @( square )
+		KNIGHT-ATTACKS-BY-SQUARE
+			square gen-knight-attacks
+			append KNIGHT-ATTACKS-BY-SQUARE!
 	} 0 1 64 for-range
 	;
 	
@@ -409,7 +431,8 @@ make-var
 	@yes true return
 	;
 
-: print-move @( move )
+\ print a move verbosely
+: print-move-long @( move )
 	move move-piece move move-side piece-char "-" + puts
 	move move-squareFrom square-to-algebraic puts
 	move move-squareTo square-to-algebraic .
@@ -440,7 +463,9 @@ make-var
 
 "Making king attack table ..." . CR	
 gen-all-king-attacks
-\ KING-ATTACKS-BY-SQUARE . CR
+
+"Making knight attack table ..." . CR	
+gen-all-knight-attacks
 
 \ attacks is from gen-fixed-attacks
 : gen-fixed-moves @( piece square attacks side -- moves )
@@ -473,10 +498,18 @@ gen-all-king-attacks
 	P-KING square KING-ATTACKS-BY-SQUARE square get side gen-fixed-moves
 	;
 	
+: gen-knight-moves @( square side -- moves )
+	P-KNIGHT square KNIGHT-ATTACKS-BY-SQUARE square get side gen-fixed-moves
+	;
+	
 "2k5/8/8/8/3np3/2NK4/3RB3/8 w - - 0 1" set-from-fen
 print-board
 
-2 3 square-index WHITE gen-king-moves { print-move } for-each
+2 3 square-index WHITE gen-king-moves { print-move-long } for-each CR 
 	
-		
-		
+"1k6/8/7N/8/2N5/8/8/5K2 w - - 0 1" set-from-fen
+print-board
+
+3 2 square-index WHITE gen-knight-moves { print-move-long } for-each CR 
+
+5 7 square-index WHITE gen-knight-moves { print-move-long } for-each CR 
