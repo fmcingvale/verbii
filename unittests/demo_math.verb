@@ -1,6 +1,10 @@
-( -- test math functions. adds many math functions that may
-	eventually migrate to the default library -- )
-( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+\ For fun (since these will eventually be added on the host side),
+\ define some standard math functions in pure verbii.
+\
+\ Not really for practical usage since there are too many edge cases
+\ that blow things up.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 ( reduce precision [TOTAL significant digits printed!] when printing to avoid small rounding errors )
 14 f.setprec
@@ -27,9 +31,9 @@
 { #17.838 #47.639 pct-diff } #91.02738366143838 expect-f
 { #-2.876 #12.341 pct-diff } #321.5425250924458 expect-f
 
-: pow ( x y -- x^y; y is an integer )
+: my-pow ( x y -- x^y; y is an integer )
 	dup int? if >>begin
-	"Exponent must be integer in 'pow'" error
+	"Exponent must be integer in 'my-pow'" error
 	@begin
 	1 -rot 
 	@loop ( P x y )
@@ -37,21 +41,21 @@
 	-rot 2dup * -rot swap drop rot 1 - <<loop ( P*x x y-1 )
 	@done drop drop ;
 
-" -- pow, x=int" . CR
-{ 2 16 pow } 65536 expect-f
-{ 10 3 pow } 1000 expect-f
-{ 17 6 pow } 24137569 expect-f
-{ -1 5 pow } -1 expect-f
-{ 10 0 pow } 1 expect-f
+" -- my-pow, x=int" . CR
+{ 2 16 my-pow } 65536 expect-f
+{ 10 3 my-pow } 1000 expect-f
+{ 17 6 my-pow } 24137569 expect-f
+{ -1 5 my-pow } -1 expect-f
+{ 10 0 my-pow } 1 expect-f
 
-"-- pow, x=float" . CR
-{ #1.27431 7 pow } #5.4566442225796 expect-f
-{ #-18.564 5 pow } #-2204742.1183508 expect-f
-{ -1 7 pow } -1 expect-f
-{ #124.56 0 pow } 1 expect-f
+"-- my-pow, x=float" . CR
+{ #1.27431 7 my-pow } #5.4566442225796 expect-f
+{ #-18.564 5 my-pow } #-2204742.1183508 expect-f
+{ -1 7 my-pow } -1 expect-f
+{ #124.56 0 my-pow } 1 expect-f
 
 ( -- compute sqrt using Babylonian method -- )
-: sqrt ( x -- sqrt(x) )
+: my-sqrt ( x -- sqrt(x) )
 	15 swap  ( n[#terms] x )
 	dup 2 /  ( n x y0 [initial guess] )
 	@loop ( n x y0 )
@@ -62,9 +66,9 @@
 	@end ( x y1 ) 
 	swap drop ;
 
-" -- sqrt" . CR
-{ 18273 sqrt } #135.17766087634 expect-f
-{ #192834.72 sqrt } #439.12950253883 expect-f
+" -- my-sqrt" . CR
+{ 18273 my-sqrt } #135.17766087634 expect-f
+{ #192834.72 my-sqrt } #439.12950253883 expect-f
 
 ( -- factorial -- )
 : fact ( n -- n! )
@@ -109,7 +113,7 @@
 		return y
 )
 ( -- log base 2 -- translated from the Python code shown above -- )
-: log2 ( x -- log2[x] )
+: my-log2 ( x -- log2[x] )
 	0 swap ( y x )
 	@scale-x
 		dup 1 < if >>x*2
@@ -137,12 +141,12 @@
 		@done
 			drop swap drop ;
 
-"-- log2" . CR
+"-- my-log2" . CR
 
-{ 128 log2 } 7 expect-f 
-{ #8.0625 log2 } #3.0112272554233 expect-f
-{ #1234.5678 log2 } #10.269790353251 expect-f 
-{ #0.5678 log2 } #-0.81654524582506 expect-f
+{ 128 my-log2 } 7 expect-f 
+{ #8.0625 my-log2 } #3.0112272554233 expect-f
+{ #1234.5678 my-log2 } #10.269790353251 expect-f 
+{ #0.5678 my-log2 } #-0.81654524582506 expect-f
 
 ( -- log2[10] and log2[e], for changing base -- )
 var LOG2_10 1
@@ -150,26 +154,26 @@ var LOG2_10 1
 var LOG2_E 1
 #1.4426950408889634 LOG2_E set!
 
-: log10 ( x -- log10[x] )
+: my-log10 ( x -- log10[x] )
 	( change of base == log2[x] / log2[10] )
-	log2 LOG2_10 ref / ;
+	my-log2 LOG2_10 ref / ;
 
-: log ( x -- logE[x] )
+: my-log ( x -- logE[x] )
 	( change of base == log2[x] / log2[e] )
-	log2 LOG2_E ref / ;
+	my-log2 LOG2_E ref / ;
 
-"-- log10" . CR
+"-- my-log10" . CR
 
-{ 1000 log10 } 3 expect-f
-{ #1234.5678 log10 } #3.0915149455092 expect-f
-{ #0.5678 log10 } #-0.24580461181016 expect-f
+{ 1000 my-log10 } 3 expect-f
+{ #1234.5678 my-log10 } #3.0915149455092 expect-f
+{ #0.5678 my-log10 } #-0.24580461181016 expect-f
 
-"-- log [natural log]" . CR
-{ 1 log 1 + } 1 expect-f ( +1 so pctdiff won't have divide by zero )
-{ #0.5 log } #-0.69314718055995 expect-f
-{ #0.25 log } #-1.3862943611199 expect-f
-{ #0.1 log } #-2.3025850929941 expect-f
-{ #1234.5678 log } #7.1184762282978 expect-f
+"-- my-log [natural log]" . CR
+{ 1 my-log 1 + } 1 expect-f ( +1 so pctdiff won't have divide by zero )
+{ #0.5 my-log } #-0.69314718055995 expect-f
+{ #0.25 my-log } #-1.3862943611199 expect-f
+{ #0.1 my-log } #-2.3025850929941 expect-f
+{ #1234.5678 my-log } #7.1184762282978 expect-f
 
 ( -- calc i'th term of Taylor series for sin[x] -- )
 : sin-term ( x n -- n'th term of sin[x] )
@@ -177,7 +181,7 @@ var LOG2_E 1
 	( denominator = (2n+1)! )
 	tuck 2 * 1 + ( n x 2n+1 )
 	dup fact ( n x 2n+1 [2n+1]! )
-	-rot pow swap / swap -1 swap pow *
+	-rot my-pow swap / swap -1 swap my-pow *
 	;
 
 ( -- calc i'th term of Taylor series for cos[x] -- )
@@ -186,13 +190,13 @@ var LOG2_E 1
 	( denominator = (2n)! )
 	tuck 2 * ( n x 2n )
 	dup fact ( n x 2n [2n]! )
-	-rot pow swap / swap -1 swap pow *
+	-rot my-pow swap / swap -1 swap my-pow *
 	;
 
 ( -- calc i'th term of Taylor series for exp[x] -- )
 : exp-term ( x n -- n'th term of exp[x] )
 	( term = (x^n)/(n!) )
-	dup fact -rot pow swap / ( x^n/n! ) ;
+	dup fact -rot my-pow swap / ( x^n/n! ) ;
 
 ( -- calc Taylor series -- )
 : taylor ( lambda x n start -- sum lambda[x,i] for i=start..n )
@@ -208,31 +212,31 @@ var LOG2_E 1
 
 ( number of terms is tuned to give small% difference from expected results
   -- currently allowing max 1e-8 % error )
-: sin ( x -- sin[x] ) { sin-term } swap 12 0 taylor ;
-: cos ( x -- cos[x] ) { cos-term } swap 12 0 taylor ;
+: my-sin ( x -- sin[x] ) { sin-term } swap 12 0 taylor ;
+: my-cos ( x -- cos[x] ) { cos-term } swap 12 0 taylor ;
 ( takes a ridiculous number of terms to converge for larger values ... )
-: exp ( x -- exp[x] ) { exp-term } swap 40 0 taylor ;
+: my-exp ( x -- exp[x] ) { exp-term } swap 40 0 taylor ;
 
-"-- sin" . CR
-{ 1 sin } #0.8414709848079 expect-f
-{ #3.141 sin } #0.00059265355509945 expect-f
+"-- my-sin" . CR
+{ 1 my-sin } #0.8414709848079 expect-f
+{ #3.141 my-sin } #0.00059265355509945 expect-f
 
 var PI 1
 #3.141592653589793 PI set!
 
-{ 0 sin 1 + } 1 expect-f 
-{ PI ref sin 1 + } 1 expect-f
-{ PI ref 2 / sin } 1 expect-f
+{ 0 my-sin 1 + } 1 expect-f 
+{ PI ref my-sin 1 + } 1 expect-f
+{ PI ref 2 / my-sin } 1 expect-f
 
-"-- cos" . CR
-{ 1 cos } #0.54030230586814 expect-f
-{ 2 cos } #-0.41614683654714 expect-f
-{ #3.14 cos } #-0.99999873172754 expect-f
-{ PI ref cos } -1 expect-f
-{ PI ref #1.9 / cos } #-0.08257934547233227 expect-f
-{ 0 cos } 1 expect-f
+"-- my-cos" . CR
+{ 1 my-cos } #0.54030230586814 expect-f
+{ 2 my-cos } #-0.41614683654714 expect-f
+{ #3.14 my-cos } #-0.99999873172754 expect-f
+{ PI ref my-cos } -1 expect-f
+{ PI ref #1.9 / my-cos } #-0.08257934547233227 expect-f
+{ 0 my-cos } 1 expect-f
 
-: exp2 ( x -- exp[x] )
+: my-exp2 ( x -- exp[x] )
 	( based on: https://www.geeksforgeeks.org/program-to-efficiently-calculate-ex/ )
 	40 swap 1 ( n x sum )
 	@loop
@@ -241,24 +245,24 @@ var PI 1
 	2dup * 4 pick / 1 + nip rot 1 - -rot <<loop ( n x 1+[x*sum/n] )
 	@done nip nip ;
 
-"-- exp" . CR
-{ #1.2345 exp } #3.4366597611705 expect-f
-{ #1.2345 exp2 } #3.4366597611705 expect-f
-{ #12.3456 exp } #229946.05110990 expect-f
-{ #12.3456 exp2 } #229946.05110990 expect-f
-{ #-3.4567 exp } #0.031533651556486 expect-f
-{ #-3.4567 exp2 } #0.031533651556486 expect-f
+"-- my-exp" . CR
+{ #1.2345 my-exp } #3.4366597611705 expect-f
+{ #1.2345 my-exp2 } #3.4366597611705 expect-f
+{ #12.3456 my-exp } #229946.05110990 expect-f
+{ #12.3456 my-exp2 } #229946.05110990 expect-f
+{ #-3.4567 my-exp } #0.031533651556486 expect-f
+{ #-3.4567 my-exp2 } #0.031533651556486 expect-f
 
-( now can define full pow with float exponent using exp )
-: powf ( x y -- x^y, both float/int )
-	dup int? if >>intY ( if y is in, use pow )
+( now can define full my-pow with float exponent using exp )
+: my-powf ( x y -- x^y, both float/int )
+	dup int? if >>intY ( if y is in, use my-pow )
 	( x^y == exp(y*log(x)) )
-	swap log * exp ( exp[y*log(x)] ) return
-	@intY pow ;
+	swap my-log * my-exp ( exp[y*log(x)] ) return
+	@intY my-pow ;
 
-"-- powf" . CR
-{ #2.345 #4.567 powf } #49.027797367222 expect-f
-{ #3.567 4 powf } #161.88717233312 expect-f
+"-- my-powf" . CR
+{ #2.345 #4.567 my-powf } #49.027797367222 expect-f
+{ #3.567 4 my-powf } #161.88717233312 expect-f
 
 
 

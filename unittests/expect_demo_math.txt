@@ -2,59 +2,59 @@
 OK 
 OK 
 OK 
- -- pow, x=int 
+ -- my-pow, x=int 
 OK 
 OK 
 OK 
 OK 
 OK 
--- pow, x=float 
+-- my-pow, x=float 
 OK 
 OK 
 OK 
 OK 
- -- sqrt 
+ -- my-sqrt 
 OK 
 OK 
 -- fact 
 OK 
 OK 
 OK 
--- log2 
+-- my-log2 
 OK 
 OK 
 OK 
 OK 
--- log10 
+-- my-log10 
 OK 
 OK 
 OK 
--- log [natural log] 
-OK 
-OK 
-OK 
-OK 
-OK 
--- sin 
+-- my-log [natural log] 
 OK 
 OK 
 OK 
 OK 
 OK 
--- cos 
+-- my-sin 
 OK 
 OK 
 OK 
 OK 
 OK 
-OK 
--- exp 
+-- my-cos 
 OK 
 OK 
 OK 
 OK 
 OK 
 OK 
--- powf 
+-- my-exp 
+OK 
+OK 
+OK 
+OK 
+OK 
+OK 
+-- my-powf 
 OK 
 OK 
