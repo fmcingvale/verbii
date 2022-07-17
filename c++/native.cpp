@@ -406,6 +406,17 @@ static void builtin_append(Interpreter *intr) {
 	intr->push(list);
 }
 
+// append items from a list to an existing list, pushing original
+// object back to stack
+static void builtin_extend(Interpreter *intr) {
+	Object src = popList(intr, "extend");
+	Object list = popList(intr, "extend");
+	for(auto obj : *src.asList())
+		list.asList()->push_back(obj);
+
+	intr->push(list);
+}
+
 static void builtin_make_lambda(Interpreter *intr) {
 	Object list = popList(intr, "Bad arg to make-lambda");
 	// must deepcopy list so that external changes to original list cannot
@@ -778,6 +789,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"unmake", builtin_unmake},
 	{"slice", builtin_slice},
 	{"append", builtin_append},
+	{"extend", builtin_extend},
 	// could implement next two in script, however, host language has to have this
 	// function anyways to deserialize programs, so just use that
 	{"parse-int", [](Interpreter *intr){intr->push(parseInt(popStringOrSymbol(intr)));}},
