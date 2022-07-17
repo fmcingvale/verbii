@@ -96,6 +96,19 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* nested @[ ] lists not being expanded correctly:
+	: x @[ 1 2 @[ 111 222 333 ] ] ;
+	'x .dumpword
+
+	shows:
+		[ 1 2 [ ',,inline 111 222 333 3 'make-list ] 3 'make-list 'return ]
+
+	... so inner ,,inlines are not being flattened
+	
+* + on lists is kind of unsafe -- extend is better since it maintains object identity (important across
+  closure boundaries). a list+ could be defined as:
+	: list+ @( list1 list2 ) [ ] list1 extend list2 extend ;
+
 * change all verbii code to use make-var instead of var then get rid of old ,,var/var -- can replace with make-var based function
 
 * collect-args-locals should give error on duplicated names
