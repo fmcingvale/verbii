@@ -299,6 +299,13 @@
 			(loop (- nr 1) (cons (pop intr) lst))
 			lst)))
 
+(define (pop-float-or-int intr wheresym)
+	(let ((obj (pop intr)))
+		(cond
+			((integer? obj) obj)
+			((Float? obj) (value obj))
+			(else (lang-error wheresym "Expecting float or int but got: " obj)))))
+
 (define (builtin-make-string intr NR)
 	; pop list of integers into lst and make string
 	(push intr (make-String (apply string (map integer->char (pop-nr-objs intr NR))))))
@@ -588,7 +595,11 @@
 			(lambda (intr) (push intr (- (intr-SP_EMPTY intr) (intr-SP intr)))))
 
 		(list "keys" '() builtin-keys)
-				
+
+		(list "sin" '() (lambda (intr) (push intr (make-Float (sin (pop-float-or-int intr 'sin))))))
+		(list "cos" '() (lambda (intr) (push intr (make-Float (cos (pop-float-or-int intr 'cos))))))
+		(list "sqrt" '() (lambda (intr) (push intr (make-Float (sqrt (pop-float-or-int intr 'sqrt))))))
+		(list "log" '() (lambda (intr) (push intr (make-Float (log (pop-float-or-int intr 'log))))))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

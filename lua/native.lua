@@ -773,4 +773,9 @@ BUILTINS = {
 	["sys-platform"] = { {}, function(intr) intr:push(new_String(_VERSION)) end},
 
 	["keys"] = { {}, builtin_keys },
+
+	["sin"] = { {}, function(intr) intr:push(new_Float(math.sin(popFloatOrInt(intr)))) end},
+	["cos"] = { {}, function(intr) intr:push(new_Float(math.cos(popFloatOrInt(intr)))) end},
+	["sqrt"] = { {}, function(intr) intr:push(new_Float(math.sqrt(popFloatOrInt(intr)))) end},
+	["log"] = { {}, function(intr) intr:push(new_Float(math.log(popFloatOrInt(intr)))) end},
 }

@@ -820,5 +820,10 @@ class Builtins {
 		{"sys-platform", intr => intr.push(new LangString("C#"))},
 
 		{"keys", keys},
+
+		{"sin", intr => intr.push(new LangFloat(Math.Sin(popFloatOrInt(intr,"sin"))))},
+		{"cos", intr => intr.push(new LangFloat(Math.Cos(popFloatOrInt(intr,"cos"))))},
+		{"sqrt", intr => intr.push(new LangFloat(Math.Sqrt(popFloatOrInt(intr,"sqrt"))))},
+		{"log", intr => intr.push(new LangFloat(Math.Log(popFloatOrInt(intr,"log"))))},
 	};
 }

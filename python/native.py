@@ -6,6 +6,7 @@
 	Ported from C++ version
 """
 from math import floor
+import math
 from xml.dom.minidom import ReadOnlySequentialNamedNodeMap
 from errors import LangError
 from interpreter import Interpreter
@@ -623,5 +624,11 @@ BUILTINS = {
 	'sys-platform': ([], lambda I: I.push(LangString("Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro)))),
 
 	'keys': ([], lambda I: I.push(list(popDict(I)))),
+
+	'sin': ([], lambda I: I.push(math.sin(popIntOrFloat(I)))),
+	'cos': ([], lambda I: I.push(math.cos(popIntOrFloat(I)))),
+	'sqrt': ([], lambda I: I.push(math.sqrt(popIntOrFloat(I)))),
+	'log': ([], lambda I: I.push(math.log(popIntOrFloat(I)))),
+
 }
 
