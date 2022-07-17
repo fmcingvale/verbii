@@ -367,6 +367,64 @@ make-var
 	attacks
 	;
 
+\ generate a table of all fixed attacks for a piece at each square
+: gen-all-fixed-attacks @( moves -- attack-table ) 
+	[ ] attack-table!
+	@{ @( square )
+		attack-table
+			square moves gen-fixed-attacks
+			append attack-table!
+	} 0 1 64 for-range
+	attack-table
+	;
+	
+\ generate attack squares for sliding pieces - pieces moves from square along (dRow,dCol) direction
+\
+\ squares are returned as a list of empty squares + the final blocked square, or void if all are empty
+: gen-sliding-attacks @( square dRow dCol -- attacks blocked )
+	@locals [ row col ]
+	[ ] attacks!
+	square square-to-rowcol col! row!
+	@loop
+		row dRow + row!
+		col dCol + col!
+		row col valid-rowcol? not if >>off-board 
+		row col square-index square!
+		square piece-at P-NONE != if >>blocked 
+		\ valid & empty -- add to attacks
+		attacks square append drop <<loop
+	@off-board
+		\ all were empty and i went off side of board, so
+		\ no square was blocked
+		attacks void return
+	@blocked
+		\ square is blocked (be either side) so stop & return
+		attacks square return
+	;
+
+\ generate sliding attacks for multiple direction vectors
+\	movedirs is list of [ dRow dCol ]		
+\
+\ here, blockers is always a list (can be empty)
+: gen-all-sliding-attacks @( square movedirs -- attacks blockers )
+	[ ] attacks!
+	[ ] blockers!
+	movedirs
+	@{ @( dir )
+		square dir unmake drop gen-sliding-attacks \ ( attacks blocked )
+		\ if blocked is not void, add to blockers list
+		dup void? not
+			@{ blockers swap append blockers! }
+			{ drop } ifelse
+			
+		\ add attacks to list (use extend so i don't change object identity vs attacks
+		\ defined in outer scope!)
+		attacks swap extend attacks!
+	} for-each
+	
+	attacks blockers
+	;
+	
 \ generate attacks for king of given side at square (king does not have
 \ to actually be there); these will be ALL squares the king can reach,
 \ regardless of whether something is on the destination square
@@ -375,18 +433,10 @@ make-var
 \ pregenerated list of king attacks indexed by square
 'KING-ATTACKS-BY-SQUARE [ ] make-var
 
-: gen-king-attacks @( square -- attacks )
-	square KING-MOVEDIRS gen-fixed-attacks
-	;
-	
 \ pregenerate KING-ATTACKS-BY-SQUARE
 : gen-all-king-attacks @( ) 
-	[ ] KING-ATTACKS-BY-SQUARE!
-	@{ @( square )
-		KING-ATTACKS-BY-SQUARE
-			square gen-king-attacks
-			append KING-ATTACKS-BY-SQUARE!
-	} 0 1 64 for-range
+	KING-MOVEDIRS gen-all-fixed-attacks
+		KING-ATTACKS-BY-SQUARE!
 	;
 	
 \ generate attacks for knight of given side at square (knight does not have
@@ -397,18 +447,10 @@ make-var
 \ pregenerated list of knight attacks indexed by square
 'KNIGHT-ATTACKS-BY-SQUARE [ ] make-var
 
-: gen-knight-attacks @( square -- attacks )
-	square KNIGHT-MOVEDIRS gen-fixed-attacks
-	;
-	
 \ pregenerate KNIGHT-ATTACKS-BY-SQUARE
 : gen-all-knight-attacks @( ) 
-	[ ] KNIGHT-ATTACKS-BY-SQUARE!
-	@{ @( square )
-		KNIGHT-ATTACKS-BY-SQUARE
-			square gen-knight-attacks
-			append KNIGHT-ATTACKS-BY-SQUARE!
-	} 0 1 64 for-range
+	KNIGHT-MOVEDIRS gen-all-fixed-attacks
+		KNIGHT-ATTACKS-BY-SQUARE!
 	;
 	
 \ move object
@@ -435,6 +477,7 @@ make-var
 : print-move-long @( move )
 	move move-piece move move-side piece-char "-" + puts
 	move move-squareFrom square-to-algebraic puts
+	move move-isCapture? { "x" puts } ifthen
 	move move-squareTo square-to-algebraic .
 	;
 	
@@ -455,11 +498,7 @@ make-var
 : move-pieceCaptured @( move -- piece ) move 5 get ;
 : move-pieceCaptured! @( move piece -- move' ) move 5 piece put ;
 	
-"King @ row=2, col=4 (square 20):" . CR
-2 4 square-index gen-king-attacks . CR
-
-"King @ row=0, col=2 (square 2):" . CR
-0 2 square-index gen-king-attacks . CR
+: move-isCapture? @( move -- result ) move move-pieceCaptured P-NONE != ;
 
 "Making king attack table ..." . CR	
 gen-all-king-attacks
@@ -494,6 +533,32 @@ gen-all-knight-attacks
 	moves
 	;
 	
+\ (attacks,blockers) is from gen-all-sliding-attacks
+: gen-sliding-moves @( piece square attacks blockers side -- moves )
+	[ ] moves!
+	\ all the squares in attacked are empty, so make those first
+	attacks
+	@{ @( squareTo )
+		\ always non-capturing move
+		moves
+			piece side square squareTo new-move append moves!
+	} for-each
+	
+	\ now i have to check if blockers are opposite side (voids were already
+	\ filtered out in gen-all-sliding-squares)
+	blockers
+	@{ @( squareTo )
+		squareTo color-at side == if >>done \ blocked by my piece, so i'm done
+		\ else its a capture
+		moves
+			piece side square squareTo new-move
+			squareTo piece-at move-pieceCaptured!
+			append moves!
+		@done
+	} for-each
+	moves
+	;
+	
 : gen-king-moves @( square side -- moves )
 	P-KING square KING-ATTACKS-BY-SQUARE square get side gen-fixed-moves
 	;
@@ -502,14 +567,83 @@ gen-all-knight-attacks
 	P-KNIGHT square KNIGHT-ATTACKS-BY-SQUARE square get side gen-fixed-moves
 	;
 	
+'ROOK-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] ] make-var
+
+: gen-rook-moves @( square side -- moves )
+	@locals [ attacks blockers ]
+	\ gen attacks & blocked squares
+	square ROOK-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
+	P-ROOK square attacks blockers side gen-sliding-moves
+	\ return moves
+	;
+
+'BISHOP-MOVEDIRS [ [ 1 1 ] [ -1 1 ] [ 1 -1 ] [ -1 -1 ] ] make-var
+
+: gen-bishop-moves @( square side -- moves )
+	@locals [ attacks blockers ]
+	\ gen attacks & blocked squares
+	square BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
+	P-BISHOP square attacks blockers side gen-sliding-moves
+	\ return moves
+	;
+	
+\ generate pseudolegal moves for side (moves are not checked to see if they
+\ put the king into/leave the king in check)
+: gen-pseudo-moves @( side -- moves )
+	@locals [ piece ]
+	[ ] moves!
+	\ for each square ...
+	@{ @( i )
+		i piece-at piece!
+		piece P-NONE == if >>done \ empty square, skip
+		i color-at side != if >>done \ wrong color piece
+
+		\ generate moves for piece
+		piece P-ROOK == if >>rook 
+		piece P-BISHOP == if >>bishop 
+		piece P-KNIGHT == if >>knight 
+		piece P-KING == if >>king 
+		"Unknown piece:" piece str + error
+		
+		\ use extend to preserve object id with outer loop
+		@rook  moves i side gen-rook-moves extend moves! >>done
+		@bishop moves i side gen-bishop-moves extend moves! >>done
+		@knight moves i side gen-knight-moves extend moves! >>done
+		@king moves i side gen-king-moves extend moves! >>done
+		@done
+	} 0 1 64 for-range
+	moves
+	;
+	
 "2k5/8/8/8/3np3/2NK4/3RB3/8 w - - 0 1" set-from-fen
 print-board
 
 2 3 square-index WHITE gen-king-moves { print-move-long } for-each CR 
 	
-"1k6/8/7N/8/2N5/8/8/5K2 w - - 0 1" set-from-fen
+"1k6/5b2/1b5N/4b3/2N3b1/8/8/5K2 w - - 0 1" set-from-fen
 print-board
 
 3 2 square-index WHITE gen-knight-moves { print-move-long } for-each CR 
 
 5 7 square-index WHITE gen-knight-moves { print-move-long } for-each CR 
+
+"2k5/5n2/3B4/6B1/2n5/4P3/1P6/1K6 w - - 0 1" set-from-fen
+print-board
+
+3 2 square-index BLACK gen-knight-moves { print-move-long } for-each CR 
+
+"k7/8/8/1n6/8/1R3b2/8/4K3 w - - 0 1" set-from-fen
+print-board
+
+2 1 square-index WHITE gen-rook-moves { print-move-long } for-each CR
+
+"3k4/8/8/r3r3/1B6/8/8/4K3 w - - 0 1" set-from-fen
+print-board
+
+3 1 square-index WHITE gen-bishop-moves { print-move-long } for-each CR
+
+"* Test gen-pseudo-moves ..." . CR
+
+"3k4/8/8/r3r3/1B6/8/8/4K3 w - - 0 1" set-from-fen
+
+WHITE gen-pseudo-moves { print-move-long } for-each CR
