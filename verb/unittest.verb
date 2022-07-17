@@ -7,6 +7,8 @@
 'UNITTEST-NR-FAIL 0 make-var
 'UNITTEST-SP0 void make-var
 'UNITTEST-LP0 void make-var
+\ maximum % difference when checking floating point results, on [0..1]
+'UNITTEST-MAX-PCTDIFF 1e-6 make-var
 
 \ must call this once
 : unittest-init
@@ -15,16 +17,61 @@
 	LP UNITTEST-LP0!
 	;
 
-: expect== @( expect actual )
-	expect actual == if >>ok
+\ test is called with stack: ( expect actual )
+: expect-generic @( test testname expect actual )
+	expect actual test call if >>ok
 		"*** ERROR *** expecting " . expect . "but got" . actual . CR 
 		UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
 		return
 	@ok 
-		"    " . expect . "==" . actual . ": ok" . CR 
+		"    " . expect . testname . actual . ": ok" . CR 
 		UNITTEST-NR-PASS 1 + UNITTEST-NR-PASS!
 	;
 
+\ exact equality, no coercion allowed other than usual int+float comparison
+: expect== @( expect actual )
+	{ == } "==" expect actual expect-generic
+	;
+
+: expect!= @( expect actual )
+	{ != } "!=" expect actual expect-generic
+	;
+
+: expectTrue @( actual )
+	{ == } "true?" true actual expect-generic
+	;
+
+: expectFalse @( actual )
+	{ == } "false?" false actual expect-generic
+	;
+	
+\ % difference between a & b as [0..1]
+: %diff @( a b -- p )
+	\ abs(a-b) / ((a+b)/2)
+	a b - abs a b + 2 / /
+	;
+
+\ test that values are equal within UNITTEST-MAX-PCTDIFF
+: expect==f @( expect actual )
+	{ %diff UNITTEST-MAX-PCTDIFF <= } "~=" expect actual expect-generic
+	;
+
+\ test that values are not equal (more than UNITTEST-MAX-PCTDIFF)
+: expect!=f @( expect actual )
+	{ %diff UNITTEST-MAX-PCTDIFF > } "~!=" expect actual expect-generic
+	;
+	
+( takes a lambda that takes nothing from the stack and leaves one result on the stack.
+  compares the result to 'a' - print OK or error if error is too large )
+: expect-f ( lambda a )
+	\ "Expect" . dup . swap call "got" . dup . 
+	swap call
+	pct-diff \ dup "(" .. .. " %)" . CR
+	#1e-6 > if >>toolarge
+		"OK" . CR return
+	@toolarge "** !! ERROR !! **" . CR
+	;
+	
 : unittest-summary
 	"* Summary:" . CR
 	"    Tests passed:" . UNITTEST-NR-PASS . CR

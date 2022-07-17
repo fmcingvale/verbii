@@ -103,47 +103,6 @@ clear
 rot
 -rot
 
-( relational operators )
-clear
-10 20 >=
-30 20 >=
-40 40 >=
-
-clear
-10 20 <
-30 10 <
-40 40 <
-
-clear
-15 20 <=
-35 21 <=
-40 40 <=
-
-( combinations of rich math operations )
-clear
-10 20 +
-10 #21 +
-#11 22 +
-#11 #33 +
-
-clear
-10 20 -
-10 #21 -
-#11 20 -
-#22 #77 -
-
-clear
-10 20 *
-10 #21 *
-#12 12 *
-#10 #40 *
-
-clear
-10 20 /
-40 #20 /
-#30 2 /
-#100 #25 /
-
 clear
 "hello" " " "world"
 +
@@ -153,41 +112,6 @@ clear
 'abc 'def 'ghi
 +
 +
-
-( more math operations )
-clear
-123 
-neg
--456
-neg
-
-clear
-123 456 
-max
--500 200 
-max
-300 -44
-max
-444 444 
-max
-
-clear
-100 200 
-min
--400 500 
-min
-123 -40 
-min
-77 77
-min
-
-clear
-123
-abs
--99
-abs
-0
-abs
 
 clear
 10 20 30 40 

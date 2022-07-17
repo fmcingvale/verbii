@@ -70,6 +70,132 @@
 	188900976391764 bit-low32 4019746388 expect==
 	;
 	
+: test-basic-mathops
+	"* basic math ops ..." . CR
+	12 12 expect==
+	-34 -34 expect==
+	20 8 expect!=
+
+	#123.125 #123.125 expect==
+	#-4.5 #-4.5 expect==
+	#45.125 #35.125 expect!=
+
+	123.125 #123.125 expect==
+	-4.5 #-4.5 expect==
+	45.125 #35.125 expect!=
+
+	123 #123 expect==
+	-45 #-45 expect==
+	123 #1234 expect!=
+	#987.0 987 expect==
+	
+	\ make sure expect==f is working ...
+	10 10.0000000000001 expect==f
+	12 12.1 expect!=f
+	
+	71.78504672897196 7681 107 / expect==f
+	1.204044397141554 7919 6577 / expect==f
+	275.1680469808764 1827391 6641 / expect==f
+	
+	( *** rounding of / -- should round to nearest *** ) 
+
+	( round down 8.3 -> 8 ) 
+	8 639 77 /mod nip expect==
+	23 639 77 /mod drop expect==
+
+	-8 -639 77 /mod nip expect==
+	-23 -639 77 /mod drop expect==
+
+	8 639 77 // expect==
+	-8 -639 77 // expect==
+	
+	23 639 77 mod expect==
+	-23 -639 77 mod expect==
+
+	( round down 7.8 -> 7 ) 
+	7 335 43 // expect==
+	34 335 43 mod expect==
+
+	-7 -335 43 // expect==
+	-34 -335 43 mod expect==
+	
+	( round 6.5 -> 6 ) 
+	6 403 62 // expect==
+	31 403 62 mod expect==
+	
+	-6 -403 62 // expect==
+	-31 -403 62 mod expect==
+ 
+	( this was a c++ & c# bug case with # > 32 bits ) 
+	5750699319 11501398638 2 /mod nip expect==
+	0 11501398638 2 /mod drop expect==
+	
+	( numerical limits -- non-error cases )
+	( ports are required to support UP TO these max values )
+
+	9007199254740991 9007199254740981 10 + expect==
+	-9007199254740991 -9007199254740971 20 - expect==
+
+	( relational operators )
+	10 20 >= expectFalse
+	30 20 >= expectTrue
+	40 40 >= expectTrue
+
+	-12 8 > expectFalse
+	100 2 > expectTrue
+	212 -84 > expectTrue
+	123 123 > expectFalse
+	-456 -456 > expectFalse
+
+	10 20 < expectTrue
+	30 10 < expectFalse
+	40 40 < expectFalse
+
+	15 20 <= expectTrue
+	35 21 <= expectFalse
+	40 40 <= expectTrue
+
+	( combinations of rich math operations )
+	30 10 20 + expect==
+	31 10 #21 + expect==
+	
+	33 #11 22 + expect==
+	44 #11 #33 + expect==
+
+	-10 10 20 - expect==
+	-11 10 #21 - expect==
+	-9 #11 20 - expect==
+	-55 #22 #77 - expect==
+
+	200 10 20 * expect==
+	210 10 #21 * expect==
+	144 #12 12 * expect==
+	400 #10 #40 * expect==
+
+	0.5 10 20 / expect==
+	2 40 #20 / expect==
+	15 #30 2 / expect==
+	4 #100 #25 / expect==
+	
+	( more math operations )
+	-123 123 neg expect==
+	456 -456 neg expect==
+
+	456 123 456 max expect==
+	200 -500 200 max expect==
+	300 300 -44 max expect==
+	444 444 444 max expect==
+
+	100 100 200 min expect==
+	-400 -400 500 min expect==
+	-40 123 -40 min expect==
+	77 77 77 min expect==
+
+	123 123 abs expect==
+	99 -99 abs expect==
+	0 0 abs expect==
+	;
+	
 unittest-init
 
 test-parse-hex
@@ -78,6 +204,7 @@ test-bit-shr
 test-bit-shl
 test-bit-rotl
 test-bit-low32
+test-basic-mathops
 
 unittest-summary
 

@@ -17,75 +17,7 @@ clear
 * 
 +
 
-( *** rounding of / -- should round to nearest *** )
-
-( round down 8.3 -> 8 )
-clear
-639 77 /mod
-77 * +
--639 77 /mod
-77 * +
-639 77 //
--639 77 //
-639 77 mod
--639 77 mod
-
-( round down 7.8 -> 7 )
-clear
-335 43 /mod
-43 * +
--335 43 /mod
-43 * +
-335 43 //
--335 43 //
-335 43 mod
--335 43 mod
-
-( round 6.5 -> 6 )
-clear
-403 62 /mod
-62 * +
--403 62 /mod
-62 * +
-403 62 //
--403 62 //
-403 62 mod
--403 62 mod
-clear
-
-( this was a c++ & c# bug case with # > 32 bits )
-11501398638 2 /mod
-clear
-
-( numerical limits -- non-error cases )
-( ports are required to support UP TO these max values )
-clear
-
-9007199254740991
--9007199254740991
-9007199254740981 10 +
--9007199254740971 20 -
-
 ( == )
-clear
-12 12 ==
--34 -34 ==
-20 8 ==
-
-clear
-#123.125 #123.125 ==
-#-4.5 #-4.5 ==
-#45.125 #35.125 ==
-
-123.125 #123.125 ==
--4.5 #-4.5 ==
-45.125 #35.125 ==
-
-clear
-123 #123 ==
--45 #-45 ==
-123 #1234 ==
-#987.0 987 ==
 
 clear
 "hello" "hello" ==
@@ -98,6 +30,9 @@ clear
 
 clear
 ( lambdas are never equal to anything, but it should not cause an error to compare them )
+( -> why? compiler does transformations/optimizations so user code should not rely on the
+     source form of a lambda being equal to the compiled version so I think it's better to
+	 disallow this comparison )
 { 1 2 3 } { 1 2 3 } ==
 { 10 20 30 } dup ==
 { 11 22 33 } 112233 ==
@@ -116,11 +51,7 @@ void void ==
 clear
 
 ( > )
--12 8 >
-100 2 >
-212 -84 >
-123 123 >
--456 -456 >
+
 clear
 
 "abcde" "abcde" >
