@@ -10,6 +10,20 @@
 \      else compiler would never run when finding .b files.
 
 ( ------ boot ----------- )
+
+\ make a variable with only a getter so acts as a constant
+\	'name' gets data stored in var
+: make-const @( name initval )
+	@locals [ addr ]
+	1 alloc addr! \ alloc storage
+	initval addr set! \ save initval
+	
+	\ make:
+	\	name = get data @ addr
+	
+	\ make word: : NAME addr ref ;
+	addr 'ref 2 make-list name make-word
+	;
 	
 ( ------ init ----------- )
 	
