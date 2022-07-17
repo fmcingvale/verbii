@@ -39,5 +39,21 @@
 
 ( ------ compiler ------- )
 
+: float-string? ( string -- true|false if string can be parsed as float )
+	( NOTE - this will ALSO match integers, so use int-string? first to rule those out )
+	dup any-digits? not if >>nodigits ( must have digits, not just +/-/./e )
+	ltrim-sign
+	ltrim-digits
+	"." ltrim-char
+	ltrim-digits
+	"e" ltrim-char
+	"E" ltrim-char
+	ltrim-sign
+	ltrim-digits
+	length 0 == return
+	@nodigits 
+	drop false
+	;
+	
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR
