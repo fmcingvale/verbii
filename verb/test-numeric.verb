@@ -1,3 +1,6 @@
+\ Test numeric module and other number-related things
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 "unittest" import
 "numeric" import
