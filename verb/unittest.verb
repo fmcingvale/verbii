@@ -9,6 +9,14 @@
 'UNITTEST-LP0 void make-var
 \ maximum % difference when checking floating point results, on [0..1]
 'UNITTEST-MAX-PCTDIFF 1e-6 make-var
+\ NOT the smallest float that can be represented, but the value that is
+\ defined as "really really small" where %diff test would give bad results
+\ for small amounts of rounding error. so if BOTH values are below this
+\ value, the %diff is defined as 0%.
+\
+\ values below this threshold cannot be meaningfully compared, so this
+\ might need additional tuning.
+'UNITTEST-TINY-FLOAT 1e-12 make-var
 
 \ must call this once
 : unittest-init
@@ -47,8 +55,26 @@
 	
 \ % difference between a & b as [0..1]
 : %diff @( a b -- p )
+	\ special cases
+	a 0 == b 0 == and if >>zerozero  \ divide by zero
+	a b + 0 == if >>zerosum \ divide by zero
+	\ if EITHER is zero, then equation simplifies to: abs(-b) / ((b)/2) == abs(b) * 2 / b == 2.
+	\ also if both are really small, you get values approaching 2 as well (e.g. 1e-12 and 1e-16 gives
+	\ a %diff of 1.999... 
+	
+	\ so final check is if BOTH values fall below tiny float, then define that as 0% difference
+	a abs UNITTEST-TINY-FLOAT < b abs UNITTEST-TINY-FLOAT < and if >>zerozero
+	
 	\ abs(a-b) / ((a+b)/2)
-	a b - abs a b + 2 / /
+	a b - abs a b + 2 / / return
+	@zerozero
+		\ both are zero (or close to zero) so 0% difference
+			\ "ZEROZERO" . CR \ uncomment for debugging to see which cases fall out here
+		0 return
+	@zerosum 
+		\ a == -b so would divide by zero - define this as 100% difference
+			\ "ZEROSUM" . CR \ uncomment for debugging to see which cases fall out here
+		1 return
 	;
 
 \ test that values are equal within UNITTEST-MAX-PCTDIFF
