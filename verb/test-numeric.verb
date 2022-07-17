@@ -196,6 +196,64 @@
 	0 0 abs expect==
 	;
 	
+: test-sin
+	"* sin" . CR
+	\ 0, 90, 180, 270
+	0 0 sin expect==f 
+	1 PI 2 / sin expect==f 
+	0 PI sin expect==f 
+	-1 3 4 / PI * sin expect==f
+	\ 2 per quadrant
+	0.17364817766693033 10 180 / PI * sin expect==f 
+	0.8910065241883678 63 180 / PI * sin expect==f 
+	0.9396926207859083 110 180 / PI * sin expect==f 
+	0.48480962024633717 151 180 / PI * sin expect==f 
+	-0.39073112848927355 203 180 / PI * sin expect==f 
+	-0.9455185755993168 251 180 / PI * sin expect==f 
+	-0.9743700647852352 283 180 / PI * sin expect==f 
+	0.5299192642332 321 180 / PI * sin expect==f 
+	;
+	
+: test-cos
+	"* cos" . CR
+
+	\ 0, 90, 180, 270
+	1 0 cos expect==f 
+	0 PI 2 / cos expect==f 
+	-1 PI cos expect==f 
+	0 3 4 / PI * cos expect==f
+	\ 2 per quadrant
+	0.984807753012208 10 180 / PI * cos expect==f 
+	0.4539904997395468 63 180 / PI * cos expect==f 
+	-0.34202014332566893 110 180 / PI * cos expect==f 
+	-0.8746197071394 151 180 / PI * cos expect==f 
+	-0.9205048534524404 203 180 / PI * cos expect==f 
+	-0.32556815445715664 251 180 / PI * cos expect==f 
+	0.22495105434386492 283 180 / PI * cos expect==f 
+	0.7771459614569711 321 180 / PI * cos expect==f 
+	;
+	
+: test-sqrt
+	"* sqrt" . CR
+	\ integers
+	47453132.81212578 2251799813685248 sqrt expect==f 
+	31487.864424250813 991485606 sqrt expect==f
+	\ floats
+	1.3592361825672535e+63 1847523e120 sqrt expect==f 
+	\ keep numbers > UNITTEST-TINY-FLOAT for valid test
+	9.863524729950243e-06 9.728912009834e-11 sqrt expect==f
+	
+	1.3407807929942596e+154 FLOAT-MAX sqrt expect==f
+	;
+	
+: test-log
+	"* log (natural log)" . CR
+	1 E-VAL log expect==f 
+	14.442702213911256 1872345 log expect==f 
+	299.322976849677283 987e127 log expect==f
+	-1.6460323971461603 0.1928134 log expect==f
+	;
+	
 unittest-init
 
 test-parse-hex
@@ -205,6 +263,10 @@ test-bit-shl
 test-bit-rotl
 test-bit-low32
 test-basic-mathops
+test-sin
+test-cos
+test-sqrt 
+test-log 
 
 unittest-summary
 
