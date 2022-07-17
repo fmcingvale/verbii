@@ -559,6 +559,9 @@ gen-all-knight-attacks
 	moves
 	;
 	
+\ NOTE - all the gen-PIECE-moves functions are pseudo-legal - they are the literal moves
+\ the piece can make, regardless of whether they put/leave their king in check
+
 : gen-king-moves @( square side -- moves )
 	P-KING square KING-ATTACKS-BY-SQUARE square get side gen-fixed-moves
 	;
@@ -605,7 +608,7 @@ gen-all-knight-attacks
 		piece P-KING == if >>king 
 		"Unknown piece:" piece str + error
 		
-		\ use extend to preserve object id with outer loop
+		\ note: use extend to preserve object id with outer loop
 		@rook  moves i side gen-rook-moves extend moves! >>done
 		@bishop moves i side gen-bishop-moves extend moves! >>done
 		@knight moves i side gen-knight-moves extend moves! >>done
