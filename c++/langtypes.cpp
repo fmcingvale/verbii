@@ -161,6 +161,13 @@ Object newClosure(ObjList *objlist, Object state) {
 ObjList *Object::asClosureFunc() const { return data.closure->objlist; }
 Object Object::asClosureState() const { return data.closure->state; }
 
+Object newOpcode(uint64_t packed_opcode) {
+	Object obj;
+	obj.type = TYPE_OPCODE;
+	obj.data.opcode = packed_opcode;
+	return obj;
+}
+
 bool Object::opEqual(const Object &other) const {
 	switch(type) {
 		case TYPE_NULL: return other.isNull();
@@ -492,6 +499,9 @@ string Object::fmtDisplay() const {
 			s += "}";
 			return s;
 		}
+		case TYPE_OPCODE:
+			return fmtStackPrint();
+
 		default: throw LangError("str not implemented for this object type" + to_string(type));
 	}
 }
@@ -515,6 +525,8 @@ static string fmtStackPrintObjList(ObjList *objlist, string open_delim, string c
 	s += close_delim;
 	return s;
 }
+
+#include "opcodes.hpp"
 
 string Object::fmtStackPrint() const {
 	switch(type) {
@@ -549,6 +561,17 @@ string Object::fmtStackPrint() const {
 			s += "}";
 			return s;
 		}
+		case TYPE_OPCODE:
+		{
+			string s = "#op( ";
+			s += opcode_code_to_name(opcode_getcode(data.opcode));
+			s += " " + to_string(opcode_getA(data.opcode));
+			s += " " + to_string(opcode_getB(data.opcode));
+			s += " " + to_string(opcode_getC(data.opcode));
+			s += " )";
+			return s;
+		}
+
 		default: throw LangError("repr not implemented for object type " + to_string(type));
 	}
 }
@@ -563,6 +586,7 @@ ObjList *deepcopy(ObjList *objlist) {
 
 Object Object::deepcopy() const {
 	switch(type) {
+		// all atomic or read-only types just return themselves
 		case TYPE_NULL:
 		case TYPE_VOID:
 		case TYPE_INT:
@@ -572,6 +596,7 @@ Object Object::deepcopy() const {
 		case TYPE_CLOSURE:
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
+		case TYPE_OPCODE:
 			return *this;
 
 		case TYPE_LIST:

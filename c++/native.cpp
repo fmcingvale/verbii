@@ -728,6 +728,28 @@ static void builtin_log(Interpreter *intr) {
 	intr->push(newFloat(log(popFloatOrInt(intr, "log"))));
 }
 
+#include "opcodes.hpp"
+
+// opcode-name A B C make-opcode
+static void builtin_make_opcode(Interpreter *intr) {
+	auto C = popInt(intr,"make-opcode");
+	auto B = popInt(intr,"make-opcode");
+	auto A = popInt(intr,"make-opcode");
+	auto name = popStringOrSymbol(intr);
+
+	// range checks
+	if(A < 0 || A > 255)
+		throw LangError("A must be [0-255] in make-opcode, got: " + to_string(A));
+
+	if(B < 0 || B > 65535)
+		throw LangError("B must be [0-65535] in make-opcode, got: " + to_string(B));
+
+	if(C < 0 || C > 4294967295)
+		throw LangError("C must be [0-4294967295] in make-opcode, got: " + to_string(C));
+
+	intr->push(newOpcode(opcode_pack(opcode_name_to_code(name), A, B, C)));
+}		
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -854,4 +876,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"cos", builtin_cos},
 	{"sin", builtin_sin},
 	{"log", builtin_log}, // natural log
+
+	{"make-opcode", builtin_make_opcode},
 };

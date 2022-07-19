@@ -39,6 +39,8 @@ const unsigned char TYPE_CLOSURE = 8;
 // normally shouldn't be used in data anyways, i don't think that's a problem.
 const unsigned char TYPE_VOID = 9;
 const unsigned char TYPE_DICT = 10;
+// interpreter opcodes
+const unsigned char TYPE_OPCODE = 12;
 
 class Object;
 
@@ -72,6 +74,8 @@ class Object {
 	bool isString() const { return type == TYPE_STRING; }
 	bool isSymbol() const { return type == TYPE_SYMBOL; }
 	bool isClosure() const { return type == TYPE_CLOSURE; }
+	bool isOpcode() const { return type == TYPE_OPCODE; }
+
 	// convenience -- test if symbol AND equal to given string
 	// if n>0 then only require that many chars to match
 	bool isSymbol(const char *s, int n=0) const 
@@ -94,6 +98,8 @@ class Object {
 
 	ObjList *asClosureFunc() const;
 	Object asClosureState() const;
+
+	uint64_t asOpcode() const { return data.opcode; }
 
 	// '==' builtin (exact match except allows for int==float)
 	bool opEqual(const Object &other) const;
@@ -148,6 +154,7 @@ class Object {
 		double d;
 		const char *str; // strings & symbols, immutable
 		Closure *closure;
+		uint64_t opcode;
 	} data;
 };
 
@@ -188,6 +195,7 @@ Object newList(ObjList *); // wraps existing list, does NOT copy
 Object newDict(); // make an empty dict
 
 Object newClosure(ObjList *, Object);
+Object newOpcode(uint64_t packed_opcode);
 
 // to deepcopy just the ObjList portion of a Object
 ObjList *deepcopy(ObjList *objlist);
