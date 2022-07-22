@@ -53,6 +53,15 @@
 
 ( ------ compiler ------- )
 
+\ same as reader-next but doesn't change input stream position
+: reader-peek-next ( -- symbol ) 
+	@locals [ pos sym ]
+	READER_POS ref pos!
+	reader-next sym!
+	pos READER_POS set!
+	sym
+	;
+	
 : float-string? ( string -- true|false if string can be parsed as float )
 	( NOTE - this will ALSO match integers, so use int-string? first to rule those out )
 	dup any-digits? not if >>nodigits ( must have digits, not just +/-/./e )
@@ -69,6 +78,120 @@
 	drop false
 	;
 	
+\ parse next word from input into runnable object
+: syntax-next ( -- obj )
+	reader-next
+		 \ "syntax-next:" . dup . CR
+	dup void? if >>void
+	dup '( == if >>comment \ )
+	dup '\ == if >>line-comment
+	dup '{ == if >>lambda
+	dup '@{ == if >>closure
+	dup '::{ == if >>v2-closure
+	dup '[ == if >>list
+	dup '@[ == if >>capture-list
+	dup '#op( == if >>opcode  \ )
+	dup ': == if >>worddef
+	dup ':W == if >>v2-worddef
+	dup 'def == if >>worddef ( synonym for ':' )
+	dup 'var == if >>var
+	dup 'del == if >>del
+	dup 'true == if >>true-literal
+	dup 'false == if >>false-literal
+	dup 'null == if >>null-literal
+
+	( look for triple-quoted string first )
+	dup 0 3 slice TRIPLEQUOTE ref == if >>triplestring
+	( now single quoted string )
+	dup 0 get '" == if >>string ( "... )
+	\ test for correct format before passing to parse-int or parse-float since those functions
+	\ will happily parse something like "123abc" as 123 
+	dup int-symbol? if >>integer
+	dup float-symbol? if >>float
+	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
+	@nomatch
+		( leave unprocessed word on stack )
+		return
+	@void
+		return ( leave void on stack )
+	@worddef
+		drop syntax-define-word return
+	@v2-worddef
+		drop v2-syntax-define-word return
+	@var
+		drop syntax-var return
+	@del
+		drop syntax-del return
+	@comment
+		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
+	@line-comment
+		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
+	@lambda
+		drop syntax-lambda return
+	@closure
+		drop syntax-closure return
+	@v2-closure
+		drop syntax-v2-closure return
+	@list
+		drop syntax-list return
+	@capture-list
+		drop syntax-capture-list return
+	@opcode
+		drop syntax-opcode return
+	@triplestring
+		( call syntax-triple-string with first piece on stack )
+		syntax-triple-string return
+	@string
+		( call syntax-string with first piece on stack )
+		syntax-string return
+	@integer
+		parse-int return
+	@float
+		parse-float return
+	@float-literal ( #NN.NN form )
+		1 -1 slice parse-float return
+	@true-literal drop true return
+	@false-literal drop false return
+	@null-literal drop null return
+	;
+	
+\ assumes "#op(" was just read and dropped \ )
+: syntax-opcode 
+	@locals [ list s ]
+	[ ] list!
+	@loop ( list )
+		\ everything inside the parens must be a literal so call 
+		\ reader-next instead of syntax-next
+		reader-next s!
+		s void? if >>eof
+		s ') == if >>closelist
+		list s append list! ( else append to list and continue ) <<loop
+	@eof
+		"Unexpected end of input inside #op( .. )" error
+	@closelist
+		\ i parsed: #(op NAME A B C)
+		\ check for errors
+		list length 0 == if >>no-name 
+		list length 4 > if >>too-long 
+		\ A,B,C are allowed to be omitted - fill in zeroes
+	@padlist 
+		list length 4 == if >>make-opcode 
+		list "0" append list! <<padlist
+	@make-opcode
+			\ "READY TO MAKE WITH LIST:" . list str . CR
+		\ put name on stack
+		list 0 get 
+		\ parse A,B,C as ints
+		list 1 -1 slice { parse-int } map unmake drop 
+			\ "READY TO CALL:" . .S CR
+		make-opcode \ make-opcode will check for errors as well
+		return
+	@no-name
+		"Missing opcode name" error
+	@too-long
+		"#op( .. ) too long: " list str + error
+		;
+		
 : serialize-object ( obj -- ; serialize obj to stdout )
 	dup int? if >>int
 	dup float? if >>float
@@ -103,5 +226,126 @@
 	@opcode ( "o" then packed value )
 		"o" . opcode-packed str puts CR return
 		;
+		
+\ parses ::{ .. } into [ ,,v2-closure ... ]
+\
+\ assumes ::{ was just read, parses until } as an object list, prepended with ,,v2-closure
+: syntax-v2-closure
+	@locals [ outlist ]
+	',,v2-closure 1 make-list outlist!
+	
+	\ see if there is a ( .. ) next -- if so treat it as declargs
+	reader-peek-next '( == if >>read-arglist \ )
+	>>loop \ no arglist, peeked symbol will be read again below
+	
+	@read-arglist
+	\ read ( ... ) as arglist
+	reader-next drop \ read the ( now \ )
+	syntax-parse-decl-arglist 
+	outlist swap append outlist! \ fall through to loop
+		"AFTER ARGLIST:" . outlist . CR
+	
+	@loop
+		syntax-next
+		dup void? if >>eof
+		dup '} == if >>done
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside ::{" error
+	@done
+		drop \ drop '}
+		"RETURN OUTLIST:" . outlist . CR
+		outlist
+	;
+
+\ assumes ':W' was just read
+\
+\ TODO --- there should be a common routine to parse functions & lambdas since they
+\ are so similar ... 
+\	:W name ( args ) STUFF ... ;
+\ vs
+\	::{ ( args ) STUFF ... }
+: v2-syntax-define-word
+	@locals [ SP-start name outlist ]
+		"V2 define word" . CR
+	syntax-next ( name must be next )
+	dup symbol? not if >>badname
+	name!
+	
+	\ now this is syntax-v2-closure
+	',,v2-closure 1 make-list outlist!
+	
+	\ see if there is a ( .. ) next -- if so treat it as declargs
+	reader-peek-next '( == if >>read-arglist \ )
+	>>loop \ no arglist, peeked symbol will be read again below
+	
+	@read-arglist
+	\ read ( ... ) as arglist
+	reader-next drop \ read the ( now \ )
+	syntax-parse-decl-arglist 
+	outlist swap append outlist! \ fall through to loop
+		"AFTER ARGLIST:" . outlist . CR
+	
+	@loop
+		syntax-next
+		dup void? if >>eof
+		\ just ; instead of } like in syntax-v2-closure
+		dup '; == if >>done
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside :W" error
+	@done
+		drop \ drop '}
+		\ "RETURN OUTLIST:" . outlist . CR
+		\ outlist
+		
+	@finish
+		"FINISHING" . CR
+		\ SP-start SP - 1 - ( calc number of items )
+			"MAKING" . CR
+		\ make-list
+			"MADE" . dup . CR
+		( save names & compiled words )
+		outlist name save-defined-word
+		syntax-next ( save-defined-word has no return value, so return NEXT object )
+	;
+	
+\ take a parsed objlist, presumably from byte-compile, and perform finalization:
+\	* ensure objlist ends with 'return'
+\	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
+\
+\ returns a new list, does NOT modify objlist
+: compile-finalize-word @( objlist -- newlist )
+		\ "FINALIZE WORD:" . objlist . CR
+	\ dup length 0 > if >>not-empty
+	\ objlist is empty; newlist is [ return ]
+	\ drop 'return 1 make-list >>transform-args-locals
+
+	\ @not-empty ( objlist )
+	\ 	dup -1 get 'return != if >>add-return
+		\ already has return at end
+	\ 	>>transform-args-locals
+
+	\ @add-return ( objlist )
+	\ 	deepcopy \ don't modify original
+	\ 	'return append
+
+	@transform-args-locals 
+		\ see if i got a [ ,,v2closure ... ]
+		objlist length 0 == if >>v1-word
+		objlist 0 get ',,v2-closure != if >>v1-word
+		
+		\ TEMP while i'm working on v2 rewriter ...
+		"NOT CHANGING V2 WORD:" . objlist . CR 
+		objlist return
+	@v1-word
+		\ "V1 WORD:" . objlist . CR
+		\ turn names into code sequences
+		objlist [ ] make-dict ( toplevel has empty selfmap ) compile-rewrite-args-locals
+			\ "AFTER REWRITING:" . .S CR
+	;
+	
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR

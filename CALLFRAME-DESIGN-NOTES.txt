@@ -1,0 +1,129 @@
+
+Design of call frames:
+
+Given a function definition:
+
+: foo ( a b )
+	
+	{ ( c d )
+		a b c d + + + a!
+	}
+	call
+	;
+	
+Compile time:
+
+	1. foo ( a b ) is parsed:
+		- foo will need locals { a b }
+		
+		{ ( c d )
+			- lambda will need locals { c d }
+			- lambda has outer frame { a b }
+			
+		
+Run time:
+
+	1. foo ( a b )
+		- new frame created when foo called, lets call it Frame#1
+		- a,b are popped from stack and stored in Frame#1
+		
+		{ ( c d ) ... }
+		- Lambda found in objlist while running foo
+		- compiler inserted 'bind-lambda' so runtime code is actually:
+			{ .. } bind-lambda
+		- so lambda is pushed to stack, then bound, leaving a bound-lambda on stack
+			- bound lambda has its outer frame set to Frame#1
+			
+		call
+		- new frame created to run { ( c d ) ... }, lets call it Frame#2
+		
+		- bound-lambda runs:
+			a b c d + + + a!
+			
+			translated by compiler to:
+			
+			#op(FRAME-GET 1 0) #(FRAME-GET 1 1) \ get a,b from frame 1 level up (Frame#1 that was bound)
+			#op(FRAME-GET 0 0) #(FRAME-GET 0 1) \ get c,d from 0 frames up (i.e. my frame)
+			+ + + \ no change
+			#op(FRAME-SET 1 0) \ set a in Frame#1 from top of stack
+			
+		NOTE:
+			if inner lambda was returned and called later, it would work the same -- Frame#1 would still be
+			alive, just no longer accessible from original foo instance
+			
+More deeply nested example:
+
+	: foo ( a b )
+		
+		{ ( c d )
+		
+			{ ( e f ) a b c d e f + + + + + b! }
+			
+		}
+		
+Runtime:
+	- foo called
+	- new frame created, Frame#1
+	- a,b popped from stack and saved to Frame#1 index 0 & 1
+	
+	- next in objlist: { ( c d ) ... } bind-lambda
+	- lambda pushed to stack, then bind-lambda binds lambda to Frame#1 as its outer frame
+	
+	- bound { ( c d ) ... } is returned to caller of foo
+	
+	LATER:
+	- bound { ( c d ) ... } is called
+	- new frame created, Frame#2
+	- c,d popped and stored to Frame#2 at index 0 & 1
+	- objlist now: { ( e f ) ... } bind-lambda
+	- creates bound-lambda with outer set to Frame#1 (cur_frame of running lambda)
+	- bound lambda is returned to caller
+	
+	LATER:
+	- bound { ( e f ) ... } is called
+	- new frame created, Frame#3
+	- e,f popped and saved to Frame#3 at index 0 & 1
+	- ORIGINAL objlist now: a b c d e f + + + + + b!
+	- translated by compiler to:
+		#op(FRAME-GET 2 0) \ get a from 2 levels up @ index 0
+		#op(FRAME-GET 2 1) \ get b from 2 levels up @ index 1
+		#op(FRAME-GET 1 0) \ get c from 1 level up @ index 0
+		#op(FRAME-GET 1 1) \ get d from 1 level up @ index 1
+		#op(FRAME-GET 0 0) \ get e from level 0 (my frame) @ index 0
+		#op(FRAME-GET 0 1) \ get f from level 0 (my frame) @ index 1
+		+ + + + + \ unchanged
+		#op(FRAME-SET 2 1) \ set top of stack to b, which is 2 levels up @ index 1
+		
+So at compile time:
+
+	: foo ( a b )
+		- top level function so no outer frame
+		- adds #op(FRAME-POP-TO 1) \ pop from stack, store in local frame at index 1 ('b')
+			- pops never go to higher levels, so no 'level' param needed here, unlike above
+		- adds #op(FRAME-POP-TO 0) \ pop from stack, store in local frame at index 0 ('a')
+		- create frame namemap: { 'a' -> 0, 'b' -> 1 }
+		
+		{ ( c d ) ... }
+		- lambda code is:
+			- #op(FRAME-POP-TO 1) #(FRAME-POP-TO 0) \ pop c & d into new runtime frame
+			- add compiled Lambda obj to objlist, followed by 'bind-lambda'
+				- at runtime this makes a bound-lambda as described above
+			- my namemap chain is { 'c' -> 0, 'd' -> 1 } => { 'a' -> 0, 'b' -> 1 }
+			
+		{ ( e f ) ... }
+		- same lambda code as above to pop e,f 
+		- add compiled Lambda to objlist, followed by bind-lambda to bind it at runtime
+			- my namemap chain is { 'e' -> 0, 'f' -> 1 } => { 'c' -> 0, 'd' -> 1 } => { 'a' -> 0, 'b' -> 1 }
+		- inner code 'a b c d e f + + + + +' is translated as described above by using namemap chain
+		  to find level & index of vars NAME & NAME!
+		  
+			
+			
+			
+		
+		
+		
+		
+		
+		
+	
