@@ -138,6 +138,14 @@ static Object popList(Interpreter *intr, const char *errmsg) {
 	return obj;
 }
 
+static Object popLambda(Interpreter *intr, const char *errmsg) {
+	Object obj = intr->pop();
+	if(!obj.isLambda()) {
+		throw LangError(string(errmsg) + " (requires lambda, got: " + obj.fmtStackPrint() + ")");
+	}
+	return obj;
+}
+
 static Object popDict(Interpreter *intr, const char *where) {
 	Object obj = intr->pop();
 	if(!obj.isDict()) {
@@ -757,6 +765,17 @@ static void builtin_opcode_packed(Interpreter *intr) {
 
 	intr->push(newInt(op.asOpcode()));
 }
+
+// ( lambda -- bound-lambda )
+static void builtin_bind_lambda(Interpreter *intr) {
+	auto lambda = popLambda(intr, "bind-lambda");
+	// remember currently active frame -- when bound-lambda is called
+	// later, this frame will be set as its outer frame
+	intr->push(newBoundLambda(lambda, intr->cur_framedata));
+	// mark current frame as being linked now so it isn't freed
+	intr->cur_framedata->setLinked(true);
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -771,8 +790,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 				fprintf(fp_stdout, "%s", popString(intr,"puts"));
 			else
 				printf("%s", popString(intr,"puts"));
-				
-			
 		}},
 	
 	// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
@@ -888,4 +905,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// 'version 2' closures
 	{"make-opcode", builtin_make_opcode},
 	{"opcode-packed", builtin_opcode_packed},
+	{"bind-lambda", builtin_bind_lambda},
 };

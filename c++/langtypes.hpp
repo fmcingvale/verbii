@@ -39,6 +39,8 @@ const unsigned char TYPE_CLOSURE = 8;
 // normally shouldn't be used in data anyways, i don't think that's a problem.
 const unsigned char TYPE_VOID = 9;
 const unsigned char TYPE_DICT = 10;
+// 'version 2' closure
+const unsigned char TYPE_BOUND_LAMBDA = 11;
 // interpreter opcodes
 const unsigned char TYPE_OPCODE = 12;
 
@@ -54,7 +56,18 @@ extern int FLOAT_PRECISION;
 // verbii's integer type
 typedef int64_t VINT;
 
+// 'version 1' closures (for @{ .. })
 class Closure;
+
+class CallFrameData;
+
+// a Lambda that is bound to a CallFrameData, thereby giving it access
+// the all the frame data of its outer context
+class BoundLambda {
+	public:
+	ObjList *objlist; // store list directly instead of lambda Object
+	CallFrameData *outer;
+};
 
 // this is intended to be a POD type, so no non-default constructors, destructors, base classes,
 // and small enough to pass as value -- any large parts will be stored in pointers
@@ -73,7 +86,10 @@ class Object {
 	bool isFloat() const { return type == TYPE_FLOAT; }
 	bool isString() const { return type == TYPE_STRING; }
 	bool isSymbol() const { return type == TYPE_SYMBOL; }
+	// 'version 1' closures
 	bool isClosure() const { return type == TYPE_CLOSURE; }
+	// 'version 2' closures
+	bool isBoundLambda() const { return type == TYPE_BOUND_LAMBDA; }
 	bool isOpcode() const { return type == TYPE_OPCODE; }
 
 	// convenience -- test if symbol AND equal to given string
@@ -154,15 +170,61 @@ class Object {
 		double d;
 		const char *str; // strings & symbols, immutable
 		Closure *closure;
+		BoundLambda *boundLambda;
 		uint64_t opcode;
 	} data;
 };
 
+// 'version 1' closure
 class Closure {
 	public:
 	ObjList *objlist; // the function
 	Object state; // the bound state
 };
+
+// for simplicity all call frames are the same size, so this may
+// need some tuning so they aren't too large but large enough
+// for all practical cases. for one thing, this avoids an extra
+// allocation when creating a CallFrameData
+//
+// this is the maximum number args + locals a function can have
+const int MAX_CALLFRAME_SLOTS = 255; // probably way too much, but have to start somewhere 
+
+// 'version 2' closures based on persistent frames
+// every time a userword is called (or lambda via 'call')
+// a new frame data is created for it.
+class CallFrameData {
+	public:
+	CallFrameData();
+
+	// get/set an object in my local frame
+	Object getLocalObj(int index);
+	void setLocalObj(int index, Object obj);
+
+	// frames begin disconnected from any other context. this
+	// can be used to tie this frame to an outer context so that
+	// getOuterObj/setOuterObj can be used (can also pass NULL to
+	// disconnect this frame from any outer context)
+	void setOuterFrame(CallFrameData *outer);
+
+	// once an outer frame is connected, these can be used
+	// to get/set objects in the outer frame(s)
+	Object getOuterObj(int levels, int index);
+	void setOuterObj(int levels, int index, Object obj);
+
+	bool isLinked() const;
+	void setLinked(bool l) { linked = l; }
+
+	private:
+	Object data[MAX_CALLFRAME_SLOTS]; // args+locals for function
+	CallFrameData *outer;
+	bool linked; // has this been linked as an outer frame to any other frame?
+};
+
+extern std::vector<CallFrameData*> callframe_pool;
+CallFrameData *callframe_alloc();
+void callframe_free(CallFrameData*);
+void print_callframe_alloc_stats();
 
 // single NULL object
 extern Object NULLOBJ;
@@ -194,7 +256,13 @@ Object newList(ObjList *); // wraps existing list, does NOT copy
 
 Object newDict(); // make an empty dict
 
+// 'version 1' closures
 Object newClosure(ObjList *, Object);
+// 'version 2' closures
+// NOTE: *my* frame is not known until bound-lambda is called.
+// however, outerFrame is set when bind-lambda is called.
+Object newBoundLambda(Object lambda, CallFrameData *outerFrame);
+
 Object newOpcode(uint64_t packed_opcode);
 
 // to deepcopy just the ObjList portion of a Object

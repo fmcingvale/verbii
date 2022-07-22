@@ -44,9 +44,14 @@ Interpreter::Interpreter() {
 	// not running
 	code = NULL;
 
+	// 'version 1' closures
 	// init to "not set" -- NOTE I have to remember the Closure, NOT just the state data,
 	// so that I can update the Closure correctly in self!
 	closure = NULL;
+
+	// 'version 2' closures
+	// initially no call frame, so this is NULL
+	cur_framedata = NULL;
 
 	// init stats
 	max_callstack = 0;
@@ -100,6 +105,7 @@ void Interpreter::print_stats() {
 #else
 	cout << "  xmalloc bytes: " << X_BYTES_ALLOCATED << endl;
 #endif
+	print_callframe_alloc_stats();
 	cout << "  size of Object: " << sizeof(Object) << endl;
 
 	cout << "* Notices:\n";
@@ -241,16 +247,34 @@ ObjList* Interpreter::lookup_word(const char *name) {
 		return NULL;
 }
 
-void Interpreter::code_call(ObjList *new_code, Closure *new_closure) {
+void Interpreter::code_call(ObjList *new_code, Closure *new_closure, BoundLambda *bound_lambda) {
 	if(!code) {
 		throw LangError("code_call but no code is running");
 	}
 	callstack_code.push_back(code);
 	callstack_pos.push_back(codepos);
 	callstack_closure.push_back(closure);
+	callstack_frame_data.push_back(cur_framedata);
+
 	code = new_code;
 	codepos = 0;
-	closure = new_closure;
+	// 'version 1' closures -- this is 'self' 
+	closure = new_closure; // can be null
+	// 'version 2' closures -- this is used for framedata references (TBD)
+	// FOR NOW at least, a new frame is created for each call -- eventually the
+	// compiler could optimize this if the function doesn't use any locals or take args etc.
+	// (these are pooled since the common case is where a frame is not linked to an inner
+	// frame so they are recycled ... trying this with a 'new' every time made a looping
+	// benchmark run 20x slower ... with pooling there was no slowdown versus 
+	// just setting this to NULL)
+	cur_framedata = callframe_alloc();
+	// when bound lambda was created, the current frame (at the time) was saved
+	// so it can access it later ('closure'). so when bound lambda is passed here,
+	// make te connection from the bound lambdas runtime frame (i.e. cur_framedata)
+	// to its saved outer frame
+	if(bound_lambda)
+		cur_framedata->setOuterFrame(bound_lambda->outer);
+
 	// stats
 	max_callstack = max(max_callstack,(int)callstack_code.size());
 }
@@ -274,6 +298,14 @@ void Interpreter::code_return() {
 	callstack_pos.pop_back();
 	closure = callstack_closure.back();
 	callstack_closure.pop_back();
+
+	// if frame not linked as an outer frame anywhere, then return it
+	// to the pool
+	if(cur_framedata != NULL && !cur_framedata->isLinked())
+		callframe_free(cur_framedata);
+
+	cur_framedata = callstack_frame_data.back();
+	callstack_frame_data.pop_back();
 }
 
 bool Interpreter::hasWord(const char *name) {
@@ -321,6 +353,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 	code = to_run;
 	codepos = 0;
 	closure = NULL; // "not set"
+	cur_framedata = NULL; // not set
 
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
@@ -413,6 +446,11 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 				else if(val.isClosure()) {
 					// as above but with self
 					code_call(val.asClosureFunc(), val.data.closure);
+				}
+				else if(val.isBoundLambda()) {
+					// as above but pass bound lambda so its new call frame will be
+					// connected the same outer frame that was captured with bind-lambda
+					code_call(val.data.boundLambda->objlist, NULL, val.data.boundLambda);
 				}
 				else {
 					throw LangError("call expects a lambda or closure, but got: " + val.fmtStackPrint());

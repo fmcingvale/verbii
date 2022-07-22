@@ -162,6 +162,123 @@ Object newClosure(ObjList *objlist, Object state) {
 ObjList *Object::asClosureFunc() const { return data.closure->objlist; }
 Object Object::asClosureState() const { return data.closure->state; }
 
+CallFrameData::CallFrameData() {
+	outer = NULL;
+	linked = false;
+}
+
+bool CallFrameData::isLinked() const {
+	return linked;
+}
+
+// get/set an object in my local frame
+Object
+ CallFrameData::getLocalObj(int index) {
+	//printf("GET LOCAL OBJ, index=%d\n", index);
+	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
+		throw LangError("Out of bounds in getLocalObj()");
+
+	return data[index];
+}
+
+void CallFrameData::setLocalObj(int index, Object obj) {
+	//printf("SET LOCAL OBJ, index=%d\n", index);
+	
+	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
+		throw LangError("Out of bounds in setLocalObj()");
+
+	data[index] = obj;
+}
+
+void CallFrameData::setOuterFrame(CallFrameData *outer) {
+	this->outer = outer;
+	// NOTE!! this is NOT the place to mark the outer frame
+	// as linked -- it is marked when bind-lambda is called
+}
+
+Object CallFrameData::getOuterObj(int levels, int index) {
+	//printf("GET OUTER OBJ, level=%d, index=%d\n", levels, index);
+	// go up number of levels
+	auto frame = outer;
+	while(--levels > 0) {
+		if(!frame || !frame->outer)
+			throw LangError("Bad level number in getOuterObj()");
+
+		frame = frame->outer;
+	}
+
+	if(!frame)
+		throw LangError("Null outer frame in getOuterObj()");
+
+	return frame->getLocalObj(index);
+}
+
+void CallFrameData::setOuterObj(int levels, int index, Object obj) {
+	//printf("SET OUTER OBJ, level=%d, index=%d\n", levels, index);
+	// go up number of levels
+	auto frame = outer;
+	while(--levels > 0) {
+		if(!frame || !frame->outer)
+			throw LangError("Bad level number in setOuterObj()");
+
+		frame = frame->outer;
+	}
+
+	frame->setLocalObj(index, obj);
+}
+
+#define COLLECT_CALLFRAME_ALLOC_STATS
+
+std::vector<CallFrameData*> callframe_pool;
+
+static int CALLFRAME_NR_ALLOCS = 0;
+static int CALLFRAME_NR_FREE = 0;
+static size_t CALLFRAME_POOL_MAX = 0;
+
+CallFrameData *callframe_alloc() {
+#ifdef COLLECT_CALLFRAME_ALLOC_STATS
+	++CALLFRAME_NR_ALLOCS;
+#endif
+	if(callframe_pool.size() == 0)
+		return new CallFrameData();
+	else {
+		auto data = callframe_pool.back();
+		callframe_pool.pop_back();
+		// reset its data
+		data->setLinked(false);
+		data->setOuterFrame(NULL);
+
+		return data;
+	}
+}
+
+void callframe_free(CallFrameData* data) {
+	callframe_pool.push_back(data);
+#ifdef COLLECT_CALLFRAME_ALLOC_STATS
+	++CALLFRAME_NR_FREE;
+	CALLFRAME_POOL_MAX = max(CALLFRAME_POOL_MAX,callframe_pool.size());
+#endif
+}
+
+void print_callframe_alloc_stats() {
+#ifdef COLLECT_CALLFRAME_ALLOC_STATS
+	cout << "    CALLFRAME_NR_ALLOCS: " << CALLFRAME_NR_ALLOCS << endl;
+	cout << "    CALLFRAME_NR_FREE: " << CALLFRAME_NR_FREE << endl;
+	cout << "    CALLFRAME_POOL_MAX: " << CALLFRAME_POOL_MAX << endl;
+#else
+	cout << "    CALLFRAME - stats not enabled" << endl;
+#endif
+}
+
+Object newBoundLambda(Object lambda, CallFrameData *outer) {
+	Object obj;
+	obj.type = TYPE_BOUND_LAMBDA;
+	obj.data.boundLambda = (BoundLambda*)x_malloc(sizeof(BoundLambda));
+	obj.data.boundLambda->outer = outer;
+	obj.data.boundLambda->objlist = lambda.asLambda();
+	return obj;
+}
+
 Object newOpcode(uint64_t packed_opcode) {
 	Object obj;
 	obj.type = TYPE_OPCODE;
@@ -179,6 +296,7 @@ bool Object::opEqual(const Object &other) const {
 		case TYPE_BOOL: return other.type == TYPE_BOOL && other.data.b == data.b;
 		case TYPE_LAMBDA: return false; // lambdas never equal any other object, even themselves
 		case TYPE_CLOSURE: return false; // same for closures
+		case TYPE_BOUND_LAMBDA: return false; // same
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
 		case TYPE_VOID: return other.type == TYPE_VOID;
@@ -311,6 +429,7 @@ Object Object::opAdd(const Object &other) const {
 		case TYPE_BOOL: break;
 		case TYPE_LAMBDA: break;
 		case TYPE_CLOSURE: break;
+		case TYPE_BOUND_LAMBDA: break;
 		// strings & symbols defined as immutable, so no changing this
 		case TYPE_STRING:
 			if(other.type == TYPE_STRING) {
@@ -482,10 +601,12 @@ string Object::fmtDisplay() const {
 		case TYPE_BOOL: return data.b ? "true" : "false";
 		// these two are not meant to be printed, but can be shown in stack
 		case TYPE_LAMBDA:
-			return "<" + fmtDisplayObjList(data.objlist, "{", "}") + ">";
+			return fmtDisplayObjList(data.objlist, "{", "}");
 		case TYPE_CLOSURE:
 			return "<" + fmtDisplayObjList(data.closure->objlist, "{", "}") +
 				" :: " + data.closure->state.fmtDisplay() + ">";
+		case TYPE_BOUND_LAMBDA:
+			return "<bound " + fmtDisplayObjList(data.boundLambda->objlist, "{", "}") + ">";
 		case TYPE_STRING: return string(data.str);
 		case TYPE_SYMBOL: return string(data.str);
 		case TYPE_LIST: return fmtDisplayObjList(data.objlist, "[", "]");
@@ -543,10 +664,12 @@ string Object::fmtStackPrint() const {
 		}
 		case TYPE_BOOL: return data.b ? "<true>" : "<false>";
 		case TYPE_LAMBDA:
-			return "<" + fmtStackPrintObjList(data.objlist, "{", "}") + ">";
+			return fmtStackPrintObjList(data.objlist, "{", "}");
 		case TYPE_CLOSURE:
 			return "<" + fmtStackPrintObjList(data.closure->objlist, "{", "}") +
 				" :: " + data.closure->state.fmtStackPrint() + ">";
+		case TYPE_BOUND_LAMBDA:
+			return "<bound " + fmtStackPrintObjList(data.boundLambda->objlist, "{", "}") + ">";
 		// add " .. " so its clear on stack that it is a string
 		case TYPE_STRING: return "\"" + string(data.str) + "\"";
 		// opposite of above -- since strings get " .. " then i don't get a ' here
@@ -599,6 +722,7 @@ Object Object::deepcopy() const {
 		case TYPE_BOOL:
 		case TYPE_LAMBDA:
 		case TYPE_CLOSURE:
+		case TYPE_BOUND_LAMBDA:
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
 		case TYPE_OPCODE:
