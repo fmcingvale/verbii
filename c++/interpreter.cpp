@@ -16,6 +16,7 @@
 #include "xmalloc.hpp"
 #include "string.h"
 #include "langtypes.hpp"
+#include "opcodes.hpp"
 #include <algorithm>
 using namespace std;
 
