@@ -28,6 +28,7 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 			case 'f': return parseFloat(line.substr(2));
 			case 'b': return parseBool(line.substr(2));
 			case 'n': return newNull();
+			case 'o': return newOpcode(parseInt(line.substr(2)).asInt());
 			case 's':
 				string_replace(line, "%32", " ");
 				string_replace(line, "%09", "\t");

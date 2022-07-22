@@ -69,5 +69,39 @@
 	drop false
 	;
 	
+: serialize-object ( obj -- ; serialize obj to stdout )
+	dup int? if >>int
+	dup float? if >>float
+	dup string? if >>string
+	dup symbol? if >>symbol
+	dup list? if >>list
+	dup lambda? if >>lambda
+	dup bool? if >>bool
+	dup null? if >>null
+	dup opcode? if >>opcode
+	repr "Unknown obj in serialize-object:" swap + error
+	@int ( i NNN )
+		"i" . str puts CR return
+	@float ( f NN.NNN )
+		"f" . str puts CR return
+	@bool ( b true|false )
+		"b" . str puts CR return
+	@null ( n )
+		drop "n" . CR return
+	@string ( s SSS )
+		"s" . serialize-escape-string puts CR return
+	@symbol ( y SSS - symbols cannot contains spaces, \n, etc. so no escaping needed )
+		"y" . str puts CR return
+	@list ( "L length" then serialized items )
+		"L" . dup length str puts CR
+		{ serialize-object } for-each ( items )
+		return
+	@lambda ( "F" then list serialized )
+		"F" puts CR
+		unmake serialize-object ( serialize list )
+		return
+	@opcode ( "o" then packed value )
+		"o" . opcode-packed str puts CR return
+		;
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR
