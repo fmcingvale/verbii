@@ -48,3 +48,33 @@ const string& opcode_code_to_name(uint8_t code) {
 
 	return CODE_TO_NAME[code];
 }
+
+// --- opcode functions ---
+
+// A = number of frames up (0 means my frame); B = index of var in outer frame
+void opcode_FRAME_GET(Interpreter *intr, uint8_t levels, uint16_t index, uint32_t _unused) {
+	if(!intr->cur_framedata)
+		throw LangError("opcode FRAME-GET called on null frame");
+
+	if(levels == 0) // local frame
+		intr->push(intr->cur_framedata->getLocalObj(index));
+	else // outer frame
+		intr->push(intr->cur_framedata->getOuterObj(levels, index));
+}
+
+// A = number of frames up (0 means my frame); B = index of var in outer frame
+void opcode_FRAME_SET(Interpreter *intr, uint8_t levels, uint16_t index, uint32_t _unused) {
+	if(!intr->cur_framedata)
+		throw LangError("opcode FRAME-SET called on null frame");
+
+	auto obj = intr->pop(); // get obj to be stored
+
+	if(levels == 0) // local frame
+		intr->cur_framedata->setLocalObj(index, obj);
+	else // outer frame
+		intr->cur_framedata->setOuterObj(levels, index, obj);
+}
+
+// make sure order is correct!
+std::vector<opcode_func> OPCODE_FUNCTIONS {
+	opcode_FRAME_GET, opcode_FRAME_SET };

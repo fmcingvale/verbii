@@ -40,6 +40,10 @@ void opcode_unpack(uint64_t opcode, uint8_t &code, uint8_t &A, uint16_t &B, uint
 uint8_t opcode_name_to_code(const char *name);
 const std::string& opcode_code_to_name(uint8_t code);
 
+typedef void (*opcode_func)(Interpreter *intr, uint8_t A, uint16_t B, uint32_t C);
+
+// indexed by OPCODE_*
+extern std::vector<opcode_func> OPCODE_FUNCTIONS;
 
 
 
