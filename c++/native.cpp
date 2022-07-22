@@ -744,12 +744,19 @@ static void builtin_make_opcode(Interpreter *intr) {
 	if(B < 0 || B > 65535)
 		throw LangError("B must be [0-65535] in make-opcode, got: " + to_string(B));
 
-	if(C < 0 || C > 4294967295)
-		throw LangError("C must be [0-4294967295] in make-opcode, got: " + to_string(C));
+	if(C < 0 || C > 0x000fffff)
+		throw LangError("C must be [0-1048575] in make-opcode, got: " + to_string(C));
 
 	intr->push(newOpcode(opcode_pack(opcode_name_to_code(name), A, B, C)));
 }		
 
+static void builtin_opcode_packed(Interpreter *intr) {
+	auto op = intr->pop();
+	if(!op.isOpcode())
+		throw LangError("Expecting opcode in opcode-packed but got: " + op.fmtStackPrint());
+
+	intr->push(newInt(op.asOpcode()));
+}
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -789,6 +796,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
 	{"lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isLambda()));}},
 	{"closure?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isClosure()));}},
+	{"opcode?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isOpcode()));}},
 
 	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
 	{"SP", [](Interpreter *intr){intr->push(newInt(intr->SP));}},
@@ -877,5 +885,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"sin", builtin_sin},
 	{"log", builtin_log}, // natural log
 
+	// 'version 2' closures
 	{"make-opcode", builtin_make_opcode},
+	{"opcode-packed", builtin_opcode_packed},
 };

@@ -5,17 +5,24 @@
 */
 #include "opcodes.hpp"
 #include "errors.hpp"
+#include "interpreter.hpp"
 #include <map>
 using namespace std;
 
 uint64_t opcode_pack(uint8_t code, uint8_t A, uint16_t B, uint32_t C) {
+	// C is max 20 bits
+	if(C > 0x000fffff)
+		throw LangError("C > 20 bits in opcode_pack()");
+
 	return code | (A<<8) | (B<<16) | (((uint64_t)C)<<32);
 }
 
-uint8_t opcode_getcode(uint64_t opcode) { return opcode & 0xff; }
-uint8_t opcode_getA(uint64_t opcode) { return (opcode >> 8) & 0xff; }
-uint16_t opcode_getB(uint64_t opcode) { return (opcode >> 16) & 0xffff; }
-uint32_t opcode_getC(uint64_t opcode) { return (opcode >> 32) & 0xffffffff; }
+void opcode_unpack(uint64_t opcode, uint8_t &code, uint8_t &A, uint16_t &B, uint32_t &C) {
+	code = opcode & 0xff;
+	A = (opcode >> 8) & 0xff;
+	B = (opcode >> 16) & 0xffff;
+	C = (opcode >> 32) & 0x000fffff;
+}
 
 // use maps so this is order-independent
 static map<string,uint8_t> NAME_TO_CODE { 

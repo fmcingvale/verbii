@@ -6,6 +6,7 @@
 #pragma once
 #include <stdint.h> // get the uint* types
 #include <string>
+#include "interpreter.hpp"
 
 /*
 	Opcode packing -- to simplify/standardize the interface, the opcode
@@ -20,7 +21,11 @@
 			page-selectors to allow expanding this further)
 	- 15:8	8 bit data  ("A")
 	- 31:16 16 bit data ("B")
-	- 63:32	32 bit data ("C")
+	- 51:32	20 bit data ("C")
+		- A,B,C are opcode-defined. so for example, if an opcode needed 32-bit
+		  data it could put that in C:B for example.
+		- packed opcode needs to fit into 52 bits to ensure it can be parsed
+		  as an unsigned int on all platforms (i.e. when deserializing)
 */
 
 // A = number of frames up (0 means my frame); B = index of var in outer frame
@@ -29,11 +34,7 @@ const int OPCODE_FRAME_GET = 0;
 const int OPCODE_FRAME_SET = 1; 
 
 uint64_t opcode_pack(uint8_t code, uint8_t A, uint16_t B, uint32_t C);
-
-uint8_t opcode_getcode(uint64_t opcode);
-uint8_t opcode_getA(uint64_t opcode);
-uint16_t opcode_getB(uint64_t opcode);
-uint32_t opcode_getC(uint64_t opcode);
+void opcode_unpack(uint64_t opcode, uint8_t &code, uint8_t &A, uint16_t &B, uint32_t &C);
 
 // translate to/from opcode name
 uint8_t opcode_name_to_code(const char *name);
