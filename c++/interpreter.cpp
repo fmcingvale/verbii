@@ -337,7 +337,20 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		// words here since 'if(word == ...)' is a lot faster than a map lookup. But .. again ..
 		// no hard and fast rule about it.
 
-		if(obj.isSymbol()) {
+		// TODO -- make this all a case on .type ...
+
+		if(obj.isOpcode()) {
+			uint8_t code, A;
+			uint16_t B;
+			uint32_t C;
+			opcode_unpack(obj.asOpcode(), code, A, B, C);
+			if(code < 0 || code >= OPCODE_FUNCTIONS.size())
+				throw LangError("Bad opcode: " + to_string(code));
+
+			OPCODE_FUNCTIONS[code](this, A, B, C);
+			continue;
+		}
+		else if(obj.isSymbol()) {
 			if(obj.isSymbol("'",1)) {
 				// quoted symbol - remove one level of quoting and push
 				push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));

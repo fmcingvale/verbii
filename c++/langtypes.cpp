@@ -7,6 +7,7 @@
 #include "errors.hpp"
 #include "xmalloc.hpp"
 #include <sstream>
+#include <iostream>
 using namespace std;
 
 // set maximum portable integer size based on lowest common denominator
@@ -563,11 +564,15 @@ string Object::fmtStackPrint() const {
 		}
 		case TYPE_OPCODE:
 		{
+			uint8_t code, A;
+			uint16_t B;
+			uint32_t C;
+			opcode_unpack(data.opcode, code, A, B, C);
 			string s = "#op( ";
-			s += opcode_code_to_name(opcode_getcode(data.opcode));
-			s += " " + to_string(opcode_getA(data.opcode));
-			s += " " + to_string(opcode_getB(data.opcode));
-			s += " " + to_string(opcode_getC(data.opcode));
+			s += opcode_code_to_name(code);
+			s += " " + to_string(A);
+			s += " " + to_string(B);
+			s += " " + to_string(C);
 			s += " )";
 			return s;
 		}
