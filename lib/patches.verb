@@ -243,7 +243,7 @@
 	reader-next drop \ read the ( now \ )
 	syntax-parse-decl-arglist 
 	outlist swap append outlist! \ fall through to loop
-		"AFTER ARGLIST:" . outlist . CR
+		\ "AFTER ARGLIST:" . outlist . CR
 	
 	@loop
 		syntax-next
@@ -255,7 +255,7 @@
 		drop "End of input inside ::{" error
 	@done
 		drop \ drop '}
-		"RETURN OUTLIST:" . outlist . CR
+			\ "RETURN OUTLIST:" . outlist . CR
 		outlist
 	;
 
@@ -268,7 +268,7 @@
 \	::{ ( args ) STUFF ... }
 : v2-syntax-define-word
 	@locals [ SP-start name outlist ]
-		"V2 define word" . CR
+		\ "V2 define word" . CR
 	syntax-next ( name must be next )
 	dup symbol? not if >>badname
 	name!
@@ -285,7 +285,7 @@
 	reader-next drop \ read the ( now \ )
 	syntax-parse-decl-arglist 
 	outlist swap append outlist! \ fall through to loop
-		"AFTER ARGLIST:" . outlist . CR
+		\ "AFTER ARGLIST:" . outlist . CR
 	
 	@loop
 		syntax-next
@@ -302,11 +302,11 @@
 		\ outlist
 		
 	@finish
-		"FINISHING" . CR
+			\ "FINISHING" . CR
 		\ SP-start SP - 1 - ( calc number of items )
-			"MAKING" . CR
+			\ "MAKING" . CR
 		\ make-list
-			"MADE" . dup . CR
+			\ "MADE" . dup . CR
 		( save names & compiled words )
 		outlist name save-defined-word
 		syntax-next ( save-defined-word has no return value, so return NEXT object )
@@ -343,7 +343,7 @@
 		
 		\ remove ,,v2-closure from head of list
 		\ toplevel function - no outer environment
-		objlist 1 -1 slice void v2-compile-rewrite-args-locals
+		objlist 1 -1 slice void false v2-compile-rewrite-args-locals
 		drop \ don't need nr-rewritten here; top level is never bound anyways
 		return \ return new objlist
 	@v1-word
@@ -447,17 +447,20 @@
 	
 \ ===============================================
 
-: v2-compile-rewrite-args-locals @( objlist outer-env -- new-objlist nr-rewritten )
+\ objlist is normally from a [ ,,v2-closure ... ] list (with the ,,v2-closure removed)
+\ plain-list is a flag that is true if objlist is from a list or false if objlist is from a lambda
+\ (the difference being that plain lists are never bound to a frame since they are never called as code)
+: v2-compile-rewrite-args-locals @( objlist outer-env plain-list -- new-objlist nr-rewritten )
 	@locals [ argnames localnames env i ]
 			
-		"* V2-rewrite-args-locals" . CR
+			\ "* V2-rewrite-args-locals" . CR
 		\ scan objlist for , @( ... ), @args, @locals
 		objlist
 		compile-collect-args-locals localnames! argnames! new-objlist!
 		
-		"ARGS:" . argnames . CR
-		"LOCALS:" . localnames . CR
-		"NEW-OBJLIST:" . new-objlist . CR
+			\ "ARGS:" . argnames . CR
+			\ "LOCALS:" . localnames . CR
+			\ "NEW-OBJLIST:" . new-objlist . CR
 		
 		\ track number of var references i rewrite
 		0 nr-rewritten!
@@ -480,24 +483,40 @@
 			-1 								\ count by -1
 				argnames length for-range	\ for argnames args
 		
-		"NEW-OBJLIST:" . new-objlist . CR
+			\ "NEW-OBJLIST:" . new-objlist . CR
 		
-		\ create an environment to resolve names -- add args first since those are at lowest indexes
+		\ create an environment to resolve names 
+		plain-list if >>make-env-plain-list
+		
+		\ make environment for new closure, chained to outer-env
+		\ -- add args first since those are at lowest indexes
 		new-closure-env env!
 		\ add args first so they'll get assigned indexes starting at 0
 		env argnames closure-env-add-namelist
 		\ now @locals
 		env localnames closure-env-add-namelist
-		
 		\ .. and chain to my outer scope
 		env outer-env closure-env-set-up
+		>>begin-rewrite
+			\ "ENV NOW:" . env . CR
 		
-		"ENV NOW:" . env . CR
+	@make-env-plain-list
+		\ i'm rewriting a LIST not code -- list will be flattened (see below) so will
+		\ run IN the outer-env, not a new environment
+		outer-env env!
+		\ IMPORTANT! nothing below here is allowed to modify env since that would modify
+		\ outer-env incorrectly
 		
+	@begin-rewrite
 	\ rewrite symbols using environment just created
 	0 i!
 	@rewrite-loop
-		i objlist length >= if >>done 
+		\ i objlist length >= if >>done 
+		
+		\ two purposes for this check -- first this is the easy (designed) way to check for end of lists instead
+		\ of having to test against list length. second, this ensures there are no void values in the lists
+		\ which would mess up the make-listv code down below
+		objlist i get void? if >>done 
 		objlist i get symbol? if >>symbol
 		objlist i get list? if >>list
 		\ everything else, copy as-is
@@ -510,7 +529,9 @@
 		\ see if symbol is in my env or any outer scope
 		env sym closure-env-lookup-name index! level!
 		index void? if <<copy-element \ not in environment, so copy as is 
-		\ turn symbol into get/set opcode
+		\ turn symbol into get/set opcode (going along with the comment on voids above, this should
+		\ never be able to add voids into the lists -- all rewriting does is turns names into
+		\ FRAME-GET or FRAME-SET opcodes)
 		new-objlist
 			sym level index closure-env-make-ref-or-set
 			append new-objlist!
@@ -520,18 +541,21 @@
 		
 	@list
 		\ look for [ ,,v2-closure ... ] (parsed from ::{ .. })
-		objlist i get length 2 < if <<copy-element \ list too short, can't be closure
+		objlist i get length 2 < if <<copy-element \ list too short, can't be closure nor hold varnames
 		objlist i get 0 get ',,v2-closure == if >>rewrite-inner-closure \ got [ ,,v2-closure .. ]
-		<<copy-element \ not a special list, so just copy element
+		\ <<copy-element \ not a special list, so just copy element
+		
+		\ else, recurse normal list looking for names to be rewritten
+		>>rewrite-inner-plain-list
 		
 	@rewrite-inner-closure
 		@locals [ sub-objlist sub-nr-rewritten ]
-		"REWRITE SUBLIST:" . CR
+			\ "REWRITE SUBLIST:" . CR
 		\ call rewrite recursively with my env as the outer scope
 		objlist i get 1 -1 slice \ remove ,,v2-closure
-		env v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
-		"GOT NEW SUBLIST:" . sub-objlist . CR
-		"NEW OBJLIST:" . new-objlist . CR
+		env false v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
+			\ "GOT NEW SUBLIST:" . sub-objlist . CR
+			\ "NEW OBJLIST:" . new-objlist . CR
 		\ turn new sub-objlist back into lambda now that its rewritten and add to new-objlist
 		new-objlist
 			sub-objlist make-lambda append new-objlist!
@@ -544,6 +568,36 @@
 	@done-rewrite-sub
 		\ add # rewritten to my count so i return total of mine + all recursive inner lambdas
 		nr-rewritten sub-nr-rewritten + nr-rewritten!
+		>>next
+		
+	@rewrite-inner-plain-list
+			\ "PLAIN LIST:" . objlist i get . CR
+		\ rewrite vars inside a list without binding frame to it at runtime (since the list will
+		\ be expanded, it will be filled from MY frame) -- also see code at beginning that
+		\ knows not to create a new env for plain lists
+		objlist i get env true v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
+			\ "SUB RESULT:" . sub-objlist . CR
+		\ did I rewrite anything?
+		sub-nr-rewritten 0 == if >>plain-list-no-rewrites
+		\ else, the rewrites occurred in MY ENV so flatten list so runtime references are correct
+		\ new-objlist sub-objlist extend \ flatten sub-objlist into new-objlist
+		new-objlist 'void append \ insert void first
+			sub-objlist extend \ flatten sub-objlist into new-objlist, preceded by (runtime-created) void
+			\ add code to remake list at runtime -- make-listv is better here since i don't need to know what the
+			\ length of sub-objlist is supposed to be ahead of time (remember it may have lots of recursive flattened
+			\ lists inside of it) -- using void markers and make-listv makes it easy -- the only caveat is i have
+			\ to make sure the lists don't contain any void values (-- per verbii design, voids aren't SUPPOSED to
+			\ be inside lists, but in practice there is some code using void in lists that need to be rewritten to
+			\ use null instead ... so in the meantime i'm still allowing them)
+			'make-listv append new-objlist!
+		\ add # rewritten to my count so i return total of mine + all recursive inner lambdas
+		nr-rewritten sub-nr-rewritten + nr-rewritten!
+		>>next 
+		
+	@plain-list-no-rewrites
+		\ nothing rewritten, so leave list as-is and it can be instantiated by deepcopy at runtime
+		new-objlist objlist i get append new-objlist!
+		
 		>>next
 		
 	@next

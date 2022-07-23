@@ -92,3 +92,10 @@ foo1
 
 foo2
 
+\ ** TODO ** turn this on later once void issues are fixed and I can turn on the 
+\ code to disallow voids in lists
+
+\ ( void value not allowed in lists )
+\ 10 20 30 void 40 50 6 make-list 
+\ [ 10 20 30 40 ] 2 void put 
+\ [ 11 22 33 ] void append 

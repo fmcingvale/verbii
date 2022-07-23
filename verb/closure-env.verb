@@ -131,13 +131,54 @@ ENV2 . CR
 	
 "Hello" stringadds 
 
-\ this is not working as intended yet
+\ show that inner lists get rewritten as well
 :W listtest ( a b c )
 	[ a b c ]
 	;
 
 "List test:" . 	
 11 22 33 listtest . CR
+
+\ more complex ...
+:W listtest2 ( a b c d )
+	[ a [ b c ] d ]
+	;
+
+"List test #2:" .	
+11 22 33 44 listtest2 . CR
+\ 'listtest2 .dumpword . CR
+
+\ an even more nesting ...
+:W listtest3 ( a b c d e f g h )
+	[ a [ b [ c [ d e ] f ] g ] h ]
+	;
+
+"List test #3:" .	
+11 22 33 44 55 66 77 88 listtest3 . CR
+\ 'listtest2 .dumpword . CR
+
+\ what about mixed lambda & list nesting ...
+:W listtest4 ( a b c d e f )
+	::{ 
+		[ a b c d ]
+	}
+	;
+
+"List test #4:" .	
+11 22 33 44 55 66 listtest4 call . CR
+	
+\ what about mixed lambda & list nesting ...
+:W listtest5 ( a b c d e f )
+	::{ 
+		[ 
+			[ [ a b ] ::{ 111 } ]
+			[ [ c d ] ::{ 222 } ]
+		]
+	}
+	;
+
+"List test #5:" .	
+11 22 33 44 55 66 listtest5 call . CR
 
 "END STACK:" . .S CR
 	
