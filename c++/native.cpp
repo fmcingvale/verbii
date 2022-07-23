@@ -15,6 +15,12 @@
 #include <sys/stat.h>
 using namespace std;
 
+// LATER, this needs to be turned on to disallow void values in lists.
+// for now it is needed for backwards compat -- need to find all code
+// using void as a list element and change to null
+
+// #define NO_VOIDS_IN_LISTS
+
 // file to write output
 static FILE *fp_stdout = NULL;
 
@@ -323,7 +329,13 @@ static void builtin_make_list(Interpreter *intr) {
 	Object list = newList();
 	int nr = (int)popInt(intr, "Bad make-list number of items");
 	for(int i=0; i<nr; ++i) {
-		list.data.objlist->insert(list.data.objlist->begin(), intr->pop());
+		Object obj = intr->pop();
+		#ifdef NO_VOIDS_IN_LISTS
+		if(obj.isVoid()) // check that code isn't trying to insert void
+			throw LangError("The void value is not allowed in lists");
+		#endif
+
+		list.data.objlist->insert(list.data.objlist->begin(), obj);
 	}
 	intr->push(list);
 }
@@ -387,6 +399,12 @@ static void builtin_put(Interpreter *intr) {
 	auto indexOrKey = intr->pop();
 	auto dest = intr->pop();
 	if(dest.isList()) {
+		// eventaually this may be a delete operation -- for now though, void values are
+		// not allowed in lists
+		#ifdef NO_VOIDS_IN_LISTS
+		if(obj.isVoid())
+			throw LangError("The void value is not allowed in lists");			
+		#endif
 		if(!indexOrKey.isInt())
 			throw LangError("put expects integer index, got: " + indexOrKey.fmtStackPrint());
 		int index = indexOrKey.asInt();
@@ -409,6 +427,11 @@ static void builtin_put(Interpreter *intr) {
 // append modifies original object
 static void builtin_append(Interpreter *intr) {
 	Object add = intr->pop();
+	#ifdef NO_VOIDS_IN_LISTS
+	if(add.isVoid()) // don't allow code to insert void into lists
+		throw LangError("The void value is not allowed in lists");
+	#endif
+
 	Object list = popList(intr, "Bad arg to append");
 	list.data.objlist->push_back(add);
 	intr->push(list);
