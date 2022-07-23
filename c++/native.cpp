@@ -799,6 +799,21 @@ static void builtin_bind_lambda(Interpreter *intr) {
 	intr->cur_framedata->setLinked(true);
 }
 
+// ( <void> e1 e2 .. eN -- [ e1 e2 ... eN ] )
+static void builtin_make_listv(Interpreter *intr) {
+	auto list = newList();
+	Object obj;
+	while(true) {
+		obj = intr->pop();
+		if(obj.isVoid()) {
+			intr->push(list);
+			return;
+		}
+		
+		list.asList()->insert(list.asList()->begin(), obj);
+	}
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -929,4 +944,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"make-opcode", builtin_make_opcode},
 	{"opcode-packed", builtin_opcode_packed},
 	{"bind-lambda", builtin_bind_lambda},
+	{"make-listv", builtin_make_listv},
 };
