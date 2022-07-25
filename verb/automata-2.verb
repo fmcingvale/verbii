@@ -1,0 +1,122 @@
+\
+\ 1-D cellular automata
+\
+\ current state is given by an arbitrary length list of 1's and 0's
+\
+\ rules are an 8-element list of 1's and 0's giving next state for a given
+\ 3-bit input
+\ 
+\ next state of i'th list item:
+\	1. form 3-bit number from i-1,i,i+1 elements
+\	2. use as index into rules table to get next value of i'th element
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+
+\ uncomment one of these to turn on/off debugging
+
+\ : ddd ( msg -- ; print msg + stack trace ) . .S CR ;
+:V2 ddd drop ;
+
+\ wrap index based on length of list
+:V2 wrapped-index ( list index -- adjusted-index )
+	index 0 < if >>negative 
+	index list length >= if >>overflow
+	index return ( index is OK )
+	@negative
+		index list length + return
+	@overflow
+		index list length -
+		;
+
+\ get value from wrapped index
+:V2 wrapped-get ( list index -- value )
+	list list index wrapped-index get
+	;
+
+\ get 3-bit value (as above) for i'th list entry
+:V2 get-encoded-state ( list i -- code )
+	\ 3-bit value = list[i-1] * 4 + list[i] * 2 + list[i+1]
+	\ (the i-1,i+1 are wrapped around as needed)
+	list i 1 - wrapped-get 4 *
+	list i wrapped-get 2 *
+	list i 1 + wrapped-get + +
+	;
+
+\ given a current state as a list, and a rule set, calculate the next state
+:V2 next-state ( state rules -- new-state )
+	@locals [ i ]
+	[ ] new-state!
+	0 i!
+	@loop
+		i state length >= if >>done
+		state i get-encoded-state ( code )
+		rules swap get ( rules[code] )
+		new-state swap append new-state! \ append rules[code] to new-state
+		i 1 + i! <<loop
+		
+	@done
+		new-state
+		;
+
+\ ( state -- diagram )
+:V2 state2diagram 
+	{ 1 == if >>one " " + return @one "*" + } "" fold
+	;
+
+[ 0 1 0 0 0 0 0 0 ] 1 get-encoded-state . CR
+[ 0 1 0 0 1 1 0 0 ] 5 get-encoded-state . CR
+
+[ 1 0 0 0 1 1 0 1 ] 7 get-encoded-state . CR
+[ 1 1 0 0 1 1 0 0 ] 0 get-encoded-state . CR
+
+\ state
+[ 0 1 1 0 1 ]
+\ "rule 90" (Sierpinski triangle)
+[ 0 1 0 1 1 0 1 0 ]
+
+next-state dup . CR
+state2diagram . CR
+
+\ run nr loops of automata with initial state & rules
+:V2 run-automata ( state rules nr -- )
+	@loop
+		nr 0 == if >>done
+		state state2diagram . CR \ print current state
+		state rules next-state state! \ update to next state
+		nr 1 - nr!
+		<<loop
+	@done
+		
+	;
+
+\ make a new state vector with a single 1 in center
+\ (returned state will always be odd sized)
+:V2 make-new-state ( length )
+	
+	0 { dup } length 2 // 1 - repeat
+	1
+	0 { dup } length 2 // 1 - repeat
+	length 1 + make-list
+	;
+	
+\ state
+80 make-new-state
+\ rule 60
+\ [ 0 0 1 1 1 1 1 0 ]
+\ "rule 90" (Sierpinski triangle)
+[ 0 1 0 1 1 0 1 0 ]
+\ rule 62
+\ [ 0 1 1 1 1 1 0 0 ]
+\ rule 129 (inverse Sierpinksi triangle)
+\ [ 1 0 0 0 0 0 0 1 ]
+\ 45
+\ [ 1 0 1 1 0 1 0 0 ]
+\ 105 (another semi reverse Sierpinksi)
+\ [ 1 0 0 1 0 1 1 0 ]
+\ 110
+\ [ 0 1 1 1 0 1 1 0 ]
+\ 30 ("RNG")
+\ [ 0 1 1 1 1 0 0 0 ]
+
+40 run-automata

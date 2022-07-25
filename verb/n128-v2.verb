@@ -1,0 +1,557 @@
+\ 128-bit signed numbers.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+\ Since verbii provides 32-bit unsigned values, I break the 128-bit number up
+\ into 16-bit chunks. This allows for a 16x16 multiply without overflow.
+\
+\ Unlike normal 2's compliment where the 128th bit would be the sign bit, 
+\ here I prepend an additional 16-bit value for the sign. This allows for
+\ full 2^128 +/- range instead of +/- 2^127 as with normal 2's compliment.
+\ (e.g. normally an unsigned 128-bit value would be [0..2^128] and a signed
+\ value would be +/- 2^127. Here there is no difference in range for signed
+\ vs unsigned ... essentially this is 129 bit math)
+
+\ Python 19.0-19.7
+
+"numeric" import
+
+'START_TIME run-time make-var
+
+\ create a 128 bit number, set to zero )
+:V2 n128-new ( -- obj )
+	[ 0 0 0 0 0 0 0 0 0 ] \ 8 x 16-bit values + 1 extra for sign
+	;
+
+\ add two 128 bit numbers, producing 128 bit result
+:V2 n128-add ( a b -- r )
+	@locals [ i carry ]
+	n128-new r!
+	8 i!
+	0 carry!
+	@addloop
+		i 0 < if >>done \ stop when i<0
+		a i get b i get carry + + ( sum = a[i] + b[i] + carry )
+		65536 /mod ( sum% sum// )
+		carry! \ sum// is new carry
+		r i rot put r! \ r[i] = sum%
+		i 1 - i! <<addloop
+	@done
+		r
+		;
+
+:V2 ddd . .S CR  ;
+
+\ parse hex string into n128 value
+:V2 n128-from-hex ( hex -- nr )
+	@locals [ negative ]
+	\ see if there's a sign
+	hex 0 get "-" == if >>negative-sign
+	hex 0 get "+" == if >>positive-sign
+	\ else no sign == +
+	false negative!
+	>>pad
+	@negative-sign
+		true negative!
+		hex 1 -1 slice hex! \ remove sign
+		>>pad
+	@positive-sign
+		false negative!
+		hex 1 -1 slice hex! \ remove sign
+		
+	\ each digit is 16 bits -- 4 hex chars -- so make sure length is a multiple of 4
+	@pad
+		hex length 4 mod 0 == if >>ready
+		"0" hex + hex! \ prepend "0" until correct length
+	<<pad
+	@ready
+	[ ] nr!
+	@loop
+		hex length 0 == if >>done
+		hex 0 get hex-char-to-int 16 * ( h[0]*16 )
+		hex 1 get hex-char-to-int + 16 * ( h[0]*256+h[1]*16 )
+		hex 2 get hex-char-to-int + 16 * ( h[0]*4096+h[1]*256+h[2]*16 )
+		hex 3 get hex-char-to-int + ( h[0]*4096+h[1]*256+h[2]*16+h[3] )
+		nr swap append nr! \ append digit to nr
+		
+		hex 4 -1 slice hex! \ hex=hex[4:]
+		<<loop
+	@done ( N hex )
+		\ front-pad nr to 9 16-bit digits
+		[ 0 0 0 0 0 0 0 0 ] nr + -9 -1 slice nr!
+		\ if negative, negate
+		negative if >>negate
+		nr return
+		@negate nr n128-negate
+		;
+
+"*** Test n128-from-hex ********************" . CR
+
+[ 	[ "1234abcd5678cdef" [ 0 0 0 0 0 4660 43981 22136 52719 ] ]
+	[ "1234abcd5678cd" [ 0 0 0 0 0 18 13483 52566 30925 ] ]
+	[ "1234abcd5678cdef8765DCBA4321FEDC" [ 0 4660 43981 22136 52719 34661 56506 17185 65244 ] ]
+	[ "d" [ 0 0 0 0 0 0 0 0 13 ] ]
+]
+	{ unmake drop "Expect:" . . CR "       " . n128-from-hex . CR } for-each
+
+\ get hex string for n128 value:
+\	* assumes value is positive and prints as-is
+\	* does NOT include leading sign value
+\ ( n -- hex )
+:V2 n128-to-hex-raw 
+	1 -1 slice { swap "." + swap int16-to-hex + } "" fold \ put dots between each 16-bits for readability
+	1 -1 slice ( remove leading . )
+	;
+
+\ nice printing of n128 values with raw value included for debugging
+\ ( n -- hex )
+:V2 n128-to-hex 
+		\ "n128-to-hex" ddd
+	\ first print as +/- value
+	dup 0 get 0 == if >>positive
+	n128-negate dup n128-to-hex-raw "-" swap + over n128-negate drop >>next ( n "-h" )
+		\ "after -" ddd
+	@positive
+	dup n128-to-hex-raw "+" swap + ( n "+h" )
+		\ "after +" ddd
+	@next
+	" [ " + ( n "+h [ " )
+		\ "[" ddd
+	over 0 get int16-to-hex + "|" + ( n "h|" )
+		\ "|" ddd
+	over n128-to-hex-raw + " ]" +
+		\ "EXIT" ddd
+	nip
+	;
+
+[ 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 ]
+	{ "Value:" . dup . "hex:" . int4-to-hex . CR } for-each
+
+[ [ 104 "68" ] [ 143 "8f" ] [ 12 "0c" ] ]
+	{ unmake drop "Expect:" . . CR "       " . int8-to-hex . CR } for-each
+
+[ [ 41412 "a1c4" ] [ 36515 "8ea3" ] ]
+	{ unmake drop "Expect:" . . CR "       " . int16-to-hex . CR } for-each
+
+[ "abcDEf" "1234abcd5678cdef" "1234abcd5678cdef3210DCBA9876FEDC" ]
+	{ dup . CR n128-from-hex n128-to-hex . CR } for-each
+ 
+ \ test adding
+ "*** Test Add ********************" . CR
+ 
+ \ checked in python
+ [ 	[ "12345678" "abcdef98" "0000|0000.0000.0000.0000.0000.0000.be02.4610" ] 
+	[ "a58d3c2f52bedf65" "83bcda51a4ebf987" "0000|0000.0000.0000.0001.294a.1680.f7aa.d8ec" ] 
+	[ "0a91b7703990df1f6847c0c0fe054e2a" "0ee9071bca817da22d26d97aa4cb54d0" "0000|197a.be8c.0412.5cc1.956e.9a3b.a2d0.a2fa" ]
+	]
+	{ unmake drop "Expect:" . . CR "           " . n128-from-hex swap n128-from-hex n128-add n128-to-hex . CR }
+	for-each
+
+\ left shift in multiples of 16-bits
+\
+\ assumes that n is unsigned and sets sign to 0000 (i.e. bits are NOT shifted out of
+\ MSB into sign), so caller should only pass positive values
+\ ( n i -- n<<(i*16) )
+:V2 n128-shl-x16 
+	swap deepcopy swap \ shift a copy not original
+	tuck
+	@loop ( i n i )
+		dup 0 == if >>slice
+		swap 0 append swap ( i n i )
+		1 - <<loop
+	@slice ( i n 0 )
+		drop swap -1 slice
+		0 0 put \ set first word (sign) to 0
+	;
+
+\ shift n << i*16 and put v in low word of result
+\ ( n i v -- (n<<(i*16)) | v - IN PLACE )
+:V2 n128-shl-x16-in 
+	-rot ( v n i )
+	n128-shl-x16 swap ( n<<i*16 v )
+	8 swap put ( put v into n[8] )
+	;
+
+"*** Test Left-Shift ********************" . CR
+
+"abcd" n128-from-hex 0 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 1 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 2 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 3 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 4 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 5 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 6 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 7 n128-shl-x16 n128-to-hex . CR
+"abcd" n128-from-hex 8 n128-shl-x16 n128-to-hex . CR
+
+\ negate n128 value *IN PLACE*
+:V2 n128-negate ( nr -- negated )
+	@locals [ i carry ]
+	\ invert all bits first (including sign value)
+	8 i!
+	@notloop
+		i 0 < if >>add1 ( loop until i<0 )
+		\ nr[i] = (~nr[i]) & 0xffff
+		nr i get bit-not 65535 bit-and nr i rot put nr!
+		i 1 - i! <<notloop
+	@add1
+	\ add 1 in-place (do it here instead of modifying main add function)
+	8 i!
+	1 carry!
+	@addloop
+		i 0 < if >>done
+		nr i get carry + ( sum = n[i] + carry )
+		65536 /mod ( sum% sum// )
+		carry! ( sum// -> carry )
+		nr i rot put nr! ( nr[i] = sum% )
+		i 1 - i! <<addloop 
+	@done 
+		nr
+		;
+
+"*** Test Negate ****************************" . CR
+
+\ ( ASTR )
+:V2 testNegate
+	"ASTR = " . dup . CR
+	dup n128-from-hex ( ASTR a )
+	swap n128-from-hex ( a a )
+	n128-negate ( a -a )
+	"  A = " . swap dup n128-to-hex . CR ( -a a )
+	" -A = " . swap dup n128-to-hex . CR ( a -a )
+	"SUM = " . n128-add n128-to-hex . CR
+	;
+
+[ "a" "1" "90000000000000000000000000000000" "12345678abcdef01" 
+	"9876543210abcdef9876543210abcdef" ]
+	{ testNegate } for-each
+	
+\ ( a b - a-b )
+:V2 n128-subtract
+	tuck n128-negate ( -b a -b )
+	n128-add ( -b sum )
+	swap n128-negate drop ( restore b since caller probably has a reference )
+	;
+
+\ ( ASTR BSTR )
+:V2 testSubtract
+	" ASTR = " . over . CR
+	" BSTR = " . dup . CR
+	n128-from-hex swap n128-from-hex ( b a )
+	"    A = " . dup n128-to-hex . CR ( b a )
+	"    B = " . over n128-to-hex . CR ( b a )
+	over n128-subtract ( b a-b )
+	"  A-B = " . dup n128-to-hex . CR ( b a-b )
+	"A-B+B = " . n128-add n128-to-hex . CR 
+	;
+
+"**** Test Subtract **************************" . CR
+[ [ "128" "96" ] 
+	[ "abcdef0123456789ABCDEF" "88776655443322" ] 
+	[ "1122334455" "abcdefABCDEF0123456789" ]
+
+	]
+	{ unmake drop testSubtract } for-each
+
+\ n128 x 16-bit multiply
+\
+\ a is n128, b is 16-bit value - both are assumed to be positive so
+\ caller should negate if needed and adjust afterwards
+:V2 n128-mul-16 ( a b -- product )
+	@locals [ i carry ]
+	\ check that a is positive
+	a 0 get 0 != if >>badA \ sign != 0
+	\ check that b is 16-bits and positive
+	b 0 < b 65535 > or if >>badB
+
+	\ set product to zero
+	n128-new product!
+
+	\ multiply b across all digits of a
+	8 i!
+	0 carry!
+	@loop
+		i 0 < if >>done \ loop until i<0
+		a i get b * carry + ( sum = a[i]*b + carry )
+		\ split into 16-bit digit + carry
+		65536 /mod ( sum% sum// )
+		carry! \ carry=sum//
+		product i rot put product! \ product[i] = sum%
+		i 1 - i! <<loop
+		
+	@badA
+		"Negative A not allowed in n128-mul-16: " a n128-to-hex + error
+
+	@badB
+		"B is > 16-bits in n128-mul-16: " b str + error
+
+	@done
+		product
+		;
+
+\ a*b where a & b are both n128. a & b are assumed to be positive, and result will always
+\ have sign word set to 0000
+:V2 n128-mul ( a b -- product )
+	@locals [ i ]
+	n128-new product!
+	8 i!
+	\ multiply each 16-bit word of b against a, shifting and summing into result
+	@loop
+		i 1 < if >>done \ only have to multiply b[1:8], not sign digit since assumed >0
+		a b i get n128-mul-16 ( p=a*b[i] )
+		\ shift left by (8-i)*16-bits and add to result
+		8 i - n128-shl-x16 ( p << (8-i) )
+		product swap n128-add product! \ add to product
+		i 1 - i! <<loop
+	@done
+		product 0 0 put product! \ set sign to 0, per assumption at top
+		product
+		;
+
+\ ( ASTR b )
+:V2 testMul16
+	"ASTR = " . over . CR
+	"b = " . dup . CR
+
+	swap n128-from-hex dup "A:" . n128-to-hex . CR swap ( a b )
+	n128-mul-16 ( r )
+	"a*b = " . n128-to-hex . CR
+	;
+
+\ "abc" 4 testMul16
+\ "abcdef0123456789ABC" 14563 testMul16
+
+"**** 128 x 16 multiply test ..." . CR
+
+\ values checked in Python
+[ [ "abcd" 78 "0034.5876" ] 
+	[ "8127bdce3841aff3" 14382 "1c57.e6a9.375c.7a4a.c5aa" ]
+	\ this overflows into the sign digit but thats ok for testing
+	[ "a74bc13e7f438129eeabcd3fa3847565" 61387 "9cb4.627b.955e.f01d.9212.a6da.2b1f.53a2.6217" ] ]
+	{ unmake drop "Expect " . . CR testMul16 } for-each
+		
+
+\ error cases - uncomment to test
+\
+\ [ 123 123 123 123 123 123 123 123 123 ] 123 n128-mul-16
+\
+\ [ 0 0 0 0 0 0 0 0 0 ] 128237 n128-mul-16
+
+"**** 128 x 128 multiply test ..." . CR
+
+\ values checked in Python
+[
+	[ "abcd" "1234" "0000.0000.0000.0000.0000.0000.0c37.4fa4" ]
+	[ "93be8ac3" "a37b1ced" "0000.0000.0000.0000.5e59.5f98.7344.ca87" ]
+	[ "9dbe5af3b127da9c73bd" "5bd7aecd" "0000.3897.90e8.b5e3.6abc.2a09.c8ae.2459" ]
+	[ "b1a7cd4fe8945e3c612a473b" "f48123bc" "a9ad.8e0b.073e.5010.1ee0.b7d2.4384.6054" ]
+	[ "f48123bc" "b1a7cd4fe8945e3c612a473b" "a9ad.8e0b.073e.5010.1ee0.b7d2.4384.6054" ]
+	\ overflow case
+	[ "730192be0a3ebcfac12398eb" "9012834ebfae3acb31809234" "baa2.bff6.e0b5.aa78.d577.477f.f8f1.15bc" ]
+]
+	{ unmake drop "Expect " . . CR "      " . n128-from-hex swap n128-from-hex swap 
+		n128-mul n128-to-hex . CR } for-each
+		
+\
+\ FNV-1a 128-bit hash function
+\
+\ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+'FNV128-PRIME "0000000001000000000000000000013B" n128-from-hex make-var
+'FNV128-OFFSET "6c62272e07bb014262b821756295c58d" n128-from-hex make-var
+
+\ ( text -- hash, as n128 )
+:V2 fnv-128 
+	\ for each byte:
+	\	hash = hash XOR byte (i.e. XOR against low word of n128 only)
+	\	hash = hash * FNV128-PRIME
+
+	\ called with stack: [ hash char ]
+	{ 
+		ord over 8 get ( hash c hash[8] )
+		bit-xor ( hash c^hash[8] )
+		8 swap put ( hash )
+		FNV128-PRIME n128-mul ( hash*prime )
+	}
+	\ init hash = FNV128-OFFSET
+	FNV128-OFFSET deepcopy \ deepcopy, otherwise FNV128-OFFSET would be modified
+	fold
+	;
+
+"*** FNV-128 hashing ..." . CR 
+[
+	\ test cases generated at: https://www.toolkitbay.com/tkb/tool/FNV-1
+	[ "The quick brown fox jumped over the lazy dog."
+		"0689.f441.3f88.2750.6b0b.00b3.c261.159a" ]
+	[ "The quick brown fOX jumpeD over the lAzy doG!"
+		"6aff.893c.2a2c.dc86.c696.3d5e.89f8.fefb" ]
+	[ "Hello world!"
+		"3c94.fff9.ede8.7203.1d95.566a.4577.0eb2" ]
+	[ "Hello World!"
+		"d2d4.2892.ede8.7203.1d25.9336.6229.c2d2" ]
+	\ https://lipsum.com/feed/html
+	[ "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec ac libero eu orci efficitur ultricies."
+		"09f5.c1ae.a03c.ee13.7c76.3a31.881f.e3f7" ]
+]
+{ unmake drop "Text:   " . over . CR "Expect: " . . CR "       " . 
+	fnv-128 n128-to-hex . CR } for-each
+	
+\ ( a b -- -1,0 or 1 ; -1: a<b 0: a==b 1: a>b )
+:V2 n128-compare
+		\ "cmp" ddd
+	2dup 0 get swap 0 get ( a b b[0] a[0] )
+		\ "B" ddd
+	2dup 0 == swap 0 != ( a b b[0] a[0] a[0]==0 b[0]!=0 )
+		\ "C" ddd
+	and if >>greater-sign ( true if a>=0 && b<0 )
+		\ "D" ddd
+	0 != swap 0 == ( a b a[0]!=0 b[0]==0 )
+		\ "E" ddd
+	and if >>less ( true if b>=0 && a<0 )
+	\ else signs are equal so test magnitudes
+		\ "test mag" ddd
+	2dup == if >>equal
+	> if >>greater
+		\ not greater and not equal, so ...
+		-1 return ( a<b )
+	@greater-sign ( a b b[0] a[0] )
+		SP 4 + SP! 1 return ( a>b )
+	@less ( a b )
+		drop drop -1 return ( a<b )
+	@equal ( a b )
+		drop drop 0 return ( a==b )
+	@greater (  )
+		1 return ( a>b )
+	;
+
+\ for readability ...
+
+\ ( a b -- a>b )
+:V2 n128-greater?
+	n128-compare 1 ==
+	;
+
+\ ( a b -- a==b )
+:V2 n128-equal?
+	n128-compare 0 == 
+	;
+
+\ ( a b -- a<b )
+:V2 n128-less?
+	n128-compare -1 ==
+	;
+
+"** n128-equal" . CR
+"Expect <true>: " . "abcdef12" n128-from-hex "abcdef12" n128-from-hex n128-equal? . CR
+"Expect <false>: " . "abcdef12" n128-from-hex "abcde012" n128-from-hex n128-equal? . CR
+"Expect <false>: " . "abcdcf12" n128-from-hex "abcdef12" n128-from-hex n128-equal? . CR
+
+"** n128-greater, # >0" . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <true>: " . "12345678bbcd" n128-from-hex "12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "12345678bbcd" n128-from-hex n128-greater? . CR
+
+"** n128-greater, # < 0" . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <false>: " . "-12345678bbcd" n128-from-hex "-12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <true>: " . "-12345678abcd" n128-from-hex "-12345678bbcd" n128-from-hex n128-greater? . CR
+
+"** n128-greater, opposite signs" . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-greater? . CR
+"Expect <true>: " . "12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-greater? . CR
+
+"** n128-less, # > 0" . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-less? . CR
+"Expect <false>: " . "12345678bbcd" n128-from-hex "12345678abcd" n128-from-hex n128-less? . CR
+"Expect <true>: " . "12345678abcd" n128-from-hex "12345678bbcd" n128-from-hex n128-less? . CR
+
+"** n128-less, # < 0" . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-less? . CR
+"Expect <true>: " . "-12345678bbcd" n128-from-hex "-12345678abcd" n128-from-hex n128-less? . CR
+"Expect <false>: " . "-12345678abcd" n128-from-hex "-12345678bbcd" n128-from-hex n128-less? . CR
+
+"** n128-less, opposite signs" . CR
+"Expect <true>: " . "-12345678abcd" n128-from-hex "12345678abcd" n128-from-hex n128-less? . CR
+"Expect <false>: " . "12345678abcd" n128-from-hex "-12345678abcd" n128-from-hex n128-less? . CR
+	
+"Expect ffff.ffff.ffff.ffff.ffff.5432.fedc.789b" . CR
+"-abcd01238765" n128-from-hex n128-to-hex "     " . . CR
+
+"-abcd01238765fedc6543dcba3210cdef" n128-from-hex n128-to-hex "     " . . CR
+
+"Expect 0:" . CR
+"83bd82abcde09076b31cabefd8493021" n128-from-hex 
+"-83bd82abcde09076b31cabefd8493021" n128-from-hex
+n128-add n128-to-hex . CR
+
+\ ( a -- a==0? )
+:V2 n128-zero?
+	{ 0 != } find void? 
+	;
+
+"Expect true:" . CR
+"0" n128-from-hex n128-zero? . CR
+
+"Expect false:" . CR
+"1" n128-from-hex n128-zero? . CR
+
+\ get i'th most significant word from n128
+\ *assumes a is > 0*
+\ ex: [ 0 0 0 123 456 ] -- msw[0] == 123, msw[1] == 456
+\
+\ ( a i -- get i'th most significant word )
+:V2 n128-get-msw
+	\ find first nonzero word
+	over { 0 > } find
+	\ check for errors
+	dup 0 == if >>got-negative
+	dup void? if >>not-found
+	+ \ a msw+i
+	2dup over length >= ( a m+i a m+i>=len[a] )
+	if >>out-of-bounds
+	drop get return ( a[m+i] )
+
+	@got-negative "Negative value in n128-get-msw not allowed" error
+	@not-found "Zero not allowed in n128-get-msw" error
+	;
+
+"** n128-get-msw:" . CR
+"12345678abcd" n128-from-hex 
+"Expect 4660:" .
+dup 0 n128-get-msw . CR
+"Expect 22136:" . 
+dup 1 n128-get-msw . CR
+"Expect 43981:" .
+dup 2 n128-get-msw . CR
+drop
+
+\ 'significant' meaning the number of words starting at the first nonzero word from the left side
+\ 'a' must be > 0
+\ in this context, trailing zeros are still considered significant
+\
+\ ( a -- #significant words in a )
+:V2 n128-nr-sigwords
+		\ "count sigwords" ddd
+	{ 0 > } find
+		\ "find result" ddd
+	dup void? if >>not-found
+	9 swap - return ( 9-i )
+
+	@not-found "Zero not allowed in n128-nr-sigwords" error
+	;
+
+"Expect 2:" . 
+"12345678" n128-from-hex n128-nr-sigwords . CR
+"Expect 3:" . 
+"123456780" n128-from-hex n128-nr-sigwords . CR
+"Expect 4:" .
+"abcd01234567cdef" n128-from-hex n128-nr-sigwords . CR
+"Expect 5:" .
+"abcd01234567cdef123" n128-from-hex n128-nr-sigwords . CR
+
+6 f.setprec
+
+"Script ran in" .
+run-time START_TIME - . "seconds" . CR
+
+"TOTAL system time" .
+run-time . "seconds" . CR
