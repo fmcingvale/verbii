@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "xmalloc.hpp"
 
 const unsigned char TYPE_NULL = 0;
 const unsigned char TYPE_INT = 1;
@@ -22,6 +23,7 @@ const unsigned char TYPE_FLOAT = 4;
 const unsigned char TYPE_STRING = 5;
 const unsigned char TYPE_SYMBOL = 6;
 const unsigned char TYPE_LIST = 7;
+// ** THIS IS FOR 'VERSION 1' CLOSURES ONLY --- 'VERSION 2' closures act like e.g. scheme
 // verbii's idea of a closure is little different that in other languages -- mainly
 // that it does not capture by name (since verbii functions do not have named args)
 // and doesn't capture any outer scope (since, again, there are no names to capture).
@@ -193,10 +195,11 @@ const int MAX_CALLFRAME_SLOTS = 255; // probably way too much, but have to start
 // 'version 2' closures based on persistent frames
 // every time a userword is called (or lambda via 'call')
 // a new frame data is created for it.
-class CallFrameData {
+class CallFrameData : public gc_cleanup {
 	public:
 	CallFrameData();
-
+	~CallFrameData() 
+		{ outer = NULL; /* printf("CALLFRAME DATA DTOR\n"); */ }
 	// get/set an object in my local frame
 	Object getLocalObj(int index);
 	void setLocalObj(int index, Object obj);
