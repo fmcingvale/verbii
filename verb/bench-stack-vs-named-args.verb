@@ -1,0 +1,150 @@
+
+\ Some benchmarking of new style arguments vs stack fiddling based operations.
+\
+\
+\ Results (C++):
+\	stack operations only: 34.1 seconds
+\	named-arguments, 'version 1': 8.3 seconds (using self-based closures)
+\	named-arguments, 'version 2': 3.5 seconds (using callframe-based closures)
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: int-range ( start end -- list ; makes list of integers from start to end [inclusive] by +1 )
+	[ ] -rot 1 swap '<= 2 make-list make-lambda ( [ ] start 1 { end != } ) 
+	{ append } for-while
+	;
+
+: for-while ( start increment cond-while lambda )
+	>L >L >L >L ( L3: lambda, L2: cond-while, L1: increment, L0: current )
+	@loop
+		L0 ref L2 ref call if >>continue >>end ( cond-end true|false for current counter? )
+	@continue
+		L0 ref L3 ref call ( call lambda with current value )
+		L0 ref L1 ref + L0 set! ( current += increment )
+		<<loop
+	@end
+		LP 4 + LP! ( clean up locals )
+	;
+
+( - https://rosettacode.org/wiki/Primality_by_trial_division - )
+
+\ @doc
+\ test if a number is prime
+\ @in
+\ n Number to test
+\ @out
+\ result true or false
+\ @demo
+\ 12 prime? . CR
+\ 31 prime? . CR
+: prime? ( n -- true|false )
+	dup 1 <= if >>below2
+	dup 2 == if >>is2
+
+	dup 2 / 2 swap ( n i=2 stop=n/2 )
+	@loop ( n i stop )
+			\ "LOOP:" . .S CR
+		-rot 2dup mod 0 == if >>notprime
+		1 + rot ( n i+1 stop )
+		2dup >= if >>isprime
+		<<loop
+	@notprime ( stop n i )
+		drop drop drop false return
+	@isprime ( n i stop )
+		drop drop drop true return
+	@below2 
+		drop false return
+	@is2
+		drop true return
+	;
+
+\ 'version 1' closures
+: prime-2? @( n -- out )
+	@locals [ i stop ]
+	n 1 <= if >>below2
+	n 2 == if >>is2
+
+	2 i! \ i = next value to try (n/i)
+	n 2 / stop! \ no need to check values beyond n/2
+
+	@loop
+		i stop > if >>isprime \ i>stop, no divisor found
+		n i mod 0 == if >>notprime \ found divisor, so not prime
+		i 1 + i!
+		<<loop
+	@notprime
+		false return
+	@isprime
+		true return
+	@below2 
+		false return
+	@is2
+		true return
+	;
+
+\ 'version 2' closures
+:V2 prime-3? ( n -- out )
+	@locals [ i stop ]
+	n 1 <= if >>below2
+	n 2 == if >>is2
+
+	2 i! \ i = next value to try (n/i)
+	n 2 / stop! \ no need to check values beyond n/2
+
+	@loop
+		i stop > if >>isprime \ i>stop, no divisor found
+		n i mod 0 == if >>notprime \ found divisor, so not prime
+		i 1 + i!
+		<<loop
+	@notprime
+		false return
+	@isprime
+		true return
+	@below2 
+		false return
+	@is2
+		true return
+	;
+	
+'NUMRANGE -100 10000 int-range make-var
+
+\ ====== stack only ===========
+
+'T0 run-time make-var
+
+"* primes *" . CR
+"Expect [ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]:" . CR
+"      " .
+NUMRANGE { prime? } filter . CR
+
+'T1 run-time make-var
+
+"TIME:" . T1 T0 - . CR
+
+\ ====== version 1 closures ===========
+
+run-time T0!
+
+"* primes *" . CR
+"Expect [ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]:" . CR
+"      " .
+NUMRANGE { prime-2? } filter . CR
+
+run-time T1!
+
+"TIME:" . T1 T0 - . CR
+
+\ ====== version 2 closures ===========
+
+run-time T0!
+
+"* primes *" . CR
+"Expect [ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]:" . CR
+"      " .
+NUMRANGE { prime-3? } filter . CR
+
+run-time T1!
+
+"TIME:" . T1 T0 - . CR
+
+"TOT TIME:" . run-time . CR
