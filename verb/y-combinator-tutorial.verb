@@ -8,7 +8,7 @@
 
 \ Let's start by defining the factorial function in traditional recursive style:
 
-: fact-0 @( n )
+:V2 fact-0 ( n -- n' )
 	n 0 == if >>zero
 	n 1 - fact-0 n * return \ result = n * fact(n-1)
 	@zero 1 return \ fact(0) == 1
@@ -47,7 +47,7 @@
 \	- f takes a callable (g) as an argument
 \	- g in turn also takes a callable as its argument
 
-: f @( g )
+:V2 f ( g )
 	"in f" . CR
 	\ for now, assume g doesn't use its argument and just pass an empty lambda
 	{ } g call
@@ -55,8 +55,7 @@
 	
 "* Expect 'in f' then 'in g':" . CR
 \ make a lambda that just prints "in g"
-@{
-	@args [ x ]
+::{ ( x )
 	"in g" . CR
 }
 f \ pass that to f as the g argument
@@ -69,9 +68,9 @@ f \ pass that to f as the g argument
 \ now we're going to add two things:
 \	1. instead of calling 'g' directly, we're going to return a lambda that does it when called
 \	2. instead of passing an empty lambda to g, we're going to pass g to itself
-: f2 @( g )
+:V2 f2 ( g )
 	"in f2" . CR
-	@{ g g call }
+	::{ g g call }
 	;
 
 \ the first time I call f2, it will print "in f2" then return a lambda ...
@@ -87,7 +86,7 @@ drop \ don't need the lambda anymore
 
 \ lets go one further step (not in the original) -- lets lift the { g g call } out of
 \ the inner lambda and let it run freely.
-: f3 @( g n )
+:V2 f3 ( g n )
 	"in f3, n=" . n . CR
 	n 0 == if >>done
 	g n 1 - g call return \ g(g,n-1)
@@ -102,8 +101,7 @@ drop \ don't need the lambda anymore
 \ * another step not in the original *
 \ the above still invites cheating since the function f3 knows its name.
 \ so lets rewrite it as an unnamed lambda
-@{
-	@args [ g n ]
+::{ ( g n )
 	\ note the rest of this is the same
 	"in f4, n=" . n . CR
 	n 0 == if >>done
@@ -124,12 +122,8 @@ dup 10 swap ( now: lambda 10 lambda ) call
 
 \ now lets split up the lambda taking [ g n ] into a two lambdas - one taking g and one taking n.
 \ formally, this is called currying and will make sense shortly ...
-@{
-	\ outer lambda takes g
-	@args [ g ]
-	@{
-		\ inner lambda takes n
-		@args [ n ]
+::{ ( g ) \ outer lambda takes g
+	::{ ( n ) \ inner lambda takes n
 		\ this part is the same
 		"in f5, n=" . n . CR
 		n 0 == if >>done
@@ -169,17 +163,14 @@ dup ( now: LAMBDA LAMBDA ) call
 
 \ first lets make a function to make the recursive function -- this will get rid
 \ of the first 'dup call' line above
-: make-recur @( f ) f f call ;
+:V2 make-recur ( f ) f f call ;
 
 \ rewriting with make-recur ...
 
 "* Countdown (#5):" . CR
 
-@{
-	\ renaming G to REC since this is for our recursive call below
-	@args [ rec ]
-	@{
-		@args [ n ]
+::{ ( rec ) \ renaming G to REC since this is for our recursive call below
+	::{ ( n )
 		\ this part is the same
 		"in f6, n=" . n . CR
 		n 0 == if >>done
@@ -202,14 +193,13 @@ make-recur
 \   		mkrec(lambda rec:
 \ 			    g(lambda y: rec(rec)(y))))
 	
-: make-recur-nice @( g )
+:V2 make-recur-nice ( g )
 	\ arg to make-recur	
-	@{
-		@args [ rec ]
+	::{ ( rec )
 		\ arg to g
 		\ NOTE! the original does (rec(rec))(y) -- here I don't need the parameter
 		\ so it's omitted, but can't forget the 2nd call so it's not just (rec(rec)) but (rec(rec))()
-		@{ rec rec call call }
+		::{ rec rec call call }
 		g call
 	} make-recur
 	;
@@ -218,10 +208,8 @@ make-recur
 
 "* Countdown (#6):" . CR
 
-@{
-	@args [ rec ]
-	@{
-		@args [ n ]
+::{ ( rec )
+	::{ ( n )
 		\ this part is the same
 		"in f7, n=" . n . CR
 		n 0 == if >>done
@@ -237,10 +225,9 @@ make-recur-nice
 		
 \ since make-recur would just be 'dup call' if it was inline, let's do that ...
 
-: make-recur-nice-2 @( g )
-	@{
-		@args [ rec ]
-		@{ rec rec call call }
+:V2 make-recur-nice-2 ( g )
+	::{ ( rec )
+		::{ rec rec call call }
 		g call
 	} dup call
 	;
@@ -248,10 +235,8 @@ make-recur-nice
 \ so once again ...
 "* Countdown (#7):" . CR
 
-@{
-	@args [ rec ]
-	@{
-		@args [ n ]
+::{ ( rec )
+	::{ ( n )
 			"in f8, n=" . n . CR
 			n 0 == if >>done
 			n 1 - rec call
@@ -267,19 +252,17 @@ make-recur-nice-2
 \ it is the Y combinator.
 
 \ we can write it as a 1-liner, omitting the commentary ...
-: Y @( g ) @{ @args [ rec ] @{ rec rec call call } g call } dup call ;
+:V2 Y ( g ) ::{ ( rec ) ::{ rec rec call call } g call } dup call ;
 
 \ final tests ...
 
 "* Countdown (THE FINAL!):" . CR
 
-@{
-	@args [ rec ]
-	@{
-		@args [ n ]
-			"in f8, n=" . n . CR
-			n 0 == if >>done 	\ stop when n==0
-			n 1 - rec call 		\ else call rec(n-1)
+::{ ( rec )
+	::{ ( n )
+		"in f8, n=" . n . CR
+		n 0 == if >>done 	\ stop when n==0
+		n 1 - rec call 		\ else call rec(n-1)
 		@done
 	}
 }
@@ -289,13 +272,11 @@ Y
 \ ... and how about a factorial function like in the original article ...
 "* Some factorials ..." . CR
 
-@{
-	@args [ rec ]
-	@{
-		@args [ n ]
-			n 0 == if >>zero 	\ stop on n==0
-			n 1 - rec call n *	\ else return n * rec(n-1)
-			return
+::{ ( rec )
+	::{ ( n )
+		n 0 == if >>zero 	\ stop on n==0
+		n 1 - rec call n *	\ else return n * rec(n-1)
+		return
 		@zero
 			1 return
 	}

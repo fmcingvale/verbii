@@ -11,12 +11,34 @@
 'FLOAT-MAX 1.7976931348623157E+308 make-const
 'FLOAT-MIN -1.7976931348623157E+308 make-const
 
+\ ( n -- ; get n as binary string )
+:V2 str.bin
+	32 "" -rot
+	@loop ( s n i )
+		dup 0 == if >>done ( i==0? )
+		over 1 bit-and 0 == if >>zero
+			rot "1" swap + -rot >>next ( prepend 1 )
+		@zero
+			rot "0" swap + -rot ( prepend 0 )
+		@next ( s n i )
+			swap 1 bit-shr swap 1 - ( s n>>1 --i )
+			<<loop
+	@done
+		drop drop ( leave string on stack )
+		\ put in dotted form for readability
+		dup 0 8 slice "." + swap
+		dup 8 8 slice "." + swap 
+		dup 16 8 slice "." + swap 
+		24 8 slice
+		+ + + 
+		;
+
 \ ======================================================================
 \ Parsing & printing of hex values
 \ ======================================================================
 
 \ convert char h from hex to int
-: hex-char-to-int @( h -- i )
+:V2 hex-char-to-int ( h -- i )
 	h "0" >= 
 	h "9" <=
 	and if >>digit 
@@ -37,17 +59,18 @@
 	;
 
 \ parse hex string to integer -- hex must NOT have leading "0x"; ONLY hex digits
-: parse-hex @( hex -- i )
+:V2 parse-hex ( hex -- i )
 	\ fold
 	hex
-	@{ @( accum h ) 
+	::{ ( accum h ) 
 		h hex-char-to-int 
 		accum 16 * + 
 	} 0 fold
 	;
 
 \ 4-bit value to hex digit
-: int4-to-hex ( n -- h )
+\ ( n -- h )
+:V2 int4-to-hex 
 	dup 9 <= if >>digit 
 	dup 16 < if >>hex 
 	"Bad value in int4-to-hex:" swap str + error
@@ -57,36 +80,41 @@
 	;
 
 \ 8-bit value to 2 hex digits )
-: int8-to-hex ( n -- h )
+\ ( n -- h )
+:V2 int8-to-hex 
 	16 /mod int4-to-hex swap int4-to-hex +
 	;
 
 \ 16-bit value to 4 hex digits
-: int16-to-hex ( n -- h )
+\ ( n -- h )
+:V2 int16-to-hex
 	256 /mod int8-to-hex swap int8-to-hex +
 	;
 
 \ 32-bit value to 8 hex digits )
-: int32-to-hex ( n -- h )
+\ ( n -- h )
+:V2 int32-to-hex
 	65536 /mod int16-to-hex swap int16-to-hex +
 	;
 
 \ shortcut - int to hex string
 \ - always unsigned
 \ - does NOT prepend "0x", only returns the hex digits
-: str.hex ( val ) int32-to-hex ;
+\
+\ ( val -- hexstring )
+:V2 str.hex int32-to-hex ;
 
 \ ======================================================================
 \ More bit operations (all 32-bit)
 \ ======================================================================
 
 \ rotate X left by K bits
-: bit-rotl @( x k )
+:V2 bit-rotl ( x k )
 	\ (x << k) | (x >> (32 - k))
 	x k bit-shl
 	x 32 k - bit-shr
 	bit-or
 	;
 	
-: bit-low32 @( val ) val 4294967295 bit-and ;
+:V2 bit-low32 ( val ) val 4294967295 bit-and ;
 

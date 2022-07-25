@@ -14,55 +14,21 @@
 \ My purpose of marking this above is to ensure the code is under a free license; if anyone has an 
 \ objection please let me know.)
 	
-: compress @( text -- output )
+:V2 compress ( text -- output )
 	@locals [ cmap ]
 	
 	[ ] make-dict cmap! \ maps text sequences to codes
 	
 	\ start by adding all single characters to the map as chr(i) -> i
-	@{ 
-		@args [ i ]
+	::{ ( i )
 			cmap i chr i put cmap!
 	} 0 1 256 for-range
 
 	[ ] output! \ append codes here as generated
-	
-	\ a few verbii subtleties come into play here that are worth mentioning:
-	\	the original has a Python-style loop:
-	\		buf = ""
-	\		for c in buf:
-	\			...
-	\
-	\		# do something with buf after loop is done
-	\
-	\	trying to something like this in verbii will NOT work:
-	\		"" buf!
-	\		@{ .. process each char of buf .. } for-each
-	\		.. do something with buf after loop ..
-	\
-	\	in verbii, a closure (@{ .. }) is *NOT* a nested scope in the traditional sense. upon creation,
-	\	the closure captures *VALUES* and *OBJECT REFERENCES* from the outer scope. so for example, if
-	\	buf were a list or dictionary, then the outer & inner loops would be reading/writing the SAME object.
-	\	but with atoms (ints,floats,strings,symbols,bools) the VALUES in the inner loop are not attached to
-	\	the original variable. so when the inner loop updates 'buf', that does NOT change the value of buf
-	\	in the outer loop.
-	\
-	\	a possible future extension to verbii will be to allow VALUES (atoms) to be boxed so they can be passed
-	\	by reference just like objects (lists,dicts). however, i'm not 100% convinced this is useful enough to
-	\	be worth implementing.
-	\	
-	\	for now, here is one way to solve it -- using fold, i let the accumulator function as 'buf', saving
-	\	the current text we are trying to match from loop to loop. traditionally, the accumulator for fold
-	\	would be the object being built (in this case, 'output'). however, as noted above, since output is
-	\	an OBJECT it is captured by reference in the closure, so the inner and outer scopes are both seeing the
-	\	same object, so no need to hold it in the fold accumulator.
-	\
-	\	another way to solve the problem would be to just write my own loop and not use a closure at all,
-	\	but where is the fun in that ;-)
 
-	\ so, i fold over all chars in text, updating cmap, output and leaving remaining text in accumulator ...
+	\ fold over all chars in text, updating cmap, output and leaving remaining text in accumulator ...
 	text
-	@{	@args [ buf c ]	\ args from fold (accumulator & next char of text)
+	::{	( buf c )	\ args from fold (accumulator & next char of text)
 		@locals [ buf+c ]	\ <- closures can have their own locals, instead of cluttering namespace in outer scope
 		
 		buf c + buf+c! \ add c to current input buffer
@@ -88,13 +54,12 @@
 		output
 	;
 	
-: decompress @( compressed -- text )
+:V2 decompress ( compressed -- text )
 	@locals [ i dmap w ]
 	
 	[ ] make-dict dmap! \ this maps codes -> strings
 	\ init dict to contain 0..255 mapping to first 256 ascii chars
-	@{ 
-		@args [ i ]
+	::{  ( i )
 		\ general note: dict keys have to be strings, so 'i str' will be the pattern here and below
 		dmap i str i chr put dmap!
 	} 0 1 256 for-range
@@ -104,12 +69,8 @@
 	
 	compressed 0 get chr w! \ w = chr(compressed[0])
 	
-	\ now -- having said all that above about capturing VALUES vs OBJECTS, notice i'm capturing 'w' here, which
-	\ is an atom (string). in this case, it is fine, since i never need to use w again in the outer scope.
-	\ capturing w in the inner scope allows it to act as persistent storage between loops in the fold.
-	
 	compressed 1 -1 slice \ fold over compressed[1:]
-	@{ 	@args [ text code ] \ args from fold -- accumulator & next element from compressed
+	::{ ( text code ) \ args from fold -- accumulator & next element from compressed
 		@locals [ entry ]
 		dmap code str get void? not if >>in-dmap \ true if code is in dmap
 		dmap length code == if >>new-code \ code i haven't seen before?
@@ -134,14 +95,14 @@
 	\ final accumulator left on stack is output text, so just leave it there
 	;
 	
-: test-for-range
+:V2 test-for-range
 	"Count 0 .. 100 by 10:" . { . } 0 10 11 for-range CR
 	"Count -100 .. 100 by 25:" . { . } -100 25 9 for-range CR
 	;
 	
 test-for-range
 
-: test-compress-decompress @( text )
+:V2 test-compress-decompress ( text )
 	"Input text:  " . text . "length =" . text length . CR
 	text compress
 	"Compressed:  " . dup . "length =" . dup length . CR

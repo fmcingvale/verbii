@@ -26,11 +26,11 @@
 'MERSENNE-INDEX void make-var
 
 \ must be called at least once
-: mersenne-random-seed @( seed )
+:V2 mersenne-random-seed ( seed )
 	624 MERSENNE-INDEX!
-	@[ seed ] MERSENNE-STATE! \ MT[0] := seed
+	[ seed ] MERSENNE-STATE! \ MT[0] := seed
 	\ for i from 1 to (n - 1)
-	@{ @( i )
+	::{ ( i )
 		\ MT[i] := lowest w bits of (f * (MT[i-1] xor (MT[i-1] >> (w-2))) + i)
 		MERSENNE-STATE
 			MERSENNE-STATE i 1 - get 30 bit-shr 
@@ -44,7 +44,7 @@
 	;
 	
 \ get next 32-bit value from generator
-: mersenne-random-extract
+:V2 mersenne-random-extract
 	@locals [ y ]
 	MERSENNE-INDEX void? if >>not-initted
 	MERSENNE-INDEX 624 < if >>ready
@@ -71,10 +71,10 @@
 	;
 	
 \ called periodically to refill MERSENNE-STATE
-: mersenne-random-twist
+:V2 mersenne-random-twist
 		\ "TWIST" . CR
 	\ for i from 0 to (n-1)
-	@{ @( i )
+	::{ ( i )
 		@locals [ x xA ]
 		\ int x := (MT[i] and upper_mask) + (MT[(i+1) mod n] and lower_mask)
 		MERSENNE-STATE i get 2147483648 bit-and
@@ -95,7 +95,7 @@
 		
 	0 MERSENNE-INDEX!
 	;
-						  
+
 
 
 	

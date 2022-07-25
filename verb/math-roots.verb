@@ -13,7 +13,7 @@
 \ prevent endless loop if solution diverges.
 \
 \ returns root xn or void on divergence.
-: find-root-secant @( f x0 x1 eps maxloops -- xn )
+:V2 find-root-secant ( f x0 x1 eps maxloops -- xn )
 	@locals [ xn1 xn2 ] \ x[n-1], x[n-2]
 	
 	\ x[n-2] = x0; x[n-1] = x1
@@ -47,7 +47,7 @@
 	@diverges void \ solution diverged
 	;
 
-: sign @( x -- sign )
+:V2 sign ( x -- sign )
 	x 0 < if >>negative
 	1 return
 	@negative -1 return
@@ -56,7 +56,7 @@
 \ Bisection method
 \ ref: https://en.wikipedia.org/wiki/Bisection_method
 
-: find-root-bisect @( f a b eps maxloops -- root )
+:V2 find-root-bisect ( f a b eps maxloops -- root )
 	@locals [ c ]
 
 	\ check that a & b start on opposite sides of the root
@@ -90,36 +90,36 @@
 
 "* Secant method ..." . CR
 \ f = (x-2)*(x+4)
-@{ @args [ x ] x 2 - x 4 + * }
+::{ ( x ) x 2 - x 4 + * }
 "Expect 2:" . 1 3 0.0000001 100 find-root-secant . CR
 
-@{ @args [ x ] x 2 - x 4 + * }
+::{ ( x ) x 2 - x 4 + * }
 "Expect -4:" . -2 -6 0.0000001 100 find-root-secant . CR
 
 \ f = (x-10)*(x+5)*(x+15)
-@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+::{ ( x ) x 10 - x 5 + * x 15 + * }
 "Expect 10:" . 8 12 0.0000001 100 find-root-secant . CR
 
-@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+::{ ( x ) x 10 - x 5 + * x 15 + * }
 "Expect -5:" . -1 -8 0.0000001 100 find-root-secant . CR
 
-@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+::{ ( x ) x 10 - x 5 + * x 15 + * }
 "Expect -15:" . -16 -14 0.0000001 100 find-root-secant . CR
 
 "* Bisection method ..." . CR
 \ f = (x-2)*(x+4)
-@{ @args [ x ] x 2 - x 4 + * }
+::{ ( x ) x 2 - x 4 + * }
 "Expect 2:" . -0.3 3.1 0.0000001 100 find-root-bisect . CR
 
-@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+::{ ( x ) x 10 - x 5 + * x 15 + * }
 "Expect -15:" . -8.1 -25.5 0.0000001 100 find-root-bisect . CR
 
 \ f = (x-10)*(x+5)*(x+15)
-@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+::{ ( x ) x 10 - x 5 + * x 15 + * }
 "Expect 10:" . 5.1 15.3 0.0000001 100 find-root-bisect . CR
 
-@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+::{ ( x ) x 10 - x 5 + * x 15 + * }
 "Expect -5:" . 2.4 -8.77 0.0000001 100 find-root-bisect . CR
 
-@{ @args [ x ] x 10 - x 5 + * x 15 + * }
+::{ ( x ) x 10 - x 5 + * x 15 + * }
 "Expect -15:" . -35.7 -8.1 0.0000001 100 find-root-bisect . CR

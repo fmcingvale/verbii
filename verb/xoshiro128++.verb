@@ -10,8 +10,8 @@
 'XOSHIRO128PP-STATE void make-var
 
 \ seed with 4 integer values
-: xoshiro128pp-seed @( a b c d )
-	@[ a b c d ] XOSHIRO128PP-STATE!
+:V2 xoshiro128pp-seed ( a b c d -- )
+	[ a b c d ] XOSHIRO128PP-STATE!
 	;
 	
 : xoshiro128pp-next
