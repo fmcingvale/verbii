@@ -26,7 +26,7 @@
 	;
 	
 ( ------ init ----------- )
-	
+
 : stream-reader-peek-line @( stream -- stream' line )
 	@locals [ savepos ]
 	stream 1 get savepos!
@@ -92,7 +92,9 @@
 	dup '@[ == if >>capture-list
 	dup '#op( == if >>opcode  \ )
 	dup ': == if >>worddef
+	\ eventually these will replace : once all code has been ported
 	dup ':W == if >>v2-worddef
+	dup ':V2 == if >>v2-worddef
 	dup 'def == if >>worddef ( synonym for ':' )
 	dup 'var == if >>var
 	dup 'del == if >>del
@@ -454,6 +456,9 @@
 	@locals [ argnames localnames env i ]
 			
 			\ "* V2-rewrite-args-locals" . CR
+			\ "OBJLIST:" . objlist . CR
+			\ "PLAIN-LIST?:" . plain-list . CR
+			
 		\ scan objlist for , @( ... ), @args, @locals
 		objlist
 		compile-collect-args-locals localnames! argnames! new-objlist!
@@ -513,6 +518,7 @@
 	@rewrite-loop
 		\ i objlist length >= if >>done 
 		
+			\ "OBJLIST[i]:" . objlist i get . CR
 		\ two purposes for this check -- first this is the easy (designed) way to check for end of lists instead
 		\ of having to test against list length. second, this ensures there are no void values in the lists
 		\ which would mess up the make-listv code down below
@@ -539,11 +545,9 @@
 		nr-rewritten 1 + nr-rewritten!
 		>>next 
 		
-	@list
+	@list			
 		\ look for [ ,,v2-closure ... ] (parsed from ::{ .. })
-		objlist i get length 2 < if <<copy-element \ list too short, can't be closure nor hold varnames
 		objlist i get 0 get ',,v2-closure == if >>rewrite-inner-closure \ got [ ,,v2-closure .. ]
-		\ <<copy-element \ not a special list, so just copy element
 		
 		\ else, recurse normal list looking for names to be rewritten
 		>>rewrite-inner-plain-list
@@ -606,6 +610,199 @@
 	@done
 		new-objlist nr-rewritten return	
 		;
+	
+\ rewrites an objlist to translate arg/local names including capturing outer vars (closures)
+\
+\ selfmap should be set to an empty dict at the toplevel
+\
+\ ASSUMPTIONS:
+\	1. If objlist from { .. } or @{ .. } it must end with a 'return (the normal parsing code handles this)
+\		[eventually rewriting of lists will be possible, so can't assume objlist is code and add the return here]
+\	2. closures must be marked with @{ ... } ; will NOT transform unmarked lambdas since they might
+\		be used in other binding constructs
+\	3. does NOT (yet) rewrite lists so dynamic code cannot use @args/@lists nor create closures
+\		(user code can manually do closures with :: of course)
+\
+\ does these things:
+\	1. scans objlist (non-recursively) for @args, @locals, and/or [ ,,declargs ... ]
+\	2. rewrite objlist to do:
+\		a. alloc locals (LP nr - LP!)
+\		b. pop args (L> L> ...)
+\		c. rewrite symbols to their code sequences:
+\			(i) if name in args/locals, rewrite to (LP i + ref) or (LP i + set!)
+\			(ii) if name in selfmap, rewrite to (self i get) or (self i rot put drop)
+\		d. if an inner lambda is found ( @{ ... } -- @ is required for backward compat with { .. } obj :: code )
+\			(i) recursively rewrite lambda, passing selfmap + my args+locals as its selfmap
+\			(ii) add binding of selfmap + my locals as self for inner lambda
+: compile-rewrite-args-locals @( objlist selfmap -- new-objlist )
+	@locals [ argnames localnames local-refmap local-setmap i self-setmap ]
+			
+		\ scan objlist for , @( ... ), @args, @locals
+		objlist
+		compile-collect-args-locals localnames! argnames! new-objlist!
+			
+		\ note: even if i have no @args/@locals, i can still have names that resolve to selfmap
+		\       - could also have inner closures that take their own args
+
+		\ set objlist to rewritten list without @args/@locals
+		new-objlist objlist!
+		\ clear new-objlist now
+		[ ] new-objlist!
 		
+		\ make preamble code to:
+		\	1. alloc spaces for @locals
+		\	2. pop args to locals
+		\ note this will put args starting at LP and locals starting at LP + #args
+		
+		\ 1. alloc locals (LP #localnames - LP!)
+		localnames length 0 == if >>popargs \ omit code if no locals
+		'LP localnames length '- 'LP! 4 make-list new-objlist!
+	@popargs
+		\ 2. push args to locals (adding code to new-objlist)
+		argnames { ( accum elem ) drop '>L append } new-objlist fold new-objlist! 
+		
+		\ make a map of arg|local name -> index into locals
+		[ ] make-dict argnames localnames + dict-add-indexed-names local-refmap!
+		\ make a map of name! as well to replace setters
+		[ ] make-dict 
+			argnames { str "!" + } map 
+			localnames { str "!" + } map 
+			+ dict-add-indexed-names local-setmap!
+		
+		\ for each name in selfmap, make name! in self-setmap with same index
+		[ ] make-dict self-setmap!
+		selfmap
+		@{ @args [ key val ]
+			self-setmap key "!" + val put drop
+		} for-each-dict
+		
+	\ rewrite objlist replacing arg|local symbols with appropriate code sequences and creating
+	\ closures as needed
+	0 i!
+	@rewrite-loop
+		i objlist length >= if >>done 
+		objlist i get symbol? if >>symbol
+		objlist i get list? if >>list
+		\ everything else, copy as-is
+	@copy-element
+		new-objlist objlist i get append new-objlist! >>next
+		
+	@symbol
+		objlist i get 'return == if >>rewrite-return
+		\ NOTE: local scope is checked BEFORE outer scope so that the inner scope can redefine
+		\ names and see the intended (local) value instead of the outer one
+		\ example:
+		\		: fn @( n ) @{ @args [ n ] <- here, n and n! should see the LOCAL names not the outer n, n! }
+		
+		\ is symbol (as string) in local-refmap?
+		local-refmap objlist i get str get void? not if >>rewrite-local-ref
+		\ check for local setter
+		local-setmap objlist i get str get void? not if >>rewrite-local-set
+		\ is symbol (as string) in selfmap?
+		selfmap objlist i get str get void? not if >>rewrite-self-ref
+		\ check for self setter
+		self-setmap objlist i get str get void? not if >>rewrite-self-set
+		
+		\ else not in either list, keep as-is
+		<<copy-element
+		
+	@rewrite-local-ref
+		\ add (LP i + ref) to new-objlist
+		new-objlist
+		'LP local-refmap objlist i get str get '+ 'ref 4 make-list
+		+ new-objlist! >>next
+		
+	@rewrite-local-set
+		\ add (LP i + set!) to new-objlist
+		new-objlist
+		'LP local-setmap objlist i get str get '+ 'set! 4 make-list
+		+ new-objlist! >>next
+	
+	@rewrite-self-ref
+		\ add (self i get) to new-objlist
+		new-objlist
+		'self selfmap objlist i get str get 'get 3 make-list
+		+ new-objlist! >>next
+	
+	@rewrite-self-set
+		\ add (self i rot put drop) to new-objlist
+		new-objlist
+		'self self-setmap objlist i get str get 'rot 'put 'drop 5 make-list
+		+ new-objlist! >>next
+		
+	@rewrite-return
+		\ if no args/locals then skip -- no frame to remove
+		argnames length localnames length + 0 == if >>simple-return
+		
+		\ replace return with code to remove local frame
+		new-objlist
+		'LP argnames length localnames length + '+ 'LP! 'return 5 make-list
+		+ new-objlist! >>next
+		
+	@simple-return
+		\ no frame, so just keep return
+		new-objlist 'return append new-objlist! >>next
+		
+	@list
+		\ look for [ ,,closure ... ] (parsed from @{ .. })
+		objlist i get length 2 < if <<copy-element \ list too short, can't be closure
+		objlist i get 0 get ',,closure == if >>rewrite-inner-closure \ got [ ,,closure .. ]
+		\ it could be a v2 closure embedded in a v1 closure ...
+		objlist i get 0 get ',,v2-closure == if >>rewrite-inner-v2-closure
+		<<copy-element \ not a special list, so just copy element
+
+	@rewrite-inner-closure
+		\ recursively parse list, passing a selfmap that is my selfmap + my locals
+		selfmap deepcopy \ don't alter my selfmap
+		( inner-selfmap )
+		argnames dict-add-indexed-names \ add arg names first -- they are first on locals stack
+		localnames dict-add-indexed-names \ .. then locals
+		( inner-selfmap )
+		objlist i get 1 -1 slice \ remove ,,closure
+		swap ( objlist inner-selfmap )
+		compile-rewrite-args-locals ( new-objlist )
+		make-lambda \ turn new-objlist back into lambda
+		new-objlist swap append new-objlist! \ add lambda to new-objlist
+		\ now create code to make runtime binding for new lambda
+		\ want self = [ self0 .. selfN arg0 .. argN local0 .. localN ]
+		\ so code will be:
+		\	[ ] self + ( shallow-copy self )
+		\	#args #locals + copy-locals-to-list + ( self + locals ) ::
+			
+		\ NOTE! have to check for empty selfmap since referencing a non-existent self is an error
+		selfmap length 0 == if >>inner-closure-no-selfmap
+		
+		\ case 1: my self is bound so concatenate my locals to self
+		0 'make-list 'self '+ argnames length localnames length + 'copy-locals-to-list '+ '::
+		8 make-list new-objlist swap + new-objlist! \ add self-making code to new-objlist
+		>>next
+		
+	@inner-closure-no-selfmap
+		\ case 2: no selfmap so just pass on my locals
+		argnames length localnames length + 'copy-locals-to-list '::
+		3 make-list new-objlist swap + new-objlist! \ add self-making code to new-objlist
+		>>next
+		
+	@rewrite-inner-v2-closure
+		\ a v2 closure inside a v1 closure cannot access any of its variables (v1 uses 'self', v2 uses frame).
+		\ so treat v2 as having an empty outer-env
+		objlist i get 1 -1 slice \ remove ,,v2-closure
+			void \ outer-env
+			false \ this is a lambda not a plain list
+			v2-compile-rewrite-args-locals 
+			\ i don't care about nr-rewritten since this closure cannot bind to an outer env anyways
+			drop \ nr-rewritten
+			make-lambda \ turn list back into lambda
+			new-objlist swap append new-objlist! \ add to new-objlist
+			\ as noted, since never will be bound, nothing more to add
+			>>next
+			
+	@next
+		i 1 + i! <<rewrite-loop
+	
+	@done
+		new-objlist return
+	;
+	
 ( ------ misc ------- )
 \ "System startup time: " . run-time str . CR
