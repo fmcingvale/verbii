@@ -28,7 +28,7 @@
 \ test is called with stack: ( expect actual )
 : expect-generic @( test testname expect actual )
 	expect actual test call if >>ok
-		"*** ERROR *** expecting " . expect . "but got" . actual . CR 
+		"*** ERROR *** expecting " . expect repr . "but got" . actual repr . CR 
 		UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
 		return
 	@ok 
@@ -96,6 +96,23 @@
 	#1e-6 > if >>toolarge
 		"OK" . CR return
 	@toolarge "** !! ERROR !! **" . CR
+	;
+	
+\ get stack representation as a string "[ .. ]".
+\ does not affect stack.
+:V2 str.stack ( -- s )
+	"]" s!
+	::{ ( i )
+		SP i + ref repr " " + s + s!
+	} 0 1 depth 3 - for-range \ subtract off 3 for (lambda 0 1)
+	"[ " s +
+	;
+	
+\ expect a stack string like "[ ... ]"
+:V2 expect-stack ( expect )
+	@locals [ actual ]
+	str.stack actual!
+	{ == } "stack?" expect actual expect-generic
 	;
 	
 : unittest-summary

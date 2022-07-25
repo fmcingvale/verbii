@@ -1,0 +1,102 @@
+\ Unittests for basic stack operations
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"unittest" import
+
+:V2 test-push
+	"* stack push ..." . CR
+	"[ ]" expect-stack
+	111
+	"[ 111 ]" expect-stack
+	222
+	"[ 111 222 ]" expect-stack
+	333
+	"[ 111 222 333 ]" expect-stack
+	clear
+	"[ ]" expect-stack
+	"abcd" 'wxyz 1.25 88 false true null
+	"""[ "abcd" 'wxyz #1.25 88 <false> <true> <null> ]""" expect-stack
+	clear
+	[ 123 [ "abc" [ 'def [ 81.75 true ] false ] [ yyy zzz ] "end" ] 789 ]
+	"""[ [ 123 [ "abc" [ ''def [ #81.75 <true> ] <false> ] [ 'yyy 'zzz ] "end" ] 789 ] ]""" expect-stack
+	clear
+	;
+	
+:V2 test-ops-1
+	"* stack ops 1 ..." . CR
+	"[ ]" expect-stack
+	11 22
+	"[ 11 22 ]" expect-stack
+	swap
+	"[ 22 11 ]" expect-stack
+	33
+	"[ 22 11 33 ]" expect-stack
+	dup
+	"[ 22 11 33 33 ]" expect-stack
+	drop
+	"[ 22 11 33 ]" expect-stack
+	0
+	"[ 22 11 33 0 ]" expect-stack
+	dup?
+	"[ 22 11 33 0 ]" expect-stack
+	swap
+	"[ 22 11 0 33 ]" expect-stack
+	clear 123
+	"[ 123 ]" expect-stack
+	drop
+	"[ ]" expect-stack
+	55 66
+	"[ 55 66 ]" expect-stack
+	over
+	"[ 55 66 55 ]" expect-stack
+	over
+	"[ 55 66 55 66 ]" expect-stack
+	clear
+	11 22 33 44
+	"[ 11 22 33 44 ]" expect-stack
+	2dup
+	"[ 11 22 33 44 33 44 ]" expect-stack
+	clear
+	44 55 66
+	"[ 44 55 66 ]" expect-stack
+	2drop
+	"[ 44 ]" expect-stack
+	clear
+	1 2 3 4 
+	"[ 1 2 3 4 ]" expect-stack
+	2swap
+	"[ 3 4 1 2 ]" expect-stack
+	2over
+	"[ 3 4 1 2 3 4 ]" expect-stack
+	6 ndrop
+	"[ ]" expect-stack
+	9 8 7 6 
+	"[ 9 8 7 6 ]" expect-stack
+	nip
+	"[ 9 8 6 ]" expect-stack
+	nip
+	"[ 9 6 ]" expect-stack
+	nip
+	"[ 6 ]" expect-stack
+	clear
+	10 20 30 
+	"[ 10 20 30 ]" expect-stack
+	tuck
+	"[ 10 30 20 30 ]" expect-stack
+	clear
+	10 20 30 40
+	"[ 10 20 30 40 ]" expect-stack
+	rot
+	"[ 10 30 40 20 ]" expect-stack
+	-rot
+	"[ 10 20 30 40 ]" expect-stack
+	clear
+	;
+	
+unittest-init
+
+test-push
+test-ops-1
+
+unittest-summary

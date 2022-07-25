@@ -1,0 +1,149 @@
+\ Unittests for string operations
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"unittest" import
+
+:V2 test-string-compares
+	"* string comparison ..." . CR
+	"abcde" "abcde" expect==
+	"aBcdE" "aBcdE" expect==
+	"aBcdE" "aBcde" expect!=
+	"xyz" "xyzw" expect!=
+	
+	"hello" 'hello expect!=
+	'hello "hello" expect!=
+	;
+	
+:V2 test-string-make-unmake
+	"* string make/unmake ..." . CR
+	"abcde" unmake 
+	"[ 97 98 99 100 101 5 ]" expect-stack
+	clear
+	
+	"ABCDE" unmake
+	"[ 65 66 67 68 69 5 ]" expect-stack
+	clear
+	
+	"verbii" 118 101 114 98 105 105 6 make-string expect==
+	;
+
+:V2 test-string-get
+	"* string get ..." . CR
+	"a" "abcdefgh" 0 get expect==
+	"b" "abcdefgh" 1 get expect==
+	"f" "abcdefgh" 5 get expect==
+	"h" "abcdefgh" 7 get expect==
+	"h" "abcdefgh" -1 get expect==
+	"g" "abcdefgh" -2 get expect==
+	"d" "abcdefgh" -5 get expect==
+	"a" "abcdefgh" -8 get expect==
+	void "abcdefgh" -9 get expect==
+	void "abcdefgh" 8 get expect==
+	;
+	
+:V2 test-string-slicing
+	"* string slicing ..." . CR
+	"cde" "abcdefgh" 2 3 slice expect==
+	"f" "abcdefgh" 5 1 slice expect==
+	"efgh" "abcdefgh" 4 -1 slice expect==
+	"h" "abcdefgh" -1 1 slice expect==
+	"cde" "abcdefgh" -6 3 slice expect==
+	"" "abcdefgh" -100 3 slice expect==
+	"fgh" "abcdefgh" 5 100 slice expect==
+	;
+	
+:V2 test-string-ops
+	"* string ops ..." . CR
+	"abcdef" "abc" "def" + expect==
+	"abc" "abc" "" + expect==
+	"def" "" "def" + expect==
+	
+	"abcde" " 	 	abcde" string-ltrim expect==
+	"abcde" " abcde" string-ltrim expect==
+	"abcde" "abcde" string-ltrim expect==
+	"" "  	 	  " string-ltrim expect==
+	"" "" string-ltrim expect==
+	
+	"abcde" string-empty? expectFalse
+	"e" string-empty? expectFalse
+	"  	e  		" string-empty? expectFalse
+	"" string-empty? expectTrue
+	" " string-empty? expectTrue
+	" 	 			   " string-empty? expectTrue
+	
+	"abc::def::ghi" [ "abc" "def" "ghi" ] "::" string-join expect==
+	"abc" [ "abc" ] "::" string-join expect==
+	"" [ ] "::" string-join expect==
+	"abcdefghi" [ "abc" "def" "ghi" ] "" string-join expect==
+	
+	'Hello "Hello" string->symbol expect==
+	"World" 'World symbol->string expect==
+	
+	38 "&" ord expect==
+	56 "8" ord expect==
+	60 "<" ord expect==
+	32 " " ord expect==
+	81 "Q" ord expect==
+	121 "y" ord expect==
+	126 "~" ord expect==
+	
+	"&" 38 chr expect==
+	"8" 56 chr expect==
+	"<" 60 chr expect==
+	" " 32 chr expect==
+	"Q" 81 chr expect==
+	"y" 121 chr expect==
+	"~" 126 chr expect==
+	
+	"A" upper? expectTrue
+	"M" upper? expectTrue
+	"Z" upper? expectTrue
+	"a" upper? expectFalse
+	"h" upper? expectFalse
+	"z" upper? expectFalse
+	"4" upper? expectFalse
+	">" upper? expectFalse
+	
+	"a" lower? expectTrue
+	"t" lower? expectTrue
+	"z" lower? expectTrue
+	"A" lower? expectFalse
+	"R" lower? expectFalse
+	"Z" lower? expectFalse
+	"6" lower? expectFalse
+	"?" lower? expectFalse
+	
+	"A" "a" toupper expect==
+	"K" "k" toupper expect==
+	"Z" "z" toupper expect==
+	"M" "M" toupper expect==
+	"3" "3" toupper expect==
+	"!" "!" toupper expect==
+	
+	"a" "A" tolower expect==
+	"e" "E" tolower expect==
+	"z" "Z" tolower expect==
+	"f" "f" tolower expect==
+	"7" "7" tolower expect==
+	"*" "*" tolower expect==
+	
+	"abcde123%&" "ABCdE123%&" string-lower expect==
+	"ABCDE123%&" "aBcde123%&" string-upper expect==
+	
+	[ "abc" "def" "ghi" ] "abc/def:ghi" "&*/#:$" string-split expect==
+	[ "abc" "def" "ghi" ] "&abc/def:ghi$" "&*/#:$" string-split expect==
+	[ "abc" ] "&abc/" "&*/#:$" string-split expect==
+	[ ] "&/#:" "&*/#:$" string-split expect==
+	[ "abc" "def" "ghi" ] "#&abc$/def::/ghi*#" "&*/#:$" string-split expect==
+	;
+	
+unittest-init
+
+test-string-compares
+test-string-make-unmake
+test-string-get
+test-string-slicing
+test-string-ops
+
+unittest-summary
