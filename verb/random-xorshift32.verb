@@ -1,0 +1,31 @@
+\ xorshift32 pseudo-random number generation (for non-cryptographic use)
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"hashing" import
+
+\ 32-bit xor-shift pseudo random number generator
+\ ported from: https://en.wikipedia.org/wiki/Xorshift
+'XORSHIFT_32_STATE void make-var
+
+: xorshift32-seed ( n -- ; seed randomizer with seed n )
+	XORSHIFT_32_STATE!
+	;
+
+\ on startup, set default seed using hash of current date/time as string plus current runtime as string.
+\ there appears to be enough variability in startup time that even running the script multiple times
+\ in the same second will give a unique starting seed (of course, this is all considered non-cryptogrphic
+\ RNG anyways, but at least trying to give better than 1-second resolution on this)
+time-string " " + run-time str + hash-fnv-32 xorshift32-seed
+
+: xorshift32 ( -- n ; returns random n )
+	XORSHIFT_32_STATE ( x )
+	dup 13 bit-shl ( x x<<13 )
+	bit-xor ( x ^ x<<13 )
+	dup 17 bit-shr ( x x>>17 )
+	bit-xor ( x ^ x>>17 )
+	dup 5 bit-shl ( x x<<5 )
+	bit-xor ( x ^ x>>5 )
+	dup XORSHIFT_32_STATE!
+	( leave state on stack as result )
+	;
