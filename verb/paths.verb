@@ -1,0 +1,276 @@
+\ File path functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ for a lib later
+
+\ is c (single char string) alphabetic?
+:V2 is-alphabetic? ( c -- result )
+	c "a" >= c "z" <= and if >>yes 
+	c "A" >= c "Z" <= and if >>yes
+	false return
+	@yes true return
+	;
+	
+\ some more sequence functions
+
+\ return NR elements from head of sequence (i.e. NR elements starting at left)
+:V2 head ( seq nr -- list' )
+	seq 0 nr slice
+	;
+	
+\ get NR elements from tail of sequence (ie. NR elements starting at right)
+:V2 tail ( seq nr -- list' )
+	seq 0 nr - nr slice
+	;
+	
+\ get all EXCEPT the first NR elements from the left
+:V2 drop-head ( seq nr -- list' )
+	seq nr -1 slice
+	;
+
+\ get all EXCEPT the last NR elements from the left	
+:V2 drop-tail ( seq nr -- list' )
+	seq 0 seq length nr - slice 
+	;
+
+\ split a path into parts by either \ or / separators
+:V2 file-path-split ( path -- parts )
+	path "\/" string-split
+	;
+
+\ determine the absolute path of the given path, i.e. removing any '.' and '..' parts
+:V2 file-path-abspath ( path -- name )
+	path os-getcwd file-path-abspath/cwd
+	;
+
+\ return just the final component of a path (does not have to be an existing file)
+:V2 file-path-basename ( path -- name )
+	path os-getcwd file-path-basename/cwd
+	;
+
+\ return path EXCEPT for last component, as absolute/normalized path
+:V2 file-path-pathname ( path -- name )
+	path os-getcwd file-path-pathname/cwd
+	;
+	
+\ the /cwd versions below let you pass the cwd so they can be used easily in unittests
+
+\ return just the final component of a path (does not have to be an existing file)
+:V2 file-path-basename/cwd ( path cwd -- name )
+	path cwd file-path-abspath/cwd file-path-split -1 get
+	;
+
+\ return path EXCEPT for last component, as absolute/normalized path
+:V2 file-path-pathname/cwd ( path cwd -- name )
+	\ cannot do obvious thing and split the abspath and rejoin, excluding last piece,
+	\ since i would have to recreate the logic in file-path-abspath to get first part correct.
+	\ so instead, make abspath and trim from end until first / is found
+	path cwd file-path-abspath/cwd name!
+	@loop
+		name length 0 == if >>empty
+		name -1 get "/" == if >>found-slash
+		name 1 drop-tail name! <<loop
+	@found-slash
+		name 1 drop-tail return
+	@empty
+		\ did not find a / so path is pathname
+		path
+	;
+
+\ this version takes the cwd as an argument so it can be used easily in unittests
+:V2 file-path-abspath/cwd ( path cwd -- name )
+	@locals [ parts-in char-0 ]
+	
+	\ pre-normalize -- path must be one of:
+	\	./name...
+	\	../name...
+	\	/name
+	\
+	\ if NOT then it must be "name..", so prepend "./"
+	
+	path file-path-split parts-in!
+	
+		\ "PARTS-IN:" . parts-in . CR
+	
+	\ does path start with '..' or '.'?
+	parts-in 0 get "." == if >>prepend-cwd 
+	parts-in 0 get ".." == if >>prepend-cwd
+	\ see if path looks like a root directory
+	path 0 get "/" == if >>is-root
+	path 0 get "\" == if >>is-root
+	\ hackish ... win/dos paths start with "letter:\" or "letter:/"
+	path 0 get is-alphabetic? path 1 get ":" == path 2 get "\" == and and if >>is-drive-root
+	path 0 get is-alphabetic? path 1 get ":" == path 2 get "/" == and and if >>is-drive-root
+	\ else it is "name/..." so treat as if "./" is prepended
+	>>prepend-cwd 
+	
+	@is-root
+		\ path starts with \ or / so final path must start with /
+		"/" char-0!
+		>>walk
+	
+	@is-drive-root
+		\ path starts with "letter:\" so final path must as well
+		path 0 get char-0!
+		>>walk
+		
+	@prepend-cwd
+		\ path starts with '.' or '..', so first char of final path must be first char of cwd
+		cwd 0 get char-0!
+		\ prepend cwd on parts so ".." can be resolved by removing parts
+		cwd file-path-split parts-in + parts-in!
+			\ "PREPENDING CWD:" . parts-in . CR
+	
+	@walk
+		\ fold over all parts-in to build parts-out
+		parts-in
+		::{ ( newparts part )
+			part ".." == if >>two-dots
+			part "." == if >>one-dot
+			\ else append to newparts and continue
+			newparts part append return
+			
+			@two-dots
+				\ got '..', so remove last piece, checking for errors
+				newparts length 0 == if >>too-many-backups \ ran out of parts to back up
+				newparts 1 drop-tail return
+				
+			@one-dot
+				\ '.' does nothing
+				newparts return
+				
+			@too-many-backups
+				"Too many '..' in path, cannot resolve: " path + error 
+		} [ ] fold 
+		\ final accumulator on stack
+		"/" string-join name!
+		\ if didn't end up with char-0 at start, prepend it now (i.e. if i joined 'usr', 'local', 'bin', that will
+		\ give 'usr/local/bin' instead of '/usr/local/bin')
+		name 0 get char-0 != if >>add-slash
+		>>done
+		
+		@add-slash "/" name + name!
+		@done name
+	;
+	
+"unittest" import
+
+:V2 test-is-alphabetic?
+	"A" is-alphabetic? expectTrue
+	"M" is-alphabetic? expectTrue
+	"Z" is-alphabetic? expectTrue
+	"a" is-alphabetic? expectTrue
+	"p" is-alphabetic? expectTrue
+	"z" is-alphabetic? expectTrue
+	
+	"4" is-alphabetic? expectFalse
+	"." is-alphabetic? expectFalse
+	"!" is-alphabetic? expectFalse
+	;
+	
+:V2 test-seq-head-tail
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 0 head expect==
+	[ 11 ] [ 11 22 33 44 55 66 77 88 99 ] 1 head expect==
+	[ 11 22 ] [ 11 22 33 44 55 66 77 88 99 ] 2 head expect==
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 9 head expect==
+	
+	"" "abcdefg" 0 head expect==
+	"a" "abcdefg" 1 head expect==
+	"ab" "abcdefg" 2 head expect==
+	"abcdefg" "abcdefg" 7 head expect==
+	
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 0 tail expect==
+	[ 99 ] [ 11 22 33 44 55 66 77 88 99 ] 1 tail expect==
+	[ 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 2 tail expect==
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 9 tail expect==
+	
+	"" "abcdefg" 0 tail expect==
+	"g" "abcdefg" 1 tail expect==
+	"fg" "abcdefg" 2 tail expect==
+	"abcdefg" "abcdefg" 7 tail expect==
+	
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 0 drop-head expect==
+	[ 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 1 drop-head expect==
+	[ 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 2 drop-head expect==
+	[ 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 5 drop-head expect==
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 9 drop-head expect==
+	
+	"abcdefg" "abcdefg" 0 drop-head expect==
+	"bcdefg" "abcdefg" 1 drop-head expect==
+	"cdefg" "abcdefg" 2 drop-head expect==	
+	"" "abcdefg" 7 drop-head expect==
+	
+	[ 11 22 33 44 ] [ 11 22 33 44 55 66 77 88 99 ] 5 drop-tail expect==
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 0 drop-tail expect==
+	[ 11 22 33 44 55 66 77 88 ] [ 11 22 33 44 55 66 77 88 99 ] 1 drop-tail expect==
+	[ 11 22 33 44 55 66 77 ] [ 11 22 33 44 55 66 77 88 99 ] 2 drop-tail expect==
+	[ 11 22 33 44 55 66 ] [ 11 22 33 44 55 66 77 88 99 ] 3 drop-tail expect==
+	[ 11 22 33 44 ] [ 11 22 33 44 55 66 77 88 99 ] 5 drop-tail expect==
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 9 drop-tail expect==
+	
+	"abcdefg" "abcdefg" 0 drop-tail expect==
+	"abcdef" "abcdefg" 1 drop-tail expect==
+	"abcde" "abcdefg" 2 drop-tail expect==
+	"" "abcdefg" 7 drop-tail expect==
+	;
+	
+:V2 test-file-path-split
+	[ "usr" "local" "bin" "verbii" "verbii.exe" ] "/usr/local/bin/verbii/verbii.exe" file-path-split expect==
+	[ "usr" "bin" ".." "verbii" "verbii.exe" ] "/usr\bin\..\verbii\verbii.exe" file-path-split expect==
+	[ "c:" "aaa" "bbb" "ccc" ] "c:\aaa\bbb\ccc" file-path-split expect==
+	;
+
+:V2 test-file-path-basename
+	"verbii.exe" "/usr/local/bin/verbii/verbii.exe" "/a/b/c" file-path-basename/cwd expect==
+	"verbii.exe" "verbii.exe" "/usr/local/bin" file-path-basename/cwd expect==
+	"verbii.exe" "/usr\bin\..\verbii\verbii.exe" "/a/b/c" file-path-basename/cwd expect==
+	"ccc" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-basename/cwd expect==
+	;
+
+:V2 test-file-path-pathname
+	"/usr/local/bin/verbii" "/usr/local/bin/verbii/verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
+	"/usr/verbii" "/usr\bin\..\verbii\verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
+	"/usr/bin" "verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
+	"/usr/bin" "./verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
+	"/usr/local" "../local/verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
+	"c:/aaa/bbb" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-pathname/cwd expect==
+	;
+
+:V2 test-file-path-abspath
+	\ pass a cwd so test is portable
+	"/usr/local/bin" "." "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local" ".." "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local/include/mylib" "../include/mylib" "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/verbii/scripts/run.verb" "verbii/scripts/run.verb" "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/stuff" "/usr/local/bin/stuff" "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/stuff" "/usr/local/bin/../../stuff" "/usr/local/bin" file-path-abspath/cwd expect==
+
+	\ paths always normalized to use '/'
+	"/usr/local/bin" "." "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local" ".." "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local/include/mylib" "..\include\mylib" "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/verbii/scripts/run.verb" "verbii\scripts\run.verb" "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/stuff" "\usr\local\bin\stuff" "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/stuff" "\usr\local\bin\..\..\stuff" "\usr\local\bin" file-path-abspath/cwd expect==
+	
+	\ dos/win style paths with drive letters
+	"c:/usr/local/bin" "." "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local" ".." "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local/include/mylib" "..\include\mylib" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local/bin/verbii/scripts/run.verb" "verbii\scripts\run.verb" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local/bin/stuff" "c:\usr\local\bin\stuff" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/stuff" "c:\usr\local\bin\..\..\stuff" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	;
+
+unittest-init
+
+test-seq-head-tail
+test-file-path-split
+test-file-path-basename
+test-file-path-pathname
+test-file-path-abspath
+test-is-alphabetic?
+
+unittest-summary
+
