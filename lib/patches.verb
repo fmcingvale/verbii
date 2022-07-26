@@ -519,9 +519,6 @@
 		\ i objlist length >= if >>done 
 		
 			\ "OBJLIST[i]:" . objlist i get . CR
-		\ two purposes for this check -- first this is the easy (designed) way to check for end of lists instead
-		\ of having to test against list length. second, this ensures there are no void values in the lists
-		\ which would mess up the make-listv code down below
 		objlist i get void? if >>done 
 		objlist i get symbol? if >>symbol
 		objlist i get list? if >>list
@@ -575,25 +572,29 @@
 		>>next
 		
 	@rewrite-inner-plain-list
+		@locals [ list-length ]
 			\ "PLAIN LIST:" . objlist i get . CR
 		\ rewrite vars inside a list without binding frame to it at runtime (since the list will
 		\ be expanded, it will be filled from MY frame) -- also see code at beginning that
 		\ knows not to create a new env for plain lists
+		
+		\ remember ORIGINAL length of list i'm about to rewrite. after rewriting i could have something like:
+		\	BEFORE: [ a b [ c d [ e f ] ] ]
+		\	AFTER: a b c d e f 2 make-list 3 make-list 3 make-list
+		\ in other words, the inner lists have been flattened so the literal length is longer, but the
+		\ RUNTIME length (i.e. for make-list) is the same -- rewriting is a 1-to-1 replacement of varnames
+		\ with a single opcode, so the ending RUNTIME length will be the same.
+		objlist i get length list-length!
+		\ rewrite list
 		objlist i get env true v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
 			\ "SUB RESULT:" . sub-objlist . CR
 		\ did I rewrite anything?
 		sub-nr-rewritten 0 == if >>plain-list-no-rewrites
 		\ else, the rewrites occurred in MY ENV so flatten list so runtime references are correct
-		\ new-objlist sub-objlist extend \ flatten sub-objlist into new-objlist
-		new-objlist 'void append \ insert void first
-			sub-objlist extend \ flatten sub-objlist into new-objlist, preceded by (runtime-created) void
-			\ add code to remake list at runtime -- make-listv is better here since i don't need to know what the
-			\ length of sub-objlist is supposed to be ahead of time (remember it may have lots of recursive flattened
-			\ lists inside of it) -- using void markers and make-listv makes it easy -- the only caveat is i have
-			\ to make sure the lists don't contain any void values (-- per verbii design, voids aren't SUPPOSED to
-			\ be inside lists, but in practice there is some code using void in lists that need to be rewritten to
-			\ use null instead ... so in the meantime i'm still allowing them)
-			'make-listv append new-objlist!
+		new-objlist
+			sub-objlist extend \ flatten sub-objlist into new-objlist
+			\ add code to remake list at runtime -- see notes above on the length passed to make-list
+			list-length append 'make-list append new-objlist!
 		\ add # rewritten to my count so i return total of mine + all recursive inner lambdas
 		nr-rewritten sub-nr-rewritten + nr-rewritten!
 		>>next 
