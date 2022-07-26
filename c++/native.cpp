@@ -799,6 +799,30 @@ static void builtin_bind_lambda(Interpreter *intr) {
 	intr->cur_framedata->setLinked(true);
 }
 
+static void builtin_file_pathsep(Interpreter *intr) {
+	// need to check what this should be under mingw64 ... for now return as linux default
+	intr->push(newString("/"));
+}
+
+#include <stdlib.h>
+
+static void builtin_os_getenv(Interpreter *intr) {
+	char *val = getenv(popString(intr,"os-getenv"));
+	if(!val)
+		intr->push(newVoid());
+	else
+		intr->push(newString(val));
+}
+
+#include <unistd.h>
+#include <limits.h>
+
+static void builtin_os_getcwd(Interpreter *intr) {
+	char buf[PATH_MAX+1];
+	getcwd(buf, PATH_MAX);
+	intr->push(newString(buf));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -929,4 +953,9 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"make-opcode", builtin_make_opcode},
 	{"opcode-packed", builtin_opcode_packed},
 	{"bind-lambda", builtin_bind_lambda},
+
+	// more os/fileops
+	{"file-pathsep", builtin_file_pathsep},
+	{"os-getenv", builtin_os_getenv},
+	{"os-getcwd", builtin_os_getcwd},
 };
