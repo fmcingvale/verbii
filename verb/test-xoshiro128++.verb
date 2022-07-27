@@ -6,13 +6,12 @@
 "xoshiro128++" import
 
 :V2 test-xoshiro128pp-seeding
-	"* xoshiro128pp-seeding ..." . CR
 	11 22 33 44 xoshiro128pp-seed
 	[ 11 22 33 44 ] XOSHIRO128PP-STATE expect==
 	;
 	
-\ seed is a list of 4 values
-:V2 test-xoshiro128pp-case ( seed skip vals -- )
+\ seed is a list of 4 values (name with '*' so test runner doesn't run it by itself)
+:V2 *test-xoshiro128pp-case ( seed skip vals -- )
 	"SEED:" . seed . CR
 	"SKIP:" . skip . CR
 	"VALS:" . vals . CR
@@ -26,7 +25,6 @@
 	;
 
 :V2 test-xoshiro128pp
-	"* xoshiro128pp ..." . CR
 	\ list of:
 	\	[ seedlist skip vals ]
 	\
@@ -39,13 +37,15 @@
 	]
 	
 	::{ ( P )
-		P unmake drop test-xoshiro128pp-case
+		P unmake drop *test-xoshiro128pp-case
 	} for-each
 	;
-	
+
+(	
 unittest-init
 
 test-xoshiro128pp-seeding
 test-xoshiro128pp
 
 unittest-summary
+)

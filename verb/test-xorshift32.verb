@@ -20,7 +20,6 @@
 	;
 
 :V2 test-xorshift32
-	"* xoshift32 ..." . CR
 	\ list of:
 	\	[ seed skip vals ]
 	\
@@ -36,9 +35,11 @@
 		P unmake drop *test-xorshift32-case 
 	} for-each
 	;
-	
+
+(	
 unittest-init
 
 test-xorshift32
 
 unittest-summary
+)

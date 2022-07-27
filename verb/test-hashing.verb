@@ -7,8 +7,6 @@
 "unittest" import
 
 : test-hash-djb2
-	"*** hash-djb2 tests ..." . CR
-
 	[ 	[ 24858410 "Hello World 12345 ^.^" ]
 		[ 2070383472 "the djb2 hashing function" ]
 		[ 2915615060 "Some Day somewhere In THE futurE 9.8.7.6.5.4.3.2.1.ZeRo" ]
@@ -21,7 +19,6 @@
 	;
 
 : test-hash-fnv-32
-	"*** hash-fnv-32 tests ..." . CR
 	[
 		[ "7a78f512" "Hello world!" ]
 		[ "b1ea4872" "Hello World!" ]
@@ -32,9 +29,9 @@
 	{ unmake drop hash-fnv-32 int32-to-hex expect== } for-each
 	;
 
-unittest-init
+\ unittest-init
 
-test-hash-djb2
-test-hash-fnv-32
+\ test-hash-djb2
+\ test-hash-fnv-32
 
-unittest-summary
+\ unittest-summary

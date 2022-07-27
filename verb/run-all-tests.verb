@@ -1,0 +1,60 @@
+\ Run entire unittest suite
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"unittest" import
+
+\ import all the test modules
+"test-hashing" import
+"test-numeric" import
+"test-random-mersenne" import 
+"test-stackops" import
+"test-string" import
+"test-xorshift32" import
+"test-xoshiro128++" import
+
+'FAIL-BY-NAME [ ] make-dict make-var
+
+\ get all user functions starting with 'test-'
+:V2 get-all-tests
+	@locals [ words ]
+	.wordlist
+	{ 0 5 slice 'test- == } filter
+	;
+
+\ run test by name (symbol)
+:V2 run-test-by-name ( namesym )
+	@locals [ fails-before fails-after ]
+	\ see if i get any new failures while running this test
+	UNITTEST-NR-FAIL fails-before!
+	
+	"* " namesym symbol->string 5 -1 slice + " ..." + . CR
+	namesym 1 make-list make-lambda call
+	UNITTEST-NR-FAIL fails-after! 
+	fails-after fails-before - 0 > if >>new-errors
+	return
+	
+	@new-errors
+		FAIL-BY-NAME namesym str fails-after fails-before - put FAIL-BY-NAME!
+	;
+		
+\ run all the tests
+unittest-init
+
+get-all-tests
+{ run-test-by-name } for-each
+
+unittest-summary
+
+\ if i got any failures, print them by function name
+FAIL-BY-NAME length 0 > if >>show-fails-by-name
+return
+
+@show-fails-by-name
+	"Failures by test:" . CR
+	FAIL-BY-NAME
+	::{ ( key val )
+		"    " key + ": " + val str + . CR
+	} for-each-dict
+	
+	

@@ -5,7 +5,6 @@
 "unittest" import
 
 :V2 test-string-compares
-	"* string comparison ..." . CR
 	"abcde" "abcde" expect==
 	"aBcdE" "aBcdE" expect==
 	"aBcdE" "aBcde" expect!=
@@ -16,7 +15,6 @@
 	;
 	
 :V2 test-string-make-unmake
-	"* string make/unmake ..." . CR
 	"abcde" unmake 
 	"[ 97 98 99 100 101 5 ]" expect-stack
 	clear
@@ -29,7 +27,6 @@
 	;
 
 :V2 test-string-get
-	"* string get ..." . CR
 	"a" "abcdefgh" 0 get expect==
 	"b" "abcdefgh" 1 get expect==
 	"f" "abcdefgh" 5 get expect==
@@ -43,7 +40,6 @@
 	;
 	
 :V2 test-string-slicing
-	"* string slicing ..." . CR
 	"cde" "abcdefgh" 2 3 slice expect==
 	"f" "abcdefgh" 5 1 slice expect==
 	"efgh" "abcdefgh" 4 -1 slice expect==
@@ -54,7 +50,6 @@
 	;
 	
 :V2 test-string-ops
-	"* string ops ..." . CR
 	"abcdef" "abc" "def" + expect==
 	"abc" "abc" "" + expect==
 	"def" "" "def" + expect==
@@ -138,6 +133,7 @@
 	[ "abc" "def" "ghi" ] "#&abc$/def::/ghi*#" "&*/#:$" string-split expect==
 	;
 	
+(
 unittest-init
 
 test-string-compares
@@ -147,3 +143,4 @@ test-string-slicing
 test-string-ops
 
 unittest-summary
+)

@@ -6,7 +6,6 @@
 "numeric" import
 
 :V2 test-parse-hex
-	"* parse-hex ..." . CR
 	2595453966 "9ab37c0e" parse-hex expect==
 	2068551320 "7b4b9698" parse-hex expect==
 	2503746217 "953c22a9" parse-hex expect==
@@ -20,7 +19,6 @@
 	;
 	
 :V2 test-str.hex
-	"* str.hex ..." . CR
 	2882400152 str.hex "abcdef98" expect==
 	2271562428 str.hex "87654abc" expect==
 	4275830784 str.hex "fedc0000" expect==
@@ -31,7 +29,6 @@
 	;
 	
 :V2 test-str.bin 
-	"* str.bin ..." . CR
 	"00000000.00010010.11010110.10000111" 1234567 str.bin expect==
 	"10100100.10001011.11010011.11001111" 2760627151 str.bin expect==
 	"11110100.11010000.01111011.11100011" 4107303907 str.bin expect==
@@ -39,7 +36,6 @@
 	;
 	
 :V2 test-bit-shr
-	"* bit-shr ..." . CR
 	"0fedcba9" "fedcba98" parse-hex  4 bit-shr str.hex expect==
 	"00fedcba" "fedcba98" parse-hex  8 bit-shr str.hex expect==
 	"000fedcb" "fedcba98" parse-hex 12 bit-shr str.hex expect==
@@ -51,7 +47,6 @@
 	;
 	
 :V2 test-bit-shl
-	"* bit-shl ..." . CR
 	"8abcdef0" "98abcdef" parse-hex  4 bit-shl str.hex expect==
 	"abcdef00" "98abcdef" parse-hex  8 bit-shl str.hex expect==
 	"bcdef000" "98abcdef" parse-hex 12 bit-shl str.hex expect==
@@ -63,7 +58,6 @@
 	;
 
 :V2 test-bit-rotl
-	"* bit-rotl ..." . CR
 	"876abcd9" "9876abcd" parse-hex  4 bit-rotl str.hex expect==
 	"76abcd98" "9876abcd" parse-hex  8 bit-rotl str.hex expect==
 	"6abcd987" "9876abcd" parse-hex 12 bit-rotl str.hex expect==
@@ -75,14 +69,12 @@
 	;
 	
 :V2 test-bit-low32
-	"* bit-low32 ..." . CR
 	\ have to test numerically since e.g. str.hex always truncates to 32 bits
 	\ so would not be a valid test
 	188900976391764 bit-low32 4019746388 expect==
 	;
 	
 :V2 test-basic-mathops
-	"* basic math ops ..." . CR
 	12 12 expect==
 	-34 -34 expect==
 	20 8 expect!=
@@ -208,7 +200,6 @@
 	;
 	
 :V2 test-sin
-	"* sin" . CR
 	\ 0, 90, 180, 270
 	0 0 sin expect==f 
 	1 PI 2 / sin expect==f 
@@ -226,8 +217,6 @@
 	;
 	
 :V2 test-cos
-	"* cos" . CR
-
 	\ 0, 90, 180, 270
 	1 0 cos expect==f 
 	0 PI 2 / cos expect==f 
@@ -245,7 +234,6 @@
 	;
 	
 :V2 test-sqrt
-	"* sqrt" . CR
 	\ integers
 	47453132.81212578 2251799813685248 sqrt expect==f 
 	31487.864424250813 991485606 sqrt expect==f
@@ -258,13 +246,13 @@
 	;
 	
 :V2 test-log
-	"* log (natural log)" . CR
 	1 E-VAL log expect==f 
 	14.442702213911256 1872345 log expect==f 
 	299.322976849677283 987e127 log expect==f
 	-1.6460323971461603 0.1928134 log expect==f
 	;
 	
+(
 unittest-init
 
 test-parse-hex
@@ -281,5 +269,5 @@ test-sqrt
 test-log 
 
 unittest-summary
-
+)
 

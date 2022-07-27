@@ -5,7 +5,6 @@
 "unittest" import
 
 :V2 test-push
-	"* stack push ..." . CR
 	"[ ]" expect-stack
 	111
 	"[ 111 ]" expect-stack
@@ -24,7 +23,6 @@
 	;
 	
 :V2 test-ops-1
-	"* stack ops 1 ..." . CR
 	"[ ]" expect-stack
 	11 22
 	"[ 11 22 ]" expect-stack
@@ -93,10 +91,12 @@
 	"[ 10 20 30 40 ]" expect-stack
 	clear
 	;
-	
+
+(	
 unittest-init
 
 test-push
 test-ops-1
 
 unittest-summary
+)
