@@ -14,8 +14,6 @@
 #include "native.hpp"
 using namespace std;
 
-static const char *BOOTFILE = "../lib/boot.verb.b";
-
 void backtrace_curframe(Interpreter *intr) {
 	string trace = "";
 	int nr = 7; // number of words to print in each frame
@@ -48,6 +46,9 @@ void print_backtrace(Interpreter *intr) {
 
 void deserialize_and_run(Interpreter *intr, string filename) {
 	ifstream fileIn(filename);
+	if(!fileIn)
+		throw LangError("No such file: " + filename);
+
 	deserialize_stream(intr, fileIn);
 	// run __main__ to setup any vars
 	auto code = intr->lookup_word("__main__");
@@ -60,6 +61,9 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 
 	intr->run(code);
 }
+
+#include <limits.h>
+#include <stdlib.h>
 
 int main(int argc, char *argv[]) {
 	// under gcc 9.4 this is not necessary -- STARTUP_TIME is set automatically from
@@ -88,6 +92,21 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	
+	// set path to bootfile -- require VERBII_BOOT to be set to avoid duplicating the
+	// path functions that are in verbii code
+	char bootfile[PATH_MAX];
+	char *rootdir = getenv("VERBII_BOOT");
+	if(!rootdir) {
+		printf("* VERBII_BOOT must be set to the path where boot.verb.b is located.\n");
+		exit(1);
+	}
+	strcpy(bootfile, rootdir);
+	if(bootfile[strlen(bootfile)-1] != '/') {
+		strcat(bootfile, "/");
+	}
+	strcat(bootfile, "boot.verb.b");
+	//printf("** BOOTFILE: %s\n", bootfile);
+
 	Interpreter *intr = NULL;
 	while(1) {
 		try {
@@ -96,7 +115,7 @@ int main(int argc, char *argv[]) {
 			// boot.verb expects cmdline args on top of stack on entry
 			intr->push(cmdline_args);
 			//printf("STACK BEFORE BOOT: %s\n", intr->reprStack().c_str());
-			deserialize_and_run(intr, BOOTFILE);
+			deserialize_and_run(intr, bootfile);
 			if(SHOW_RUN_STATS)
 				intr->print_stats();
 			break;
