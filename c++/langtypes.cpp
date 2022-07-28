@@ -534,8 +534,10 @@ Object Object::opSlice(VINT index, VINT nr) const {
  		index = objsize + index;
 	}
 	if(index < 0 || index >= objsize) { // out of bounds - return empty object
-		if(type == TYPE_STRING || type == TYPE_SYMBOL)
+		if(type == TYPE_STRING)
 			return newString("");
+		else if(type == TYPE_SYMBOL)
+			return newSymbol("");
 		else if(type == TYPE_LIST)
 			return newList();
 		else {
