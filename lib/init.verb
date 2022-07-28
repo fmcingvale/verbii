@@ -140,7 +140,7 @@
 
 : whitespace? ( string -- bool; is first char of string whitespace? )
 	0 get ord ( get as ascii )
-	32 <= ( treat everthing <= space as whitespace )
+	32 <= ( treat everything <= space as whitespace )
 	;
 
 \ return string with any leading whitespace removed

@@ -491,7 +491,7 @@ var TRIPLEQUOTE 1
 \ assumes @[ was just read, parses until ] as an object list, prepended with ,,inline
 \
 \ expanding literal lists back into stack operations allows variable (name) substitution to work
-\ on them. obviously slower that literal lists that are just deepcopied on instantiation.
+\ on them. obviously slower than literal lists that are just deepcopied on instantiation.
 : syntax-capture-list
 	@locals [ outlist ]
 	',,inline 1 make-list outlist!
