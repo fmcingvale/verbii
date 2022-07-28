@@ -37,6 +37,19 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* SCRIPT-ARGS (repl/boot?) should be a read only var instead of returning an address
+
+* add an 'append' for strings, like lists, to allow dynamically growing strings without breaking
+  backwards compat ... so ie. the rules are:
+		object + object => new object (e.g. [ a b ] + [ c d ] == new list [ a b c d ])
+		object part append => modifies existing object, leaving obj on stack
+		
+		since no code uses 'string string append' right now there is no code to break
+		
+	lists have an 'append' and 'extend' since there is a semantic difference between e.g. adding
+	a list an an ELEMENT and flattening a list into an existing list. with strings, append is the
+	same regardless of 1 char vs 100
+	
 * i think i need to move to a character instead of word parser .. things like: "\a comment" crash the
   parser with no explanation of what happened .. so at least char-by-char for these cases:
 	* \a comment
