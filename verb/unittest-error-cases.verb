@@ -1,0 +1,28 @@
+\ Unittest error cases to ensure the unittests are working.
+\
+\ This is NOT run as part of the normal regression tests, since obviously these are meant to fail.
+\ However it should be run periodically to ensure nothing has broken in the unittest framework.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"unittest" import
+
+unittest-init
+
+1 2 expect==
+1 1 expect!=
+10 20 expect>
+10 20 expect>=
+20 10 expect<
+20 10 expect<=
+false expectTrue
+true expectFalse
+10 20 expect==f 
+10 10 expect!=f 
+10 20 40 "[ 10 20 30 ]" expect-stack drop drop drop
+
+unittest-summary
+
+"***" . CR
+"*** If everything is OK, you should see *11* failures and NO passes above." . CR
+"***" . CR

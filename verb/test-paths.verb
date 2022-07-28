@@ -1,0 +1,112 @@
+\ Unittests for paths module
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE	
+
+"unittest" import
+
+:V2 test-is-alphabetic?
+	"A" is-alphabetic? expectTrue
+	"M" is-alphabetic? expectTrue
+	"Z" is-alphabetic? expectTrue
+	"a" is-alphabetic? expectTrue
+	"p" is-alphabetic? expectTrue
+	"z" is-alphabetic? expectTrue
+	
+	"4" is-alphabetic? expectFalse
+	"." is-alphabetic? expectFalse
+	"!" is-alphabetic? expectFalse
+	;
+	
+:V2 test-seq-head-tail
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 0 head expect==
+	[ 11 ] [ 11 22 33 44 55 66 77 88 99 ] 1 head expect==
+	[ 11 22 ] [ 11 22 33 44 55 66 77 88 99 ] 2 head expect==
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 9 head expect==
+	
+	"" "abcdefg" 0 head expect==
+	"a" "abcdefg" 1 head expect==
+	"ab" "abcdefg" 2 head expect==
+	"abcdefg" "abcdefg" 7 head expect==
+	
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 0 tail expect==
+	[ 99 ] [ 11 22 33 44 55 66 77 88 99 ] 1 tail expect==
+	[ 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 2 tail expect==
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 9 tail expect==
+	
+	"" "abcdefg" 0 tail expect==
+	"g" "abcdefg" 1 tail expect==
+	"fg" "abcdefg" 2 tail expect==
+	"abcdefg" "abcdefg" 7 tail expect==
+	
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 0 head-drop expect==
+	[ 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 1 head-drop expect==
+	[ 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 2 head-drop expect==
+	[ 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 5 head-drop expect==
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 9 head-drop expect==
+	
+	"abcdefg" "abcdefg" 0 head-drop expect==
+	"bcdefg" "abcdefg" 1 head-drop expect==
+	"cdefg" "abcdefg" 2 head-drop expect==	
+	"" "abcdefg" 7 head-drop expect==
+	
+	[ 11 22 33 44 ] [ 11 22 33 44 55 66 77 88 99 ] 5 tail-drop expect==
+	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 0 tail-drop expect==
+	[ 11 22 33 44 55 66 77 88 ] [ 11 22 33 44 55 66 77 88 99 ] 1 tail-drop expect==
+	[ 11 22 33 44 55 66 77 ] [ 11 22 33 44 55 66 77 88 99 ] 2 tail-drop expect==
+	[ 11 22 33 44 55 66 ] [ 11 22 33 44 55 66 77 88 99 ] 3 tail-drop expect==
+	[ 11 22 33 44 ] [ 11 22 33 44 55 66 77 88 99 ] 5 tail-drop expect==
+	[ ] [ 11 22 33 44 55 66 77 88 99 ] 9 tail-drop expect==
+	
+	"abcdefg" "abcdefg" 0 tail-drop expect==
+	"abcdef" "abcdefg" 1 tail-drop expect==
+	"abcde" "abcdefg" 2 tail-drop expect==
+	"" "abcdefg" 7 tail-drop expect==
+	;
+	
+:V2 test-file-path-split
+	[ "usr" "local" "bin" "verbii" "verbii.exe" ] "/usr/local/bin/verbii/verbii.exe" file-path-split expect==
+	[ "usr" "bin" ".." "verbii" "verbii.exe" ] "/usr\bin\..\verbii\verbii.exe" file-path-split expect==
+	[ "c:" "aaa" "bbb" "ccc" ] "c:\aaa\bbb\ccc" file-path-split expect==
+	;
+
+:V2 test-file-path-basename
+	"verbii.exe" "/usr/local/bin/verbii/verbii.exe" "/a/b/c" file-path-basename/cwd expect==
+	"verbii.exe" "verbii.exe" "/usr/local/bin" file-path-basename/cwd expect==
+	"verbii.exe" "/usr\bin\..\verbii\verbii.exe" "/a/b/c" file-path-basename/cwd expect==
+	"ccc" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-basename/cwd expect==
+	;
+
+:V2 test-file-path-pathname
+	"/usr/local/bin/verbii" "/usr/local/bin/verbii/verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
+	"/usr/verbii" "/usr\bin\..\verbii\verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
+	"/usr/bin" "verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
+	"/usr/bin" "./verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
+	"/usr/local" "../local/verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
+	"c:/aaa/bbb" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-pathname/cwd expect==
+	;
+
+:V2 test-file-path-abspath
+	\ pass a cwd so test is portable
+	"/usr/local/bin" "." "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local" ".." "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local/include/mylib" "../include/mylib" "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/verbii/scripts/run.verb" "verbii/scripts/run.verb" "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/stuff" "/usr/local/bin/stuff" "/usr/local/bin" file-path-abspath/cwd expect==
+	"/usr/stuff" "/usr/local/bin/../../stuff" "/usr/local/bin" file-path-abspath/cwd expect==
+
+	\ paths always normalized to use '/'
+	"/usr/local/bin" "." "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local" ".." "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local/include/mylib" "..\include\mylib" "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/verbii/scripts/run.verb" "verbii\scripts\run.verb" "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/local/bin/stuff" "\usr\local\bin\stuff" "\usr\local\bin" file-path-abspath/cwd expect==
+	"/usr/stuff" "\usr\local\bin\..\..\stuff" "\usr\local\bin" file-path-abspath/cwd expect==
+	
+	\ dos/win style paths with drive letters
+	"c:/usr/local/bin" "." "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local" ".." "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local/include/mylib" "..\include\mylib" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local/bin/verbii/scripts/run.verb" "verbii\scripts\run.verb" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/local/bin/stuff" "c:\usr\local\bin\stuff" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	"c:/usr/stuff" "c:\usr\local\bin\..\..\stuff" "c:\usr\local\bin" file-path-abspath/cwd expect==
+	;

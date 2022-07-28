@@ -17,12 +17,6 @@ clear
 * 
 +
 
-( == )
-
-clear
-"hello" "hello" ==
-"hello5" "hello" ==
-
 clear
 'abc 'abc ==
 'abc 'abcd ==
@@ -52,32 +46,11 @@ clear
 
 ( > )
 
-clear
-
-"abcde" "abcde" >
-"abcdf" "abcde" >
-"abcdc" "abcde" >
-"abbde" "abcde" >
-"abdde" "abcde" >
-clear
-
 'abcde 'abcde >
 'abcdf 'abcde >
 'abcdc 'abcde >
 'aacde 'abcde >
 'adcde 'abcde >
-clear
-
-[ 1 2 3 4 5 ] [ 1 2 3 4 5 ] >
-[ 1 2 3 4 3 ] [ 1 2 3 4 5 ] >
-[ 1 2 3 4 6 ] [ 1 2 3 4 5 ] >
-[ 1 2 1 4 5 ] [ 1 2 3 4 5 ] >
-[ 1 2 4 4 5 ] [ 1 2 3 4 5 ] >
-clear
-
-( check with unequal length lists - again like a string test )
-[ 1 2 3 4 5 ] [ 1 2 3 4 ] >
-[ 1 2 3 ] [ 1 2 3 4 ] >
 clear
 
 ( make sure f.setprec is working )

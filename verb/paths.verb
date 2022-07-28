@@ -25,12 +25,12 @@
 	;
 	
 \ get all EXCEPT the first NR elements from the left
-:V2 drop-head ( seq nr -- list' )
+:V2 head-drop ( seq nr -- list' )
 	seq nr -1 slice
 	;
 
 \ get all EXCEPT the last NR elements from the left	
-:V2 drop-tail ( seq nr -- list' )
+:V2 tail-drop ( seq nr -- list' )
 	seq 0 seq length nr - slice 
 	;
 
@@ -70,9 +70,9 @@
 	@loop
 		name length 0 == if >>empty
 		name -1 get "/" == if >>found-slash
-		name 1 drop-tail name! <<loop
+		name 1 tail-drop name! <<loop
 	@found-slash
-		name 1 drop-tail return
+		name 1 tail-drop return
 	@empty
 		\ did not find a / so path is pathname
 		path
@@ -134,7 +134,7 @@
 			@two-dots
 				\ got '..', so remove last piece, checking for errors
 				newparts length 0 == if >>too-many-backups \ ran out of parts to back up
-				newparts 1 drop-tail return
+				newparts 1 tail-drop return
 				
 			@one-dot
 				\ '.' does nothing
@@ -153,124 +153,5 @@
 		@add-slash "/" name + name!
 		@done name
 	;
-	
-"unittest" import
 
-:V2 test-is-alphabetic?
-	"A" is-alphabetic? expectTrue
-	"M" is-alphabetic? expectTrue
-	"Z" is-alphabetic? expectTrue
-	"a" is-alphabetic? expectTrue
-	"p" is-alphabetic? expectTrue
-	"z" is-alphabetic? expectTrue
-	
-	"4" is-alphabetic? expectFalse
-	"." is-alphabetic? expectFalse
-	"!" is-alphabetic? expectFalse
-	;
-	
-:V2 test-seq-head-tail
-	[ ] [ 11 22 33 44 55 66 77 88 99 ] 0 head expect==
-	[ 11 ] [ 11 22 33 44 55 66 77 88 99 ] 1 head expect==
-	[ 11 22 ] [ 11 22 33 44 55 66 77 88 99 ] 2 head expect==
-	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 9 head expect==
-	
-	"" "abcdefg" 0 head expect==
-	"a" "abcdefg" 1 head expect==
-	"ab" "abcdefg" 2 head expect==
-	"abcdefg" "abcdefg" 7 head expect==
-	
-	[ ] [ 11 22 33 44 55 66 77 88 99 ] 0 tail expect==
-	[ 99 ] [ 11 22 33 44 55 66 77 88 99 ] 1 tail expect==
-	[ 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 2 tail expect==
-	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 9 tail expect==
-	
-	"" "abcdefg" 0 tail expect==
-	"g" "abcdefg" 1 tail expect==
-	"fg" "abcdefg" 2 tail expect==
-	"abcdefg" "abcdefg" 7 tail expect==
-	
-	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 0 drop-head expect==
-	[ 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 1 drop-head expect==
-	[ 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 2 drop-head expect==
-	[ 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 5 drop-head expect==
-	[ ] [ 11 22 33 44 55 66 77 88 99 ] 9 drop-head expect==
-	
-	"abcdefg" "abcdefg" 0 drop-head expect==
-	"bcdefg" "abcdefg" 1 drop-head expect==
-	"cdefg" "abcdefg" 2 drop-head expect==	
-	"" "abcdefg" 7 drop-head expect==
-	
-	[ 11 22 33 44 ] [ 11 22 33 44 55 66 77 88 99 ] 5 drop-tail expect==
-	[ 11 22 33 44 55 66 77 88 99 ] [ 11 22 33 44 55 66 77 88 99 ] 0 drop-tail expect==
-	[ 11 22 33 44 55 66 77 88 ] [ 11 22 33 44 55 66 77 88 99 ] 1 drop-tail expect==
-	[ 11 22 33 44 55 66 77 ] [ 11 22 33 44 55 66 77 88 99 ] 2 drop-tail expect==
-	[ 11 22 33 44 55 66 ] [ 11 22 33 44 55 66 77 88 99 ] 3 drop-tail expect==
-	[ 11 22 33 44 ] [ 11 22 33 44 55 66 77 88 99 ] 5 drop-tail expect==
-	[ ] [ 11 22 33 44 55 66 77 88 99 ] 9 drop-tail expect==
-	
-	"abcdefg" "abcdefg" 0 drop-tail expect==
-	"abcdef" "abcdefg" 1 drop-tail expect==
-	"abcde" "abcdefg" 2 drop-tail expect==
-	"" "abcdefg" 7 drop-tail expect==
-	;
-	
-:V2 test-file-path-split
-	[ "usr" "local" "bin" "verbii" "verbii.exe" ] "/usr/local/bin/verbii/verbii.exe" file-path-split expect==
-	[ "usr" "bin" ".." "verbii" "verbii.exe" ] "/usr\bin\..\verbii\verbii.exe" file-path-split expect==
-	[ "c:" "aaa" "bbb" "ccc" ] "c:\aaa\bbb\ccc" file-path-split expect==
-	;
-
-:V2 test-file-path-basename
-	"verbii.exe" "/usr/local/bin/verbii/verbii.exe" "/a/b/c" file-path-basename/cwd expect==
-	"verbii.exe" "verbii.exe" "/usr/local/bin" file-path-basename/cwd expect==
-	"verbii.exe" "/usr\bin\..\verbii\verbii.exe" "/a/b/c" file-path-basename/cwd expect==
-	"ccc" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-basename/cwd expect==
-	;
-
-:V2 test-file-path-pathname
-	"/usr/local/bin/verbii" "/usr/local/bin/verbii/verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
-	"/usr/verbii" "/usr\bin\..\verbii\verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
-	"/usr/bin" "verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
-	"/usr/bin" "./verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
-	"/usr/local" "../local/verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
-	"c:/aaa/bbb" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-pathname/cwd expect==
-	;
-
-:V2 test-file-path-abspath
-	\ pass a cwd so test is portable
-	"/usr/local/bin" "." "/usr/local/bin" file-path-abspath/cwd expect==
-	"/usr/local" ".." "/usr/local/bin" file-path-abspath/cwd expect==
-	"/usr/local/include/mylib" "../include/mylib" "/usr/local/bin" file-path-abspath/cwd expect==
-	"/usr/local/bin/verbii/scripts/run.verb" "verbii/scripts/run.verb" "/usr/local/bin" file-path-abspath/cwd expect==
-	"/usr/local/bin/stuff" "/usr/local/bin/stuff" "/usr/local/bin" file-path-abspath/cwd expect==
-	"/usr/stuff" "/usr/local/bin/../../stuff" "/usr/local/bin" file-path-abspath/cwd expect==
-
-	\ paths always normalized to use '/'
-	"/usr/local/bin" "." "\usr\local\bin" file-path-abspath/cwd expect==
-	"/usr/local" ".." "\usr\local\bin" file-path-abspath/cwd expect==
-	"/usr/local/include/mylib" "..\include\mylib" "\usr\local\bin" file-path-abspath/cwd expect==
-	"/usr/local/bin/verbii/scripts/run.verb" "verbii\scripts\run.verb" "\usr\local\bin" file-path-abspath/cwd expect==
-	"/usr/local/bin/stuff" "\usr\local\bin\stuff" "\usr\local\bin" file-path-abspath/cwd expect==
-	"/usr/stuff" "\usr\local\bin\..\..\stuff" "\usr\local\bin" file-path-abspath/cwd expect==
-	
-	\ dos/win style paths with drive letters
-	"c:/usr/local/bin" "." "c:\usr\local\bin" file-path-abspath/cwd expect==
-	"c:/usr/local" ".." "c:\usr\local\bin" file-path-abspath/cwd expect==
-	"c:/usr/local/include/mylib" "..\include\mylib" "c:\usr\local\bin" file-path-abspath/cwd expect==
-	"c:/usr/local/bin/verbii/scripts/run.verb" "verbii\scripts\run.verb" "c:\usr\local\bin" file-path-abspath/cwd expect==
-	"c:/usr/local/bin/stuff" "c:\usr\local\bin\stuff" "c:\usr\local\bin" file-path-abspath/cwd expect==
-	"c:/usr/stuff" "c:\usr\local\bin\..\..\stuff" "c:\usr\local\bin" file-path-abspath/cwd expect==
-	;
-
-unittest-init
-
-test-seq-head-tail
-test-file-path-split
-test-file-path-basename
-test-file-path-pathname
-test-file-path-abspath
-test-is-alphabetic?
-
-unittest-summary
 
