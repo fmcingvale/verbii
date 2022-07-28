@@ -1,17 +1,31 @@
-\ Run entire unittest suite
+\ Run entire unittest suite -OR- individual test scripts.
+\
+\ To run ALL tests just do:
+\	verbii run-all-tests.verb
+\
+\ To run a single test, do:
+\	verbii run-all-tests.verb -- test-filename.verb
+\
+\ NOTE: Adding -nocache is helpful for weird crashes.
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 "unittest" import
+"paths" import \ for tail/tail-drop until they are moved to init
 
-\ import all the test modules
-"test-hashing" import
-"test-numeric" import
-"test-random-mersenne" import 
-"test-stackops" import
-"test-string" import
-"test-xorshift32" import
-"test-xoshiro128++" import
+\ list all the test modules
+'ALL-TEST-MODULES [
+	"test-hashing"
+	"test-lists"
+	"test-numeric"
+	"test-paths"
+	"test-random-mersenne"
+	"test-stackops"
+	"test-string"
+	"test-symbol"
+	"test-xorshift32"
+	"test-xoshiro128++"
+	] make-var
 
 'FAIL-BY-NAME [ ] make-dict make-var
 
@@ -38,23 +52,76 @@
 		FAIL-BY-NAME namesym str fails-after fails-before - put FAIL-BY-NAME!
 	;
 		
-\ run all the tests
-unittest-init
-
-get-all-tests
-{ run-test-by-name } for-each
-
-unittest-summary
-
-\ if i got any failures, print them by function name
-FAIL-BY-NAME length 0 > if >>show-fails-by-name
-return
-
-@show-fails-by-name
-	"Failures by test:" . CR
-	FAIL-BY-NAME
-	::{ ( key val )
-		"    " key + ": " + val str + . CR
-	} for-each-dict
+:V2 do-run-test-modules ( module-names )
+	\ import all test modules
+	module-names ::{ ( name ) name import } for-each
 	
+	\ run all the tests
+	unittest-init
+
+	get-all-tests
+	{ run-test-by-name } for-each
+
+	unittest-summary
+
+	\ if i got any failures, print them by function name
+	FAIL-BY-NAME length 0 > if >>show-fails-by-name
+	return
+
+	@show-fails-by-name
+		"Failures by test:" . CR
+		FAIL-BY-NAME
+		::{ ( key val )
+			"    " key + ": " + val str + . CR
+		} for-each-dict
+	;
 	
+:V2 do-run-all-tests
+	ALL-TEST-MODULES do-run-test-modules
+	;
+	
+:V2 parse-cmdline-and-run
+	@locals [ filename is-verbii-filename ]
+	\ see if I got a test script name on the cmdline
+	SCRIPT-ARGS ref length 0 == if >>run-all
+	SCRIPT-ARGS ref length 1 > if >>too-many-args
+	SCRIPT-ARGS ref 0 get file-exists? if >>got-filename
+	"*ERROR* Unknown cmdline arg:" . SCRIPT-ARGS ref 0 get . CR
+	return
+
+	@too-many-args
+		"*ERROR* Too many cmdline arguments:" . SCRIPT-ARGS ref . CR
+		return
+		
+	@run-all
+		do-run-all-tests
+		return
+
+	@got-filename
+		false is-verbii-filename!
+		SCRIPT-ARGS ref 0 get filename!
+		\ make sure filename ends in .verb or .verb.b
+		filename 2 tail ".b" ==
+			::{
+				filename 2 tail-drop filename!
+			} ifthen
+			
+		filename 5 tail ".verb" ==
+			::{
+				filename 5 tail-drop filename!
+				true is-verbii-filename!
+			} ifthen
+			
+		is-verbii-filename not if >>bad-filename
+		\ else import and run JUST this test
+		[ filename ] do-run-test-modules
+		return
+		
+	@bad-filename
+		"*ERROR* Not a .verbii file: " SCRIPT-ARGS ref 0 get + error
+	;
+	
+parse-cmdline-and-run
+
+		
+		
