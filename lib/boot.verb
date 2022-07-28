@@ -26,6 +26,20 @@
 	addr 'set! 2 make-list name '! + make-word
 	;
 	
+\ make a variable with only a getter so acts as a constant
+\	'name' gets data stored in var
+: make-const @( name initval )
+	@locals [ addr ]
+	1 alloc addr! \ alloc storage
+	initval addr set! \ save initval
+	
+	\ make:
+	\	name = get data @ addr
+	
+	\ make word: : NAME addr ref ;
+	addr 'ref 2 make-list name make-word
+	;
+	
 \ safely run currently loaded __main__ and delete it
 : safe-run-and-delete-main ( -- )
 	\ the __main__ I'm about to run might want to redefine __main__ itself 

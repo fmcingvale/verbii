@@ -255,6 +255,26 @@
 	;
 	
 \ ========================================================================
+\ Branching
+\ ========================================================================
+
+\ calls if-true if cond is true else calls if-false
+\ (cond must be a bool)
+: ifelse @( cond if-true if-false )
+	cond if >>true
+	if-false call return
+	@true if-true call
+	;
+
+\ calls if-true if cond is true, else does nothing
+: ifthen @( cond if-true )
+	cond if >>true
+	return \ nothing to do on false
+	@true
+		if-true call
+	;
+
+\ ========================================================================
 \ Iteration/looping/functional programming
 \ ========================================================================
 
@@ -597,3 +617,10 @@
 		drop void
 		;
 		
+: stream-reader-peek-line @( stream -- stream' line )
+	@locals [ savepos ]
+	stream 1 get savepos!
+	stream stream-reader-next-line line!
+	\ reset stream back to start of line
+	1 savepos put line
+	;

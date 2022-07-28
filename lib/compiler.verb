@@ -118,6 +118,15 @@ var READER_POS 1
 	@isvoid drop void return
 	;
 
+\ same as reader-next but doesn't change input stream position
+: reader-peek-next ( -- symbol ) 
+	@locals [ pos sym ]
+	READER_POS ref pos!
+	reader-next sym!
+	pos READER_POS set!
+	sym
+	;
+	
 : digit? ( string|symbol -- true|false; is single char a digit? )
 	dup string? if >>string
 		dup '0 < if >>notdigit
@@ -183,13 +192,14 @@ var READER_POS 1
 	"." ltrim-char
 	ltrim-digits
 	"e" ltrim-char
+	"E" ltrim-char
 	ltrim-sign
 	ltrim-digits
 	length 0 == return
 	@nodigits 
 	drop false
 	;
-
+	
 : float-symbol? ( as above but for symbols )
 	unmake make-string float-string?
 	;
@@ -217,13 +227,18 @@ var TRIPLEQUOTE 1
 	reader-next
 		 \ "syntax-next:" . dup . CR
 	dup void? if >>void
-	dup '( == if >>comment
+	dup '( == if >>comment \ )
 	dup '\ == if >>line-comment
 	dup '{ == if >>lambda
 	dup '@{ == if >>closure
+	dup '::{ == if >>v2-closure
 	dup '[ == if >>list
 	dup '@[ == if >>capture-list
+	dup '#op( == if >>opcode  \ )
 	dup ': == if >>worddef
+	\ eventually these will replace : once all code has been ported
+	dup ':W == if >>v2-worddef
+	dup ':V2 == if >>v2-worddef
 	dup 'def == if >>worddef ( synonym for ':' )
 	dup 'var == if >>var
 	dup 'del == if >>del
@@ -236,7 +251,7 @@ var TRIPLEQUOTE 1
 	( now single quoted string )
 	dup 0 get '" == if >>string ( "... )
 	\ test for correct format before passing to parse-int or parse-float since those functions
-	\ will happily parse something like "123abc" as 123 )
+	\ will happily parse something like "123abc" as 123 
 	dup int-symbol? if >>integer
 	dup float-symbol? if >>float
 	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
@@ -247,6 +262,8 @@ var TRIPLEQUOTE 1
 		return ( leave void on stack )
 	@worddef
 		drop syntax-define-word return
+	@v2-worddef
+		drop v2-syntax-define-word return
 	@var
 		drop syntax-var return
 	@del
@@ -259,10 +276,14 @@ var TRIPLEQUOTE 1
 		drop syntax-lambda return
 	@closure
 		drop syntax-closure return
+	@v2-closure
+		drop syntax-v2-closure return
 	@list
 		drop syntax-list return
 	@capture-list
 		drop syntax-capture-list return
+	@opcode
+		drop syntax-opcode return
 	@triplestring
 		( call syntax-triple-string with first piece on stack )
 		syntax-triple-string return
@@ -279,7 +300,7 @@ var TRIPLEQUOTE 1
 	@false-literal drop false return
 	@null-literal drop null return
 	;
-
+	
 \ if list is [ ,,inline obj1 .. objN ] then push obj1 .. objN to the stack
 \ and remove of list. else leave list alone.
 : flatten-if-inline ( list -- list or items )
@@ -350,6 +371,59 @@ var TRIPLEQUOTE 1
 		syntax-next ( save-defined-word has no return value, so return NEXT object )
 	;
 
+\ assumes ':W' was just read
+\
+\ TODO --- there should be a common routine to parse functions & lambdas since they
+\ are so similar ... 
+\	:W name ( args ) STUFF ... ;
+\ vs
+\	::{ ( args ) STUFF ... }
+: v2-syntax-define-word
+	@locals [ SP-start name outlist ]
+		\ "V2 define word" . CR
+	syntax-next ( name must be next )
+	dup symbol? not if >>badname
+	name!
+	
+	\ now this is syntax-v2-closure
+	',,v2-closure 1 make-list outlist!
+	
+	\ see if there is a ( .. ) next -- if so treat it as declargs
+	reader-peek-next '( == if >>read-arglist \ )
+	>>loop \ no arglist, peeked symbol will be read again below
+	
+	@read-arglist
+	\ read ( ... ) as arglist
+	reader-next drop \ read the ( now \ )
+	syntax-parse-decl-arglist 
+	outlist swap append outlist! \ fall through to loop
+		\ "AFTER ARGLIST:" . outlist . CR
+	
+	@loop
+		syntax-next
+		dup void? if >>eof
+		\ just ; instead of } like in syntax-v2-closure
+		dup '; == if >>done
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside :W" error
+	@done
+		drop \ drop '}
+		\ "RETURN OUTLIST:" . outlist . CR
+		\ outlist
+		
+	@finish
+			\ "FINISHING" . CR
+		\ SP-start SP - 1 - ( calc number of items )
+			\ "MAKING" . CR
+		\ make-list
+			\ "MADE" . dup . CR
+		( save names & compiled words )
+		outlist name save-defined-word
+		syntax-next ( save-defined-word has no return value, so return NEXT object )
+	;
+
 \ var NAME COUNT -- 'var' was already read
 : syntax-var
 	syntax-next ( name should be next )
@@ -389,6 +463,43 @@ var TRIPLEQUOTE 1
 	@badname str "Bad name in del: " swap + error
 	;
 
+\ assumes "#op(" was just read and dropped \ )
+: syntax-opcode 
+	@locals [ list s ]
+	[ ] list!
+	@loop ( list )
+		\ everything inside the parens must be a literal so call 
+		\ reader-next instead of syntax-next
+		reader-next s!
+		s void? if >>eof
+		s ') == if >>closelist
+		list s append list! ( else append to list and continue ) <<loop
+	@eof
+		"Unexpected end of input inside #op( .. )" error
+	@closelist
+		\ i parsed: #(op NAME A B C)
+		\ check for errors
+		list length 0 == if >>no-name 
+		list length 4 > if >>too-long 
+		\ A,B,C are allowed to be omitted - fill in zeroes
+	@padlist 
+		list length 4 == if >>make-opcode 
+		list "0" append list! <<padlist
+	@make-opcode
+			\ "READY TO MAKE WITH LIST:" . list str . CR
+		\ put name on stack
+		list 0 get 
+		\ parse A,B,C as ints
+		list 1 -1 slice { parse-int } map unmake drop 
+			\ "READY TO CALL:" . .S CR
+		make-opcode \ make-opcode will check for errors as well
+		return
+	@no-name
+		"Missing opcode name" error
+	@too-long
+		"#op( .. ) too long: " list str + error
+		;
+		
 : syntax-string ( first string part already on stack *as symbol* )
 	( convert first since reader-next-char returns strings )
 	symbol->string
@@ -584,6 +695,38 @@ var TRIPLEQUOTE 1
 		outlist
 	;
 	
+\ parses ::{ .. } into [ ,,v2-closure ... ]
+\
+\ assumes ::{ was just read, parses until } as an object list, prepended with ,,v2-closure
+: syntax-v2-closure
+	@locals [ outlist ]
+	',,v2-closure 1 make-list outlist!
+	
+	\ see if there is a ( .. ) next -- if so treat it as declargs
+	reader-peek-next '( == if >>read-arglist \ )
+	>>loop \ no arglist, peeked symbol will be read again below
+	
+	@read-arglist
+	\ read ( ... ) as arglist
+	reader-next drop \ read the ( now \ )
+	syntax-parse-decl-arglist 
+	outlist swap append outlist! \ fall through to loop
+		\ "AFTER ARGLIST:" . outlist . CR
+	
+	@loop
+		syntax-next
+		dup void? if >>eof
+		dup '} == if >>done
+		\ else append object and continue
+		outlist swap append outlist! <<loop
+	@eof
+		drop "End of input inside ::{" error
+	@done
+		drop \ drop '}
+			\ "RETURN OUTLIST:" . outlist . CR
+		outlist
+	;
+	
 : serialize-escape-string ( string -- string with whitespace escaped )
 	{ 
 		( char )
@@ -641,6 +784,7 @@ var TRIPLEQUOTE 1
 	dup lambda? if >>lambda
 	dup bool? if >>bool
 	dup null? if >>null
+	dup opcode? if >>opcode
 	repr "Unknown obj in serialize-object:" swap + error
 	@int ( i NNN )
 		"i" . str puts CR return
@@ -662,6 +806,8 @@ var TRIPLEQUOTE 1
 		"F" puts CR
 		unmake serialize-object ( serialize list )
 		return
+	@opcode ( "o" then packed value )
+		"o" . opcode-packed str puts CR return
 		;
 
 : save-defined-word ( list name )
@@ -895,6 +1041,8 @@ var TRIPLEQUOTE 1
 		\ look for [ ,,closure ... ] (parsed from @{ .. })
 		objlist i get length 2 < if <<copy-element \ list too short, can't be closure
 		objlist i get 0 get ',,closure == if >>rewrite-inner-closure \ got [ ,,closure .. ]
+		\ it could be a v2 closure embedded in a v1 closure ...
+		objlist i get 0 get ',,v2-closure == if >>rewrite-inner-v2-closure
 		<<copy-element \ not a special list, so just copy element
 
 	@rewrite-inner-closure
@@ -929,20 +1077,291 @@ var TRIPLEQUOTE 1
 		3 make-list new-objlist swap + new-objlist! \ add self-making code to new-objlist
 		>>next
 		
+	@rewrite-inner-v2-closure
+		\ a v2 closure inside a v1 closure cannot access any of its variables (v1 uses 'self', v2 uses frame).
+		\ so treat v2 as having an empty outer-env
+		objlist i get 1 -1 slice \ remove ,,v2-closure
+			void \ outer-env
+			false \ this is a lambda not a plain list
+			v2-compile-rewrite-args-locals 
+			\ i don't care about nr-rewritten since this closure cannot bind to an outer env anyways
+			drop \ nr-rewritten
+			make-lambda \ turn list back into lambda
+			new-objlist swap append new-objlist! \ add to new-objlist
+			\ as noted, since never will be bound, nothing more to add
+			>>next
+			
 	@next
 		i 1 + i! <<rewrite-loop
 	
 	@done
 		new-objlist return
 	;
+	
+\ ===============================================
+\ Closure environments
+\ ===============================================
+\ this defines a closure environment -- this is similar conceptually to a scheme environment.
+\ it is used to take some of the work of rewriting variables into frame references out of the
+\ rewriting routine so that it can be tested in isolation.
+\
+\ this is a compile-time environment only; at runtime only frames & indexes are used
 
+\ closure environment:
+\	[ TAG dict up ]
+\
+\	TAG = ,,closure-env (for type checking)
+\	dict = maps names into local frame indexes (NAME, not NAME! -- NAME! handled internally)
+\	up = next upward frame, or void if toplevel env
+: new-closure-env ( -- env )
+	',,closure-env	 	\ TAG
+	[ ] make-dict		\ dict
+	void				\ up
+	3 make-list
+	;
+
+: closure-env? @( env -- result ) env 0 get ',,closure-env == ;	
+: closure-env-dict @( env -- dict ) env 1 get ;
+\ set the parent of env (i.e. its outer scope) so that name lookups	
+\ can traverse up the parent tree
+: closure-env-set-up @( env up -- ) env 2 up put drop ;
+: closure-env-get-up @( env -- ) env 2 get ;
+
+\ add a new name (symbol) to env, assigning it the next available index
+: closure-env-add-name @( env name -- )
+	\ type checking
+	env closure-env? not if >>bad-env
+	\ check if already defined
+	env closure-env-dict name str get void? not if >>dup-name 
+	\ add to dict
+	env closure-env-dict name str env closure-env-dict length put drop return
+	
+	@dup-name "Duplicate name in args/locals: " name str + error
+	@bad-env "Not a closure environment: " env str + error
+	;
+
+\ add a list of names at once
+: closure-env-add-namelist @( env names -- )
+	names
+	@{ @( name )
+		env name closure-env-add-name
+	} for-each
+	;
+	
+\ lookup name in closure or in any outer scope
+\
+\ if found, returns ( level index ) where level is the scope level (local==0, first parent==1, etc.)
+\ and index is the index into that frame
+\
+\ if NOT found, returns ( void void )
+: closure-env-lookup-name @( env name )
+	env name 0 closure-env-lookup-name-inner
+	;
+	
+\ the inner loop, called recursively
+: closure-env-lookup-name-inner @( env name level )
+	@locals [ index up ]
+	\ if name has ! at the end then remove it
+	name -1 get '! != if >>lookup
+	name 0 name length 1 - slice name! \ remove !
+	
+	@lookup
+	env closure-env-dict name str get index! 
+	index void? if >>try-up \ try next scope up
+	\ found it, return ( level index )
+	level index return
+	
+	@try-up
+		env closure-env-get-up up!
+		up void? if >>not-found \ no outer scope, so name not found
+		\ recursively search upwards
+		up name level 1 + closure-env-lookup-name-inner
+		return
+		
+	@not-found
+		void void
+	;
+	
+: closure-env-make-ref-or-set @( name level index )
+	name -1 get '! == if >>set 
+	\ make a get 
+	'FRAME-GET level index 0 make-opcode return
+	@set
+	'FRAME-SET level index 0 make-opcode return
+	;
+	
+\ ===============================================
+
+\ objlist is normally from a [ ,,v2-closure ... ] list (with the ,,v2-closure removed)
+\ plain-list is a flag that is true if objlist is from a list or false if objlist is from a lambda
+\ (the difference being that plain lists are never bound to a frame since they are never called as code)
+: v2-compile-rewrite-args-locals @( objlist outer-env plain-list -- new-objlist nr-rewritten )
+	@locals [ argnames localnames env i ]
+			
+			\ "* V2-rewrite-args-locals" . CR
+			\ "OBJLIST:" . objlist . CR
+			\ "PLAIN-LIST?:" . plain-list . CR
+			
+		\ scan objlist for , @( ... ), @args, @locals
+		objlist
+		compile-collect-args-locals localnames! argnames! new-objlist!
+		
+			\ "ARGS:" . argnames . CR
+			\ "LOCALS:" . localnames . CR
+			\ "NEW-OBJLIST:" . new-objlist . CR
+		
+		\ track number of var references i rewrite
+		0 nr-rewritten!
+		
+		\ set objlist to rewritten list without @args/@locals
+		new-objlist objlist!
+		\ clear new-objlist now
+		[ ] new-objlist!
+		
+		\ note: i don't have to reserve space for locals -- interpreter creates frame
+		\ with sufficient space, so i only have to pop args into frame ...
+		
+		\ make code to push args to locals (add to new-objlist)
+		\ (pop in reverse order of argnames, so range starts at (#argnames-1)
+		@{ @( i )
+			new-objlist
+				'FRAME-SET 0 i 0 make-opcode
+				append drop
+		} argnames length 1 - 				\ start index = #argnames-1
+			-1 								\ count by -1
+				argnames length for-range	\ for argnames args
+		
+			\ "NEW-OBJLIST:" . new-objlist . CR
+		
+		\ create an environment to resolve names 
+		plain-list if >>make-env-plain-list
+		
+		\ make environment for new closure, chained to outer-env
+		\ -- add args first since those are at lowest indexes
+		new-closure-env env!
+		\ add args first so they'll get assigned indexes starting at 0
+		env argnames closure-env-add-namelist
+		\ now @locals
+		env localnames closure-env-add-namelist
+		\ .. and chain to my outer scope
+		env outer-env closure-env-set-up
+		>>begin-rewrite
+			\ "ENV NOW:" . env . CR
+		
+	@make-env-plain-list
+		\ i'm rewriting a LIST not code -- list will be flattened (see below) so will
+		\ run IN the outer-env, not a new environment
+		outer-env env!
+		\ IMPORTANT! nothing below here is allowed to modify env since that would modify
+		\ outer-env incorrectly
+		
+	@begin-rewrite
+	\ rewrite symbols using environment just created
+	0 i!
+	@rewrite-loop
+		\ i objlist length >= if >>done 
+		
+			\ "OBJLIST[i]:" . objlist i get . CR
+		objlist i get void? if >>done 
+		objlist i get symbol? if >>symbol
+		objlist i get list? if >>list
+		\ everything else, copy as-is
+	@copy-element
+		new-objlist objlist i get append new-objlist! >>next
+		
+	@symbol
+		@locals [ level index sym ]
+		objlist i get sym!
+		\ see if symbol is in my env or any outer scope
+		env sym closure-env-lookup-name index! level!
+		index void? if <<copy-element \ not in environment, so copy as is 
+		\ turn symbol into get/set opcode (going along with the comment on voids above, this should
+		\ never be able to add voids into the lists -- all rewriting does is turns names into
+		\ FRAME-GET or FRAME-SET opcodes)
+		new-objlist
+			sym level index closure-env-make-ref-or-set
+			append new-objlist!
+		\ increment counter
+		nr-rewritten 1 + nr-rewritten!
+		>>next 
+		
+	@list			
+		\ look for [ ,,v2-closure ... ] (parsed from ::{ .. })
+		objlist i get 0 get ',,v2-closure == if >>rewrite-inner-closure \ got [ ,,v2-closure .. ]
+		
+		\ else, recurse normal list looking for names to be rewritten
+		>>rewrite-inner-plain-list
+		
+	@rewrite-inner-closure
+		@locals [ sub-objlist sub-nr-rewritten ]
+			\ "REWRITE SUBLIST:" . CR
+		\ call rewrite recursively with my env as the outer scope
+		objlist i get 1 -1 slice \ remove ,,v2-closure
+		env false v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
+			\ "GOT NEW SUBLIST:" . sub-objlist . CR
+			\ "NEW OBJLIST:" . new-objlist . CR
+		\ turn new sub-objlist back into lambda now that its rewritten and add to new-objlist
+		new-objlist
+			sub-objlist make-lambda append new-objlist!
+		\ did i rewrite ANY names in inner closure (or any inner closures of that, etc.)
+		sub-nr-rewritten 0 == if >>done-rewrite-sub 
+		\ i rewrote terms, therefore this lambda needs to be bound to my (runtime) frame,
+		\ so add that ...
+		new-objlist 'bind-lambda append new-objlist!
+		
+	@done-rewrite-sub
+		\ add # rewritten to my count so i return total of mine + all recursive inner lambdas
+		nr-rewritten sub-nr-rewritten + nr-rewritten!
+		>>next
+		
+	@rewrite-inner-plain-list
+		@locals [ list-length ]
+			\ "PLAIN LIST:" . objlist i get . CR
+		\ rewrite vars inside a list without binding frame to it at runtime (since the list will
+		\ be expanded, it will be filled from MY frame) -- also see code at beginning that
+		\ knows not to create a new env for plain lists
+		
+		\ remember ORIGINAL length of list i'm about to rewrite. after rewriting i could have something like:
+		\	BEFORE: [ a b [ c d [ e f ] ] ]
+		\	AFTER: a b c d e f 2 make-list 3 make-list 3 make-list
+		\ in other words, the inner lists have been flattened so the literal length is longer, but the
+		\ RUNTIME length (i.e. for make-list) is the same -- rewriting is a 1-to-1 replacement of varnames
+		\ with a single opcode, so the ending RUNTIME length will be the same.
+		objlist i get length list-length!
+		\ rewrite list
+		objlist i get env true v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
+			\ "SUB RESULT:" . sub-objlist . CR
+		\ did I rewrite anything?
+		sub-nr-rewritten 0 == if >>plain-list-no-rewrites
+		\ else, the rewrites occurred in MY ENV so flatten list so runtime references are correct
+		new-objlist
+			sub-objlist extend \ flatten sub-objlist into new-objlist
+			\ add code to remake list at runtime -- see notes above on the length passed to make-list
+			list-length append 'make-list append new-objlist!
+		\ add # rewritten to my count so i return total of mine + all recursive inner lambdas
+		nr-rewritten sub-nr-rewritten + nr-rewritten!
+		>>next 
+		
+	@plain-list-no-rewrites
+		\ nothing rewritten, so leave list as-is and it can be instantiated by deepcopy at runtime
+		new-objlist objlist i get append new-objlist!
+		
+		>>next
+		
+	@next
+		i 1 + i! <<rewrite-loop
+		
+	@done
+		new-objlist nr-rewritten return	
+		;
+	
 \ take a parsed objlist, presumably from byte-compile, and perform finalization:
 \	* ensure objlist ends with 'return'
 \	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
 \
 \ returns a new list, does NOT modify objlist
-: compile-finalize-word ( objlist -- newlist )
-		\ "FINALIZE WORD:" . .S CR
+: compile-finalize-word @( objlist -- newlist )
+		\ "FINALIZE WORD:" . objlist . CR
 	\ dup length 0 > if >>not-empty
 	\ objlist is empty; newlist is [ return ]
 	\ drop 'return 1 make-list >>transform-args-locals
@@ -956,9 +1375,24 @@ var TRIPLEQUOTE 1
 	\ 	deepcopy \ don't modify original
 	\ 	'return append
 
-	@transform-args-locals ( objlist )
+	@transform-args-locals 
+		\ see if i got a [ ,,v2closure ... ]
+		objlist length 0 == if >>v1-word
+		objlist 0 get ',,v2-closure != if >>v1-word
+		
+		\ TEMP while i'm working on v2 rewriter ...
+		\ "NOT CHANGING V2 WORD:" . objlist . CR 
+		\ objlist return
+		
+		\ remove ,,v2-closure from head of list
+		\ toplevel function - no outer environment
+		objlist 1 -1 slice void false v2-compile-rewrite-args-locals
+		drop \ don't need nr-rewritten here; top level is never bound anyways
+		return \ return new objlist
+	@v1-word
+		\ "V1 WORD:" . objlist . CR
 		\ turn names into code sequences
-		[ ] make-dict ( toplevel has empty selfmap ) compile-rewrite-args-locals
+		objlist [ ] make-dict ( toplevel has empty selfmap ) compile-rewrite-args-locals
 			\ "AFTER REWRITING:" . .S CR
 	;
 	
