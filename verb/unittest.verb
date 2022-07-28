@@ -25,10 +25,20 @@
 	LP UNITTEST-LP0!
 	;
 
+:V2 unittest-report-pass ( msg )
+	"    " . msg . CR
+	UNITTEST-NR-PASS 1 + UNITTEST-NR-PASS!
+	;
+
+:V2 unittest-report-fail ( msg )
+	"*** ERROR ***" . msg . CR
+	UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
+	;
+	
 \ test is called with stack: ( expect actual )
 : expect-generic @( test testname expect actual )
 	expect actual test call if >>ok
-		"*** ERROR *** expecting " . expect repr . "but got" . actual repr . CR 
+		"*** ERROR *** Expecting" . expect repr . "but got" . actual repr . CR 
 		UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
 		return
 	@ok 
@@ -36,13 +46,42 @@
 		UNITTEST-NR-PASS 1 + UNITTEST-NR-PASS!
 	;
 
+\ test must be a comparison operator taking args ( A B ) and producing a result that is checked vs expect
+:V2 expect-generic-compare ( test testname A B expect )
+	@locals [ actual ]
+	A B test call actual!
+	actual expect == if >>ok
+		"Expecting " expect str + " for " + A str + " " + testname + " " + B str + " but got " + actual str +
+			unittest-report-fail
+		return
+	@ok
+		A str " " + testname + " " + B str + ": ok" + 
+			unittest-report-pass
+	;	
+
 \ exact equality, no coercion allowed other than usual int+float comparison
-: expect== @( expect actual )
-	{ == } "==" expect actual expect-generic
+:V2 expect== ( A B )
+	{ == } "==" A B true expect-generic-compare
 	;
 
-: expect!= @( expect actual )
-	{ != } "!=" expect actual expect-generic
+:V2 expect!= ( A B )
+	{ != } "!=" A B true expect-generic-compare
+	;
+
+:V2 expect> ( A B )
+	{ > } ">" A B true expect-generic-compare
+	;
+
+:V2 expect>= ( A B )
+	{ >= } ">=" A B true expect-generic-compare
+	;
+
+:V2 expect< ( A B )
+	{ < } "<" A B true expect-generic-compare
+	;
+
+:V2 expect<= ( A B )
+	{ <= } "<=" A B true expect-generic-compare
 	;
 
 : expectTrue @( actual )
@@ -78,25 +117,25 @@
 	;
 
 \ test that values are equal within UNITTEST-MAX-PCTDIFF
-: expect==f @( expect actual )
-	{ %diff UNITTEST-MAX-PCTDIFF <= } "~=" expect actual expect-generic
+: expect==f @( A B )
+	{ %diff UNITTEST-MAX-PCTDIFF <= } "~=" A B true expect-generic-compare
 	;
 
 \ test that values are not equal (more than UNITTEST-MAX-PCTDIFF)
-: expect!=f @( expect actual )
-	{ %diff UNITTEST-MAX-PCTDIFF > } "~!=" expect actual expect-generic
+: expect!=f @( A B )
+	{ %diff UNITTEST-MAX-PCTDIFF > } "~!=" A B true expect-generic-compare
 	;
 	
-( takes a lambda that takes nothing from the stack and leaves one result on the stack.
-  compares the result to 'a' - print OK or error if error is too large )
-: expect-f ( lambda a )
-	\ "Expect" . dup . swap call "got" . dup . 
-	swap call
-	pct-diff \ dup "(" .. .. " %)" . CR
-	#1e-6 > if >>toolarge
-		"OK" . CR return
-	@toolarge "** !! ERROR !! **" . CR
-	;
+\ ( takes a lambda that takes nothing from the stack and leaves one result on the stack.
+\  compares the result to 'a' - print OK or error if error is too large )
+\ : expect-f ( lambda a )
+\ 	\ "Expect" . dup . swap call "got" . dup . 
+\ 	swap call
+\	pct-diff \ dup "(" .. .. " %)" . CR
+\	#1e-6 > if >>toolarge
+\		"OK" . CR return
+\	@toolarge "** !! ERROR !! **" . CR
+\	;
 	
 \ get stack representation as a string "[ .. ]".
 \ does not affect stack.
