@@ -1195,7 +1195,7 @@ var TRIPLEQUOTE 1
 \ objlist is normally from a [ ,,v2-closure ... ] list (with the ,,v2-closure removed)
 \ plain-list is a flag that is true if objlist is from a list or false if objlist is from a lambda
 \ (the difference being that plain lists are never bound to a frame since they are never called as code)
-: v2-compile-rewrite-args-locals @( objlist outer-env plain-list -- new-objlist nr-rewritten )
+:V2 v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist nr-rewritten )
 	@locals [ argnames localnames env i ]
 			
 			\ "* V2-rewrite-args-locals" . CR
@@ -1223,7 +1223,7 @@ var TRIPLEQUOTE 1
 		
 		\ make code to push args to locals (add to new-objlist)
 		\ (pop in reverse order of argnames, so range starts at (#argnames-1)
-		@{ @( i )
+		::{ ( i )
 			new-objlist
 				'FRAME-SET 0 i 0 make-opcode
 				append drop
@@ -1240,9 +1240,33 @@ var TRIPLEQUOTE 1
 		\ -- add args first since those are at lowest indexes
 		new-closure-env env!
 		\ add args first so they'll get assigned indexes starting at 0
-		env argnames closure-env-add-namelist
-		\ now @locals
-		env localnames closure-env-add-namelist
+		\ -- arg names are NOT allowed to repeat
+		argnames
+		::{ ( name )
+			\ "ARGNAME:" . name . CR
+			env name closure-env-add-name
+		} for-each
+
+		\ env argnames closure-env-add-namelist
+		
+		\ now @locals -- these ARE allowed to duplicate names in arglist, in which
+		\ case they are ignored
+		\ WHY? it seems fairly common to have arglists like:
+		\		( a b -- a )
+		\ where the output a is a modified version of a, for example. there is no need
+		\ for a second var in these kinds of cases, and allowing the duplicated names
+		\ makes function signatures cleaner for a lot of common cases
+		
+		\ env localnames closure-env-add-namelist
+		localnames
+		::{ ( name )
+			\ "LOCAL NAME:" . name . CR
+			env closure-env-dict name str get void? not if >>dup-name 
+			\ "LOCAL ADD:" . name . CR
+			env name closure-env-add-name
+			@dup-name \ not an error, just ignored
+		} for-each
+
 		\ .. and chain to my outer scope
 		env outer-env closure-env-set-up
 		>>begin-rewrite

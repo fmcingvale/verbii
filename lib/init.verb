@@ -6,56 +6,109 @@
 \	***       Changing this file can easily break the entire system!        ***
 \
 
-: . str puts 32 .c ;
-: CR ( -- , prints CR LF ) 10 .c ;
-: clear ( xn ... x1 -- ) SP depth + 1 - SP! ;
+\ Implementation note: Many of these are written without argument lists, since they
+\ are more compact/faster to write as stack operations.
 
-: drop ( a -- ) SP 1 + SP! ; 
-: dup ( a -- a a ) SP ref ; 
-: dup? ( a -- a a, only if a != 0 ) dup 0 == if >>ZERO dup @ZERO ; 
-: swap ( a b -- b a ) over >L >L drop L> L> ;
-: pick ( Sn .. S1 i -- Sn .. S1 Si ) SP + ref ; 
+\ print top of stack + space
+:V2 . str puts 32 .c ;
 
-: over ( a b -- a b a ) SP 1 + ref ; 
-: 2dup ( a b -- a b a b ) over over ; 
-: 2drop ( a b -- ) SP 2 + SP! ; 
-: 2over ( a b c d -- a b c d a b ) 4 pick 4 pick ; 
-: 2swap ( a b c d -- c d a b ) 
-    >L >L >L >L  
-    LP 2 + ref LP 3 + ref LP ref LP 1 + ref LP 4 + LP! ; 
+\ actually prints LF but originally named CR so I left it
+:V2 CR 10 .c ;
 
-: ndrop ( xn .. x1 N -- ) SP + 1 + SP! ;
-: nip ( a b -- b ) >L drop L> ;
-: tuck ( a b -- b a b ) swap 2 pick ;
-: rot ( a b c -- b c a ) 3 pick >L >L >L drop L> L> L> ;
-: -rot ( b c a -- a b c ) 2 pick >L 3 pick >L >L drop drop L> L> L> ;
+\ clear the stack
+:V2 clear SP depth + 1 - SP! ;
 
-: not ( a -- not[a] ) if >>true true return @true false ;
-: or ( a b -- a|b ) if >>true1 if >>true2 false return @true1 drop @true2 true ;
-: and ( a b -- a&b ) if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
+\ ( a -- ) 
+:V2 drop SP 1 + SP! ; 
 
-: != ( a b -- a!=b ) == not ;
-: >= ( a b -- a>=b ) 2dup > -rot == or ;
-: < ( a b -- a<b ) swap > ;
-: <= ( a b -- a<=b ) > not ;
+\ ( a -- a a ) 
+:V2 dup SP ref ; 
 
-: neg ( a -- -a ) dup int? if >>int 0 swap - return @int 0 swap - ;
-: max ( a b -- max[a,b] ) 2dup > if >>A nip return @A drop ;
-: min ( a b -- min[a,b] ) 2dup > if >>B drop return @B nip ;
-: abs ( a -- abs[a] ) dup 0 < if >>neg return @neg neg ;
-( 'floor' divide like in Python -- integers only )
-: // ( a b -- quotient a/b ) /mod swap drop ;
-: mod ( a b -- remainder a/b ) /mod drop ;
+\ ( a -- a a, only if a != 0 )
+:V2 dup? dup 0 == if >>ZERO dup @ZERO ; 
+
+\ ( a b -- b a )
+:V2 swap ( a b ) b a ;
 
 \ *DEPRECATED*
-: :: make-closure ;
+\ ( Sn .. S1 i -- Sn .. S1 Si )
+:V2 pick SP + ref ; 
 
-( .S - print stack without affecting it - good for debugging )
-: .S "=>" . depth 
+\ ( a b -- a b a ) 
+:V2 over SP 1 + ref ;
+ 
+ \ ( a b -- a b a b ) 
+:V2 2dup over over ; 
+
+:V2 2drop ( a b -- ) ; 
+
+\ ( a b c d -- a b c d a b ) 
+:V2 2over 4 pick 4 pick ; 
+
+\ ==============================================================================
+\ FIXME -- many arglists below are gross like ( a b -- B A ) since the current
+\ version of the compiler (at the time of writing this) doesn't allow dup names
+\ for locals ... once i rebootstrap, fix these 
+\ ==============================================================================
+
+:V2 2swap ( a b c d -- C D A B ) c d a b ;
+
+\ ( xn .. x1 N -- ) - drop N items
+:V2 ndrop SP + 1 + SP! ;
+
+\ ( a b -- b ) 
+:V2 nip >L drop L> ;
+
+:V2 tuck ( a b -- B A _B ) b a b ;
+
+:V2 rot ( a b c -- B C A ) b c a ;
+
+:V2 -rot ( b c a -- A B C ) a b c ;
+
+\ *LOGICAL* not/and/or -- see bit-* functions for bitwise
+
+\ ( a -- not[a] )
+:V2 not if >>true true return @true false ;
+
+\ ( a b -- a|b )
+:V2 or if >>true1 if >>true2 false return @true1 drop @true2 true ;
+
+\ ( a b -- a&b )
+:V2 and if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
+
+\ ( a b -- a!=b ) 
+:V2 != == not ;
+
+:V2 >= ( a b -- a>=b ) a b > a b == or ;
+
+:V2 < ( a b -- a<b ) b a > ;
+\ ( a b -- a<=b )
+:V2 <= > not ;
+
+:V2 neg ( a -- neg[a] ) 0 a - ;
+\ implementation note -- there is ZERO runtime overhead for unused locals, so
+\ things like the below, where the output is called 'max[a,b]', and is never used,
+\ has no performance penalty at all. taking advantage of this can make the arglists
+\ more self-documenting
+:V2 max ( a b -- max[a,b] ) a b > if >>A b return @A a ;
+:V2 min ( a b -- min[a,b] ) a b > if >>B a return @B b ;
+:V2 abs ( a -- abs[a] ) a 0 < if >>neg a return @neg a neg ;
+\ 'floor' divide like in Python -- integers only )
+\ ( a b -- quotient[a/b] )
+:V2 // /mod swap drop ;
+\ ( a b -- remainder a/b )
+:V2 mod /mod drop ;
+
+\ *DEPRECATED*
+:V2 :: make-closure ;
+
+\ .S - print stack without affecting it - good for debugging
+:V2 .S "=>" . depth 
 @LOOP 
 	dup 0 > if >>true >>done @true dup SP + 1 + ref repr puts 32 .c 1 - <<LOOP @done drop CR ;
 
-: .L ( N -- print first N locals .. meant for debugging, like .S )
+\ ( N -- print first N locals .. meant for debugging, like .S )
+:V2 .L 
 	0 ( N index )
 	"Locals:" .
 	@loop
@@ -65,32 +118,37 @@
 		1 + <<loop
 	@done 2drop
 	;
-
+	
+\ *DEPRECATED* -- use make-var in new code
 \ compiler turns "var NAME COUNT" into ( name count ,,var )
-: ,,var ( name count -- ; creates new variable )
+\ ( name count -- ; creates new variable )
+:V2 ,,var 
 	alloc ( name addr )
 	( make word that pushes addr onto stack )
 	1 make-list ( name [ addr ] )
 	swap make-word
 	;
 	
+\ *SEMI-DEPRECATED* -- named variables are much easier to use than locals, so
+\ the entire locals stack may eventually go away
 ( shortcuts for addresses of first 10 locals )
-: L0 LP ;
-: L1 LP 1 + ;
-: L2 LP 2 + ;
-: L3 LP 3 + ;
-: L4 LP 4 + ;
-: L5 LP 5 + ;
-: L6 LP 6 + ;
-: L7 LP 7 + ;
-: L8 LP 8 + ;
-: L9 LP 9 + ;
+:V2 L0 LP ;
+:V2 L1 LP 1 + ;
+:V2 L2 LP 2 + ;
+:V2 L3 LP 3 + ;
+:V2 L4 LP 4 + ;
+:V2 L5 LP 5 + ;
+:V2 L6 LP 6 + ;
+:V2 L7 LP 7 + ;
+:V2 L8 LP 8 + ;
+:V2 L9 LP 9 + ;
 
-: +get ( same as get but leaves obj on stack )
+\ same as get but leaves obj on stack
+:V2 +get 
 	over swap get ;
-
+	
 \ true|false if ANY member of sequence satisfies test function
-: any? @( sequence test -- anytrue )
+:V2 any? ( sequence test -- anytrue )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -105,7 +163,7 @@
 	;
 
 \ true|false if ALL members of sequence satisfy test
-: all? @( sequence test -- alltrue )
+:V2 all? ( sequence test -- alltrue )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -120,8 +178,10 @@
 		true return
 	;
 
+\ *SEMI-DEPRECATED* -- this is to support v1 closures
 \ copy first nr locals into list [ LP LP+1 LP+2 ... ]
-: copy-locals-to-list ( nr -- list )
+\ ( nr -- list )
+:V2 copy-locals-to-list
 	\ cannot use @( .. ) params since that would mess up the locals
 	[ ]
 	0
@@ -132,20 +192,25 @@
 		1 + ( nr list i+1 ) <<loop
 	@done ( nr list i )
 		drop nip
-	;	
+	;
 	
 \ ========================================================================
 \ String functions
 \ ========================================================================
 
+\ *TODO* rewrite more of these to take named arguments
 
-: whitespace? ( string -- bool; is first char of string whitespace? )
+\ *TODO* this should take a char (1-length string) instead of any string
+
+\ ( string -- bool; is first char of string whitespace? )
+:V2 whitespace?
 	0 get ord ( get as ascii )
 	32 <= ( treat everything <= space as whitespace )
 	;
 
 \ return string with any leading whitespace removed
-: string-ltrim ( string -- string )
+\ ( string -- string )
+:V2 string-ltrim 
 	0
 	@loop ( string i )
 		2dup swap length >= ( string i i>=len ) if >>empty
@@ -158,47 +223,52 @@
 	;
 
 \ is string zero length or contain only whitespace?
-: string-empty? ( string -- empty? )
+\ ( string -- empty? )
+:V2 string-empty?
 	string-ltrim length 0 ==
 	;
 
 \ join a list of strings by separator string
-: string-join ( list separator -- string )
-	@args [ list sep ]
+\ ( list separator -- string )
+:V2 string-join ( list sep )
 	list
-	@{ @args [ accum elem ]
+	::{ ( accum elem )
 		accum length 0 == if >>skip \ skip separator before first string
 		accum sep + elem + return
 		@skip elem return
 	} "" fold
 	;
 	
-: string->symbol ( string -- symbol )
+\ ( string -- symbol )
+:V2 string->symbol 
 	unmake make-symbol
 	;
 
-: symbol->string ( symbol -- string )
+\ ( symbol -- string )
+:V2 symbol->string 
 	unmake make-string
 	;
 
-: ord ( string -- ascii ; get ASCII value of first char of string )
+\ ( string -- ascii ; get ASCII value of first char of string )
+:V2 ord 
 	0 get unmake drop
 	;
 
-: chr ( ASCII -- string ; turn ASCII character value into single-character string )
+\ ( ASCII -- string ; turn ASCII character value into single-character string )
+:V2 chr 
 	1 make-string
 	;
 
 \ is c an uppercase letter?
-: upper? @( c ) 
+:V2 upper? ( c ) 
 	c ord 65 >= c ord 90 <= and ;
 	
 \ is c an uppercase letter?
-: lower? @( c )
+:V2 lower? ( c )
 	c ord 97 >= c ord 122 <= and ;
 	
 \ convert char c to lowercase, if it is a letter
-: tolower @( c -- lowercase )
+:V2 tolower ( c -- lowercase )
 	c upper? if >>is-upper
 	c return \ not uppercase, return c as is
 	@is-upper
@@ -206,7 +276,7 @@
 	;
 
 \ convert char c to uppercase, if it is a letter
-: toupper @( c -- uppercase )
+:V2 toupper ( c -- uppercase )
 	c lower? if >>is-lower
 	c return \ not uppercase, return call
 	@is-lower
@@ -214,18 +284,18 @@
 	;
 	
 \ convert string to lowercase
-: string-lower @( s -- lowercase )
+:V2 string-lower ( s -- lowercase )
 	s { tolower } map
 	;
 
 \ convert string to uppercase	
-: string-upper @( s -- lowercase )
+:V2 string-upper ( s -- lowercase )
 	s { toupper } map
 	;
 	
 \ split text into parts separated by one or more chars from delims (a string or list of chars).
 \ any leading/trailing delims are trimmed. this function does NOT make empty parts.
-: string-split @( text delims -- parts )
+:V2 string-split ( text delims -- parts )
 	@locals [ i c piece ]
 	[ ] parts!
 	0 i!
@@ -233,7 +303,7 @@
 	@loop
 		text i get c!
 		c void? if >>got-end \ end of string
-		delims @{ c == } find void? not if >>got-delim \ found delimiter
+		delims ::{ c == } find void? not if >>got-delim \ found delimiter
 		\ not a delim, add to piece
 		piece c + piece! >>next
 	@got-delim
@@ -261,14 +331,14 @@
 
 \ calls if-true if cond is true else calls if-false
 \ (cond must be a bool)
-: ifelse @( cond if-true if-false )
+:V2 ifelse ( cond if-true if-false )
 	cond if >>true
 	if-false call return
 	@true if-true call
 	;
 
 \ calls if-true if cond is true, else does nothing
-: ifthen @( cond if-true )
+:V2 ifthen ( cond if-true )
 	cond if >>true
 	return \ nothing to do on false
 	@true
