@@ -135,10 +135,10 @@ Expect [ 10 20 30 hello 50 ] x 4:
 [ 10 20 30 hello 50 ] [ 10 20 30 hello 50 ] [ 10 20 30 hello 50 ] [ 10 20 30 hello 50 ] 
 * unmake lambda 
 Expect <{ 11 22 33 44 return }> [ 11 22 88888 44 return ] 
-       <{ 11 22 33 44 return }> [ 11 22 88888 44 return ] 
+       { 11 22 33 44 return } [ 11 22 88888 44 return ] 
 * make-lambda 
 Expect <{ 11 22 33 44 }> [ 11 22 977 44 ] 
-       <{ 11 22 33 44 }> [ 11 22 977 44 ] 
+       { 11 22 33 44 } [ 11 22 977 44 ] 
 * make-closure 
 Expect <{ 11 22 33 44 } :: 999> [ 11 22 777 44 ] 
        <{ 11 22 33 44 } :: 999> [ 11 22 777 44 ] 

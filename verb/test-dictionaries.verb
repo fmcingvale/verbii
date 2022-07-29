@@ -1,0 +1,39 @@
+\ Tests for dictionaries
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+:V2 test-dictionaries-basic
+	@locals [ D ]
+	
+	[ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict D!
+	333 D "uuu" get expect==
+	444 D "zzz" get expect==
+	555 D "bbb" get expect==
+	999 D "eee" get expect==
+	
+	\ bad key -> void
+	void D "xyz" get expect==
+	
+	D "xyz" 888 put D! \ insert new entry
+	D "bbb" 777 put D! \ update existing entry
+	
+	888 D "xyz" get expect==
+	777 D "bbb" get expect==
+	
+	5 D length expect==
+	
+	
+	\ * TODO * need to check keys function, but keys is not required to sort names, so
+	\ will have to either sort them myself (otherwise text results won't match across platforms)
+	\ or do a find on each key to test if it is there
+
+	;
+	
+:V2 test-dictionary-deepcopy
+	[ [ "aaa" 1 ] [ "bbb" 2 ] [ "ccc" 3 ] ] make-dict dup
+	deepcopy
+	\ should not affect original
+	"zzz" 10 put
+	"""[ { "aaa" => 1 "bbb" => 2 "ccc" => 3 } { "aaa" => 1 "bbb" => 2 "ccc" => 3 "zzz" => 10 } ]""" expect-stack 2 ndrop
+	;
+	

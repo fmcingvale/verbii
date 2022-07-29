@@ -1,10 +1,10 @@
-( -- default library, loaded at startup -- )
-( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
+\ default library, loaded at startup 
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-(
-	*** Read bootstrap/READ-ME-BEFORE-RUNNING.txt before editing this code! ***
-	***       Changing this file can easily break the entire system!        ***
-)
+\
+\	*** Read bootstrap/READ-ME-BEFORE-RUNNING.txt before editing this code! ***
+\	***       Changing this file can easily break the entire system!        ***
+\
 
 : . str puts 32 .c ;
 : CR ( -- , prints CR LF ) 10 .c ;
@@ -47,6 +47,7 @@
 : // ( a b -- quotient a/b ) /mod swap drop ;
 : mod ( a b -- remainder a/b ) /mod drop ;
 
+\ *DEPRECATED*
 : :: make-closure ;
 
 ( .S - print stack without affecting it - good for debugging )
@@ -276,6 +277,11 @@
 
 \ ========================================================================
 \ Iteration/looping/functional programming
+\
+\ Implementation note: A lot of the functions here could be implemented
+\ on top of for-each or fold instead of writing their own inner loops.
+\ However, the loops are so simple that I decided the performance tradeoff
+\ was worth it vs having to create closures to pass to for-each.
 \ ========================================================================
 
 \ call func NR times -- does not touch stack; func can use stack in any way
@@ -284,7 +290,7 @@
 	\ parameters in locals
 	@loop
 		NR 0 <= if >>done 
-		func call \ call func - stack is in same state as last call to fund
+		func call \ call func - stack is in same state as last call to func
 		NR 1 - NR! <<loop
 	@done
 		;
@@ -340,6 +346,7 @@
 		;
 	
 \ variant of for-each that calls func with ( key val )
+\ NOTE: iteration order is not guaranteed across platforms
 : for-each-dict @( dict func -- )
 	@locals [ i keylist ]
 	dict keys keylist!

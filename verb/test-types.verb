@@ -1,0 +1,88 @@
+\ Testing of types, other than what is done in e.g. test-string.verb
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+:V2 test-type-comparisons
+	\ lambdas are never equal to anything, but it should not cause an error to compare them
+	\ -> why? compiler does transformations/optimizations so user code should not rely on the
+	\     source form of a lambda being equal to the compiled version so I think it's better to
+	\	 disallow this comparison
+	{ 1 2 3 } { 1 2 3 } == expectFalse
+	{ 10 20 30 } dup == expectFalse
+	{ 11 22 33 } 112233 == expectFalse
+	
+	\ bool correctness
+	1 1 == 2 2 == == expectTrue
+	1 2 == 2 3 == == expectTrue
+	1 1 == 2 1 == == expectFalse
+	2 1 == 1 1 == == expectFalse
+
+	\ should not be any bool coercion
+	0 false == expectFalse
+	1 true == expectFalse 
+	"abc" true == expectFalse
+	"" false == expectFalse
+	null false == expectFalse
+	void false == expectFalse
+	
+	\ void is the only value equal to void
+	2 void == expectFalse
+	void 2 == expectFalse
+	void void == expectTrue
+	;
+	
+:V2 test-types-testing
+	123 int? expectTrue
+	#123 int? expectFalse
+	#446 float? expectTrue
+	123 float? expectFalse
+
+	"hello" string? expectTrue
+	"there" symbol? expectFalse
+	'world symbol? expectTrue
+	'foobar string? expectFalse
+	
+	true bool? expectTrue
+	false bool? expectTrue
+	1 bool? expectFalse
+
+	null null? expectTrue
+	0 null? expectFalse
+	null void? expectFalse
+	
+	void void? expectTrue
+	void null? expectFalse
+	0 void? expectFalse
+	;
+	
+:V2 test-repr
+	\ test that repr makes expected strings for all types
+	"1234" 1234 repr expect==
+	"#3.75" #3.75 repr expect==
+	"#4.125" 4.125 repr expect==
+	"<true>" true repr expect==
+	"<false>" false repr expect==
+	"[ 10 20 'hello #11.5 ]" 10 20 'hello 11.5 4 make-list repr expect==
+	\ eventually this will change to not have the added 'return at the end
+	"{ 1 2 3 'a 'b 'c 'return }" { 1 2 3 a b c } repr expect==
+	"'a-long-symbol" 'a-long-symbol repr expect==
+	""""hello there world"""" "hello there world" repr expect== \ """ <- so notepad++ sees end of string
+	"<null>" null repr expect==
+	"<*void*>" void repr expect==
+	;
+	
+:V2 test-str
+	\ test that str makes expected strings for all types
+	"1234" 1234 str expect==
+	"3.75" #3.75 str expect==
+	"4.125" 4.125 str expect==
+	"true" true str expect==
+	"false" false str expect==
+	"[ 10 20 hello 11.5 ]" 10 20 'hello 11.5 4 make-list str expect==
+	\ eventually this will change to not have the added 'return at the end
+	"{ 1 2 3 a b c return }" { 1 2 3 a b c } str expect==
+	"a-long-symbol" 'a-long-symbol str expect==
+	"""hello there world""" "hello there world" str expect== 
+	"<null>" null str expect==
+	"<*void*>" void str expect==
+	;

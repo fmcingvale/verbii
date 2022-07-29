@@ -28,6 +28,28 @@
 			 0 str.hex "00000000" expect==
 	;
 	
+:V2 test-bit-not-and-or-xor
+	\ 11001001100010100110001011100110
+	\ 00110110011101011001110100011001
+
+	913677593 3381289702 bit-not expect==
+	
+	\ 01000000100001000000001100001000 1082393352
+	\ 10000100000001000010000100010001 2214863121
+	\ 11000100100001000010001100011001 3296994073
+	3296994073 1082393352 2214863121 bit-or expect==
+
+	\ 11110011000011111011111001111101 4077895293
+	\ 10001100111100001110000111000110 2364596678
+	\ 10000000000000001010000001000100 2147524676
+	2147524676 4077895293 2364596678 bit-and expect==
+
+	\ 11010011010010011010011100110010 3544819506
+	\ 00110110110011100100010011000110 919487686
+	\ 11100101100001111110001111110100 3850888180
+	3850888180 3544819506 919487686 bit-xor expect==
+	;
+
 :V2 test-str.bin 
 	"00000000.00010010.11010110.10000111" 1234567 str.bin expect==
 	"10100100.10001011.11010011.11001111" 2760627151 str.bin expect==
@@ -44,6 +66,19 @@
 	"000000fe" "fedcba98" parse-hex 24 bit-shr str.hex expect==
 	"0000000f" "fedcba98" parse-hex 28 bit-shr str.hex expect==
 	"00000000" "fedcba98" parse-hex 32 bit-shr str.hex expect==
+	
+	\ 11111000000000000000000000000000 4160749568
+	\ 00000011111000000000000000000000 65011712
+
+	65011712 4160749568 6 bit-shr expect==
+
+	\ 10000000000000000000000000000000
+	\ 2147483648
+	\ 1073741824
+	\ 536870912
+
+	1073741824  1 31 bit-shl 1 bit-shr expect==
+	536870912  1 31 bit-shl 2 bit-shr expect==
 	;
 	
 :V2 test-bit-shl
@@ -55,6 +90,16 @@
 	"ef000000" "98abcdef" parse-hex 24 bit-shl str.hex expect==
 	"f0000000" "98abcdef" parse-hex 28 bit-shl str.hex expect==
 	"00000000" "98abcdef" parse-hex 32 bit-shl str.hex expect==
+	
+	2147483648  1 31 bit-shl expect==
+	
+	\ 11000000000000000000000000000000 3221225472
+	\ 10000000000000000000000000000000 2147483648
+	\ 00000000000000000000000000000000 0
+
+	3221225472 3 30 bit-shl expect==
+	2147483648 3 31 bit-shl expect==
+	0 3 32 bit-shl expect==
 	;
 
 :V2 test-bit-rotl
@@ -129,6 +174,12 @@
 	-6 -403 62 // expect==
 	-31 -403 62 mod expect==
  
+	( floor )
+	3 3.21 floor expect==
+	4 4 floor expect==
+	-4 -3.21 floor expect==
+	-5 -5 floor expect==
+	
 	( this was a c++ & c# bug case with # > 32 bits ) 
 	5750699319 11501398638 2 /mod nip expect==
 	0 11501398638 2 /mod drop expect==
@@ -199,6 +250,28 @@
 	0 0 abs expect==
 	;
 	
+:V2 test-float-precision
+	@locals [ list ]
+	#1.2345678 #0.3456789 #8.8567843 3 make-list list!
+
+	4 f.setprec 
+	"[ 1.235 0.3457 8.857 ]" list str expect==
+
+	2 f.setprec
+	"[ 1.2 0.35 8.9 ]" list str expect==
+
+	1 f.setprec
+	"[ 1 0.3 9 ]" list str expect==
+	
+	\ set back to default
+	17 f.setprec
+	
+	\ make sure that worked ... make a power of 2 so MAYBE it will
+	\ be portable ...
+	"#5.9604644775390625e-08" 1 { 2 / } 24 repeat repr expect==
+	;
+	
+
 :V2 test-sin
 	\ 0, 90, 180, 270
 	0 0 sin expect==f 
@@ -252,22 +325,4 @@
 	-1.6460323971461603 0.1928134 log expect==f
 	;
 	
-(
-unittest-init
-
-test-parse-hex
-test-str.hex
-test-str.bin
-test-bit-shr
-test-bit-shl
-test-bit-rotl
-test-bit-low32
-test-basic-mathops
-test-sin
-test-cos
-test-sqrt 
-test-log 
-
-unittest-summary
-)
 

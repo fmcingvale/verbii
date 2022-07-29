@@ -90,6 +90,66 @@
 	-rot
 	"[ 10 20 30 40 ]" expect-stack
 	clear
+	\ pick is deprecated -- if you need pick, then using named args is likely much faster anyways
+	10 20 30 40 1 pick 
+	"[ 10 20 30 40 40 ]" expect-stack
+	5 ndrop
+	
+	10 20 30 40 3 pick 
+	"[ 10 20 30 40 20 ]" expect-stack
+	5 ndrop
+	;
+
+:V2 test-logical-ops 
+	true true and expectTrue
+	true false and expectFalse
+	false true and expectFalse
+	false false and expectFalse
+	
+	true true or expectTrue
+	true false or expectTrue
+	false true or expectTrue
+	false false or expectFalse
+	
+	true not expectFalse
+	false not expectTrue
+	;
+	
+:V2 test-locals
+	10 20 30 40
+	"[ 10 20 30 40 ]" expect-stack
+	>L 
+	>L 
+	>L 
+	>L 
+	"[ ]" expect-stack
+	
+	L>
+	"[ 10 ]" expect-stack
+	L>
+	"[ 10 20 ]" expect-stack
+	L>
+	"[ 10 20 30 ]" expect-stack
+	L>
+	"[ 10 20 30 40 ]" expect-stack
+	
+	4 ndrop
+	
+	10 20 30 40
+	>L 
+	>L 
+	>L 
+	>L 
+
+	111 LP set!
+	222 LP 1 + set!
+	333 LP 2 + set!
+	444 LP 3 + set!
+	L>
+	L>
+	L>
+	L>
+	"[ 111 222 333 444 ]" expect-stack 4 ndrop
 	;
 
 (	

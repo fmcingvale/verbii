@@ -1,0 +1,203 @@
+\ Unittests for functional routines, control structures and function/lambda defs
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+:V2 test-jumps
+	11 22 >>THREE @FIVE 55 66 >>SEVEN @THREE 33 44 <<FIVE @SEVEN 77 88
+	"[ 11 22 33 44 55 66 77 88 ]" expect-stack
+	8 ndrop \ i prefer ndrop to clear to make sure i'm keeping track of whats on the stack
+	
+	{ @ONE 11 22 >>THREE @NINE 99 return @THREE 33 44 >>FIVE @SEVEN 77 88 <<NINE @FIVE 55 66 <<SEVEN }
+	call
+	"[ 11 22 33 44 55 66 77 88 99 ]" expect-stack
+	9 ndrop
+	
+	\ repeated labels are OK since << >> makes them unambiguous
+	11 >>X @W 55 >>W @X 22 >>Y @Z 44 <<W @Y 33 <<Z @W 66 
+	"[ 11 22 33 44 55 66 ]" expect-stack
+	6 ndrop
+	;
+	
+:V2 test-if-forms
+	\ if
+	100 100 == if >>TRUE >>FALSE @TRUE 1234 >>END @FALSE 5678 @END
+	"[ 1234 ]" expect-stack drop
+	
+	200 200 == if >>TRUE 8888 >>END @TRUE 5678 @END
+	"[ 5678 ]" expect-stack drop
+	
+	100 300 == if >>TRUE >>FALSE @TRUE 9999 >>END @FALSE 8765 @END
+	"[ 8765 ]" expect-stack drop
+	
+	300 200 == if >>TRUE 4321 >>END @TRUE 9999 @END
+	"[ 4321 ]" expect-stack drop
+	
+	\ implementation note: only 'if' is a builtin word; the rest are library functions
+	
+	\ ifthen
+	10 20 == 
+		{ 777 } ifthen 888
+	
+	"[ 888 ]" expect-stack 1 ndrop
+	
+	20 20 == 
+		{ 777 } ifthen 888
+	
+	"[ 777 888 ]" expect-stack 2 ndrop
+		
+	\ ifelse
+	11 22 ==
+		{ 111 } { 222 } ifelse 333
+	"[ 222 333 ]" expect-stack 2 ndrop
+	
+	22 22 ==
+		{ 111 } { 222 } ifelse 333
+	"[ 111 333 ]" expect-stack 2 ndrop
+	
+	;
+
+\ show that forward references are fine
+: *ccc 11 *ddd 88 ;
+: *ddd 22 *eee 77 ;
+: *eee 33 *fff 66 ;
+: *fff 44 55 ;
+
+\ defs with and without explicit return	
+: *ggg 12 34 56 ;
+: *hhh 123 456 789 return 444 ;
+
+:V2 test-define-word
+	*ccc
+	"[ 11 22 33 44 55 66 77 88 ]" expect-stack 8 ndrop
+	
+	\ show that forward references work for dynamically generated code as well
+	[ 12 *nnn 21 ] '*mmm make-word
+	[ 34 *ooo 43 ] '*nnn make-word
+	[ 56 *ppp 65 ] '*ooo make-word
+	[ 78 87 ] '*ppp make-word
+	*mmm
+	"[ 12 34 56 78 87 65 43 21 ]" expect-stack 8 ndrop
+	
+	*ggg
+	"[ 12 34 56 ]" expect-stack 3 ndrop
+	
+	*hhh
+	"[ 123 456 789 ]" expect-stack 3 ndrop
+	
+	\ show that a word can be redefined after being deleted first
+	[ 111 222 333 ] '*yyy make-word
+	*yyy
+	"[ 111 222 333 ]" expect-stack 3 ndrop
+	
+	'*yyy ,,del 
+	
+	[ "aaa" "bbb" "ccc" ] '*yyy make-word
+	*yyy
+	"""[ "aaa" "bbb" "ccc" ]""" expect-stack 3 ndrop
+	
+	\ ensure that functions can't be modified by dumping to list
+	[ 11 22 33 44 ] '*foobar make-word
+	'*foobar .dumpword
+	
+	"[ [ 11 22 33 44 ] ]" expect-stack
+	
+	( ensure i can't modify word from dumped list )
+	2 777 put
+	
+	"[ [ 11 22 777 44 ] ]" expect-stack drop
+	
+	\ show that *foobar didn't change
+	'*foobar .dumpword
+	"[ [ 11 22 33 44 ] ]" expect-stack drop
+	
+	;
+	
+:V2 test-lambdas
+	\ stack->list->lambda->call
+	-172383
+		111 222 333 444 '+ '* '- 7 make-list
+		make-lambda
+		call
+	expect==
+	
+	[ aa 11 bb 22 cc ] make-lambda
+	"[ { 'aa 11 'bb 22 'cc } ]" expect-stack
+	unmake
+	"[ [ 'aa 11 'bb 22 'cc ] ]" expect-stack
+	unmake
+	"[ 'aa 11 'bb 22 'cc 5 ]" expect-stack 6 ndrop
+	
+	( -- simple example of passing lambdas to another function -- )
+	'saything ::{ ( lambda -- ) "The " 1 lambda call + " is " + 2 lambda call + } make-var
+
+	( called with cmd on TOS )
+	"The ocean is blue" ::{ ( cmd ) cmd 1 == if >>one "blue" return @one "ocean" } saything call expect==
+	"The grass is green" ::{ ( cmd ) cmd 1 == if >>one "green" return @one "grass" } saything call expect==
+	"The rose is red" ::{ ( cmd ) cmd 1 == if >>one "red" return @one "rose" } saything call expect==
+	;
+	
+:V2 test-any-all
+	\ tests of any? and all? )
+	"abcde" { "e" == } any? expectTrue
+	"01234" { "9" == } any? expectFalse
+	
+	[ 10 20 30 40 ] { 30 > } any? expectTrue
+	[ 10 20 30 40 ] { 0 <  } any? expectFalse
+
+	"mnopqr" { "m" >= } all? expectTrue
+	"mnopqr" { "r" <= } all? expectTrue
+
+	"mnolpqr" { "m" >= } all? expectFalse
+	"mnotpqr" { "r" <= } all? expectFalse
+	;
+
+:V2 test-repeat
+	@locals [ s ]
+	"" s!
+	::{ s "A" + s! } 8 repeat
+	"AAAAAAAA" s expect==
+	;
+
+:V2 test-for-each
+	@locals [ L ]
+	[ ] L!
+	[ 10 20 30 40 50 ]
+	::{ ( elem ) [ ] elem append L + L! } for-each
+	[ 50 40 30 20 10 ] L expect==
+	;
+	
+:V2 test-for-each-reverse
+	@locals [ s ]
+	"" s!
+	"ABCDEF"
+	::{ ( c ) s c + s! } for-each-reverse 
+	"FEDCBA" s expect==
+	;
+	
+:V2 test-for-each-i
+	@locals [ L ]
+	[ ] L!
+	"ABCD"
+	::{ ( i c )
+		L i 3 * append c append L!
+	} for-each-i 
+	[ 0 "A" 3 "B" 6 "C" 9 "D" ] L expect==
+	;
+	
+:V2 test-for-each-dict
+	@locals [ sum ]
+	0 sum!
+	[ [ "A" 13 ] [ "E" 71 ] [ "Z" 107 ] [ "D" 257 ] ] make-dict
+	::{ ( key val )
+		\ since iteration order isn't guaranteed, make a sum from (key,val) that doesn't depend on order
+		sum key ord val * + sum!
+	} for-each-dict
+	\ make expected value
+	"A" ord 13 *
+	"E" ord 71 *
+	"Z" ord 107 *
+	"D" ord 257 * + + +
+	sum expect==
+	;
+	
+		
