@@ -109,6 +109,8 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* rework init/compiler/boot to use named args style 
+
 * nested @[ ] lists not being expanded correctly:
 	: x @[ 1 2 @[ 111 222 333 ] ] ;
 	'x .dumpword
