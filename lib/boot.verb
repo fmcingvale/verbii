@@ -81,7 +81,7 @@
 
 \ load filename, respecting NOCACHE setting
 : load-file-maybe-cached ( filename -- )
-	NOCACHE ref if >>nocache
+	*_NOCACHE if >>nocache
 	\ do cached load
 	cached-compile-and-load
 	return
@@ -138,8 +138,8 @@
 	,,new-dict IMPORTED_MODULES set!
 
 	\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
-	var NOCACHE 1
-	false NOCACHE set!
+	\ var NOCACHE 1
+	\ false NOCACHE set!
 
 	\ args that get passed to repl (and on to other scripts after that)
 	var SCRIPT-ARGS 1
@@ -158,7 +158,7 @@
 		1 + <<parse-cmdline
 	@set-nocache ( i arg[i] )
 		drop
-		true NOCACHE set! 
+		\ true NOCACHE set! 
 		true *_NOCACHE! \ forward compat
 		1 + <<parse-cmdline
 	@got-dashdash ( i "--" )
