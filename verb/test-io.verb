@@ -1,0 +1,67 @@
+\ Test I/O functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+:V2 test-stream-reader
+	"""		   AB     C    DE   """ stream-reader-open-string
+	stream-reader-skip-whitespace
+	stream-reader-peek-char "A" expect==
+	stream-reader-next-char "A" expect==
+	stream-reader-peek-char "B" expect==
+	stream-reader-next-char "B" expect==
+	
+	stream-reader-skip-whitespace
+	stream-reader-peek-char "C" expect==
+	stream-reader-next-char "C" expect==
+	
+	stream-reader-skip-whitespace
+	stream-reader-peek-char "D" expect==
+	stream-reader-next-char "D" expect==
+	
+	stream-reader-skip-whitespace
+	stream-reader-peek-char "E" expect==
+	stream-reader-next-char "E" expect==
+	
+	stream-reader-skip-whitespace
+	stream-reader-peek-char void expect==
+	stream-reader-next-char void expect==
+	
+	drop
+	"""		   ABC     
+	DEF    
+	
+		HIJ   """ stream-reader-open-string
+		
+	stream-reader-peek-word "ABC" expect==
+	stream-reader-next-word "ABC" expect==
+	stream-reader-peek-word "DEF" expect==
+	stream-reader-next-word "DEF" expect==
+	stream-reader-peek-word "HIJ" expect==
+	stream-reader-next-word "HIJ" expect==
+	stream-reader-peek-word void expect==
+	stream-reader-next-word void expect==
+	
+	drop
+	
+	"Line 1
+Line 2
+
+Line 3
+Line 4" stream-reader-open-string
+
+	stream-reader-peek-line "Line 1" expect==
+	stream-reader-next-line "Line 1" expect==
+	stream-reader-peek-line "Line 2" expect==
+	stream-reader-next-line "Line 2" expect==
+	stream-reader-peek-line "" expect==
+	stream-reader-next-line "" expect==
+	stream-reader-peek-line "Line 3" expect==
+	stream-reader-next-line "Line 3" expect==
+	stream-reader-peek-line "Line 4" expect==
+	stream-reader-next-line "Line 4" expect==
+	stream-reader-peek-line void expect==
+	stream-reader-next-line void expect==
+	
+	drop
+	;
+	

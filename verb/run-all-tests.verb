@@ -18,6 +18,7 @@
 	"test-dictionaries"
 	"test-functional"
 	"test-hashing"
+	"test-io"
 	"test-lists"
 	"test-numeric"
 	"test-parsing"

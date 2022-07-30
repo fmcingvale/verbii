@@ -200,4 +200,91 @@
 	sum expect==
 	;
 	
+:V2 test-for-range
+	@locals [ L ]
+	[ ] L!
+	::{ ( i )
+		L i append L!
+	}
+	10 4 8 for-range
+	[ 10 14 18 22 26 30 34 38 ] L expect==
+	
+	[ ] L!
+	::{ ( i )
+		L i append L!
+	}
+	2.5 -0.5 10 for-range
+	[ 2.5 2.0 1.5 1.0 0.5 0 -0.5 -1.0 -1.5 -2.0 ] L expect==
+	;
+
+:V2 test-find
+	3
+	"zebfxt" { "f" == } find expect==
+	
+	void
+	"zebfxt" { "r" == } find expect==
+	
+	0
+	[ 8 4 -2 3 9 0 -4 14 1 5 ] { 8 == } find expect==
+	9
+	[ 8 4 -2 3 9 0 -4 14 1 5 ] { 5 == } find expect==
+	
+	\ make sure it finds first match
+	1
+	"udwpcnwdzn" { "d" == } find expect==
+	
+	4
+	[ 8 4 -2 3 9 0 -4 14 1 5 ] { 8 > } find expect==
+
+	;
+
+:V2 test-fold
+	"*a*b*c*d*"
+	
+		"abcd"
+		::{ ( accum c )
+			accum c + "*" +
+		} "*" fold 
 		
+	expect==
+
+	[ 5 15 6 18 7 21 8 24 ]
+	
+		[ 5 6 7 8 ]
+		::{ ( accum n )
+			accum n append n 3 * append
+		} [ ] fold 
+		
+	expect==
+	
+	;
+	
+:V2 test-map
+	"DEFG"
+		"ABCD" ::{ ( c ) c ord 3 + chr } map
+	expect==
+	
+	[ 15 25 35 45 ]
+		[ 10 20 30 40 ] ::{ ( n ) n 5 + } map
+	expect==
+	
+	\ contrived example to test with closure
+	@locals [ lettermap ]
+	[ [ "A" "Z" ] [ "B" "F" ] [ "C" "R" ] [ "D" "T" ] ] make-dict lettermap!
+	
+	"TZRF"
+		"DACB" ::{ ( c ) lettermap c get } map
+	expect==
+	;
+	
+:V2 test-filter
+	"zqvur"
+		"zhqpvuanr" ::{ ( c ) c "q" >= } filter
+	expect==
+	
+	[ 55 17 ]
+		[ 55 10 -14 8 17 1 -6 ] ::{ ( n ) n 10 > } filter
+	expect==
+	;
+	
+	
