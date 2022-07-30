@@ -10,7 +10,177 @@
 \      else compiler would never run when finding .b files.
 
 ( ------ boot ----------- )
+
+\ NOTE - only builtin words allowed here, at least in the functions
+\ that init the interpreter
+
+\ make a variable with a getter and setter:
+\	'name' gets data stored in var
+\	'name!' sets data stored in var
+:V2 make-var ( name initval )
+	@locals [ addr ]
+	1 alloc addr! \ alloc storage
+	initval addr set! \ save initval
 	
+	\ make:
+	\	name = get data @ addr
+	\	name! = set data @ addr
+	
+	\ make word: : NAME addr ref ;
+	addr 'ref 2 make-list name make-word
+	\ make word: : NAME! addr set! ;
+	addr 'set! 2 make-list name '! + make-word
+	;
+
+\ make a variable with only a getter so acts as a constant
+\	'name' gets data stored in var
+:V2 make-const ( name initval )
+	@locals [ addr ]
+	1 alloc addr! \ alloc storage
+	initval addr set! \ save initval
+	
+	\ make:
+	\	name = get data @ addr
+	
+	\ make word: : NAME addr ref ;
+	addr 'ref 2 make-list name make-word
+	;
+	
+\ safely run currently loaded __main__ and delete it
+\ ( -- )
+:V2 safe-run-and-delete-main
+	\ the __main__ I'm about to run might want to redefine __main__ itself 
+	\ (maybe it loads another module, etc.), so do a little trick: 
+	\ first dump __main__ to a list, delete __main__, then make the dumped
+	\ list into a lambda and run it
+	'__main__ .dumpword
+	'__main__ ,,del
+	make-lambda call
+	;
+	
+\ load .b file, run its __main__, then delete __main__
+:V2 deserialize-and-run ( filename -- )
+	filename deserialize
+	safe-run-and-delete-main
+	;
+	
+\ assumes interpreter has just started - get init & compiler loaded
+:V2 init-interpreter ( -- )
+
+	\ load precompiled init & compiler libraries
+	"../lib/init.verb.b" deserialize-and-run 
+	"../lib/compiler.verb.b" deserialize-and-run
+
+	\ load patches file -- .verb only for now, add caching later once this is working
+	
+	"../lib/patches.verb" file-read
+	\ compile & load words into interpreter
+	true set-allow-overwrite-words
+	compile-and-load-string
+	\ run main & delete
+	__main__ 
+	'__main__ ,,del
+	false set-allow-overwrite-words
+	;
+	
+\ load filename, respecting NOCACHE setting
+\ ( filename -- )
+:V2 load-file-maybe-cached
+	NOCACHE ref if >>nocache
+	\ do cached load
+	cached-compile-and-load
+	return
+
+	\ ignore any .b file - load source file and compile
+	@nocache
+		file-read
+		compile-and-load-string
+	;
+		
+\ load & import module from either name.verb or name.verb.b
+\ TODO:
+\	* define library paths & add search 
+\	* add way to let modules know they are being imported so they
+\	  shouldn't run their main code (unless it's required to init the module of course)
+\
+\ ( name -- )
+:V2 import
+	\ see if name has been imported already and don't import again
+	\ (NOTE this is declared below like the other vars since the parser can't handle
+	\ seeing it up here)
+	IMPORTED_MODULES ref over get void? not if >>already-imported
+	\ not yet imported - go ahead and mark as imported - if the below fails then 
+	\ the program will crash anyways
+	dup IMPORTED_MODULES ref swap true put drop
+	\ import module
+	".verb" +
+	dup file-exists? if >>good
+	"Unable to find file:" swap + error
+	@good
+		load-file-maybe-cached
+		\ module may need to init its own globals, etc., so run it
+		safe-run-and-delete-main
+		return
+	@already-imported ( name )
+		\ "ALREADY IMPORTED:" . dup . CR
+		drop
+	;
+	
+:V2 boot-main
+	\ first, must init interpreter for anything else to work
+	\ (no userwords are loaded yet .. no compiler, no init lib)
+	init-interpreter
+
+		\ "AT INIT INTERPRETER, STACK:" . .S CR
+
+	\ *VERY BAD VERBII STYLE HERE* ... out of necessity
+	\ (1) vars should not be declared inside a function
+	\		* since boot-main only runs once, it's ok here
+	\ (2) they are out of place .. see below
+
+	\ this belongs with 'import' but again it cannot be parsed sitting up there
+	var IMPORTED_MODULES 1
+	,,new-dict IMPORTED_MODULES set!
+
+	\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
+	var NOCACHE 1
+	false NOCACHE set!
+
+	\ args that get passed to repl (and on to other scripts after that)
+	var SCRIPT-ARGS 1
+
+	>L ( L1 = cmdline args -- pushed from host )
+	[ ] >L ( L0 = new script args being built )
+	0 
+	@parse-cmdline ( i )
+		dup LP 1 + ref length >= if >>done 
+		LP 1 + ref over get ( i arg[i] )
+			\ "BOOT ARG:" . .S CR
+		dup "--" == if >>got-dashdash \ ignore everything after --
+		dup "-nocache" == if >>set-nocache
+		\ keep other args
+		LP ref swap append LP set!
+		1 + <<parse-cmdline
+	@set-nocache ( i arg[i] )
+		drop
+		true NOCACHE set! 1 + <<parse-cmdline
+	@got-dashdash ( i "--" )
+		drop
+		LP 1 + ref swap -1 slice LP ref swap + LP set! >>end
+	@done ( i )
+		drop
+	@end
+	L> SCRIPT-ARGS set!
+	LP 1 + LP! \ drop cmdline-args from locals
+
+		\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
+
+	"../lib/repl.verb" load-file-maybe-cached 
+	safe-run-and-delete-main
+
+	repl-main
+	;
+
 ( ------ init ----------- )
 
 ( ------ compiler ------- )
