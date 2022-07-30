@@ -80,18 +80,20 @@
 '*_NOCACHE false make-var
 
 \ load filename, respecting NOCACHE setting
-: load-file-maybe-cached ( filename -- )
+:V2 load-file-maybe-cached ( filename -- )
 	*_NOCACHE if >>nocache
 	\ do cached load
-	cached-compile-and-load
+	filename cached-compile-and-load
 	return
 
 	\ ignore any .b file - load source file and compile
 	@nocache
-		file-read
+		filename file-read
 		compile-and-load-string
 		;
 	
+'*_IMPORTED-MODULES ,,new-dict make-var
+
 \ load & import module from either name.verb or name.verb.b
 \ TODO:
 \	* define library paths & add search 
@@ -101,10 +103,10 @@
 	\ see if name has been imported already and don't import again
 	\ (NOTE this is declared below like the other vars since the parser can't handle
 	\ seeing it up here)
-	IMPORTED_MODULES ref over get void? not if >>already-imported
+	*_IMPORTED-MODULES over get void? not if >>already-imported
 	\ not yet imported - go ahead and mark as imported - if the below fails then 
 	\ the program will crash anyways
-	dup IMPORTED_MODULES ref swap true put drop
+	dup *_IMPORTED-MODULES swap true put drop
 	\ import module
 	".verb" +
 	dup file-exists? if >>good
