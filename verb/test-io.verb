@@ -63,5 +63,22 @@ Line 4" stream-reader-open-string
 	stream-reader-next-line void expect==
 	
 	drop
+	
+	@locals [ pos ]
+	"ABCDE" stream-reader-open-string
+	stream-reader-next-char "A" expect==
+	stream-reader-next-char "B" expect==
+	stream-reader-tell pos!
+	stream-reader-next-char "C" expect==
+	stream-reader-next-char "D" expect==
+	stream-reader-next-char "E" expect==
+	stream-reader-next-char void expect==
+	pos stream-reader-seek
+	stream-reader-next-char "C" expect==
+	stream-reader-next-char "D" expect==
+	stream-reader-next-char "E" expect==
+	stream-reader-next-char void expect==
+	
+	drop
 	;
 	

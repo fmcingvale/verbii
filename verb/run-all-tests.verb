@@ -15,6 +15,7 @@
 
 \ list all the test modules
 'ALL-TEST-MODULES [
+	"test-compiler"
 	"test-dictionaries"
 	"test-functional"
 	"test-hashing"

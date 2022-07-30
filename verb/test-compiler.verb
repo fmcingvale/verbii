@@ -1,0 +1,103 @@
+\ Test compiler functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+:V2 test-digit?
+	"0" digit? expectTrue
+	"5" digit? expectTrue
+	"0" ord 1 - chr digit? expectFalse
+	"9" ord 1 + chr digit? expectFalse
+	;
+	
+:V2 test-any-digits?
+	"abc3de" any-digits? expectTrue
+	"3abc" any-digits? expectTrue
+	"abc6" any-digits? expectTrue
+	"7" any-digits? expectTrue
+	
+	"abcde" any-digits? expectFalse
+	"abc" any-digits? expectFalse
+	"a" any-digits? expectFalse
+	"" any-digits? expectFalse
+	;
+	
+:V2 test-ltrim-char
+	"abc" "*abc" "*" ltrim-char expect==
+	"abc" "abc" "*" ltrim-char expect==
+	
+	"" "*" "*" ltrim-char expect==
+	"" "" "*" ltrim-char expect==
+	;
+	
+:V2 test-ltrim-sign
+	"123" "+123" ltrim-sign expect==
+	"+123" "++123" ltrim-sign expect==
+	"123" "-123" ltrim-sign expect==
+	"-123" "--123" ltrim-sign expect==
+	"123" "123" ltrim-sign expect==
+	"" "" ltrim-sign expect==
+	"" "+" ltrim-sign expect==
+	"" "-" ltrim-sign expect==
+	;
+
+:V2 test-ltrim-digits
+	"abc" "123abc" ltrim-digits expect==
+	"" "123" ltrim-digits expect==
+	"abc" "abc" ltrim-digits expect==
+	"" "" ltrim-digits expect==
+	;
+	
+:V2 test-int-string?
+	"123" int-string? expectTrue
+	"+123" int-string? expectTrue
+	"-123" int-string? expectTrue
+	"3" int-string? expectTrue
+	"+3" int-string? expectTrue
+	"-3" int-string? expectTrue
+	
+	"123a" int-string? expectFalse
+	"-123a" int-string? expectFalse
+	"+123a" int-string? expectFalse
+	"+123.4" int-string? expectFalse
+	"-123.4" int-string? expectFalse
+	"123.4" int-string? expectFalse
+	;
+	
+:V2 test-float-string?
+	"123" float-string? expectTrue
+	"123." float-string? expectTrue
+	"123.5" float-string? expectTrue
+	"123.567" float-string? expectTrue
+	"123.567" float-string? expectTrue
+	"123e6" float-string? expectTrue
+	"123e-5" float-string? expectTrue
+	"123.456e-5" float-string? expectTrue
+	
+	"+123" float-string? expectTrue
+	"+123." float-string? expectTrue
+	"+123.5" float-string? expectTrue
+	"+123.567" float-string? expectTrue
+	"+123.567" float-string? expectTrue
+	"+123e6" float-string? expectTrue
+	"+123e-5" float-string? expectTrue
+	"+123.456e-5" float-string? expectTrue
+	
+	"-123" float-string? expectTrue
+	"-123." float-string? expectTrue
+	"-123.5" float-string? expectTrue
+	"-123.567" float-string? expectTrue
+	"-123.567" float-string? expectTrue
+	"-123e6" float-string? expectTrue
+	"-123e-5" float-string? expectTrue
+	"-123.456e-5" float-string? expectTrue
+	
+	"+123z" float-string? expectFalse
+	"+123.z" float-string? expectFalse
+	"+123.5z" float-string? expectFalse
+	"+123.56z7" float-string? expectFalse
+	"+12z3.567" float-string? expectFalse
+	"+123ez6" float-string? expectFalse
+	"+123ze-5" float-string? expectFalse
+	"+123.45z6e-5" float-string? expectFalse
+	;
+	
