@@ -103,15 +103,17 @@
 \	* add way to let modules know they are being imported so they
 \	  shouldn't run their main code (unless it's required to init the module of course)
 \
+'*_IMPORTED_MODULES ,,new-dict make-var
+ 
 \ ( name -- )
 :V2 import
 	\ see if name has been imported already and don't import again
 	\ (NOTE this is declared below like the other vars since the parser can't handle
 	\ seeing it up here)
-	IMPORTED_MODULES ref over get void? not if >>already-imported
+	*_IMPORTED_MODULES over get void? not if >>already-imported
 	\ not yet imported - go ahead and mark as imported - if the below fails then 
 	\ the program will crash anyways
-	dup IMPORTED_MODULES ref swap true put drop
+	dup *_IMPORTED_MODULES swap true put drop
 	\ import module
 	".verb" +
 	dup file-exists? if >>good
@@ -139,8 +141,8 @@
 	\ (2) they are out of place .. see below
 
 	\ this belongs with 'import' but again it cannot be parsed sitting up there
-	var IMPORTED_MODULES 1
-	,,new-dict IMPORTED_MODULES set!
+	\ var *_IMPORTED_MODULES 1
+	\ ,,new-dict *_IMPORTED_MODULES set!
 
 	\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
 	var NOCACHE 1
