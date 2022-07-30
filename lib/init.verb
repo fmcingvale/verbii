@@ -355,7 +355,7 @@
 \ ========================================================================
 
 \ call func NR times -- does not touch stack; func can use stack in any way
-: repeat @( func NR -- )
+:V2 repeat ( func NR -- )
 	\ lambda is allowed to use stack, but not locals, so store my
 	\ parameters in locals
 	@loop
@@ -374,7 +374,7 @@
 \	*NOTE* lambda CANNOT rely on the state of the stack or locals -- bind with state if 
 \	data is needed other than the passed elements
 \
-: for-each @( seq func -- )
+:V2 for-each ( seq func -- )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -388,7 +388,7 @@
 \
 \	for-each-reverse -- same as for-each, but starts at the end
 \
-: for-each-reverse @( seq func -- )
+:V2 for-each-reverse ( seq func -- )
 	@locals [ i ]
 	seq length 1 - i!
 	@loop
@@ -405,7 +405,7 @@
 \ *NOTE* lambda CANNOT rely on the state of the stack or locals -- bind with state if 
 \ data is needed other than the passed ( i elem )
 \
-: for-each-i @( seq func -- )
+:V2 for-each-i ( seq func -- )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -417,7 +417,7 @@
 	
 \ variant of for-each that calls func with ( key val )
 \ NOTE: iteration order is not guaranteed across platforms
-: for-each-dict @( dict func -- )
+:V2 for-each-dict ( dict func -- )
 	@locals [ i keylist ]
 	dict keys keylist!
 	0 i!
@@ -431,7 +431,7 @@
 \ for i=start .. start+incr*(count-1), call fn with args ( i )
 \
 \ note: count is used instead of an end value to simplify boundary conditions
-: for-range @( fn start incr count )
+:V2 for-range ( fn start incr count )
 	@locals [ i ]
 	
 	0 i!
@@ -446,7 +446,7 @@
 	;
 	
 \ find index of first item in sequence that satisfies test or void if none 
-: find @( seq test -- index )
+:V2 find ( seq test -- index )
 	0 index!
 	@loop
 		index seq length >= if >>not-found
@@ -467,7 +467,7 @@
 \		acc = func(acc, seq[1])
 \		.
 \		acc = func(acc, seq[n-1])
-: fold @( seq func init -- accum )
+:V2 fold ( seq func init -- accum )
 	@locals [ i ]
 	init accum!
 	0 i!
@@ -478,11 +478,11 @@
 	@done
 		accum
 	;
-
+	
 \ call func for each item of list as:
 \	( list[i] -- out )
 \ make a newlist from the 'out' values
-: map-list @( list func -- newlist )
+:V2 map-list ( list func -- newlist )
 	@locals [ i ]
 	0 i!
 	[ ] newlist!
@@ -498,7 +498,7 @@
 \ call func for each char of string as:
 \	( str[i] -- out )
 \ make a newlist from the 'out' values
-: map-string @( str func -- newstr )
+:V2 map-string ( str func -- newstr )
 	@locals [ i ]
 	0 i!
 	"" newstr!
@@ -517,7 +517,7 @@
 \ calls func as:
 \	: func ( elem -- new-elem )
 \
-: map @( seq func -- newseq )
+:V2 map ( seq func -- newseq )
 	seq list? if >>list 
 	seq string? if >>string 
 	"Bad sequence in map:" seq str + error
@@ -526,7 +526,7 @@
 	@string seq func map-string return
 	;
 
-: filter-list @( list func -- truelist )
+:V2 filter-list ( list func -- truelist )
 	@locals [ i ]
 	[ ] truelist!
 	0 i!
@@ -540,7 +540,7 @@
 		truelist
 	;
 
-: filter-string @( str func -- truestring )
+:V2 filter-string ( str func -- truestring )
 	@locals [ i ]
 	"" truestring!
 	0 i!
@@ -559,7 +559,8 @@
 \
 \ calls func with elem on top of stack; func must leave true or false on stack
 \
-: filter ( sequence func -- new-sequence )
+\ ( sequence func -- new-sequence )
+:V2 filter
 	over list? if >>list 
 	over string? if >>string
 	drop "Bad sequence in filter: " swap str + error
@@ -572,14 +573,15 @@
 \ take a list of tuples and makes a dictionary:
 \	[ [ "foo" 123 ] [ "bar" 678 ] ] make-dict
 \
-: make-dict ( list-of-pairs -- dict )
+\ ( list-of-pairs -- dict )
+:V2 make-dict 
 	\ called as: ( dict [ key val ] )
 	{ unmake drop put } ,,new-dict fold
 	;
 
 \ ( message -- ) ;  print a debug message along with the stack
-: debug . .S CR ;
-
+:V2 debug . .S CR ;
+	
 \ -------------------------------------------------------------------------
 \
 \ Stream reader
@@ -587,13 +589,15 @@
 \ -------------------------------------------------------------------------
 
 \ create a new stream for reading from string
-: stream-reader-open-string ( string -- stream )
-	\ state = [ TEXT POSITION ]
-	0 2 make-list
+\ ( string -- stream )
+:V2 stream-reader-open-string 
+	\ state = [ #stream TEXT POSITION ]
+	'#stream swap 0 3 make-list
 	;
 
 \ create a new stream for reading from file
-: stream-reader-open-file ( filename -- stream )
+\ ( filename -- stream )
+:V2 stream-reader-open-file
 	file-read stream-reader-open-string
 	;
 
@@ -602,43 +606,44 @@
 \ and also usually avoids drops here
 
 \ peek next char [as string] from stream or void on eof
-: stream-reader-peek-char ( stream -- stream c )
-	\ POS >= length?
-	dup 1 get over 0 get length >= if >>eof
-	\ POS is OK
-	dup 0 get over 1 get get return
-	
-	@eof void
+
+:V2 stream-reader-peek-char ( stream -- stream c )
+	@locals [ savepos c ]
+	stream 2 get savepos!
+	stream stream-reader-next-char c!
+	2 savepos put ( stream ) c 
 	;
 
 \ read next char [as string] from stream or void on eof
-: stream-reader-next-char ( stream -- stream c )
+:V2 stream-reader-next-char ( stream -- stream c )
+	@locals [ c ]
 	\ POS >= length?
-	dup 1 get over 0 get length >= if >>eof
+	stream 2 get stream 1 get length >= if >>eof
 	\ POS is OK, get char
-	dup 0 get over 1 get get ( stream c )
+	stream 1 get stream 2 get get c!
 	\ ++POS
-	swap dup 1 get 1 + 1 swap put ( c stream )
-	swap return 
-
-	@eof void
+	stream dup 2 get 1 + 2 swap put \ leave stream on TOS
+	c return
+	
+	@eof stream void
 	;
 
 \ skip all whitespace from current position
-: stream-reader-skip-whitespace ( stream -- stream )
+:V2 stream-reader-skip-whitespace ( stream -- stream )
+	@locals [ c ]
+		stream
 	@loop
-		stream-reader-peek-char
-		dup void? if >>done
-		dup whitespace? not if >>done
-		drop 
+		stream-reader-peek-char c! ( stream )
+		c void? if >>done
+		c whitespace? not if >>done
 		stream-reader-next-char drop <<loop
 	@done
-		drop
 		;
 
 \ read word (non-whitespace chunk) from current position,
 \ skipping any leading whitespace. returns void if no more words.
-: stream-reader-next-word ( stream -- stream word )
+\ ( stream -- stream word )
+:V2 stream-reader-next-word 
 	stream-reader-skip-whitespace
 	"" ( stream word )
 	@loop ( stream word )
@@ -654,10 +659,19 @@
 		drop void
 	;
 
+:V2 stream-reader-peek-word ( stream -- stream word )
+	@locals [ savepos ]
+	stream 2 get savepos!
+	stream stream-reader-next-word word!
+	\ reset stream back to original position
+	2 savepos put word
+	;
+
 \ get next line from reader or void
 \ discards any \r or \n line ending so an empty line will return ""
 \ returns void if no more lines
-: stream-reader-next-line ( stream -- stream line )
+\ ( stream -- stream line )
+:V2 stream-reader-next-line
 	""
 	@loop ( stream s )
 		\ "@loop:" . .S CR
@@ -694,10 +708,11 @@
 		drop void
 		;
 		
-: stream-reader-peek-line @( stream -- stream' line )
+:V2 stream-reader-peek-line ( stream -- stream line )
 	@locals [ savepos ]
-	stream 1 get savepos!
+	stream 2 get savepos!
 	stream stream-reader-next-line line!
 	\ reset stream back to start of line
-	1 savepos put line
+	2 savepos put line
 	;
+	
