@@ -609,6 +609,8 @@ string Object::fmtDisplay() const {
 				" :: " + data.closure->state.fmtDisplay() + ">";
 		case TYPE_BOUND_LAMBDA:
 			return "<bound " + fmtDisplayObjList(data.boundLambda->objlist, "{", "}") + ">";
+		// *IMPORTANT* code is allowed to rely on being able to call 'str' on either a string or
+		// symbol and get a plain string
 		case TYPE_STRING: return string(data.str);
 		case TYPE_SYMBOL: return string(data.str);
 		case TYPE_LIST: return fmtDisplayObjList(data.objlist, "[", "]");
