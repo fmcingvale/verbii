@@ -115,14 +115,8 @@ y @already-imported
 y drop
 y return
 W boot-main
-L 90
+L 84
 y init-interpreter
-y 'IMPORTED_MODULES
-i 1
-y ,,var
-y ,,new-dict
-y IMPORTED_MODULES
-y set!
 y 'SCRIPT-ARGS
 i 1
 y ,,var

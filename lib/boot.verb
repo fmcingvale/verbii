@@ -136,8 +136,8 @@
 	\ (2) they are out of place .. see below
 
 	\ this belongs with 'import' but again it cannot be parsed sitting up there
-	var IMPORTED_MODULES 1
-	,,new-dict IMPORTED_MODULES set!
+	\ var IMPORTED_MODULES 1
+	\ ,,new-dict IMPORTED_MODULES set!
 
 	\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
 	\ var NOCACHE 1
