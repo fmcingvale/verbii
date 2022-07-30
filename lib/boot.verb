@@ -11,7 +11,7 @@
 \ make a variable with a getter and setter:
 \	'name' gets data stored in var
 \	'name!' sets data stored in var
-: make-var @( name initval )
+:V2 make-var ( name initval )
 	@locals [ addr ]
 	1 alloc addr! \ alloc storage
 	initval addr set! \ save initval
@@ -25,10 +25,10 @@
 	\ make word: : NAME! addr set! ;
 	addr 'set! 2 make-list name '! + make-word
 	;
-	
+
 \ make a variable with only a getter so acts as a constant
 \	'name' gets data stored in var
-: make-const @( name initval )
+:V2 make-const ( name initval )
 	@locals [ addr ]
 	1 alloc addr! \ alloc storage
 	initval addr set! \ save initval
@@ -41,24 +41,25 @@
 	;
 	
 \ safely run currently loaded __main__ and delete it
-: safe-run-and-delete-main ( -- )
+\ ( -- )
+:V2 safe-run-and-delete-main
 	\ the __main__ I'm about to run might want to redefine __main__ itself 
 	\ (maybe it loads another module, etc.), so do a little trick: 
 	\ first dump __main__ to a list, delete __main__, then make the dumped
 	\ list into a lambda and run it
 	'__main__ .dumpword
-	del __main__
+	'__main__ ,,del
 	make-lambda call
 	;
-
+	
 \ load .b file, run its __main__, then delete __main__
-: deserialize-and-run ( filename -- )
-	deserialize
+:V2 deserialize-and-run ( filename -- )
+	filename deserialize
 	safe-run-and-delete-main
 	;
 	
 \ assumes interpreter has just started - get init & compiler loaded
-: init-interpreter ( -- )
+:V2 init-interpreter ( -- )
 
 	\ load precompiled init & compiler libraries
 	"../lib/init.verb.b" deserialize-and-run 
@@ -75,7 +76,7 @@
 	'__main__ ,,del
 	false set-allow-overwrite-words
 	;
-	
+
 \ load filename, respecting NOCACHE setting
 : load-file-maybe-cached ( filename -- )
 	NOCACHE ref if >>nocache
