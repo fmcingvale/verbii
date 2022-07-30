@@ -83,10 +83,12 @@
 	false set-allow-overwrite-words
 	;
 	
+'*_NOCACHE false make-var
+
 \ load filename, respecting NOCACHE setting
 \ ( filename -- )
 :V2 load-file-maybe-cached
-	NOCACHE ref if >>nocache
+	*_NOCACHE if >>nocache
 	\ do cached load
 	cached-compile-and-load
 	return
@@ -145,8 +147,8 @@
 	\ ,,new-dict *_IMPORTED_MODULES set!
 
 	\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
-	var NOCACHE 1
-	false NOCACHE set!
+	\ var NOCACHE 1
+	\ false NOCACHE set!
 
 	\ args that get passed to repl (and on to other scripts after that)
 	var SCRIPT-ARGS 1
@@ -165,7 +167,7 @@
 		1 + <<parse-cmdline
 	@set-nocache ( i arg[i] )
 		drop
-		true NOCACHE set! 1 + <<parse-cmdline
+		true *_NOCACHE! 1 + <<parse-cmdline
 	@got-dashdash ( i "--" )
 		drop
 		LP 1 + ref swap -1 slice LP ref swap + LP set! >>end
