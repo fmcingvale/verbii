@@ -77,6 +77,8 @@
 	false set-allow-overwrite-words
 	;
 
+'*_NOCACHE false make-var
+
 \ load filename, respecting NOCACHE setting
 : load-file-maybe-cached ( filename -- )
 	NOCACHE ref if >>nocache
@@ -117,6 +119,8 @@
 		drop
 	;
 
+'*_SCRIPT-ARGS [ ] make-var
+
 : boot-main
 	\ first, must init interpreter for anything else to work
 	\ (no userwords are loaded yet .. no compiler, no init lib)
@@ -154,7 +158,9 @@
 		1 + <<parse-cmdline
 	@set-nocache ( i arg[i] )
 		drop
-		true NOCACHE set! 1 + <<parse-cmdline
+		true NOCACHE set! 
+		true *_NOCACHE! \ forward compat
+		1 + <<parse-cmdline
 	@got-dashdash ( i "--" )
 		drop
 		LP 1 + ref swap -1 slice LP ref swap + LP set! >>end
@@ -164,6 +170,8 @@
 	L> SCRIPT-ARGS set!
 	LP 1 + LP! \ drop cmdline-args from locals
 
+	SCRIPT-ARGS ref *_SCRIPT-ARGS! \ forward compat
+	
 		\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
 
 	"../lib/repl.verb" load-file-maybe-cached 
@@ -171,7 +179,6 @@
 
 	repl-main
 	;
-
 
 \ all code is in words except for this so that anything above can be adjusted via patches.verb
 boot-main
