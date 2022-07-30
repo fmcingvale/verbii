@@ -9,6 +9,9 @@
 
 \ **TODO** change this to use the stream interface
 
+\ ** GENERAL NOTE ** I've converted these to v2 format, but did not rewrite them
+\ to use named vars so they are mostly all stack oriented. will redo at a later step.
+
 ( --- reader interface, used by compiler, but may be generally useful
 	usage:
 		" ... " reader-open-string
@@ -18,20 +21,22 @@
 		then reader-next until it returns null
 )
 
-var READER_TEXT 1 ( string )
-var READER_TEXT_LEN 1
-var READER_POS 1
+\ renaming these so i can replace them with make-vars on the next pass
+
+var *_READER_TEXT 1 ( string )
+var *_READER_TEXT_LEN 1
+var *_READER_POS 1
 
 ( note - the reader-open-* functions discard any current input )
 
-: reader-open-string ( string )
-	READER_TEXT set!
-	READER_TEXT ref length READER_TEXT_LEN set!
-	0 READER_POS set!
+:V2 reader-open-string ( string )
+	string *_READER_TEXT set!
+	*_READER_TEXT ref length *_READER_TEXT_LEN set!
+	0 *_READER_POS set!
 	;
 
-: reader-open-file ( filename )
-	file-read reader-open-string
+:V2 reader-open-file ( filename )
+	filename file-read reader-open-string
 	;
 
 \
@@ -40,24 +45,27 @@ var READER_POS 1
 \ using void throughout I think will be less confusing in the long run
 \
 
-: reader-peek-char ( -- char; get next char [string] from reader without advancing stream )
-	READER_POS ref READER_TEXT_LEN ref >= if >>eof
-	READER_TEXT ref READER_POS ref get ( char )
+\ get next char [string] from reader without advancing stream )
+:V2 reader-peek-char ( -- char )
+	*_READER_POS ref *_READER_TEXT_LEN ref >= if >>eof
+	*_READER_TEXT ref *_READER_POS ref get ( char )
 	return
 	@eof 
 		void \ return void on eof
 	;
 
-: reader-next-char ( -- char; get next char [string] from reader stream or void on eof )
-	READER_POS ref READER_TEXT_LEN ref >= if >>eof
-	READER_TEXT ref READER_POS ref get ( char )
-	READER_POS ref 1 + READER_POS set! ( char; ++pos )
+\ get next char [string] from reader stream or void on eof )
+:V2 reader-next-char ( -- char )
+	*_READER_POS ref *_READER_TEXT_LEN ref >= if >>eof
+	*_READER_TEXT ref *_READER_POS ref get ( char )
+	*_READER_POS ref 1 + *_READER_POS set! ( char; ++pos )
 	return
 	@eof
 		void
 	;
 
-: reader-next-chunk ( -- next string of either all whitespace or non-whitespace )
+\ get next string of either all whitespace -OR- non-whitespace
+:V2 reader-next-chunk ( -- chunk )
 		\ "reader-next-chunk" . CR
 	"" ( string )
 	\ see what next chunk starts with ...
@@ -84,8 +92,9 @@ var READER_POS 1
 	@drop-return ( string char )
 		drop return
 	;
-
-: reader-next ( -- symbol ; get next word from reader stream, or void on eof )
+	
+\ get next non-whitespace chunk from reader stream, or void on eof
+:V2 reader-next ( -- symbol )
 	"" ( word )
 	@skipws ( skip leading whitespace )
 		reader-peek-char
@@ -119,95 +128,101 @@ var READER_POS 1
 	;
 
 \ same as reader-next but doesn't change input stream position
-: reader-peek-next ( -- symbol ) 
+:V2 reader-peek-next ( -- symbol ) 
 	@locals [ pos sym ]
-	READER_POS ref pos!
+	*_READER_POS ref pos!
 	reader-next sym!
-	pos READER_POS set!
+	pos *_READER_POS set!
 	sym
 	;
 	
-: digit? ( string|symbol -- true|false; is single char a digit? )
-	dup string? if >>string
-		dup '0 < if >>notdigit
-		dup '9 > if >>notdigit
-		drop true return  ( symbol match )
+\ is single char (string|symbol) a digit?
+:V2 digit? ( char -- result )
+	char string? if >>string
+		char '0 < if >>notdigit
+		char '9 > if >>notdigit
+		true return  ( symbol match )
 	@string
-		dup "0" < if >>notdigit
-		dup "9" > if >>notdigit
-		drop true return
-	@notdigit drop false
+		char "0" < if >>notdigit
+		char "9" > if >>notdigit
+		true return
+	@notdigit false
 	;
 
-: any-digits? ( string|symbol -- true|false; does string/symbol contain ANY digits? )
-	{ digit? } any?
+\ does string|symbol contain ANY digits?
+:V2 any-digits? ( string-or-symbol -- result )
+	string-or-symbol { digit? } any?
 	;
 
-: ltrim-char ( string char -- if char (single-char string) is at front of string, remove it )
-	over length 0 != if >>do-trim
-	drop return \ 0-length string, nothing to do
-	@do-trim
-	>L 0 +get L> == if >>trim
-	return
-	@trim 1 -1 slice
+\ if char is at start of string, remove it
+:V2 ltrim-char ( string char -- string )
+	string 0 get char == if >>trim
+		string return
+	@trim 
+		string 1 -1 slice
 	;
 
-: ltrim-sign ( string -- string with leading "+" or "-" removed [max 1] )
-	dup length 0 != if >>do-trim
-	return \ 0-length string
-	@do-trim
-	0 +get "+" == if >>trim
-	0 +get "-" == if >>trim
-	return
-	@trim 1 -1 slice
+\ remove "+" or "-" from start of string (max 1 removal)
+:V2 ltrim-sign ( string -- string )
+	string 0 get "+" == if >>trim
+	string 0 get "-" == if >>trim
+		string return \ no change
+	@trim
+		string 1 -1 slice \ remove first char
 	;
 
-: ltrim-digits ( string -- string with leftmost digits removed )
+\ remove all leftmost digits from string
+:V2 ltrim-digits ( string -- string )
 	@loop
-		dup length 0 == if >>done
-		0 +get digit? not if >>done
-		1 -1 slice <<loop
+		string 0 get void? if >>done \ empty string
+		string 0 get digit? not if >>done
+		string 1 -1 slice string! <<loop
 	@done
+		string
 	;
 
-: int-string? ( string -- true|false if string can be parsed as integer )
-	dup any-digits? not if >>nodigits ( must have digits, not just +/- )
-	ltrim-sign
-	ltrim-digits
-	length 0 == return
+\ true|false if string can be parsed as integer (i.e. a call to parse-int would succeed)
+:V2 int-string? ( string -- result )
+	string any-digits? not if >>nodigits ( must have digits, not just +/- )
+	string ltrim-sign
+		ltrim-digits
+		length 0 == return
 	@nodigits 
-		drop false
+		false
 	;
 
-: int-symbol? ( like above but for symbols )
-	unmake make-string 
-	int-string?
+\ like above but for symbols
+:V2 int-symbol? ( sym )
+	sym str int-string?
 	;
 
-: float-string? ( string -- true|false if string can be parsed as float )
-	( NOTE - this will ALSO match integers, so use int-string? first to rule those out )
-	dup any-digits? not if >>nodigits ( must have digits, not just +/-/./e )
-	ltrim-sign
-	ltrim-digits
-	"." ltrim-char
-	ltrim-digits
-	"e" ltrim-char
-	"E" ltrim-char
-	ltrim-sign
-	ltrim-digits
-	length 0 == return
+\ true|false if string can be parsed as float (i.e. a call to parse-float would succeed)
+:V2 float-string? ( string -- result )
+	\ NOTE - this will ALSO match integers, so use int-string? first to rule those out
+	string any-digits? not if >>nodigits ( must have digits, not just +/-/./e )
+	string ltrim-sign
+		ltrim-digits
+		"." ltrim-char
+		ltrim-digits
+		"e" ltrim-char
+		"E" ltrim-char
+		ltrim-sign
+		ltrim-digits
+		length 0 == return
 	@nodigits 
-	drop false
+		false
 	;
 	
-: float-symbol? ( as above but for symbols )
-	unmake make-string float-string?
+\ as above but for symbols ... caller could also just unconditionally call 'str' on
+\ the argument before passing it
+:V2 float-symbol? 
+	str float-string?
 	;
 
 \ add each name to dict with value set to size of dict at time name was added
 \ (i.e. adding [ "a" "b" "c" ] to an empty dict gives a=0, b=1, c=2)
 \ note: symbols are accepted and converted to strings
-: dict-add-indexed-names @( dict names -- dict-out )
+:V2 dict-add-indexed-names ( dict names -- dict-out )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -219,11 +234,13 @@ var READER_POS 1
 	;
 	
 ( make literal """ which is not parseable itself )
-var TRIPLEQUOTE 1
-34 34 34 3 make-symbol TRIPLEQUOTE set!
+
+\ **RENAMED SO I CAN CHANGE TO make-var on next pass **
+var *_TRIPLEQUOTE 1
+34 34 34 3 make-symbol *_TRIPLEQUOTE set!
 
 \ parse next word from input into runnable object
-: syntax-next ( -- obj )
+:V2 syntax-next ( -- obj )
 	reader-next
 		 \ "syntax-next:" . dup . CR
 	dup void? if >>void
@@ -247,7 +264,7 @@ var TRIPLEQUOTE 1
 	dup 'null == if >>null-literal
 
 	( look for triple-quoted string first )
-	dup 0 3 slice TRIPLEQUOTE ref == if >>triplestring
+	dup 0 3 slice *_TRIPLEQUOTE ref == if >>triplestring
 	( now single quoted string )
 	dup 0 get '" == if >>string ( "... )
 	\ test for correct format before passing to parse-int or parse-float since those functions
@@ -303,7 +320,9 @@ var TRIPLEQUOTE 1
 	
 \ if list is [ ,,inline obj1 .. objN ] then push obj1 .. objN to the stack
 \ and remove of list. else leave list alone.
-: flatten-if-inline ( list -- list or items )
+\
+\ ( list -- list or items )
+:V2 flatten-if-inline
 	dup length 0 == if >>done \ empty list, leave on stack
 	dup 0 get ',,inline == if >>flatten
 	return \ not ,,inline, leave on stack
@@ -314,7 +333,7 @@ var TRIPLEQUOTE 1
 	;
 
 \ assumes @( was just read, parses until ) as an object list, prepended with ,,declargs
-: syntax-parse-decl-arglist
+:V2 syntax-parse-decl-arglist
 	@locals [ outlist ]
 	',,declargs 1 make-list outlist!
 	@loop
@@ -330,7 +349,7 @@ var TRIPLEQUOTE 1
 	;
 	
 \ assumes ':' was just read
-: syntax-define-word
+:V2 syntax-define-word
 	@locals [ SP-start name ]
 	syntax-next ( name must be next )
 	dup symbol? not if >>badname
@@ -378,7 +397,7 @@ var TRIPLEQUOTE 1
 \	:W name ( args ) STUFF ... ;
 \ vs
 \	::{ ( args ) STUFF ... }
-: v2-syntax-define-word
+:V2 v2-syntax-define-word
 	@locals [ SP-start name outlist ]
 		\ "V2 define word" . CR
 	syntax-next ( name must be next )
@@ -425,7 +444,7 @@ var TRIPLEQUOTE 1
 	;
 
 \ var NAME COUNT -- 'var' was already read
-: syntax-var
+:V2 syntax-var
 	syntax-next ( name should be next )
 	dup symbol? not if >>badname
 	'' swap + ( make quoted name )
@@ -449,7 +468,7 @@ var TRIPLEQUOTE 1
 	;
 
 \ del NAME -- 'del' was already read
-: syntax-del
+:V2 syntax-del
 	syntax-next ( name must be next )
 	dup symbol? not if >>badname
 	'' swap + ( make quoted name )
@@ -464,7 +483,7 @@ var TRIPLEQUOTE 1
 	;
 
 \ assumes "#op(" was just read and dropped \ )
-: syntax-opcode 
+:V2 syntax-opcode 
 	@locals [ list s ]
 	[ ] list!
 	@loop ( list )
@@ -500,8 +519,9 @@ var TRIPLEQUOTE 1
 		"#op( .. ) too long: " list str + error
 		;
 		
-: syntax-string ( first string part already on stack *as symbol* )
-	( convert first since reader-next-char returns strings )
+\ first string part already on stack *as symbol*
+:V2 syntax-string
+	\ convert first since reader-next-char returns strings
 	symbol->string
 		
 	( see if first string part ends with " )
@@ -537,12 +557,13 @@ var TRIPLEQUOTE 1
 		dup length 2 - 1 swap slice ( remove quotes )
 	;
 	
-: syntax-triple-string ( first-piece-symbol -- string )
+\ ( first-piece-symbol -- string )
+:V2 syntax-triple-string 
 	\ convert to string first ...
 	symbol->string
 	\ special case of only one piece ... """..."""
 	dup length 6 >=
-	over -3 -1 slice TRIPLEQUOTE ref symbol->string == and if >>return
+	over -3 -1 slice *_TRIPLEQUOTE ref symbol->string == and if >>return
 
 	\ else, keep first-piece on stack and add more chunks until i find one
 	\ that ends in """
@@ -550,7 +571,7 @@ var TRIPLEQUOTE 1
 		reader-next-chunk
 		dup void? if >>error-eos
 		+
-		dup -3 -1 slice TRIPLEQUOTE ref symbol->string == if >>return
+		dup -3 -1 slice *_TRIPLEQUOTE ref symbol->string == if >>return
 		<<read-loop
 
 	@error-eos
@@ -563,7 +584,7 @@ var TRIPLEQUOTE 1
 \ parse { .. } and return lambda
 \	- assumes { was just read & dropped by caller
 \	- appends 'return to end, if not already present
-: syntax-lambda
+:V2 syntax-lambda
 	0 make-list 
 	@loop
 		\ note - any inner lambdas will be handled automatically by syntax-next,
@@ -582,7 +603,8 @@ var TRIPLEQUOTE 1
 		make-lambda return
 		;
 
-: syntax-list ( assumes [ was just read & dropped )
+\ assumes [ was just read & dropped
+:V2 syntax-list
 	0 make-list 
 	@loop ( list )
 		\ note - any inner lists/lambdas will be handled automatically by syntax-next,
@@ -603,7 +625,7 @@ var TRIPLEQUOTE 1
 \
 \ expanding literal lists back into stack operations allows variable (name) substitution to work
 \ on them. obviously slower than literal lists that are just deepcopied on instantiation.
-: syntax-capture-list
+:V2 syntax-capture-list
 	@locals [ outlist ]
 	',,inline 1 make-list outlist!
 	@loop
@@ -623,7 +645,7 @@ var TRIPLEQUOTE 1
 	;
 	
 \ parse ( ... ) comment, with nesting. assumes "(" was just read.
-: syntax-comment
+:V2 syntax-comment
 	@locals [ nesting comment-text ]
 	"" comment-text!
 	1 nesting!
@@ -650,8 +672,9 @@ var TRIPLEQUOTE 1
 		"Unexpected end of input inside comment: " swap + error
 	;
 	
-: syntax-line-comment ( assumes "\" was just read )
-	( read *characters* until EOL found )
+\ assumes "\" was just read
+:V2 syntax-line-comment 
+	\ read *characters* until EOL found
 	@loop
 		reader-next-char
 		( if end of stream, "\n" or "\r", then i'm done )
@@ -668,7 +691,7 @@ var TRIPLEQUOTE 1
 \ assumes @{ was just read, parses until } as an object list, prepended with ,,closure
 \ 
 \ ensures there is a 'return at the end
-: syntax-closure
+:V2 syntax-closure
 	@locals [ outlist ]
 	',,closure 1 make-list outlist!
 	@loop
@@ -698,7 +721,7 @@ var TRIPLEQUOTE 1
 \ parses ::{ .. } into [ ,,v2-closure ... ]
 \
 \ assumes ::{ was just read, parses until } as an object list, prepended with ,,v2-closure
-: syntax-v2-closure
+:V2 syntax-v2-closure
 	@locals [ outlist ]
 	',,v2-closure 1 make-list outlist!
 	
@@ -727,9 +750,10 @@ var TRIPLEQUOTE 1
 		outlist
 	;
 	
-: serialize-escape-string ( string -- string with whitespace escaped )
+\ string -- string with whitespace escaped
+:V2 serialize-escape-string
 	{ 
-		( char )
+		\ ( char )
 		dup ord 32 == if >>space
 		dup ord 37 == if >>percent
 		dup ord 9 == if >>tab
@@ -775,7 +799,8 @@ var TRIPLEQUOTE 1
 \				to allow this to be used for ANY verbii source (i.e. to cache compilations)
 \				they are allowed here.
 
-: serialize-object ( obj -- ; serialize obj to stdout )
+\ ( obj -- ; serialize obj to stdout )
+:V2 serialize-object 
 	dup int? if >>int
 	dup float? if >>float
 	dup string? if >>string
@@ -810,14 +835,17 @@ var TRIPLEQUOTE 1
 		"o" . opcode-packed str puts CR return
 		;
 
-: save-defined-word ( list name )
+\ ( list name )
+:V2 save-defined-word
 	swap 2 make-list ( [ name list ] )
-	COMPILED_NAMELISTS ref swap append drop
+	*_COMPILED_NAMELISTS ref swap append drop
 	;
 
 \ take a list: [ ,,declargs arg ... -- local ... ]
 \ and return lists of [ arg ... ] and [ local ... ]
-: compile-split-declargs ( list -- args locals )
+\
+\ ( list -- args locals )
+:V2 compile-split-declargs
 	@args [ list ]
 	@locals [ i args locals parsing-locals ]
 	[ ] args!
@@ -850,7 +878,9 @@ var TRIPLEQUOTE 1
 \
 \ it is valid to have BOTH @( ... ) and @args/@locals -- the names will be
 \ merged into a single args/locals lists
-: compile-collect-args-locals ( objlist -- new-objlist args locals )
+\
+\ ( objlist -- new-objlist args locals )
+:V2 compile-collect-args-locals
 	@args [ objlist ]
 	@locals [ new-objlist args locals i ]
 		\ "COMPILE COLLECT ARGS LOCALS:" . .S CR
@@ -928,7 +958,7 @@ var TRIPLEQUOTE 1
 \		d. if an inner lambda is found ( @{ ... } -- @ is required for backward compat with { .. } obj :: code )
 \			(i) recursively rewrite lambda, passing selfmap + my args+locals as its selfmap
 \			(ii) add binding of selfmap + my locals as self for inner lambda
-: compile-rewrite-args-locals @( objlist selfmap -- new-objlist )
+:V2 compile-rewrite-args-locals ( objlist selfmap -- new-objlist )
 	@locals [ argnames localnames local-refmap local-setmap i self-setmap ]
 			
 		\ scan objlist for , @( ... ), @args, @locals
@@ -953,7 +983,9 @@ var TRIPLEQUOTE 1
 		'LP localnames length '- 'LP! 4 make-list new-objlist!
 	@popargs
 		\ 2. push args to locals (adding code to new-objlist)
-		argnames { ( accum elem ) drop '>L append } new-objlist fold new-objlist! 
+		argnames { 
+			\ ( accum elem ) 
+			drop '>L append } new-objlist fold new-objlist! 
 		
 		\ make a map of arg|local name -> index into locals
 		[ ] make-dict argnames localnames + dict-add-indexed-names local-refmap!
@@ -966,7 +998,7 @@ var TRIPLEQUOTE 1
 		\ for each name in selfmap, make name! in self-setmap with same index
 		[ ] make-dict self-setmap!
 		selfmap
-		@{ @args [ key val ]
+		::{ ( key val )
 			self-setmap key "!" + val put drop
 		} for-each-dict
 		
@@ -1113,22 +1145,22 @@ var TRIPLEQUOTE 1
 \	TAG = ,,closure-env (for type checking)
 \	dict = maps names into local frame indexes (NAME, not NAME! -- NAME! handled internally)
 \	up = next upward frame, or void if toplevel env
-: new-closure-env ( -- env )
+:V2 new-closure-env ( -- env )
 	',,closure-env	 	\ TAG
 	[ ] make-dict		\ dict
 	void				\ up
 	3 make-list
 	;
 
-: closure-env? @( env -- result ) env 0 get ',,closure-env == ;	
-: closure-env-dict @( env -- dict ) env 1 get ;
+:V2 closure-env? ( env -- result ) env 0 get ',,closure-env == ;	
+:V2 closure-env-dict ( env -- dict ) env 1 get ;
 \ set the parent of env (i.e. its outer scope) so that name lookups	
 \ can traverse up the parent tree
-: closure-env-set-up @( env up -- ) env 2 up put drop ;
-: closure-env-get-up @( env -- ) env 2 get ;
+:V2 closure-env-set-up ( env up -- ) env 2 up put drop ;
+:V2 closure-env-get-up ( env -- ) env 2 get ;
 
 \ add a new name (symbol) to env, assigning it the next available index
-: closure-env-add-name @( env name -- )
+:V2 closure-env-add-name ( env name -- )
 	\ type checking
 	env closure-env? not if >>bad-env
 	\ check if already defined
@@ -1141,9 +1173,9 @@ var TRIPLEQUOTE 1
 	;
 
 \ add a list of names at once
-: closure-env-add-namelist @( env names -- )
+:V2 closure-env-add-namelist ( env names -- )
 	names
-	@{ @( name )
+	::{ ( name )
 		env name closure-env-add-name
 	} for-each
 	;
@@ -1154,12 +1186,12 @@ var TRIPLEQUOTE 1
 \ and index is the index into that frame
 \
 \ if NOT found, returns ( void void )
-: closure-env-lookup-name @( env name )
+:V2 closure-env-lookup-name ( env name -- level index )
 	env name 0 closure-env-lookup-name-inner
 	;
 	
 \ the inner loop, called recursively
-: closure-env-lookup-name-inner @( env name level )
+:V2 closure-env-lookup-name-inner ( env name level -- level index )
 	@locals [ index up ]
 	\ if name has ! at the end then remove it
 	name -1 get '! != if >>lookup
@@ -1182,14 +1214,14 @@ var TRIPLEQUOTE 1
 		void void
 	;
 	
-: closure-env-make-ref-or-set @( name level index )
+:V2 closure-env-make-ref-or-set ( name level index -- opcode )
 	name -1 get '! == if >>set 
 	\ make a get 
 	'FRAME-GET level index 0 make-opcode return
 	@set
 	'FRAME-SET level index 0 make-opcode return
 	;
-	
+	 
 \ ===============================================
 
 \ objlist is normally from a [ ,,v2-closure ... ] list (with the ,,v2-closure removed)
@@ -1384,7 +1416,7 @@ var TRIPLEQUOTE 1
 \	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
 \
 \ returns a new list, does NOT modify objlist
-: compile-finalize-word @( objlist -- newlist )
+:V2 compile-finalize-word ( objlist -- newlist )
 		\ "FINALIZE WORD:" . objlist . CR
 	\ dup length 0 > if >>not-empty
 	\ objlist is empty; newlist is [ return ]
@@ -1420,37 +1452,41 @@ var TRIPLEQUOTE 1
 			\ "AFTER REWRITING:" . .S CR
 	;
 	
-var COMPILED_NAMELISTS 1
+\ **RENAMED SO I can change this to make-var in next pass
+var *_COMPILED_NAMELISTS 1
 
 \ take the parsed COMPILED_NAMELISTS and perform finalization on the words.
 \ see compiled-finalize-wprd for details. saves finalized lists back to COMPILED_NAMELISTS
-: compiler-finalize-all-words ( -- )
+\
+\ ( -- )
+:V2 compiler-finalize-all-words
 		\ "FINALIZE ALL WORDS" . CR
 	0
 	@loop ( i )
-		dup COMPILED_NAMELISTS ref length >= ( i >= #lists ) if >>done 
-		COMPILED_NAMELISTS ref over get ( i lists[i] )
+		dup *_COMPILED_NAMELISTS ref length >= ( i >= #lists ) if >>done 
+		*_COMPILED_NAMELISTS ref over get ( i lists[i] )
 			\ "READY FOR PAIR:" . .S CR
 		1 get ( i objlist )
 			\ "REWRITING OBJLIST:" . dup . CR
 		compile-finalize-word ( i new-objlist )
-		over COMPILED_NAMELISTS ref swap get ( i newlist LISTS[i] )
+		over *_COMPILED_NAMELISTS ref swap get ( i newlist LISTS[i] )
 			\ "READY TO PUT:" . .S CR
 		1 rot put drop ( i )
 		1 + <<loop ( ++i )
 	@done
-		\ "FINAL NAMELISTS:" . COMPILED_NAMELISTS ref . CR
+		\ "FINAL NAMELISTS:" . *_COMPILED_NAMELISTS ref . CR
 		drop
 	;
-
-: byte-compile ( -- names wordlists ; byte-compile source from current reader stream )
+	
+\ byte-compile source from current reader stream
+:V2 byte-compile ( -- names wordlists )
 	\ do NOT store compiled words into interpreter since that would prevent compiling
 	\  any code that contained a name that was already defined -- for example when
 	\  compiling this file
 	\
 	\ instead, store as a list of [name,wordlist] to COMPILED_NAMELISTS
 
-	0 make-list COMPILED_NAMELISTS set!
+	0 make-list *_COMPILED_NAMELISTS set!
 
 	\ i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
 	\ save starting SP so I can count at the end
@@ -1474,27 +1510,31 @@ var COMPILED_NAMELISTS 1
 	( perform finalization of all words )
 	compiler-finalize-all-words
 	( leave list of [ name list ] on stack )
-	COMPILED_NAMELISTS ref
+	*_COMPILED_NAMELISTS ref
 	;
 
-: byte-compile-file ( filename -- list of [ name list ] ; byte-compile filename and leave outputs on stack )
-	reader-open-file byte-compile
+\ leaves list of [ name list ] on stack
+:V2 byte-compile-file ( filename -- output-list )
+	filename reader-open-file byte-compile
 	;
 
-: byte-compile-string ( text -- list of [ name list ] ; byte-compile filename and leave outputs on stack )
-	reader-open-string byte-compile
+
+\ leaves list of [ name list ] on stack
+:V2 byte-compile-string ( text -- output-list )
+	text reader-open-string byte-compile
 	;
 
-: serialize-compiled-output
-	( take output of byte-compile-* and serialize to stdout )
+\ takes list of [ name list ]
+:V2 serialize-compiled-output
+	\ take output of byte-compile-* and serialize to stdout
 
 	( each obj is [ name wordlist ] )
 	{ "W" . dup 0 get str puts CR 1 get serialize-object } for-each 
 	;
 
 ( compiles filename and writes serialized form to stdout. does NOT alter interpreter words )
-: compile-and-serialize ( filename -- )
-	byte-compile-file ( this will be all code other than word definitions )
+:V2 compile-and-serialize ( filename -- )
+	filename byte-compile-file ( this will be all code other than word definitions )
 
 	( that left list of [ name list ] on stack )
 
@@ -1506,12 +1546,11 @@ var COMPILED_NAMELISTS 1
 	;
 
 ( compiles string and loads words into current interpreter )
-: compile-and-load-string ( string -- )
-	byte-compile-string
+:V2 compile-and-load-string ( string -- )
+	string byte-compile-string
 	( now load the [ name wordlist ] pairs into interpreter )
 	{ dup 1 get swap 0 get make-word } for-each
 	;
-
 
 \
 \ compile & load the given file. if "filename.b" exists, and is the same age (or newer), 
@@ -1523,7 +1562,8 @@ var COMPILED_NAMELISTS 1
 \ note this does NOT run the resulting __main__ -- it is the caller's responsibility
 \ to run __main__ (or not) and to delete __main__ when complete
 \
-: cached-compile-and-load ( filename -- )
+\ ( filename -- )
+:V2 cached-compile-and-load
 		\ "cached-compile-and-load of: " . dup . CR
 	\ see if filename.b exists
 	dup ".b" + file-exists? not if >>do-compile \ does not exist, must compile filename
@@ -1545,3 +1585,5 @@ var COMPILED_NAMELISTS 1
 		".b" + deserialize return
 	;
 	
+( ------ misc ------- )
+\ "System startup time: " . run-time str . CR

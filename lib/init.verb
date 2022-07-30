@@ -244,10 +244,17 @@
 	unmake make-symbol
 	;
 
+\ note that symbol->string is the less expensive conversion, so many functions take
+\ a string argument, knowing the caller can just call 'str' to pass a symbol
+\
+\ also, if a function wants to easily allow either string or symbol arguments, just do
+\ an unconditional 'str' on the arg to get a string in either case
+
 \ ( symbol -- string )
 :V2 symbol->string 
-	unmake make-string
+	str \ symbol->string is included for completeness, but just 'str' is guraranteed to work
 	;
+	
 
 \ ( string -- ascii ; get ASCII value of first char of string )
 :V2 ord 
@@ -607,6 +614,16 @@
 
 \ peek next char [as string] from stream or void on eof
 
+\ get current stream position
+:V2 stream-reader-tell ( stream -- stream position )
+	stream stream 2 get
+	;
+
+\ set current stream position
+:V2 stream-reader-seek ( stream pos -- stream )
+	stream 2 pos put
+	;
+	
 :V2 stream-reader-peek-char ( stream -- stream c )
 	@locals [ savepos c ]
 	stream 2 get savepos!
