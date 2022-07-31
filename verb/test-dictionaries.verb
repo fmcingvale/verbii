@@ -2,8 +2,8 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-: test-dictionaries-basic
-	@locals [ D ]
+: test-zzz-dictionaries-basic
+	@locals [ D L ]
 	
 	[ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict D!
 	333 D "uuu" get expect==
@@ -22,11 +22,17 @@
 	
 	5 D length expect==
 	
-	
-	\ * TODO * need to check keys function, but keys is not required to sort names, so
-	\ will have to either sort them myself (otherwise text results won't match across platforms)
-	\ or do a find on each key to test if it is there
-
+	\ test keys function -- note that keys is not required to sort list so i have to check
+	\ for keys being individially present
+	D keys L!
+	L length 5 expect==
+	L { "zzz" == } find 0 expect>=
+	L { "uuu" == } find 0 expect>=
+	L { "bbb" == } find 0 expect>=
+	L { "eee" == } find 0 expect>=
+	L { "xyz" == } find 0 expect>=
+	L { "xyza" == } find void expect==
+	L { "" == } find void expect==
 	;
 	
 : test-dictionary-deepcopy
@@ -35,5 +41,85 @@
 	\ should not affect original
 	"zzz" 10 put
 	"""[ { "aaa" => 1 "bbb" => 2 "ccc" => 3 } { "aaa" => 1 "bbb" => 2 "ccc" => 3 "zzz" => 10 } ]""" expect-stack 2 ndrop
+	;
+
+: vars-make*-1 ( a b c )
+	\ vars can be substituted into lists directly
+	[ [ "a" a ] [ "b" b ] [ "c" c ] ] make-dict* 
+	;
+	
+: vars-make*-2 ( a b c )
+	\ .. but to use an expression to init a dict entry, put the ( key expr ... ) into a lambda
+	[ { "a*2" a 2 * } { "b+50" b 50 + } { "c+100" c 100 + } ] make-dict*
+	;
+	
+: vars-make*-3 ( a b c x y z )
+	\ mixing lambdas and lists is allowed
+	[ { "a*2" a 2 * } [ "x" x ] { "b+50" b 50 + } [ "y" y ] { "c+100" c 100 + } [ "z" z ] ] make-dict*
+	;
+	
+: vars-make*-4 ( a b c )
+	\ make a deeply nested version as a stress test for closures as well
+	[
+		{ ( z ) z 2 * } \ filler
+		{ ( x y )
+			[
+				{ ( x y ) x y * } \ filler
+				{ ( z ) z z * } \ filler
+				{ ( z )
+					[ { "a*2" a 2 * } [ "x" x ] { "b+50" b 50 + } [ "y" y ] { "c+100" c 100 + } [ "z" z ] ] make-dict*
+				}
+			]
+		}
+	]
+	;
+	
+: test-make-dict*
+	\ test variations on make-dict*
+	@locals [ R ]
+	
+	\ make with constant values
+	[ [ "a" 11 ] [ "b" 22 ] [ "c" 33 ] ] make-dict* 
+		"""[ { "a" => 11 "b" => 22 "c" => 33 } ]""" expect-stack drop
+
+	\ make with passed parameters
+	"egg" "apple" "pear" vars-make*-1
+		"""[ { "a" => "egg" "b" => "apple" "c" => "pear" } ]""" expect-stack drop
+	
+	\ make with lambdas
+	10 20 30 vars-make*-2
+		"""[ { "a*2" => 20 "b+50" => 70 "c+100" => 130 } ]""" expect-stack drop
+	
+	\ mixed lambdas + lists
+	11 25 38 111 222 333 vars-make*-3
+		"""[ { "a*2" => 22 "b+50" => 75 "c+100" => 138 "x" => 111 "y" => 222 "z" => 333 } ]""" expect-stack drop
+		
+	\ deeply nested test
+	21 34 65 vars-make*-4 R!
+	777 888 R 1 get call R!
+	999 R 2 get call
+		"""[ { "a*2" => 42 "b+50" => 84 "c+100" => 165 "x" => 777 "y" => 888 "z" => 999 } ]""" expect-stack drop
+		
+	\ do the same as an inline lambda definition
+	42 67 132
+	{ ( a b c )
+		\ make a deeply nested version as a stress test for closures as well
+		[
+			{ ( z ) z 2 * } \ filler
+			{ ( x y )
+				[
+					{ ( x y ) x y * } \ filler
+					{ ( z ) z z * } \ filler
+					{ ( z )
+						[ { "a*2" a 2 * } [ "x" x ] { "b+50" b 50 + } [ "y" y ] { "c+100" c 100 + } [ "z" z ] ] make-dict*
+					}
+				]
+			}
+		]
+	} call R!
+	"apple" "grape" R 1 get call R!
+	"watermelon" R 2 get call
+		"""[ { "a*2" => 84 "b+50" => 117 "c+100" => 232 "x" => "apple" "y" => "grape" "z" => "watermelon" } ]""" expect-stack drop
+	
 	;
 	
