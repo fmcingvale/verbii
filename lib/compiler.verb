@@ -242,7 +242,8 @@
 	dup void? if >>void
 	dup '( == if >>comment \ )
 	dup '\ == if >>line-comment
-	dup '{ == if >>lambda
+	dup '{ == if >>v2-closure
+	\ **REMOVE LATER** should become just { .. }
 	dup '::{ == if >>v2-closure
 	dup '[ == if >>list
 	dup '#op( == if >>opcode  \ )
@@ -278,8 +279,6 @@
 		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
 	@line-comment
 		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
-	@lambda
-		drop syntax-lambda return
 	@v2-closure
 		drop syntax-v2-closure return
 	@list
@@ -541,28 +540,6 @@
 	@return ( remove triple quotes from both sides )
 		dup length 3 swap 6 - slice
 	;
-
-\ parse { .. } and return lambda
-\	- assumes { was just read & dropped by caller
-\	- appends 'return to end, if not already present
-:V2 syntax-lambda
-	0 make-list 
-	@loop
-		\ note - any inner lambdas will be handled automatically by syntax-next,
-		\ so don't have to check for "{" here
-		syntax-next
-		dup void? if >>eof
-		dup '} == if >>closebrace
-		append ( else append to list and continue ) <<loop
-	@eof
-		"Unexpected end of input inside { .. }" error
-	@closebrace
-		drop \ drop '} 
-		dup -1 get 'return == if >>done \ return already present
-		'return append \ add return to end
-	@done
-		make-lambda return
-		;
 
 \ assumes [ was just read & dropped
 :V2 syntax-list

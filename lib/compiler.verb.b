@@ -1,4 +1,4 @@
-L 57
+L 56
 W reader-open-string
 L 8
 o 1
@@ -191,9 +191,8 @@ L 4
 o 1
 o 0
 F
-L 2
+L 1
 y digit?
-y return
 y any?
 W ltrim-char
 L 16
@@ -345,7 +344,7 @@ y <<loop
 y @done
 o 0
 W syntax-next
-L 174
+L 170
 y reader-next
 y dup
 y void?
@@ -365,7 +364,7 @@ y dup
 y '{
 y ==
 y if
-y >>lambda
+y >>v2-closure
 y dup
 y '::{
 y ==
@@ -473,10 +472,6 @@ y @line-comment
 y drop
 y syntax-line-comment
 y syntax-next
-y return
-y @lambda
-y drop
-y syntax-lambda
 y return
 y @v2-closure
 y drop
@@ -774,9 +769,8 @@ i 1
 i -1
 y slice
 F
-L 2
+L 1
 y parse-int
-y return
 y map
 y unmake
 y drop
@@ -898,40 +892,6 @@ y swap
 i 6
 y -
 y slice
-W syntax-lambda
-L 32
-i 0
-y make-list
-y @loop
-y syntax-next
-y dup
-y void?
-y if
-y >>eof
-y dup
-y '}
-y ==
-y if
-y >>closebrace
-y append
-y <<loop
-y @eof
-s Unexpected%32end%32of%32input%32inside%32{%32..%32}
-y error
-y @closebrace
-y drop
-y dup
-i -1
-y get
-y 'return
-y ==
-y if
-y >>done
-y 'return
-y append
-y @done
-y make-lambda
-y return
 W syntax-list
 L 20
 i 0
@@ -1087,7 +1047,7 @@ o 0
 W serialize-escape-string
 L 2
 F
-L 66
+L 65
 y dup
 y ord
 i 32
@@ -1153,7 +1113,6 @@ i 37
 y chr
 s 13
 y +
-y return
 y map
 W serialize-object
 L 108
@@ -1248,9 +1207,8 @@ y str
 y puts
 y CR
 F
-L 2
+L 1
 y serialize-object
-y return
 y for-each
 y return
 y @lambda
@@ -1968,7 +1926,7 @@ y byte-compile
 W serialize-compiled-output
 L 2
 F
-L 12
+L 11
 s W
 y .
 y dup
@@ -1980,7 +1938,6 @@ y CR
 i 1
 y get
 y serialize-object
-y return
 y for-each
 W compile-and-serialize
 L 11
@@ -2001,7 +1958,7 @@ o 1
 o 0
 y byte-compile-string
 F
-L 8
+L 7
 y dup
 i 1
 y get
@@ -2009,7 +1966,6 @@ y swap
 i 0
 y get
 y make-word
-y return
 y for-each
 W cached-compile-and-load
 L 33

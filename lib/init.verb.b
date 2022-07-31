@@ -582,18 +582,16 @@ L 4
 o 1
 o 0
 F
-L 2
+L 1
 y tolower
-y return
 y map
 W string-upper
 L 4
 o 1
 o 0
 F
-L 2
+L 1
 y toupper
-y return
 y map
 W string-split
 L 65
@@ -1091,11 +1089,10 @@ y return
 W make-dict
 L 3
 F
-L 4
+L 3
 y unmake
 y drop
 y put
-y return
 y ,,new-dict
 y fold
 W debug

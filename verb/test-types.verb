@@ -63,8 +63,7 @@
 	"<true>" true repr expect==
 	"<false>" false repr expect==
 	"[ 10 20 'hello #11.5 ]" 10 20 'hello 11.5 4 make-list repr expect==
-	\ eventually this will change to not have the added 'return at the end
-	"{ 1 2 3 'a 'b 'c 'return }" { 1 2 3 a b c } repr expect==
+	"{ 1 2 3 'a 'b 'c }" { 1 2 3 a b c } repr expect==
 	"'a-long-symbol" 'a-long-symbol repr expect==
 	""""hello there world"""" "hello there world" repr expect== \ """ <- so notepad++ sees end of string
 	"<null>" null repr expect==
@@ -79,8 +78,7 @@
 	"true" true str expect==
 	"false" false str expect==
 	"[ 10 20 hello 11.5 ]" 10 20 'hello 11.5 4 make-list str expect==
-	\ eventually this will change to not have the added 'return at the end
-	"{ 1 2 3 a b c return }" { 1 2 3 a b c } str expect==
+	"{ 1 2 3 a b c }" { 1 2 3 a b c } str expect==
 	"a-long-symbol" 'a-long-symbol str expect==
 	"""hello there world""" "hello there world" str expect== 
 	"<null>" null str expect==
