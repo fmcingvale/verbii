@@ -345,7 +345,7 @@
 	name!
 	
 	\ now this is syntax-v2-closure
-	',,v2-closure 1 make-list outlist!
+	[ ] outlist!
 	
 	\ see if there is a ( .. ) next -- if so treat it as declargs
 	reader-peek-next '( == if >>read-arglist \ )
@@ -555,12 +555,12 @@
 		drop ( discard char and return )
 	;
 
-\ parses ::{ .. } into [ ,,v2-closure ... ]
+\ parses ::{ .. } into a lambda
 \
-\ assumes ::{ was just read, parses until } as an object list, prepended with ,,v2-closure
+\ assumes ::{ was just read, parses until } as an object list
 : syntax-v2-closure
 	@locals [ outlist ]
-	',,v2-closure 1 make-list outlist!
+	[ ] outlist!
 	
 	\ see if there is a ( .. ) next -- if so treat it as declargs
 	reader-peek-next '( == if >>read-arglist \ )
@@ -584,7 +584,7 @@
 	@done
 		drop \ drop '}
 			\ "RETURN OUTLIST:" . outlist . CR
-		outlist
+		outlist make-lambda
 	;
 	
 \ string -- string with whitespace escaped
@@ -866,8 +866,7 @@
 	 
 \ ===============================================
 
-\ objlist is normally from a [ ,,v2-closure ... ] list (with the ,,v2-closure removed)
-\ plain-list is a flag that is true if objlist is from a list or false if objlist is from a lambda
+\ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
 \ (the difference being that plain lists are never bound to a frame since they are never called as code)
 : v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist nr-rewritten )
 	@locals [ argnames localnames env i ]
@@ -962,7 +961,8 @@
 			\ "OBJLIST[i]:" . objlist i get . CR
 		objlist i get void? if >>done 
 		objlist i get symbol? if >>symbol
-		objlist i get list? if >>list
+		objlist i get list? if >>rewrite-inner-plain-list
+		objlist i get lambda? if >>rewrite-inner-lambda
 		\ everything else, copy as-is
 	@copy-element
 		new-objlist objlist i get append new-objlist! >>next
@@ -983,18 +983,18 @@
 		nr-rewritten 1 + nr-rewritten!
 		>>next 
 		
-	@list			
-		\ look for [ ,,v2-closure ... ] (parsed from ::{ .. })
-		objlist i get 0 get ',,v2-closure == if >>rewrite-inner-closure \ got [ ,,v2-closure .. ]
+	\ @list			
+	\	\ look for [ ,,v2-closure ... ] (parsed from ::{ .. })
+	\	objlist i get 0 get ',,v2-closure == if >>rewrite-inner-closure \ got [ ,,v2-closure .. ]
+	\	
+	\	\ else, recurse normal list looking for names to be rewritten
+	\	>>rewrite-inner-plain-list
 		
-		\ else, recurse normal list looking for names to be rewritten
-		>>rewrite-inner-plain-list
-		
-	@rewrite-inner-closure
+	@rewrite-inner-lambda
 		@locals [ sub-objlist sub-nr-rewritten ]
 			\ "REWRITE SUBLIST:" . CR
 		\ call rewrite recursively with my env as the outer scope
-		objlist i get 1 -1 slice \ remove ,,v2-closure
+		objlist i get unmake \ get lambda as list to pass
 		env false v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
 			\ "GOT NEW SUBLIST:" . sub-objlist . CR
 			\ "NEW OBJLIST:" . new-objlist . CR
@@ -1054,7 +1054,6 @@
 		;
 	
 \ take a parsed objlist, presumably from byte-compile, and perform finalization:
-\	* ensure objlist ends with 'return'
 \	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
 \
 \ returns a new list, does NOT modify objlist
@@ -1063,7 +1062,7 @@
 	\ TODO -- I should only ever see one type of closure now ... 
 	
 	\ see if i got a [ ,,v2closure ... ]
-	objlist 0 get ',,v2-closure == if >>v2-closure
+	\ objlist 0 get ',,v2-closure == if >>v2-closure
 	
 	\ not a v2-closure -- can this still happen??????? need to check later
 	\ return as-is ...
@@ -1071,14 +1070,13 @@
 	
 	\ no ,,v2-closure but still handle any rewriting to recursively find any underneath it
 	\ objlist return
-	objlist void false v2-compile-rewrite-args-locals
-	drop 
-	return
+	\ objlist void false v2-compile-rewrite-args-locals
+	\ drop 
+	\ return
 	
-	@v2-closure
-		\ remove ,,v2-closure from head of list
+	\ @v2-closure
 		\ toplevel function - no outer environment
-		objlist 1 -1 slice void false v2-compile-rewrite-args-locals
+		objlist void false v2-compile-rewrite-args-locals
 		drop \ don't need nr-rewritten here; top level is never bound anyways
 		return \ return new objlist
 	;
