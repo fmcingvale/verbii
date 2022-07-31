@@ -57,14 +57,14 @@
 	;
 
 \ show that forward references are fine
-: *ccc 11 *ddd 88 ;
-: *ddd 22 *eee 77 ;
-: *eee 33 *fff 66 ;
-: *fff 44 55 ;
+:V2 *ccc 11 *ddd 88 ;
+:V2 *ddd 22 *eee 77 ;
+:V2 *eee 33 *fff 66 ;
+:V2 *fff 44 55 ;
 
 \ defs with and without explicit return	
-: *ggg 12 34 56 ;
-: *hhh 123 456 789 return 444 ;
+:V2 *ggg 12 34 56 ;
+:V2 *hhh 123 456 789 return 444 ;
 
 :V2 test-define-word
 	*ccc

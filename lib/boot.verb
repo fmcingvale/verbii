@@ -99,7 +99,9 @@
 \	* define library paths & add search 
 \	* add way to let modules know they are being imported so they
 \	  shouldn't run their main code (unless it's required to init the module of course)
-: import ( name -- )
+\
+\ ( name -- )
+:V2 import
 	\ see if name has been imported already and don't import again
 	\ (NOTE this is declared below like the other vars since the parser can't handle
 	\ seeing it up here)
@@ -123,7 +125,7 @@
 	
 'SCRIPT-ARGS [ ] make-var
 
-: boot-main
+:V2 boot-main
 	\ first, must init interpreter for anything else to work
 	\ (no userwords are loaded yet .. no compiler, no init lib)
 	init-interpreter

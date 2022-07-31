@@ -4,7 +4,8 @@
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 \ at this point, the compiler/init must be loaded, so i can use any words now
-: repl ( -- )
+\ ( -- )
+:V2 repl
 	\ set flags instead of assuming defaults are in effect --
 	\ i do NOT want host to exit on exception, but restart me
 	false set-exit-on-exception
@@ -32,7 +33,8 @@
 	;
 
 \ load & run file (whole program mode)
-: run-file ( filename -- )
+\ ( filename -- )
+:V2 run-file
 	\ i want to exit on exceptions to avoid infinite loops
 	true set-exit-on-exception
 	\ show stacktraces
@@ -41,7 +43,7 @@
 	load-file-maybe-cached
 	\ same trick as above to delete __main__ before running
 	'__main__ .dumpword \ <- for syntax highlight error
-	del __main__
+	'__main__ ,,del
 	make-lambda call
 	;
 
@@ -58,7 +60,8 @@
 'TEST_MODE_STARTLINE null make-var
 'TEST_MODE_CURLINE null make-var
 
-: run-test ( filename -- )
+\ ( filename -- )
+:V2 run-test
 	TEST_MODE_FILENAME!
 	\ i want to restart on errors so i can continue after the line that crashed
 	false set-exit-on-exception
@@ -109,7 +112,7 @@
 'FILENAME void make-var
 'TESTMODE false make-var
 
-: repl-main
+:V2 repl-main
 	\ parse SCRIPT-ARGS and filter out my options
 	[ ] >L ( L0 = new script args being built )
 	0

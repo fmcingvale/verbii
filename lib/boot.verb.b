@@ -83,7 +83,7 @@ o 0
 y file-read
 y compile-and-load-string
 W import
-L 30
+L 29
 y *_IMPORTED-MODULES
 y over
 y get
@@ -113,9 +113,8 @@ y safe-run-and-delete-main
 y return
 y @already-imported
 y drop
-y return
 W boot-main
-L 77
+L 76
 y init-interpreter
 y >L
 L 0
@@ -192,7 +191,6 @@ s ../lib/repl.verb
 y load-file-maybe-cached
 y safe-run-and-delete-main
 y repl-main
-y return
 W __main__
 L 10
 y '*_NOCACHE
