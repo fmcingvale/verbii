@@ -1,0 +1,436 @@
+\ Test closures. Written as a tutorial.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: test-closures-1
+	\ first, here is a plain lambda - it does not capture anything so can
+	\ only work with stack value, no named variables.
+	{ "Hello" " " +  "lambda!" + }
+	\ run it with 'call'
+	call
+	\ make sure that worked
+	"Hello lambda!" expect==	
+	;
+
+: test-closures-2
+	\ make a plain lambda taking 3 stack args A,B,C and returns A+B*C 
+	5 6 7 { * + } call
+	\ check result
+	47 expect==
+	;
+	
+: test-closures-3
+	\ plain (non-capturing) lambdas work fine for simple functions, but
+	\ as you add more arguments and more complexity in the function, the
+	\ stack shuffling becomes unwieldy. so named variables help a lot
+	\ with readability. (they are also much faster than doing a lot of stack shuffling)
+	\
+	\ here is the same function as above, written as a closure:
+	
+	5 6 7 \ push args to stack
+	\ create lambda & push to stack
+	{ 	( a b c ) \ args are automatically popped from the stack and can be referred to with names
+		\ return a+b*c
+		b c * a +
+	} call
+	\ check result
+	47 expect==
+	;
+
+\ of course, such a trivial function doesn't really need named variable, but that
+\ demonstrates the basic usage
+
+\ closures get interesting when you use them to store state information.
+\ for example, let's make an accumulator factory
+\	ref: http://rosettacode.org/wiki/Accumulator_factory
+\
+\ an accumulator factory works like this:
+\	f = make-accumulator(11) -> create accumulator function with initial sum=11
+\	f(10) -> returns 21 (i.e. 11+10)
+\	f(20) -> returns 41 (i.e. 11+10+20)
+\	f(50) -> returns 91 (i.e. 11+10+20+50)
+
+: make-accumulator ( initval )
+	\ return a lambda that, when called with a numeric argument, adds the argument
+	\ to its sum and returns the new sum
+	{ ( n )
+		initval n + initval! \ update my sum
+		initval \ return new sum
+	}
+	\ note that i didn't have to do anything special to store initval -- it will be
+	\ captured automatically as demonstrated below
+	;
+	
+: test-closures-accumulator-factory
+		
+	\ lets make several accumulators and store them in variables to show that they
+	\ are independent from each other
+	'acc1 11 make-accumulator make-var \ acc1 starts with initval=11
+	'acc2 33 make-accumulator make-var \ acc2 starts with initval=33
+	'acc3 100 make-accumulator make-var \ acc3 starts with initval=100
+	 
+	\ let's test that the initial values are correct by adding 0 to each one,
+	\ so the returned value will be the initval ...
+	0 acc1 call ( leaves new value on stack ) 11 expect== ( check that value is correct )
+	0 acc2 call 33 expect== 
+	0 acc3 call 100 expect== 
+		
+	\ now add 20 to each accumulator ...
+	20 acc1 call ( leaves new value on stack ) 31 expect== ( check that value is correct )
+	20 acc2 call 53 expect==
+	20 acc3 call 120 expect==
+	
+	\ add a different amount to each just to further prove there's no shared state
+	100 acc1 call 131 expect==
+	200 acc2 call 253 expect==
+	300 acc3 call 420 expect==
+	;
+	
+\ the accumulator factory works because the inner closure captures a reference
+\ to 'initval' that was passed to the function that created the accumulator.
+\ therefore, closures capture state as you would expect in other languages.
+
+\ *historical note*
+\ in earlier versions of verbii, closures captured VALUES so they would correctly
+\ store the state from the outer context, but the outer context could not see any changes
+\ that the inner closure made. this was unlike other languages like scheme, so was changed
+\ to make references to call frames as is normally done.
+
+\ here is an example of that ...
+
+: demo-outer-inner ( x )
+	@locals [ f1 f2 result ]
+	\ make result in a list so it is easily testable
+	[ ] result!
+	result "Outer X=" x str + append result!
+	\ lets make two closures that capture x and store
+	\ the closures to locals f1 and f2
+	{
+		result "Inner 1 X=" x str + append result!
+		\ add 11 to x
+		x 11 + x!
+		result "Inner 1 X+11=" x str + append result!		
+	} f1! \ store this closure to f1
+	
+	{
+		result "Inner 2 X=" x str + append result!
+		\ add 11 to x
+		x 100 + x!
+		result "Inner 2 X+100=" x str + append result!		
+	} f2! \ store this closure to f2
+	
+	\ run the 2 closures which will modify x
+	f1 call f2 call
+	
+	\ show that outer scope sees the changes
+	result "Outer X=" x str + append result!
+	
+	\ return result so it can be tested
+	result
+	;
+	
+: test-closures-outer-inner
+	44 demo-outer-inner
+	\ check result
+	[ "Outer X=44" "Inner 1 X=44" "Inner 1 X+11=55" "Inner 2 X=55" "Inner 2 X+100=155" "Outer X=155" ] expect==
+	;
+	
+\ you can see from the above that the outer context and the two inner lambdas share 
+\ the same state. this same state is shared AFTER the outer function returns as well,
+\ as you would expect in other languages with closures ...
+
+\ this example is like an upgraded accumulator -- instead of just making a single lambda, 
+\ this creates lambdas that perform +, -, * or /, and all share state with each other
+
+: make-math-ops ( x )
+	\ create and return 4 lambdas
+	
+	\ x += n
+	{ ( n )
+		x n + x!
+		x \ return new value, like accumulator above
+	}
+	
+	\ x -= n
+	{ ( n )
+		x n - x!
+		x \ return new value, like accumulator above
+	}
+	
+	
+	\ x *= n
+	{ ( n )
+		x n * x!
+		x \ return new value, like accumulator above
+	}
+	
+	
+	\ x /= n
+	{ ( n )
+		x n / x!
+		x \ return new value, like accumulator above
+	}
+	;
+
+: do-test-closures-math-ops ( x )
+	@locals [ fADD fSUB fMUL fDIV ]
+	\ make 4 closures, passing the initial value x, save them to meaningful names
+	x make-math-ops fDIV! fMUL! fSUB! fADD!
+	\ now do some math operations to show the state is shared among all lambdas
+	20 fADD call
+		\ check at each step
+		x 20 + expect==
+	50 fSUB call
+		\ check
+		x 20 + 50 - expect==
+	12 fMUL call
+		\ check
+		x 20 + 50 - 12 * expect==
+	7 fDIV call
+		\ check
+		x 20 + 50 - 12 * 7 / expect==f
+	;
+	
+: test-closures-math-ops
+	14 do-test-closures-math-ops
+	-21 do-test-closures-math-ops
+	;
+	
+\ this shows that the same name can be defined in an outer
+\ and inner scope and the inner name will be seen in the inner scope
+\ (i.e. correct lexical scoping)
+
+: do-scope-test ( i x y )
+	@locals [ result ]
+	\ make a list result so it can be checked by called
+	[ ] result!
+	result i append result! \ store outer scope value
+	
+	\ the ( i x ) args for the lambda i'm about to push ...
+	x y
+	{ ( i x )
+		result i append result!
+		\ arg for lambda i'm about to push
+		y
+		{ ( i )
+			result i append result!
+		}
+		call
+	}
+	call
+	result
+	;
+	
+: test-closures-lexical-scope
+	10 20 30 do-scope-test
+	\ check result
+	[ 10 20 30 ] expect==
+	;
+	
+\ ====================================================================
+\ End of tutorial - the remainder are technical tests to check that
+\ different forms are compiled correctly.
+\ ====================================================================
+
+: cA0-test ( a b -- R )
+	[ ] R!
+	R a append b append R!
+	R
+	;
+
+\ nested closures taking no args of their own
+: cA1-test ( a b -- )
+	@locals [ R ]
+	[ ] R!
+	R "*" append R!
+	{
+		R a append b append R!
+		R
+	}
+	;
+
+: cA2-test ( a b -- )
+	@locals [ R ]
+	[ ] R!
+	R "*" append R!
+	{
+		R "/" append R!
+		{
+			R a append b append R!
+			R
+		}
+	}
+	;
+
+\ nested closures taking additional args
+
+: cB1-test ( a b -- lambda )
+	@locals [ R ]
+	[ ] R!
+	R a append b append "*" append R!
+	{ 	( c d -- lambda )
+		R c append d append "/" append R!
+		{
+			R a append d append "%" append R!
+			R
+		}
+	}
+	;
+	
+: cB2-test ( a b -- lambda )
+	@locals [ R ]
+	[ ] R!
+	R a append b append "*" append R!
+	{ 	( c d -- lambda )
+		R c append d append "/" append R!
+		{
+			( e f -- result ) \ don't put 'R' as return as that would hide outer R
+			R e append f append "%" append R!
+			R
+		}
+	}
+	;
+	
+\ now invert it so only the inners take args or have locals
+: cC1-test
+	{ 	( c d -- lambda )
+		@locals [ R ]
+		[ ] R!
+		R c append d append "/" append R!
+		{
+			( e f -- result ) \ don't put 'R' as return as that would hide outer R
+			R e append f append "%" append R!
+			R
+		}
+	}
+	;
+
+: cC2-test
+	{ 
+		{
+			( e f -- R )
+			[ ] R!
+			R e append f append "%" append R!
+			R
+		}
+	}
+	;
+
+\ now with nesting inside lists
+: cD1-test ( a b c )
+	\ inside [ .. ], captured names are replaced with values
+	\ (requires compiler to take apart list at compile time and rebuild it at runtime)
+	[ a b c ]
+	;
+	
+: cD2-test ( a b )
+	[
+		\ make sure lambda inside list gets bound correctly at runtime
+		{
+			a b +
+		}
+	]
+	;
+
+\ now with inners taking args
+: cD3-test ( a b )
+	[
+		{ ( c d ) a b c d * + - }
+		{ ( c d ) a b c d - * + }
+	]
+	;
+
+\ this was an earlier bug where incorrect code was generated
+\ when nothing was captured
+: cD4-test 
+	[
+		{ 1 2 3 }
+		{ 4 5 6 }
+	]
+	;
+
+\ ensure inner lambdas do not get bound since they never
+\ refer to the captured vars
+: cD5-test ( a b c )
+	[	
+		a
+		{ x y z }
+		b
+		{ t u v }
+		c
+	]
+	;
+	
+\ lots of nesting ...
+: cD6-test ( a b c )
+	[
+		{
+			[ 
+				[ "a*2" { a 2 * } ]
+				[ "b+5" { b 5 + } ]
+				[ "c*c" { c c * } ]
+			] make-dict
+		}
+	]
+	;
+	
+: test-closures-all-forms
+	@locals [ f1 f2 f3 f4 R ]
+	[ 11 22 ] 11 22 cA0-test expect==
+	
+	[ "*" 55 44 ] 55 44 cA1-test call expect==
+	
+	[ "*" "/" 88 77 ] 88 77 cA2-test call call expect==
+	
+	[ 88 77 "*" 66 55 "/" 88 55 "%" ] 88 77 cB1-test f1!
+		66 55 f1 call call expect==
+	
+	[ 11 22 "*" 33 44 "/" 55 66 "%" ] 11 22 cB2-test f1!
+		33 44 f1 call f1!
+		55 66 f1 call expect==
+		
+	[ 44 55 "/" 66 77 "%" ] cC1-test f1!
+		44 55 f1 call f1!
+		66 77 f1 call expect==
+		
+	[ 22 11 "%" ] cC2-test f1!
+		f1 call f1!
+		22 11 f1 call expect==
+		
+	[ "X" "Y" "Z" ] "X" "Y" "Z" cD1-test expect==
+	
+	213 13 200 cD2-test 0 get call expect==
+	
+	283 653 cD3-test R!
+	23 151 R 0 get call
+		283 653 23 151 * + - expect==
+	919 677 R 0 get call
+		283 653 919 677 * + - expect==
+	1307 1723 R 1 get call
+		283 653 1307 1723 - * + expect==
+	1129 1619 R 1 get call
+		283 653 1129 1619 - * + expect==
+		
+	cD4-test R!
+	R 0 get call "[ 1 2 3 ]" expect-stack 3 ndrop
+	R 1 get call "[ 4 5 6 ]" expect-stack 3 ndrop
+	
+	100 200 300 cD5-test R!
+	\ check captures
+	R 0 get 100 expect==
+	R 2 get 200 expect==
+	R 4 get 300 expect==
+	\ ensure generated code for lambdas is correct
+	R 1 get "[ { 'x 'y 'z } ]" expect-stack drop
+	R 3 get "[ { 't 'u 'v } ]" expect-stack drop
+	
+	11 22 33 cD6-test 0 get call R!
+	R "a*2" get call 22 expect==
+	R "b+5" get call 27 expect==
+	R "c*c" get call 33 33 * expect==
+	;
+	
+
+
+	
+	
