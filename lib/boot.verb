@@ -144,7 +144,7 @@
 	\ false NOCACHE set!
 
 	\ args that get passed to repl (and on to other scripts after that)
-	var SCRIPT-ARGS 1
+	\ var SCRIPT-ARGS 1
 
 	>L ( L1 = cmdline args -- pushed from host )
 	[ ] >L ( L0 = new script args being built )
@@ -175,10 +175,10 @@
 	@done ( i )
 		drop
 	@end
-	L> SCRIPT-ARGS set!
+	L> *_SCRIPT-ARGS!
 	LP 1 + LP! \ drop cmdline-args from locals
 
-	SCRIPT-ARGS ref *_SCRIPT-ARGS! \ forward compat
+	\ SCRIPT-ARGS ref *_SCRIPT-ARGS! \ forward compat
 	
 		\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
 
