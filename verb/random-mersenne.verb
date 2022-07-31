@@ -26,7 +26,7 @@
 'MERSENNE-INDEX void make-var
 
 \ must be called at least once
-:V2 mersenne-random-seed ( seed )
+: mersenne-random-seed ( seed )
 	624 MERSENNE-INDEX!
 	[ seed ] MERSENNE-STATE! \ MT[0] := seed
 	\ for i from 1 to (n - 1)
@@ -44,7 +44,7 @@
 	;
 	
 \ get next 32-bit value from generator
-:V2 mersenne-random-extract
+: mersenne-random-extract
 	@locals [ y ]
 	MERSENNE-INDEX void? if >>not-initted
 	MERSENNE-INDEX 624 < if >>ready
@@ -71,7 +71,7 @@
 	;
 	
 \ called periodically to refill MERSENNE-STATE
-:V2 mersenne-random-twist
+: mersenne-random-twist
 		\ "TWIST" . CR
 	\ for i from 0 to (n-1)
 	::{ ( i )

@@ -28,7 +28,7 @@
 
 ( reverse a list )
 
-:V2 reverse-list ( list -- reversed )
+: reverse-list ( list -- reversed )
 	@locals [ i ]
 	[ ] reversed!
 	0 i!
@@ -52,7 +52,7 @@
 
 ( reverse a string )
 
-:V2 reverse-string ( string -- reversed )
+: reverse-string ( string -- reversed )
 	( same basic idea as reverse-list except strings are immutable so used + instead of append )
 	@locals [ i ]
 	"" reversed!

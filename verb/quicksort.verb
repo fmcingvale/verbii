@@ -5,7 +5,7 @@
 \ split list into two lists:
 \	- truelist: all items where test(list[i]) is true
 \	- falselist: all items not in truelist
-:V2 partition ( list test -- truelist falselist )
+: partition ( list test -- truelist falselist )
 	@locals [ i ]
 	[ ] truelist!
 	[ ] falselist!
@@ -24,7 +24,7 @@
 	truelist falselist
 	;
 
-:V2 quicksort ( list -- sorted )
+: quicksort ( list -- sorted )
 		\ "QUICKSORT LIST:" . list . CR
 	@locals [ A B x ]
 	list length 1 <= if >>no-op
@@ -56,7 +56,7 @@
 "* Split into >2 and <=2 length ..." . CR
 [ "ab" "cdef" "g" "hi" "jklmo" "pqr" "st" "uvwx" "yz" ] { length 2 > } partition swap . . CR
 
-:V2 test-quicksort ( items )
+: test-quicksort ( items )
 	"Quicksorting:" . items . CR
 	items quicksort . CR
 	;

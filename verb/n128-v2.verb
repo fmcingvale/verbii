@@ -19,12 +19,12 @@
 'START_TIME run-time make-var
 
 \ create a 128 bit number, set to zero )
-:V2 n128-new ( -- obj )
+: n128-new ( -- obj )
 	[ 0 0 0 0 0 0 0 0 0 ] \ 8 x 16-bit values + 1 extra for sign
 	;
 
 \ add two 128 bit numbers, producing 128 bit result
-:V2 n128-add ( a b -- r )
+: n128-add ( a b -- r )
 	@locals [ i carry ]
 	n128-new r!
 	8 i!
@@ -40,10 +40,10 @@
 		r
 		;
 
-:V2 ddd . .S CR  ;
+: ddd . .S CR  ;
 
 \ parse hex string into n128 value
-:V2 n128-from-hex ( hex -- nr )
+: n128-from-hex ( hex -- nr )
 	@locals [ negative ]
 	\ see if there's a sign
 	hex 0 get "-" == if >>negative-sign
@@ -98,14 +98,14 @@
 \	* assumes value is positive and prints as-is
 \	* does NOT include leading sign value
 \ ( n -- hex )
-:V2 n128-to-hex-raw 
+: n128-to-hex-raw 
 	1 -1 slice { swap "." + swap int16-to-hex + } "" fold \ put dots between each 16-bits for readability
 	1 -1 slice ( remove leading . )
 	;
 
 \ nice printing of n128 values with raw value included for debugging
 \ ( n -- hex )
-:V2 n128-to-hex 
+: n128-to-hex 
 		\ "n128-to-hex" ddd
 	\ first print as +/- value
 	dup 0 get 0 == if >>positive
@@ -152,7 +152,7 @@
 \ assumes that n is unsigned and sets sign to 0000 (i.e. bits are NOT shifted out of
 \ MSB into sign), so caller should only pass positive values
 \ ( n i -- n<<(i*16) )
-:V2 n128-shl-x16 
+: n128-shl-x16 
 	swap deepcopy swap \ shift a copy not original
 	tuck
 	@loop ( i n i )
@@ -166,7 +166,7 @@
 
 \ shift n << i*16 and put v in low word of result
 \ ( n i v -- (n<<(i*16)) | v - IN PLACE )
-:V2 n128-shl-x16-in 
+: n128-shl-x16-in 
 	-rot ( v n i )
 	n128-shl-x16 swap ( n<<i*16 v )
 	8 swap put ( put v into n[8] )
@@ -185,7 +185,7 @@
 "abcd" n128-from-hex 8 n128-shl-x16 n128-to-hex . CR
 
 \ negate n128 value *IN PLACE*
-:V2 n128-negate ( nr -- negated )
+: n128-negate ( nr -- negated )
 	@locals [ i carry ]
 	\ invert all bits first (including sign value)
 	8 i!
@@ -212,7 +212,7 @@
 "*** Test Negate ****************************" . CR
 
 \ ( ASTR )
-:V2 testNegate
+: testNegate
 	"ASTR = " . dup . CR
 	dup n128-from-hex ( ASTR a )
 	swap n128-from-hex ( a a )
@@ -227,14 +227,14 @@
 	{ testNegate } for-each
 	
 \ ( a b - a-b )
-:V2 n128-subtract
+: n128-subtract
 	tuck n128-negate ( -b a -b )
 	n128-add ( -b sum )
 	swap n128-negate drop ( restore b since caller probably has a reference )
 	;
 
 \ ( ASTR BSTR )
-:V2 testSubtract
+: testSubtract
 	" ASTR = " . over . CR
 	" BSTR = " . dup . CR
 	n128-from-hex swap n128-from-hex ( b a )
@@ -257,7 +257,7 @@
 \
 \ a is n128, b is 16-bit value - both are assumed to be positive so
 \ caller should negate if needed and adjust afterwards
-:V2 n128-mul-16 ( a b -- product )
+: n128-mul-16 ( a b -- product )
 	@locals [ i carry ]
 	\ check that a is positive
 	a 0 get 0 != if >>badA \ sign != 0
@@ -291,7 +291,7 @@
 
 \ a*b where a & b are both n128. a & b are assumed to be positive, and result will always
 \ have sign word set to 0000
-:V2 n128-mul ( a b -- product )
+: n128-mul ( a b -- product )
 	@locals [ i ]
 	n128-new product!
 	8 i!
@@ -309,7 +309,7 @@
 		;
 
 \ ( ASTR b )
-:V2 testMul16
+: testMul16
 	"ASTR = " . over . CR
 	"b = " . dup . CR
 
@@ -360,7 +360,7 @@
 'FNV128-OFFSET "6c62272e07bb014262b821756295c58d" n128-from-hex make-var
 
 \ ( text -- hash, as n128 )
-:V2 fnv-128 
+: fnv-128 
 	\ for each byte:
 	\	hash = hash XOR byte (i.e. XOR against low word of n128 only)
 	\	hash = hash * FNV128-PRIME
@@ -396,7 +396,7 @@
 	fnv-128 n128-to-hex . CR } for-each
 	
 \ ( a b -- -1,0 or 1 ; -1: a<b 0: a==b 1: a>b )
-:V2 n128-compare
+: n128-compare
 		\ "cmp" ddd
 	2dup 0 get swap 0 get ( a b b[0] a[0] )
 		\ "B" ddd
@@ -426,17 +426,17 @@
 \ for readability ...
 
 \ ( a b -- a>b )
-:V2 n128-greater?
+: n128-greater?
 	n128-compare 1 ==
 	;
 
 \ ( a b -- a==b )
-:V2 n128-equal?
+: n128-equal?
 	n128-compare 0 == 
 	;
 
 \ ( a b -- a<b )
-:V2 n128-less?
+: n128-less?
 	n128-compare -1 ==
 	;
 
@@ -484,7 +484,7 @@
 n128-add n128-to-hex . CR
 
 \ ( a -- a==0? )
-:V2 n128-zero?
+: n128-zero?
 	{ 0 != } find void? 
 	;
 
@@ -499,7 +499,7 @@ n128-add n128-to-hex . CR
 \ ex: [ 0 0 0 123 456 ] -- msw[0] == 123, msw[1] == 456
 \
 \ ( a i -- get i'th most significant word )
-:V2 n128-get-msw
+: n128-get-msw
 	\ find first nonzero word
 	over { 0 > } find
 	\ check for errors
@@ -529,7 +529,7 @@ drop
 \ in this context, trailing zeros are still considered significant
 \
 \ ( a -- #significant words in a )
-:V2 n128-nr-sigwords
+: n128-nr-sigwords
 		\ "count sigwords" ddd
 	{ 0 > } find
 		\ "find result" ddd

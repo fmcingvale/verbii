@@ -12,7 +12,7 @@
 'FLOAT-MIN -1.7976931348623157E+308 make-const
 
 \ ( n -- ; get n as binary string )
-:V2 str.bin
+: str.bin
 	32 "" -rot
 	@loop ( s n i )
 		dup 0 == if >>done ( i==0? )
@@ -38,7 +38,7 @@
 \ ======================================================================
 
 \ convert char h from hex to int
-:V2 hex-char-to-int ( h -- i )
+: hex-char-to-int ( h -- i )
 	h "0" >= 
 	h "9" <=
 	and if >>digit 
@@ -59,7 +59,7 @@
 	;
 
 \ parse hex string to integer -- hex must NOT have leading "0x"; ONLY hex digits
-:V2 parse-hex ( hex -- i )
+: parse-hex ( hex -- i )
 	\ fold
 	hex
 	::{ ( accum h ) 
@@ -70,7 +70,7 @@
 
 \ 4-bit value to hex digit
 \ ( n -- h )
-:V2 int4-to-hex 
+: int4-to-hex 
 	dup 9 <= if >>digit 
 	dup 16 < if >>hex 
 	"Bad value in int4-to-hex:" swap str + error
@@ -81,19 +81,19 @@
 
 \ 8-bit value to 2 hex digits )
 \ ( n -- h )
-:V2 int8-to-hex 
+: int8-to-hex 
 	16 /mod int4-to-hex swap int4-to-hex +
 	;
 
 \ 16-bit value to 4 hex digits
 \ ( n -- h )
-:V2 int16-to-hex
+: int16-to-hex
 	256 /mod int8-to-hex swap int8-to-hex +
 	;
 
 \ 32-bit value to 8 hex digits )
 \ ( n -- h )
-:V2 int32-to-hex
+: int32-to-hex
 	65536 /mod int16-to-hex swap int16-to-hex +
 	;
 
@@ -102,19 +102,19 @@
 \ - does NOT prepend "0x", only returns the hex digits
 \
 \ ( val -- hexstring )
-:V2 str.hex int32-to-hex ;
+: str.hex int32-to-hex ;
 
 \ ======================================================================
 \ More bit operations (all 32-bit)
 \ ======================================================================
 
 \ rotate X left by K bits
-:V2 bit-rotl ( x k )
+: bit-rotl ( x k )
 	\ (x << k) | (x >> (32 - k))
 	x k bit-shl
 	x 32 k - bit-shr
 	bit-or
 	;
 	
-:V2 bit-low32 ( val ) val 4294967295 bit-and ;
+: bit-low32 ( val ) val 4294967295 bit-and ;
 

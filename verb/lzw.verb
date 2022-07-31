@@ -14,7 +14,7 @@
 \ My purpose of marking this above is to ensure the code is under a free license; if anyone has an 
 \ objection please let me know.)
 	
-:V2 compress ( text -- output )
+: compress ( text -- output )
 	@locals [ cmap ]
 	
 	[ ] make-dict cmap! \ maps text sequences to codes
@@ -54,7 +54,7 @@
 		output
 	;
 	
-:V2 decompress ( compressed -- text )
+: decompress ( compressed -- text )
 	@locals [ i dmap w ]
 	
 	[ ] make-dict dmap! \ this maps codes -> strings
@@ -95,14 +95,14 @@
 	\ final accumulator left on stack is output text, so just leave it there
 	;
 	
-:V2 test-for-range
+: test-for-range
 	"Count 0 .. 100 by 10:" . { . } 0 10 11 for-range CR
 	"Count -100 .. 100 by 25:" . { . } -100 25 9 for-range CR
 	;
 	
 test-for-range
 
-:V2 test-compress-decompress ( text )
+: test-compress-decompress ( text )
 	"Input text:  " . text . "length =" . text length . CR
 	text compress
 	"Compressed:  " . dup . "length =" . dup length . CR

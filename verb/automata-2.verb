@@ -16,10 +16,10 @@
 \ uncomment one of these to turn on/off debugging
 
 \ : ddd ( msg -- ; print msg + stack trace ) . .S CR ;
-:V2 ddd drop ;
+: ddd drop ;
 
 \ wrap index based on length of list
-:V2 wrapped-index ( list index -- adjusted-index )
+: wrapped-index ( list index -- adjusted-index )
 	index 0 < if >>negative 
 	index list length >= if >>overflow
 	index return ( index is OK )
@@ -30,12 +30,12 @@
 		;
 
 \ get value from wrapped index
-:V2 wrapped-get ( list index -- value )
+: wrapped-get ( list index -- value )
 	list list index wrapped-index get
 	;
 
 \ get 3-bit value (as above) for i'th list entry
-:V2 get-encoded-state ( list i -- code )
+: get-encoded-state ( list i -- code )
 	\ 3-bit value = list[i-1] * 4 + list[i] * 2 + list[i+1]
 	\ (the i-1,i+1 are wrapped around as needed)
 	list i 1 - wrapped-get 4 *
@@ -44,7 +44,7 @@
 	;
 
 \ given a current state as a list, and a rule set, calculate the next state
-:V2 next-state ( state rules -- new-state )
+: next-state ( state rules -- new-state )
 	@locals [ i ]
 	[ ] new-state!
 	0 i!
@@ -60,7 +60,7 @@
 		;
 
 \ ( state -- diagram )
-:V2 state2diagram 
+: state2diagram 
 	{ 1 == if >>one " " + return @one "*" + } "" fold
 	;
 
@@ -79,7 +79,7 @@ next-state dup . CR
 state2diagram . CR
 
 \ run nr loops of automata with initial state & rules
-:V2 run-automata ( state rules nr -- )
+: run-automata ( state rules nr -- )
 	@loop
 		nr 0 == if >>done
 		state state2diagram . CR \ print current state
@@ -92,7 +92,7 @@ state2diagram . CR
 
 \ make a new state vector with a single 1 in center
 \ (returned state will always be odd sized)
-:V2 make-new-state ( length )
+: make-new-state ( length )
 	
 	0 { dup } length 2 // 1 - repeat
 	1

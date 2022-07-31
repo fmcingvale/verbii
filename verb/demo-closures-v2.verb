@@ -42,7 +42,7 @@ call
 
 "* Accumulator factory" . CR
 
-:V2 make-accumulator ( initval )
+: make-accumulator ( initval )
 	\ return a lambda that, when called with a numeric argument, adds the argument
 	\ to its sum and returns the new sum
 	::{ ( n )
@@ -85,7 +85,7 @@ call
 
 \ so here is an example to show that it works like you'd expect ...
 
-:V2 test-outer-inner ( x )
+: test-outer-inner ( x )
 	@locals [ f1 f2 ]
 	"Hello outer! x =" . x . CR
 	\ lets make two closures that capture x and store
@@ -118,7 +118,7 @@ call
 \ the same state. this same state is shared AFTER the outer function returns (as you would
 \ expect in e.g. scheme)
 
-:V2 make-math-ops ( x )
+: make-math-ops ( x )
 	\ make lambdas that perform +, -, * and / operations on x to
 	\ show they share the same x 
 	
@@ -150,7 +150,7 @@ call
 	;
 
 \ instead of making a bunch of globals, make a test function ...
-:V2	test-math-ops ( x )
+:	test-math-ops ( x )
 	@locals [ fADD fSUB fMUL fDIV ]
 	"* Testing math ops maker ..." . CR
 	x make-math-ops fDIV! fMUL! fSUB! fADD!
@@ -166,7 +166,7 @@ call
 \ this shows that the same name can be defined in an outer
 \ and inner scope and the inner name will be seen in the inner scope
 
-:V2 scope-test-1 ( i )
+: scope-test-1 ( i )
 	"scope test outer i =" . i . CR
 	::{ ( i )
 		"inner scope i =" . i . CR
@@ -179,7 +179,7 @@ call
 
 \ === the following is a test/demo of all closure forms ...
 
-:V2 cl-test1 ( a b )
+: cl-test1 ( a b )
 	\ returns closure that captures a,b from
 	\ outer context
 	::{
@@ -200,7 +200,7 @@ call
 "Expect a,b=11,12:" . F1 call
 "Expect a,b=33,44:" . F2 call
 
-:V2 cl-test2 ( a b )
+: cl-test2 ( a b )
 	::{ ( c d )
 		\ 2nd level closure that captures a,b,c,d
 		::{
@@ -223,7 +223,7 @@ F1 call
 F2 call
 
 \ .. and nesting one more ...
-:V2 cl-test4 ( a b )
+: cl-test4 ( a b )
 	::{ ( c d )
 		\ 2nd inner 
 		::{ ( e f ) 
@@ -245,7 +245,7 @@ F2 call
 "Expect a,b,c,d,e,f=AA,BB,CC,DD,EE,FF:" . CR
 "EE" "FF" F2 call
 
-:V2 cl-test5 ( a b c )
+: cl-test5 ( a b c )
 	\ inside [ .. ], captured names are replaced with values
 	[ a b c ]
 	;
@@ -253,7 +253,7 @@ F2 call
 "Expect [ 12 34 56 ]:" .
 12 34 56 cl-test5 . CR
 
-:V2 cl-test6 ( a b )
+: cl-test6 ( a b )
 	[
 		\ captures should be seen in @{ .. } as well
 		::{
@@ -266,7 +266,7 @@ F2 call
 
 "Expect 59:" . 12 47 cl-test6 0 get call . CR
 
-:V2 cl-test7 ( a b c )
+: cl-test7 ( a b c )
 	[
 		\ inside [ .. ] closures should work as expected
 		::{ "a:" . a . "b:" . b . "c:" . c . CR }

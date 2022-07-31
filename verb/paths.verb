@@ -5,7 +5,7 @@
 \ for a lib later
 
 \ is c (single char string) alphabetic?
-:V2 is-alphabetic? ( c -- result )
+: is-alphabetic? ( c -- result )
 	c "a" >= c "z" <= and if >>yes 
 	c "A" >= c "Z" <= and if >>yes
 	false return
@@ -15,54 +15,54 @@
 \ some more sequence functions
 
 \ return NR elements from head of sequence (i.e. NR elements starting at left)
-:V2 head ( seq nr -- list' )
+: head ( seq nr -- list' )
 	seq 0 nr slice
 	;
 	
 \ get NR elements from tail of sequence (ie. NR elements starting at right)
-:V2 tail ( seq nr -- list' )
+: tail ( seq nr -- list' )
 	seq 0 nr - nr slice
 	;
 	
 \ get all EXCEPT the first NR elements from the left
-:V2 head-drop ( seq nr -- list' )
+: head-drop ( seq nr -- list' )
 	seq nr -1 slice
 	;
 
 \ get all EXCEPT the last NR elements from the left	
-:V2 tail-drop ( seq nr -- list' )
+: tail-drop ( seq nr -- list' )
 	seq 0 seq length nr - slice 
 	;
 
 \ split a path into parts by either \ or / separators
-:V2 file-path-split ( path -- parts )
+: file-path-split ( path -- parts )
 	path "\/" string-split
 	;
 
 \ determine the absolute path of the given path, i.e. removing any '.' and '..' parts
-:V2 file-path-abspath ( path -- name )
+: file-path-abspath ( path -- name )
 	path os-getcwd file-path-abspath/cwd
 	;
 
 \ return just the final component of a path (does not have to be an existing file)
-:V2 file-path-basename ( path -- name )
+: file-path-basename ( path -- name )
 	path os-getcwd file-path-basename/cwd
 	;
 
 \ return path EXCEPT for last component, as absolute/normalized path
-:V2 file-path-pathname ( path -- name )
+: file-path-pathname ( path -- name )
 	path os-getcwd file-path-pathname/cwd
 	;
 	
 \ the /cwd versions below let you pass the cwd so they can be used easily in unittests
 
 \ return just the final component of a path (does not have to be an existing file)
-:V2 file-path-basename/cwd ( path cwd -- name )
+: file-path-basename/cwd ( path cwd -- name )
 	path cwd file-path-abspath/cwd file-path-split -1 get
 	;
 
 \ return path EXCEPT for last component, as absolute/normalized path
-:V2 file-path-pathname/cwd ( path cwd -- name )
+: file-path-pathname/cwd ( path cwd -- name )
 	\ cannot do obvious thing and split the abspath and rejoin, excluding last piece,
 	\ since i would have to recreate the logic in file-path-abspath to get first part correct.
 	\ so instead, make abspath and trim from end until first / is found
@@ -79,7 +79,7 @@
 	;
 
 \ this version takes the cwd as an argument so it can be used easily in unittests
-:V2 file-path-abspath/cwd ( path cwd -- name )
+: file-path-abspath/cwd ( path cwd -- name )
 	@locals [ parts-in char-0 ]
 	
 	\ pre-normalize -- path must be one of:

@@ -8,7 +8,7 @@
 
 \ Let's start by defining the factorial function in traditional recursive style:
 
-:V2 fact-0 ( n -- n' )
+: fact-0 ( n -- n' )
 	n 0 == if >>zero
 	n 1 - fact-0 n * return \ result = n * fact(n-1)
 	@zero 1 return \ fact(0) == 1
@@ -47,7 +47,7 @@
 \	- f takes a callable (g) as an argument
 \	- g in turn also takes a callable as its argument
 
-:V2 f ( g )
+: f ( g )
 	"in f" . CR
 	\ for now, assume g doesn't use its argument and just pass an empty lambda
 	{ } g call
@@ -68,7 +68,7 @@ f \ pass that to f as the g argument
 \ now we're going to add two things:
 \	1. instead of calling 'g' directly, we're going to return a lambda that does it when called
 \	2. instead of passing an empty lambda to g, we're going to pass g to itself
-:V2 f2 ( g )
+: f2 ( g )
 	"in f2" . CR
 	::{ g g call }
 	;
@@ -86,7 +86,7 @@ drop \ don't need the lambda anymore
 
 \ lets go one further step (not in the original) -- lets lift the { g g call } out of
 \ the inner lambda and let it run freely.
-:V2 f3 ( g n )
+: f3 ( g n )
 	"in f3, n=" . n . CR
 	n 0 == if >>done
 	g n 1 - g call return \ g(g,n-1)
@@ -163,7 +163,7 @@ dup ( now: LAMBDA LAMBDA ) call
 
 \ first lets make a function to make the recursive function -- this will get rid
 \ of the first 'dup call' line above
-:V2 make-recur ( f ) f f call ;
+: make-recur ( f ) f f call ;
 
 \ rewriting with make-recur ...
 
@@ -193,7 +193,7 @@ make-recur
 \   		mkrec(lambda rec:
 \ 			    g(lambda y: rec(rec)(y))))
 	
-:V2 make-recur-nice ( g )
+: make-recur-nice ( g )
 	\ arg to make-recur	
 	::{ ( rec )
 		\ arg to g
@@ -225,7 +225,7 @@ make-recur-nice
 		
 \ since make-recur would just be 'dup call' if it was inline, let's do that ...
 
-:V2 make-recur-nice-2 ( g )
+: make-recur-nice-2 ( g )
 	::{ ( rec )
 		::{ rec rec call call }
 		g call
@@ -252,7 +252,7 @@ make-recur-nice-2
 \ it is the Y combinator.
 
 \ we can write it as a 1-liner, omitting the commentary ...
-:V2 Y ( g ) ::{ ( rec ) ::{ rec rec call call } g call } dup call ;
+: Y ( g ) ::{ ( rec ) ::{ rec rec call call } g call } dup call ;
 
 \ final tests ...
 
