@@ -93,9 +93,9 @@
 	;
 
 \ parse a piece char into its P-* and color	
-: char-to-piece @( char -- piece color )
+:V2 char-to-piece ( char -- piece color )
 	@locals [ ip ]
-	PIECE-CHARS @{ char toupper == } find ip! \ find index into PIECE_CHARS
+	PIECE-CHARS ::{ char toupper == } find ip! \ find index into PIECE_CHARS
 	ip void? if >>bad-char
 	char upper? if >>white
 	ip BLACK return 
@@ -104,18 +104,18 @@
 	;
 
 \ convert square (0..63) to algebraic notation
-: square-to-algebraic @( square )
+:V2 square-to-algebraic ( square )
 	square 8 /mod ( remainder quot )
 	swap "a" ord + chr
 	swap "1" ord + chr +
 	;
 
 \ convert algebraic notation (a1..h8) to square (0..63)
-: algebraic-to-square @( alg )
+:V2 algebraic-to-square ( alg )
 	alg string? not if >>bad-alg
 	alg length 2 != if >>bad-alg
-	"abcdefgh" @{ alg 0 get == } find void? if >>bad-alg
-	"12345678" @{ alg 1 get == } find void? if >>bad-alg
+	"abcdefgh" ::{ alg 0 get == } find void? if >>bad-alg
+	"12345678" ::{ alg 1 get == } find void? if >>bad-alg
 	alg 1 get ord "1" ord - 8 * 
 	alg 0 get ord "a" ord - +
 	return
@@ -179,7 +179,7 @@
 : put- put drop ;
 
 \ set board state from a FEN string
-: set-from-fen @( fen -- )
+:V2 set-from-fen ( fen -- )
 	@locals [ parts row col c i ]
 	clear-board
 	\ split string into its fields
@@ -246,7 +246,7 @@
 	\ parts[3] is en-passant target square or '-' if none
 	parts 3 get "-" == 
 		{ -1 EPSQUARE! }
-		@{ parts 3 get algebraic-to-square EPSQUARE! }
+		::{ parts 3 get algebraic-to-square EPSQUARE! }
 		ifelse
 	
 	\ parts[4] is halfmove number
@@ -349,12 +349,12 @@ make-var
 \
 \ this only returns squares that the piece COULD attack; caller must still check if there
 \ is a piece on the square or not
-: gen-fixed-attacks @( square moves -- attacks )
+:V2 gen-fixed-attacks ( square moves -- attacks )
 	@locals [ row col row+ col+ ]
 	[ ] attacks!
 	square square-to-rowcol col! row!
 	moves
-	@{ @( move )
+	::{ ( move )
 		\ calc row+dRow, col+dCol and see if that is a valid square
 		row move 0 get + row+!
 		col move 1 get + col+!
@@ -368,9 +368,9 @@ make-var
 	;
 
 \ generate a table of all fixed attacks for a piece at each square
-: gen-all-fixed-attacks @( moves -- attack-table ) 
+:V2 gen-all-fixed-attacks ( moves -- attack-table ) 
 	[ ] attack-table!
-	@{ @( square )
+	::{ ( square )
 		attack-table
 			square moves gen-fixed-attacks
 			append attack-table!
@@ -381,7 +381,7 @@ make-var
 \ generate attack squares for sliding pieces - pieces moves from square along (dRow,dCol) direction
 \
 \ squares are returned as a list of empty squares + the final blocked square, or void if all are empty
-: gen-sliding-attacks @( square dRow dCol -- attacks blocked )
+:V2 gen-sliding-attacks ( square dRow dCol -- attacks blocked )
 	@locals [ row col ]
 	[ ] attacks!
 	square square-to-rowcol col! row!
@@ -406,15 +406,15 @@ make-var
 \	movedirs is list of [ dRow dCol ]		
 \
 \ here, blockers is always a list (can be empty)
-: gen-all-sliding-attacks @( square movedirs -- attacks blockers )
+:V2 gen-all-sliding-attacks ( square movedirs -- attacks blockers )
 	[ ] attacks!
 	[ ] blockers!
 	movedirs
-	@{ @( dir )
+	::{ ( dir )
 		square dir unmake drop gen-sliding-attacks \ ( attacks blocked )
 		\ if blocked is not void, add to blockers list
 		dup void? not
-			@{ blockers swap append blockers! }
+			::{ blockers swap append blockers! }
 			{ drop } ifelse
 			
 		\ add attacks to list (use extend so i don't change object identity vs attacks
@@ -434,7 +434,7 @@ make-var
 'KING-ATTACKS-BY-SQUARE [ ] make-var
 
 \ pregenerate KING-ATTACKS-BY-SQUARE
-: gen-all-king-attacks @( ) 
+:V2 gen-all-king-attacks ( -- ) 
 	KING-MOVEDIRS gen-all-fixed-attacks
 		KING-ATTACKS-BY-SQUARE!
 	;
@@ -448,13 +448,13 @@ make-var
 'KNIGHT-ATTACKS-BY-SQUARE [ ] make-var
 
 \ pregenerate KNIGHT-ATTACKS-BY-SQUARE
-: gen-all-knight-attacks @( ) 
+:V2 gen-all-knight-attacks ( -- ) 
 	KNIGHT-MOVEDIRS gen-all-fixed-attacks
 		KNIGHT-ATTACKS-BY-SQUARE!
 	;
 	
 \ move object
-: new-move @( piece side squareFrom squareTo )
+:V2 new-move ( piece side squareFrom squareTo )
 	\ fields: 
 	\	tag 
 	\	piece
@@ -462,11 +462,11 @@ make-var
 	\	squareFrom 
 	\	squareTo
 	\	pieceCaptured
-	@[ 'move piece side squareFrom squareTo P-NONE ]
+	[ 'move piece side squareFrom squareTo P-NONE ]
 	;
 	
 \ is obj a move object?
-: move? @( obj )
+:V2 move? ( obj )
 	obj list? not if >>no 
 	obj 0 get 'move == if >>yes
 	@no false return
@@ -474,7 +474,7 @@ make-var
 	;
 
 \ print a move verbosely
-: print-move-long @( move )
+:V2 print-move-long ( move )
 	move move-piece move move-side piece-char "-" + puts
 	move move-squareFrom square-to-algebraic puts
 	move move-isCapture? { "x" puts } ifthen
@@ -483,22 +483,22 @@ make-var
 	
 \ setters/getters -- for efficiency these assume move is valid - caller should
 \ check with move? if unsure before calling these
-: move-piece @( move -- piece ) move 1 get ;
-: move-piece! @( move piece -- move ) move 1 piece put ;
+:V2 move-piece ( move -- piece ) move 1 get ;
+:V2 move-piece! ( move piece -- move ) move 1 piece put ;
 
-: move-side @( move -- side ) move 2 get ;
-: move-side! @( move side -- move ) move 2 piece put ;
+:V2 move-side ( move -- side ) move 2 get ;
+:V2 move-side! ( move side -- move ) move 2 piece put ;
 
-: move-squareFrom @( move -- square ) move 3 get ;
-: move-squareFrom! @( move square -- move' ) move 3 square put ;
+:V2 move-squareFrom ( move -- square ) move 3 get ;
+:V2 move-squareFrom! ( move square -- move' ) move 3 square put ;
 
-: move-squareTo @( move -- square ) move 4 get ;
-: move-squareTo! @( move square -- move' ) move 4 square put ;
+:V2 move-squareTo ( move -- square ) move 4 get ;
+:V2 move-squareTo! ( move square -- move' ) move 4 square put ;
 
-: move-pieceCaptured @( move -- piece ) move 5 get ;
-: move-pieceCaptured! @( move piece -- move' ) move 5 piece put ;
+:V2 move-pieceCaptured ( move -- piece ) move 5 get ;
+:V2 move-pieceCaptured! ( move piece -- move' ) move 5 piece put ;
 	
-: move-isCapture? @( move -- result ) move move-pieceCaptured P-NONE != ;
+:V2 move-isCapture? ( move -- result ) move move-pieceCaptured P-NONE != ;
 
 "Making king attack table ..." . CR	
 gen-all-king-attacks
@@ -507,10 +507,10 @@ gen-all-king-attacks
 gen-all-knight-attacks
 
 \ attacks is from gen-fixed-attacks
-: gen-fixed-moves @( piece square attacks side -- moves )
+:V2 gen-fixed-moves ( piece square attacks side -- moves )
 	[ ] moves!
 	attacks
-	@{ @( squareTo )
+	::{ ( squareTo )
 		\ see what is at squareTo
 		squareTo piece-at P-NONE == if >>empty
 		\ not empty - see if its opposing color
@@ -534,11 +534,11 @@ gen-all-knight-attacks
 	;
 	
 \ (attacks,blockers) is from gen-all-sliding-attacks
-: gen-sliding-moves @( piece square attacks blockers side -- moves )
+:V2 gen-sliding-moves ( piece square attacks blockers side -- moves )
 	[ ] moves!
 	\ all the squares in attacked are empty, so make those first
 	attacks
-	@{ @( squareTo )
+	::{ ( squareTo )
 		\ always non-capturing move
 		moves
 			piece side square squareTo new-move append moves!
@@ -547,7 +547,7 @@ gen-all-knight-attacks
 	\ now i have to check if blockers are opposite side (voids were already
 	\ filtered out in gen-all-sliding-squares)
 	blockers
-	@{ @( squareTo )
+	::{ ( squareTo )
 		squareTo color-at side == if >>done \ blocked by my piece, so i'm done
 		\ else its a capture
 		moves
@@ -562,17 +562,17 @@ gen-all-knight-attacks
 \ NOTE - all the gen-PIECE-moves functions are pseudo-legal - they are the literal moves
 \ the piece can make, regardless of whether they put/leave their king in check
 
-: gen-king-moves @( square side -- moves )
+:V2 gen-king-moves ( square side -- moves )
 	P-KING square KING-ATTACKS-BY-SQUARE square get side gen-fixed-moves
 	;
 	
-: gen-knight-moves @( square side -- moves )
+:V2 gen-knight-moves ( square side -- moves )
 	P-KNIGHT square KNIGHT-ATTACKS-BY-SQUARE square get side gen-fixed-moves
 	;
 	
 'ROOK-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] ] make-var
 
-: gen-rook-moves @( square side -- moves )
+:V2 gen-rook-moves ( square side -- moves )
 	@locals [ attacks blockers ]
 	\ gen attacks & blocked squares
 	square ROOK-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
@@ -582,7 +582,7 @@ gen-all-knight-attacks
 
 'BISHOP-MOVEDIRS [ [ 1 1 ] [ -1 1 ] [ 1 -1 ] [ -1 -1 ] ] make-var
 
-: gen-bishop-moves @( square side -- moves )
+:V2 gen-bishop-moves ( square side -- moves )
 	@locals [ attacks blockers ]
 	\ gen attacks & blocked squares
 	square BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
@@ -592,11 +592,11 @@ gen-all-knight-attacks
 	
 \ generate pseudolegal moves for side (moves are not checked to see if they
 \ put the king into/leave the king in check)
-: gen-pseudo-moves @( side -- moves )
+:V2 gen-pseudo-moves ( side -- moves )
 	@locals [ piece ]
 	[ ] moves!
 	\ for each square ...
-	@{ @( i )
+	::{ ( i )
 		i piece-at piece!
 		piece P-NONE == if >>done \ empty square, skip
 		i color-at side != if >>done \ wrong color piece
