@@ -231,11 +231,9 @@
 		dict
 	;
 	
-( make literal """ which is not parseable itself )
+( make literal """ which cannot be written directly as source )
 
-\ **RENAMED SO I CAN CHANGE TO make-var on next pass **
-var *_TRIPLEQUOTE 1
-34 34 34 3 make-symbol *_TRIPLEQUOTE set!
+'TRIPLEQUOTE 34 34 34 3 make-symbol make-var
 
 \ parse next word from input into runnable object
 :V2 syntax-next ( -- obj )
@@ -262,7 +260,7 @@ var *_TRIPLEQUOTE 1
 	dup 'null == if >>null-literal
 
 	( look for triple-quoted string first )
-	dup 0 3 slice *_TRIPLEQUOTE ref == if >>triplestring
+	dup 0 3 slice TRIPLEQUOTE == if >>triplestring
 	( now single quoted string )
 	dup 0 get '" == if >>string ( "... )
 	\ test for correct format before passing to parse-int or parse-float since those functions
@@ -561,7 +559,7 @@ var *_TRIPLEQUOTE 1
 	symbol->string
 	\ special case of only one piece ... """..."""
 	dup length 6 >=
-	over -3 -1 slice *_TRIPLEQUOTE ref symbol->string == and if >>return
+	over -3 -1 slice TRIPLEQUOTE symbol->string == and if >>return
 
 	\ else, keep first-piece on stack and add more chunks until i find one
 	\ that ends in """
@@ -569,7 +567,7 @@ var *_TRIPLEQUOTE 1
 		reader-next-chunk
 		dup void? if >>error-eos
 		+
-		dup -3 -1 slice *_TRIPLEQUOTE ref symbol->string == if >>return
+		dup -3 -1 slice TRIPLEQUOTE symbol->string == if >>return
 		<<read-loop
 
 	@error-eos
@@ -836,7 +834,7 @@ var *_TRIPLEQUOTE 1
 \ ( list name )
 :V2 save-defined-word
 	swap 2 make-list ( [ name list ] )
-	*_COMPILED_NAMELISTS ref swap append drop
+	COMPILED-NAMELISTS swap append drop
 	;
 
 \ take a list: [ ,,declargs arg ... -- local ... ]
@@ -1450,29 +1448,28 @@ var *_TRIPLEQUOTE 1
 			\ "AFTER REWRITING:" . .S CR
 	;
 	
-\ **RENAMED SO I can change this to make-var in next pass
-var *_COMPILED_NAMELISTS 1
+'COMPILED-NAMELISTS void make-var
 
-\ take the parsed COMPILED_NAMELISTS and perform finalization on the words.
-\ see compiled-finalize-wprd for details. saves finalized lists back to COMPILED_NAMELISTS
+\ take the parsed COMPILED-NAMELISTS and perform finalization on the words.
+\ see compiled-finalize-wprd for details. saves finalized lists back to COMPILED-NAMELISTS
 \
 \ ( -- )
 :V2 compiler-finalize-all-words
 		\ "FINALIZE ALL WORDS" . CR
 	0
 	@loop ( i )
-		dup *_COMPILED_NAMELISTS ref length >= ( i >= #lists ) if >>done 
-		*_COMPILED_NAMELISTS ref over get ( i lists[i] )
+		dup COMPILED-NAMELISTS length >= ( i >= #lists ) if >>done 
+		COMPILED-NAMELISTS over get ( i lists[i] )
 			\ "READY FOR PAIR:" . .S CR
 		1 get ( i objlist )
 			\ "REWRITING OBJLIST:" . dup . CR
 		compile-finalize-word ( i new-objlist )
-		over *_COMPILED_NAMELISTS ref swap get ( i newlist LISTS[i] )
+		over COMPILED-NAMELISTS swap get ( i newlist LISTS[i] )
 			\ "READY TO PUT:" . .S CR
 		1 rot put drop ( i )
 		1 + <<loop ( ++i )
 	@done
-		\ "FINAL NAMELISTS:" . *_COMPILED_NAMELISTS ref . CR
+		\ "FINAL NAMELISTS:" . COMPILED-NAMELISTS . CR
 		drop
 	;
 	
@@ -1482,11 +1479,11 @@ var *_COMPILED_NAMELISTS 1
 	\  any code that contained a name that was already defined -- for example when
 	\  compiling this file
 	\
-	\ instead, store as a list of [name,wordlist] to COMPILED_NAMELISTS
+	\ instead, store as a list of [name,wordlist] to COMPILED-NAMELISTS
 
-	0 make-list *_COMPILED_NAMELISTS set!
+	0 make-list COMPILED-NAMELISTS!
 
-	\ i need to count the number of parsed words that DID NOT go into COMPILED_NAMELISTS, so
+	\ i need to count the number of parsed words that DID NOT go into COMPILED-NAMELISTS, so
 	\ save starting SP so I can count at the end
 	SP >L ( L0=SP at start )
 	@loop
@@ -1508,7 +1505,7 @@ var *_COMPILED_NAMELISTS 1
 	( perform finalization of all words )
 	compiler-finalize-all-words
 	( leave list of [ name list ] on stack )
-	*_COMPILED_NAMELISTS ref
+	COMPILED-NAMELISTS
 	;
 
 \ leaves list of [ name list ] on stack
