@@ -109,6 +109,14 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* this is broken (del in v2 funcs) ...
+	>> :V2 foo 'ZZZ 1 make-var del ZZZ ;
+	=>
+	>> 'foo .dumpword
+	=> [ ''ZZZ 1 'make-var [ ',,inline ''ZZZ ',,del ] ]
+	>> foo
+	=> [ ''ZZZ 1 'make-var [ ',,inline ''ZZZ ',,del ] ] [ ',,inline ''ZZZ ',,del ]
+
 * rework init/compiler/boot to use named args style 
 
 * nested @[ ] lists not being expanded correctly:
