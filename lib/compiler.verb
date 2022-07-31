@@ -21,18 +21,16 @@
 		then reader-next until it returns null
 )
 
-\ renaming these so i can replace them with make-vars on the next pass
-
-var *_READER_TEXT 1 ( string )
-var *_READER_TEXT_LEN 1
-var *_READER_POS 1
+'READER-TEXT void make-var
+'READER-TEXT-LEN void make-var
+'READER-POS void make-var
 
 ( note - the reader-open-* functions discard any current input )
 
 :V2 reader-open-string ( string )
-	string *_READER_TEXT set!
-	*_READER_TEXT ref length *_READER_TEXT_LEN set!
-	0 *_READER_POS set!
+	string READER-TEXT!
+	READER-TEXT length READER-TEXT-LEN!
+	0 READER-POS!
 	;
 
 :V2 reader-open-file ( filename )
@@ -47,8 +45,8 @@ var *_READER_POS 1
 
 \ get next char [string] from reader without advancing stream )
 :V2 reader-peek-char ( -- char )
-	*_READER_POS ref *_READER_TEXT_LEN ref >= if >>eof
-	*_READER_TEXT ref *_READER_POS ref get ( char )
+	READER-POS READER-TEXT-LEN >= if >>eof
+	READER-TEXT READER-POS get ( char )
 	return
 	@eof 
 		void \ return void on eof
@@ -56,9 +54,9 @@ var *_READER_POS 1
 
 \ get next char [string] from reader stream or void on eof )
 :V2 reader-next-char ( -- char )
-	*_READER_POS ref *_READER_TEXT_LEN ref >= if >>eof
-	*_READER_TEXT ref *_READER_POS ref get ( char )
-	*_READER_POS ref 1 + *_READER_POS set! ( char; ++pos )
+	READER-POS READER-TEXT-LEN >= if >>eof
+	READER-TEXT READER-POS get ( char )
+	READER-POS 1 + READER-POS! ( char; ++pos )
 	return
 	@eof
 		void
@@ -130,9 +128,9 @@ var *_READER_POS 1
 \ same as reader-next but doesn't change input stream position
 :V2 reader-peek-next ( -- symbol ) 
 	@locals [ pos sym ]
-	*_READER_POS ref pos!
+	READER-POS pos!
 	reader-next sym!
-	pos *_READER_POS set!
+	pos READER-POS!
 	sym
 	;
 	
