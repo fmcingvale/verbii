@@ -110,12 +110,12 @@
 'TESTMODE false make-var
 
 : repl-main
-	\ parse *_SCRIPT-ARGS and filter out my options
+	\ parse SCRIPT-ARGS and filter out my options
 	[ ] >L ( L0 = new script args being built )
 	0
 	@parse-script-args
-		dup *_SCRIPT-ARGS length >= if >>done 
-		*_SCRIPT-ARGS over get ( i arg[i] )
+		dup SCRIPT-ARGS length >= if >>done 
+		SCRIPT-ARGS over get ( i arg[i] )
 			\ "REPL ARG:" . .S CR
 		dup "--" == if >>got-dashdash \ everything after -- goes to script i'm running
 		dup "-test" == if >>set-testmode
@@ -131,7 +131,7 @@
 	@got-dashdash ( i "--" )
 		drop
 		\ these are the args for the script to be run, excluding the '--'
-		*_SCRIPT-ARGS swap 1 + -1 slice LP ref swap + LP set! >>end
+		SCRIPT-ARGS swap 1 + -1 slice LP ref swap + LP set! >>end
 	@set-filename ( i filename )
 		FILENAME void? not if >>have-filename
 		FILENAME! 1 + <<parse-script-args
@@ -143,9 +143,9 @@
 	@done ( i )
 		drop
 	@end
-	\ set the filtered *_SCRIPT-ARGS that the next script will see now
-	L> *_SCRIPT-ARGS!
-		\ "REPL FILTERED ARGS:" . *_SCRIPT-ARGS . CR
+	\ set the filtered SCRIPT-ARGS that the next script will see now
+	L> SCRIPT-ARGS!
+		\ "REPL FILTERED ARGS:" . SCRIPT-ARGS . CR
 
 	
 	\ "GOT ARGS:" . CR

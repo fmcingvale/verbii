@@ -1,9 +1,9 @@
 ( this is the standalone compiler -- most code is in lib/compiler.verb )
 ( Copyright (c) 2022 Frank McIngvale, see LICENSE )
 
-*_SCRIPT-ARGS length 0 == if >>usage 
+SCRIPT-ARGS length 0 == if >>usage 
 
-*_SCRIPT-ARGS 0 get ( get filename to compile )
+SCRIPT-ARGS 0 get ( get filename to compile )
 compile-and-serialize
 
 return

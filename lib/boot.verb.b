@@ -183,7 +183,7 @@ y @done
 y drop
 y @end
 y L>
-y *_SCRIPT-ARGS!
+y SCRIPT-ARGS!
 y LP
 i 1
 y +
@@ -201,7 +201,7 @@ y make-var
 y '*_IMPORTED-MODULES
 y ,,new-dict
 y make-var
-y '*_SCRIPT-ARGS
+y 'SCRIPT-ARGS
 L 0
 y make-var
 y boot-main

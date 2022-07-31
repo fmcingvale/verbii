@@ -89,14 +89,14 @@
 :V2 parse-cmdline-and-run
 	@locals [ filename is-verbii-filename ]
 	\ see if I got a test script name on the cmdline
-	*_SCRIPT-ARGS length 0 == if >>run-all
-	*_SCRIPT-ARGS length 1 > if >>too-many-args
-	*_SCRIPT-ARGS 0 get file-exists? if >>got-filename
-	"*ERROR* Unknown cmdline arg:" . *_SCRIPT-ARGS 0 get . CR
+	SCRIPT-ARGS length 0 == if >>run-all
+	SCRIPT-ARGS length 1 > if >>too-many-args
+	SCRIPT-ARGS 0 get file-exists? if >>got-filename
+	"*ERROR* Unknown cmdline arg:" . SCRIPT-ARGS 0 get . CR
 	return
 
 	@too-many-args
-		"*ERROR* Too many cmdline arguments:" . *_SCRIPT-ARGS . CR
+		"*ERROR* Too many cmdline arguments:" . SCRIPT-ARGS . CR
 		return
 		
 	@run-all
@@ -105,7 +105,7 @@
 
 	@got-filename
 		false is-verbii-filename!
-		*_SCRIPT-ARGS 0 get filename!
+		SCRIPT-ARGS 0 get filename!
 		\ make sure filename ends in .verb or .verb.b
 		filename 2 tail ".b" ==
 			::{
@@ -124,7 +124,7 @@
 		return
 		
 	@bad-filename
-		"*ERROR* Not a .verbii file: " *_SCRIPT-ARGS 0 get + error
+		"*ERROR* Not a .verbii file: " SCRIPT-ARGS 0 get + error
 	;
 	
 parse-cmdline-and-run
