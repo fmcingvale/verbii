@@ -27,13 +27,13 @@
 
 ( note - the reader-open-* functions discard any current input )
 
-:V2 reader-open-string ( string )
+: reader-open-string ( string )
 	string READER-TEXT!
 	READER-TEXT length READER-TEXT-LEN!
 	0 READER-POS!
 	;
 
-:V2 reader-open-file ( filename )
+: reader-open-file ( filename )
 	filename file-read reader-open-string
 	;
 
@@ -44,7 +44,7 @@
 \
 
 \ get next char [string] from reader without advancing stream )
-:V2 reader-peek-char ( -- char )
+: reader-peek-char ( -- char )
 	READER-POS READER-TEXT-LEN >= if >>eof
 	READER-TEXT READER-POS get ( char )
 	return
@@ -53,7 +53,7 @@
 	;
 
 \ get next char [string] from reader stream or void on eof )
-:V2 reader-next-char ( -- char )
+: reader-next-char ( -- char )
 	READER-POS READER-TEXT-LEN >= if >>eof
 	READER-TEXT READER-POS get ( char )
 	READER-POS 1 + READER-POS! ( char; ++pos )
@@ -63,7 +63,7 @@
 	;
 
 \ get next string of either all whitespace -OR- non-whitespace
-:V2 reader-next-chunk ( -- chunk )
+: reader-next-chunk ( -- chunk )
 		\ "reader-next-chunk" . CR
 	"" ( string )
 	\ see what next chunk starts with ...
@@ -92,7 +92,7 @@
 	;
 	
 \ get next non-whitespace chunk from reader stream, or void on eof
-:V2 reader-next ( -- symbol )
+: reader-next ( -- symbol )
 	"" ( word )
 	@skipws ( skip leading whitespace )
 		reader-peek-char
@@ -126,7 +126,7 @@
 	;
 
 \ same as reader-next but doesn't change input stream position
-:V2 reader-peek-next ( -- symbol ) 
+: reader-peek-next ( -- symbol ) 
 	@locals [ pos sym ]
 	READER-POS pos!
 	reader-next sym!
@@ -135,7 +135,7 @@
 	;
 	
 \ is single char (string|symbol) a digit?
-:V2 digit? ( char -- result )
+: digit? ( char -- result )
 	char string? if >>string
 		char '0 < if >>notdigit
 		char '9 > if >>notdigit
@@ -148,12 +148,12 @@
 	;
 
 \ does string|symbol contain ANY digits?
-:V2 any-digits? ( string-or-symbol -- result )
+: any-digits? ( string-or-symbol -- result )
 	string-or-symbol { digit? } any?
 	;
 
 \ if char is at start of string, remove it
-:V2 ltrim-char ( string char -- string )
+: ltrim-char ( string char -- string )
 	string 0 get char == if >>trim
 		string return
 	@trim 
@@ -161,7 +161,7 @@
 	;
 
 \ remove "+" or "-" from start of string (max 1 removal)
-:V2 ltrim-sign ( string -- string )
+: ltrim-sign ( string -- string )
 	string 0 get "+" == if >>trim
 	string 0 get "-" == if >>trim
 		string return \ no change
@@ -170,7 +170,7 @@
 	;
 
 \ remove all leftmost digits from string
-:V2 ltrim-digits ( string -- string )
+: ltrim-digits ( string -- string )
 	@loop
 		string 0 get void? if >>done \ empty string
 		string 0 get digit? not if >>done
@@ -180,7 +180,7 @@
 	;
 
 \ true|false if string can be parsed as integer (i.e. a call to parse-int would succeed)
-:V2 int-string? ( string -- result )
+: int-string? ( string -- result )
 	string any-digits? not if >>nodigits ( must have digits, not just +/- )
 	string ltrim-sign
 		ltrim-digits
@@ -190,12 +190,12 @@
 	;
 
 \ like above but for symbols
-:V2 int-symbol? ( sym )
+: int-symbol? ( sym )
 	sym str int-string?
 	;
 
 \ true|false if string can be parsed as float (i.e. a call to parse-float would succeed)
-:V2 float-string? ( string -- result )
+: float-string? ( string -- result )
 	\ NOTE - this will ALSO match integers, so use int-string? first to rule those out
 	string any-digits? not if >>nodigits ( must have digits, not just +/-/./e )
 	string ltrim-sign
@@ -213,14 +213,14 @@
 	
 \ as above but for symbols ... caller could also just unconditionally call 'str' on
 \ the argument before passing it
-:V2 float-symbol? 
+: float-symbol? 
 	str float-string?
 	;
 
 \ add each name to dict with value set to size of dict at time name was added
 \ (i.e. adding [ "a" "b" "c" ] to an empty dict gives a=0, b=1, c=2)
 \ note: symbols are accepted and converted to strings
-:V2 dict-add-indexed-names ( dict names -- dict-out )
+: dict-add-indexed-names ( dict names -- dict-out )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -236,7 +236,7 @@
 'TRIPLEQUOTE 34 34 34 3 make-symbol make-var
 
 \ parse next word from input into runnable object
-:V2 syntax-next ( -- obj )
+: syntax-next ( -- obj )
 	reader-next
 		 \ "syntax-next:" . dup . CR
 	dup void? if >>void
@@ -304,7 +304,7 @@
 \ and remove of list. else leave list alone.
 \
 \ ( list -- list or items )
-:V2 flatten-if-inline
+: flatten-if-inline
 	dup length 0 == if >>done \ empty list, leave on stack
 	dup 0 get ',,inline == if >>flatten
 	return \ not ,,inline, leave on stack
@@ -315,7 +315,7 @@
 	;
 
 \ assumes @( was just read, parses until ) as an object list, prepended with ,,declargs
-:V2 syntax-parse-decl-arglist
+: syntax-parse-decl-arglist
 	@locals [ outlist ]
 	',,declargs 1 make-list outlist!
 	@loop
@@ -337,7 +337,7 @@
 \	:V2 name ( args ) STUFF ... ;
 \ vs
 \	::{ ( args ) STUFF ... }
-:V2 v2-syntax-define-word
+: v2-syntax-define-word
 	@locals [ SP-start name outlist ]
 		\ "V2 define word" . CR
 	syntax-next ( name must be next )
@@ -384,7 +384,7 @@
 	;
 
 \ del NAME -- 'del' was already read
-:V2 syntax-del
+: syntax-del
 	syntax-next ( name must be next )
 	dup symbol? not if >>badname
 	'' swap + ( make quoted name )
@@ -399,7 +399,7 @@
 	;
 
 \ assumes "#op(" was just read and dropped \ )
-:V2 syntax-opcode 
+: syntax-opcode 
 	@locals [ list s ]
 	[ ] list!
 	@loop ( list )
@@ -436,7 +436,7 @@
 		;
 		
 \ first string part already on stack *as symbol*
-:V2 syntax-string
+: syntax-string
 	\ convert first since reader-next-char returns strings
 	symbol->string
 		
@@ -474,7 +474,7 @@
 	;
 	
 \ ( first-piece-symbol -- string )
-:V2 syntax-triple-string 
+: syntax-triple-string 
 	\ convert to string first ...
 	symbol->string
 	\ special case of only one piece ... """..."""
@@ -498,7 +498,7 @@
 	;
 
 \ assumes [ was just read & dropped
-:V2 syntax-list
+: syntax-list
 	0 make-list 
 	@loop ( list )
 		\ note - any inner lists/lambdas will be handled automatically by syntax-next,
@@ -514,7 +514,7 @@
 		;
 	
 \ parse ( ... ) comment, with nesting. assumes "(" was just read.
-:V2 syntax-comment
+: syntax-comment
 	@locals [ nesting comment-text ]
 	"" comment-text!
 	1 nesting!
@@ -542,7 +542,7 @@
 	;
 	
 \ assumes "\" was just read
-:V2 syntax-line-comment 
+: syntax-line-comment 
 	\ read *characters* until EOL found
 	@loop
 		reader-next-char
@@ -558,7 +558,7 @@
 \ parses ::{ .. } into [ ,,v2-closure ... ]
 \
 \ assumes ::{ was just read, parses until } as an object list, prepended with ,,v2-closure
-:V2 syntax-v2-closure
+: syntax-v2-closure
 	@locals [ outlist ]
 	',,v2-closure 1 make-list outlist!
 	
@@ -588,7 +588,7 @@
 	;
 	
 \ string -- string with whitespace escaped
-:V2 serialize-escape-string
+: serialize-escape-string
 	{ 
 		\ ( char )
 		dup ord 32 == if >>space
@@ -637,7 +637,7 @@
 \				they are allowed here.
 
 \ ( obj -- ; serialize obj to stdout )
-:V2 serialize-object 
+: serialize-object 
 	dup int? if >>int
 	dup float? if >>float
 	dup string? if >>string
@@ -673,7 +673,7 @@
 		;
 
 \ ( list name )
-:V2 save-defined-word
+: save-defined-word
 	swap 2 make-list ( [ name list ] )
 	COMPILED-NAMELISTS swap append drop
 	;
@@ -682,7 +682,7 @@
 \ and return lists of [ arg ... ] and [ local ... ]
 \
 \ ( list -- args locals )
-:V2 compile-split-declargs
+: compile-split-declargs
 	@args [ list ]
 	@locals [ i args locals parsing-locals ]
 	[ ] args!
@@ -717,7 +717,7 @@
 \ merged into a single args/locals lists
 \
 \ ( objlist -- new-objlist args locals )
-:V2 compile-collect-args-locals
+: compile-collect-args-locals
 	@args [ objlist ]
 	@locals [ new-objlist args locals i ]
 		\ "COMPILE COLLECT ARGS LOCALS:" . .S CR
@@ -787,22 +787,22 @@
 \	TAG = ,,closure-env (for type checking)
 \	dict = maps names into local frame indexes (NAME, not NAME! -- NAME! handled internally)
 \	up = next upward frame, or void if toplevel env
-:V2 new-closure-env ( -- env )
+: new-closure-env ( -- env )
 	',,closure-env	 	\ TAG
 	[ ] make-dict		\ dict
 	void				\ up
 	3 make-list
 	;
 
-:V2 closure-env? ( env -- result ) env 0 get ',,closure-env == ;	
-:V2 closure-env-dict ( env -- dict ) env 1 get ;
+: closure-env? ( env -- result ) env 0 get ',,closure-env == ;	
+: closure-env-dict ( env -- dict ) env 1 get ;
 \ set the parent of env (i.e. its outer scope) so that name lookups	
 \ can traverse up the parent tree
-:V2 closure-env-set-up ( env up -- ) env 2 up put drop ;
-:V2 closure-env-get-up ( env -- ) env 2 get ;
+: closure-env-set-up ( env up -- ) env 2 up put drop ;
+: closure-env-get-up ( env -- ) env 2 get ;
 
 \ add a new name (symbol) to env, assigning it the next available index
-:V2 closure-env-add-name ( env name -- )
+: closure-env-add-name ( env name -- )
 	\ type checking
 	env closure-env? not if >>bad-env
 	\ check if already defined
@@ -815,7 +815,7 @@
 	;
 
 \ add a list of names at once
-:V2 closure-env-add-namelist ( env names -- )
+: closure-env-add-namelist ( env names -- )
 	names
 	::{ ( name )
 		env name closure-env-add-name
@@ -828,12 +828,12 @@
 \ and index is the index into that frame
 \
 \ if NOT found, returns ( void void )
-:V2 closure-env-lookup-name ( env name -- level index )
+: closure-env-lookup-name ( env name -- level index )
 	env name 0 closure-env-lookup-name-inner
 	;
 	
 \ the inner loop, called recursively
-:V2 closure-env-lookup-name-inner ( env name level -- level index )
+: closure-env-lookup-name-inner ( env name level -- level index )
 	@locals [ index up ]
 	\ if name has ! at the end then remove it
 	name -1 get '! != if >>lookup
@@ -856,7 +856,7 @@
 		void void
 	;
 	
-:V2 closure-env-make-ref-or-set ( name level index -- opcode )
+: closure-env-make-ref-or-set ( name level index -- opcode )
 	name -1 get '! == if >>set 
 	\ make a get 
 	'FRAME-GET level index 0 make-opcode return
@@ -869,7 +869,7 @@
 \ objlist is normally from a [ ,,v2-closure ... ] list (with the ,,v2-closure removed)
 \ plain-list is a flag that is true if objlist is from a list or false if objlist is from a lambda
 \ (the difference being that plain lists are never bound to a frame since they are never called as code)
-:V2 v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist nr-rewritten )
+: v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist nr-rewritten )
 	@locals [ argnames localnames env i ]
 			
 			\ "* V2-rewrite-args-locals" . CR
@@ -1058,7 +1058,7 @@
 \	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
 \
 \ returns a new list, does NOT modify objlist
-:V2 compile-finalize-word ( objlist -- newlist )
+: compile-finalize-word ( objlist -- newlist )
 
 	\ TODO -- I should only ever see one type of closure now ... 
 	
@@ -1089,7 +1089,7 @@
 \ see compiled-finalize-wprd for details. saves finalized lists back to COMPILED-NAMELISTS
 \
 \ ( -- )
-:V2 compiler-finalize-all-words
+: compiler-finalize-all-words
 		\ "FINALIZE ALL WORDS" . CR
 	0
 	@loop ( i )
@@ -1109,7 +1109,7 @@
 	;
 	
 \ byte-compile source from current reader stream
-:V2 byte-compile ( -- names wordlists )
+: byte-compile ( -- names wordlists )
 	\ do NOT store compiled words into interpreter since that would prevent compiling
 	\  any code that contained a name that was already defined -- for example when
 	\  compiling this file
@@ -1144,18 +1144,18 @@
 	;
 
 \ leaves list of [ name list ] on stack
-:V2 byte-compile-file ( filename -- output-list )
+: byte-compile-file ( filename -- output-list )
 	filename reader-open-file byte-compile
 	;
 
 
 \ leaves list of [ name list ] on stack
-:V2 byte-compile-string ( text -- output-list )
+: byte-compile-string ( text -- output-list )
 	text reader-open-string byte-compile
 	;
 
 \ takes list of [ name list ]
-:V2 serialize-compiled-output
+: serialize-compiled-output
 	\ take output of byte-compile-* and serialize to stdout
 
 	( each obj is [ name wordlist ] )
@@ -1163,7 +1163,7 @@
 	;
 
 ( compiles filename and writes serialized form to stdout. does NOT alter interpreter words )
-:V2 compile-and-serialize ( filename -- )
+: compile-and-serialize ( filename -- )
 	filename byte-compile-file ( this will be all code other than word definitions )
 
 	( that left list of [ name list ] on stack )
@@ -1176,7 +1176,7 @@
 	;
 
 ( compiles string and loads words into current interpreter )
-:V2 compile-and-load-string ( string -- )
+: compile-and-load-string ( string -- )
 	string byte-compile-string
 	( now load the [ name wordlist ] pairs into interpreter )
 	{ dup 1 get swap 0 get make-word } for-each
@@ -1193,7 +1193,7 @@
 \ to run __main__ (or not) and to delete __main__ when complete
 \
 \ ( filename -- )
-:V2 cached-compile-and-load
+: cached-compile-and-load
 		\ "cached-compile-and-load of: " . dup . CR
 	\ see if filename.b exists
 	dup ".b" + file-exists? not if >>do-compile \ does not exist, must compile filename

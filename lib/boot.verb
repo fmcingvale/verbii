@@ -11,7 +11,7 @@
 \ make a variable with a getter and setter:
 \	'name' gets data stored in var
 \	'name!' sets data stored in var
-:V2 make-var ( name initval )
+: make-var ( name initval )
 	@locals [ addr ]
 	1 alloc addr! \ alloc storage
 	initval addr set! \ save initval
@@ -28,7 +28,7 @@
 
 \ make a variable with only a getter so acts as a constant
 \	'name' gets data stored in var
-:V2 make-const ( name initval )
+: make-const ( name initval )
 	@locals [ addr ]
 	1 alloc addr! \ alloc storage
 	initval addr set! \ save initval
@@ -42,7 +42,7 @@
 	
 \ safely run currently loaded __main__ and delete it
 \ ( -- )
-:V2 safe-run-and-delete-main
+: safe-run-and-delete-main
 	\ the __main__ I'm about to run might want to redefine __main__ itself 
 	\ (maybe it loads another module, etc.), so do a little trick: 
 	\ first dump __main__ to a list, delete __main__, then make the dumped
@@ -53,13 +53,13 @@
 	;
 	
 \ load .b file, run its __main__, then delete __main__
-:V2 deserialize-and-run ( filename -- )
+: deserialize-and-run ( filename -- )
 	filename deserialize
 	safe-run-and-delete-main
 	;
 	
 \ assumes interpreter has just started - get init & compiler loaded
-:V2 init-interpreter ( -- )
+: init-interpreter ( -- )
 
 	\ load precompiled init & compiler libraries
 	"../lib/init.verb.b" deserialize-and-run 
@@ -80,7 +80,7 @@
 '*_NOCACHE false make-var
 
 \ load filename, respecting NOCACHE setting
-:V2 load-file-maybe-cached ( filename -- )
+: load-file-maybe-cached ( filename -- )
 	*_NOCACHE if >>nocache
 	\ do cached load
 	filename cached-compile-and-load
@@ -101,7 +101,7 @@
 \	  shouldn't run their main code (unless it's required to init the module of course)
 \
 \ ( name -- )
-:V2 import
+: import
 	\ see if name has been imported already and don't import again
 	\ (NOTE this is declared below like the other vars since the parser can't handle
 	\ seeing it up here)
@@ -125,7 +125,7 @@
 	
 'SCRIPT-ARGS [ ] make-var
 
-:V2 boot-main
+: boot-main
 	\ first, must init interpreter for anything else to work
 	\ (no userwords are loaded yet .. no compiler, no init lib)
 	init-interpreter

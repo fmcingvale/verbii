@@ -10,40 +10,40 @@
 \ are more compact/faster to write as stack operations.
 
 \ print top of stack + space
-:V2 . str puts 32 .c ;
+: . str puts 32 .c ;
 
 \ actually prints LF but originally named CR so I left it
-:V2 CR 10 .c ;
+: CR 10 .c ;
 
 \ clear the stack
-:V2 clear SP depth + 1 - SP! ;
+: clear SP depth + 1 - SP! ;
 
 \ ( a -- ) 
-:V2 drop SP 1 + SP! ; 
+: drop SP 1 + SP! ; 
 
 \ ( a -- a a ) 
-:V2 dup SP ref ; 
+: dup SP ref ; 
 
 \ ( a -- a a, only if a != 0 )
-:V2 dup? dup 0 == if >>ZERO dup @ZERO ; 
+: dup? dup 0 == if >>ZERO dup @ZERO ; 
 
 \ ( a b -- b a )
-:V2 swap ( a b ) b a ;
+: swap ( a b ) b a ;
 
 \ *DEPRECATED*
 \ ( Sn .. S1 i -- Sn .. S1 Si )
-:V2 pick SP + ref ; 
+: pick SP + ref ; 
 
 \ ( a b -- a b a ) 
-:V2 over SP 1 + ref ;
+: over SP 1 + ref ;
  
  \ ( a b -- a b a b ) 
-:V2 2dup over over ; 
+: 2dup over over ; 
 
-:V2 2drop ( a b -- ) ; 
+: 2drop ( a b -- ) ; 
 
 \ ( a b c d -- a b c d a b ) 
-:V2 2over 4 pick 4 pick ; 
+: 2over 4 pick 4 pick ; 
 
 \ ==============================================================================
 \ FIXME -- many arglists below are gross like ( a b -- B A ) since the current
@@ -51,64 +51,64 @@
 \ for locals ... once i rebootstrap, fix these 
 \ ==============================================================================
 
-:V2 2swap ( a b c d -- C D A B ) c d a b ;
+: 2swap ( a b c d -- C D A B ) c d a b ;
 
 \ ( xn .. x1 N -- ) - drop N items
-:V2 ndrop SP + 1 + SP! ;
+: ndrop SP + 1 + SP! ;
 
 \ ( a b -- b ) 
-:V2 nip >L drop L> ;
+: nip >L drop L> ;
 
-:V2 tuck ( a b -- B A _B ) b a b ;
+: tuck ( a b -- B A _B ) b a b ;
 
-:V2 rot ( a b c -- B C A ) b c a ;
+: rot ( a b c -- B C A ) b c a ;
 
-:V2 -rot ( b c a -- A B C ) a b c ;
+: -rot ( b c a -- A B C ) a b c ;
 
 \ *LOGICAL* not/and/or -- see bit-* functions for bitwise
 
 \ ( a -- not[a] )
-:V2 not if >>true true return @true false ;
+: not if >>true true return @true false ;
 
 \ ( a b -- a|b )
-:V2 or if >>true1 if >>true2 false return @true1 drop @true2 true ;
+: or if >>true1 if >>true2 false return @true1 drop @true2 true ;
 
 \ ( a b -- a&b )
-:V2 and if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
+: and if >>true1 drop false return @true1 if >>true2 false return @true2 true ;
 
 \ ( a b -- a!=b ) 
-:V2 != == not ;
+: != == not ;
 
-:V2 >= ( a b -- a>=b ) a b > a b == or ;
+: >= ( a b -- a>=b ) a b > a b == or ;
 
-:V2 < ( a b -- a<b ) b a > ;
+: < ( a b -- a<b ) b a > ;
 \ ( a b -- a<=b )
-:V2 <= > not ;
+: <= > not ;
 
-:V2 neg ( a -- neg[a] ) 0 a - ;
+: neg ( a -- neg[a] ) 0 a - ;
 \ implementation note -- there is ZERO runtime overhead for unused locals, so
 \ things like the below, where the output is called 'max[a,b]', and is never used,
 \ has no performance penalty at all. taking advantage of this can make the arglists
 \ more self-documenting
-:V2 max ( a b -- max[a,b] ) a b > if >>A b return @A a ;
-:V2 min ( a b -- min[a,b] ) a b > if >>B a return @B b ;
-:V2 abs ( a -- abs[a] ) a 0 < if >>neg a return @neg a neg ;
+: max ( a b -- max[a,b] ) a b > if >>A b return @A a ;
+: min ( a b -- min[a,b] ) a b > if >>B a return @B b ;
+: abs ( a -- abs[a] ) a 0 < if >>neg a return @neg a neg ;
 \ 'floor' divide like in Python -- integers only )
 \ ( a b -- quotient[a/b] )
-:V2 // /mod swap drop ;
+: // /mod swap drop ;
 \ ( a b -- remainder a/b )
-:V2 mod /mod drop ;
+: mod /mod drop ;
 
 \ *DEPRECATED*
-:V2 :: make-closure ;
+: :: make-closure ;
 
 \ .S - print stack without affecting it - good for debugging
-:V2 .S "=>" . depth 
+: .S "=>" . depth 
 @LOOP 
 	dup 0 > if >>true >>done @true dup SP + 1 + ref repr puts 32 .c 1 - <<LOOP @done drop CR ;
 
 \ ( N -- print first N locals .. meant for debugging, like .S )
-:V2 .L 
+: .L 
 	0 ( N index )
 	"Locals:" .
 	@loop
@@ -122,23 +122,23 @@
 \ *SEMI-DEPRECATED* -- named variables are much easier to use than locals, so
 \ the entire locals stack may eventually go away
 ( shortcuts for addresses of first 10 locals )
-:V2 L0 LP ;
-:V2 L1 LP 1 + ;
-:V2 L2 LP 2 + ;
-:V2 L3 LP 3 + ;
-:V2 L4 LP 4 + ;
-:V2 L5 LP 5 + ;
-:V2 L6 LP 6 + ;
-:V2 L7 LP 7 + ;
-:V2 L8 LP 8 + ;
-:V2 L9 LP 9 + ;
+: L0 LP ;
+: L1 LP 1 + ;
+: L2 LP 2 + ;
+: L3 LP 3 + ;
+: L4 LP 4 + ;
+: L5 LP 5 + ;
+: L6 LP 6 + ;
+: L7 LP 7 + ;
+: L8 LP 8 + ;
+: L9 LP 9 + ;
 
 \ same as get but leaves obj on stack
-:V2 +get 
+: +get 
 	over swap get ;
 	
 \ true|false if ANY member of sequence satisfies test function
-:V2 any? ( sequence test -- anytrue )
+: any? ( sequence test -- anytrue )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -153,7 +153,7 @@
 	;
 
 \ true|false if ALL members of sequence satisfy test
-:V2 all? ( sequence test -- alltrue )
+: all? ( sequence test -- alltrue )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -171,7 +171,7 @@
 \ *SEMI-DEPRECATED* -- this is to support v1 closures
 \ copy first nr locals into list [ LP LP+1 LP+2 ... ]
 \ ( nr -- list )
-:V2 copy-locals-to-list
+: copy-locals-to-list
 	\ cannot use @( .. ) params since that would mess up the locals
 	[ ]
 	0
@@ -193,14 +193,14 @@
 \ *TODO* this should take a char (1-length string) instead of any string
 
 \ ( string -- bool; is first char of string whitespace? )
-:V2 whitespace?
+: whitespace?
 	0 get ord ( get as ascii )
 	32 <= ( treat everything <= space as whitespace )
 	;
 
 \ return string with any leading whitespace removed
 \ ( string -- string )
-:V2 string-ltrim 
+: string-ltrim 
 	0
 	@loop ( string i )
 		2dup swap length >= ( string i i>=len ) if >>empty
@@ -214,13 +214,13 @@
 
 \ is string zero length or contain only whitespace?
 \ ( string -- empty? )
-:V2 string-empty?
+: string-empty?
 	string-ltrim length 0 ==
 	;
 
 \ join a list of strings by separator string
 \ ( list separator -- string )
-:V2 string-join ( list sep )
+: string-join ( list sep )
 	list
 	::{ ( accum elem )
 		accum length 0 == if >>skip \ skip separator before first string
@@ -230,7 +230,7 @@
 	;
 	
 \ ( string -- symbol )
-:V2 string->symbol 
+: string->symbol 
 	unmake make-symbol
 	;
 
@@ -241,31 +241,31 @@
 \ an unconditional 'str' on the arg to get a string in either case
 
 \ ( symbol -- string )
-:V2 symbol->string 
+: symbol->string 
 	str \ symbol->string is included for completeness, but just 'str' is guraranteed to work
 	;
 	
 
 \ ( string -- ascii ; get ASCII value of first char of string )
-:V2 ord 
+: ord 
 	0 get unmake drop
 	;
 
 \ ( ASCII -- string ; turn ASCII character value into single-character string )
-:V2 chr 
+: chr 
 	1 make-string
 	;
 
 \ is c an uppercase letter?
-:V2 upper? ( c ) 
+: upper? ( c ) 
 	c ord 65 >= c ord 90 <= and ;
 	
 \ is c an uppercase letter?
-:V2 lower? ( c )
+: lower? ( c )
 	c ord 97 >= c ord 122 <= and ;
 	
 \ convert char c to lowercase, if it is a letter
-:V2 tolower ( c -- lowercase )
+: tolower ( c -- lowercase )
 	c upper? if >>is-upper
 	c return \ not uppercase, return c as is
 	@is-upper
@@ -273,7 +273,7 @@
 	;
 
 \ convert char c to uppercase, if it is a letter
-:V2 toupper ( c -- uppercase )
+: toupper ( c -- uppercase )
 	c lower? if >>is-lower
 	c return \ not uppercase, return call
 	@is-lower
@@ -281,18 +281,18 @@
 	;
 	
 \ convert string to lowercase
-:V2 string-lower ( s -- lowercase )
+: string-lower ( s -- lowercase )
 	s { tolower } map
 	;
 
 \ convert string to uppercase	
-:V2 string-upper ( s -- lowercase )
+: string-upper ( s -- lowercase )
 	s { toupper } map
 	;
 	
 \ split text into parts separated by one or more chars from delims (a string or list of chars).
 \ any leading/trailing delims are trimmed. this function does NOT make empty parts.
-:V2 string-split ( text delims -- parts )
+: string-split ( text delims -- parts )
 	@locals [ i c piece ]
 	[ ] parts!
 	0 i!
@@ -328,14 +328,14 @@
 
 \ calls if-true if cond is true else calls if-false
 \ (cond must be a bool)
-:V2 ifelse ( cond if-true if-false )
+: ifelse ( cond if-true if-false )
 	cond if >>true
 	if-false call return
 	@true if-true call
 	;
 
 \ calls if-true if cond is true, else does nothing
-:V2 ifthen ( cond if-true )
+: ifthen ( cond if-true )
 	cond if >>true
 	return \ nothing to do on false
 	@true
@@ -352,7 +352,7 @@
 \ ========================================================================
 
 \ call func NR times -- does not touch stack; func can use stack in any way
-:V2 repeat ( func NR -- )
+: repeat ( func NR -- )
 	\ lambda is allowed to use stack, but not locals, so store my
 	\ parameters in locals
 	@loop
@@ -371,7 +371,7 @@
 \	*NOTE* lambda CANNOT rely on the state of the stack or locals -- bind with state if 
 \	data is needed other than the passed elements
 \
-:V2 for-each ( seq func -- )
+: for-each ( seq func -- )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -385,7 +385,7 @@
 \
 \	for-each-reverse -- same as for-each, but starts at the end
 \
-:V2 for-each-reverse ( seq func -- )
+: for-each-reverse ( seq func -- )
 	@locals [ i ]
 	seq length 1 - i!
 	@loop
@@ -402,7 +402,7 @@
 \ *NOTE* lambda CANNOT rely on the state of the stack or locals -- bind with state if 
 \ data is needed other than the passed ( i elem )
 \
-:V2 for-each-i ( seq func -- )
+: for-each-i ( seq func -- )
 	@locals [ i ]
 	0 i!
 	@loop
@@ -414,7 +414,7 @@
 	
 \ variant of for-each that calls func with ( key val )
 \ NOTE: iteration order is not guaranteed across platforms
-:V2 for-each-dict ( dict func -- )
+: for-each-dict ( dict func -- )
 	@locals [ i keylist ]
 	dict keys keylist!
 	0 i!
@@ -428,7 +428,7 @@
 \ for i=start .. start+incr*(count-1), call fn with args ( i )
 \
 \ note: count is used instead of an end value to simplify boundary conditions
-:V2 for-range ( fn start incr count )
+: for-range ( fn start incr count )
 	@locals [ i ]
 	
 	0 i!
@@ -443,7 +443,7 @@
 	;
 	
 \ find index of first item in sequence that satisfies test or void if none 
-:V2 find ( seq test -- index )
+: find ( seq test -- index )
 	0 index!
 	@loop
 		index seq length >= if >>not-found
@@ -464,7 +464,7 @@
 \		acc = func(acc, seq[1])
 \		.
 \		acc = func(acc, seq[n-1])
-:V2 fold ( seq func init -- accum )
+: fold ( seq func init -- accum )
 	@locals [ i ]
 	init accum!
 	0 i!
@@ -479,7 +479,7 @@
 \ call func for each item of list as:
 \	( list[i] -- out )
 \ make a newlist from the 'out' values
-:V2 map-list ( list func -- newlist )
+: map-list ( list func -- newlist )
 	@locals [ i ]
 	0 i!
 	[ ] newlist!
@@ -495,7 +495,7 @@
 \ call func for each char of string as:
 \	( str[i] -- out )
 \ make a newlist from the 'out' values
-:V2 map-string ( str func -- newstr )
+: map-string ( str func -- newstr )
 	@locals [ i ]
 	0 i!
 	"" newstr!
@@ -514,7 +514,7 @@
 \ calls func as:
 \	: func ( elem -- new-elem )
 \
-:V2 map ( seq func -- newseq )
+: map ( seq func -- newseq )
 	seq list? if >>list 
 	seq string? if >>string 
 	"Bad sequence in map:" seq str + error
@@ -523,7 +523,7 @@
 	@string seq func map-string return
 	;
 
-:V2 filter-list ( list func -- truelist )
+: filter-list ( list func -- truelist )
 	@locals [ i ]
 	[ ] truelist!
 	0 i!
@@ -537,7 +537,7 @@
 		truelist
 	;
 
-:V2 filter-string ( str func -- truestring )
+: filter-string ( str func -- truestring )
 	@locals [ i ]
 	"" truestring!
 	0 i!
@@ -557,7 +557,7 @@
 \ calls func with elem on top of stack; func must leave true or false on stack
 \
 \ ( sequence func -- new-sequence )
-:V2 filter
+: filter
 	over list? if >>list 
 	over string? if >>string
 	drop "Bad sequence in filter: " swap str + error
@@ -571,13 +571,13 @@
 \	[ [ "foo" 123 ] [ "bar" 678 ] ] make-dict
 \
 \ ( list-of-pairs -- dict )
-:V2 make-dict 
+: make-dict 
 	\ called as: ( dict [ key val ] )
 	{ unmake drop put } ,,new-dict fold
 	;
 
 \ ( message -- ) ;  print a debug message along with the stack
-:V2 debug . .S CR ;
+: debug . .S CR ;
 	
 \ -------------------------------------------------------------------------
 \
@@ -587,14 +587,14 @@
 
 \ create a new stream for reading from string
 \ ( string -- stream )
-:V2 stream-reader-open-string 
+: stream-reader-open-string 
 	\ state = [ #stream TEXT POSITION ]
 	'#stream swap 0 3 make-list
 	;
 
 \ create a new stream for reading from file
 \ ( filename -- stream )
-:V2 stream-reader-open-file
+: stream-reader-open-file
 	file-read stream-reader-open-string
 	;
 
@@ -605,16 +605,16 @@
 \ peek next char [as string] from stream or void on eof
 
 \ get current stream position
-:V2 stream-reader-tell ( stream -- stream position )
+: stream-reader-tell ( stream -- stream position )
 	stream stream 2 get
 	;
 
 \ set current stream position
-:V2 stream-reader-seek ( stream pos -- stream )
+: stream-reader-seek ( stream pos -- stream )
 	stream 2 pos put
 	;
 	
-:V2 stream-reader-peek-char ( stream -- stream c )
+: stream-reader-peek-char ( stream -- stream c )
 	@locals [ savepos c ]
 	stream 2 get savepos!
 	stream stream-reader-next-char c!
@@ -622,7 +622,7 @@
 	;
 
 \ read next char [as string] from stream or void on eof
-:V2 stream-reader-next-char ( stream -- stream c )
+: stream-reader-next-char ( stream -- stream c )
 	@locals [ c ]
 	\ POS >= length?
 	stream 2 get stream 1 get length >= if >>eof
@@ -636,7 +636,7 @@
 	;
 
 \ skip all whitespace from current position
-:V2 stream-reader-skip-whitespace ( stream -- stream )
+: stream-reader-skip-whitespace ( stream -- stream )
 	@locals [ c ]
 		stream
 	@loop
@@ -650,7 +650,7 @@
 \ read word (non-whitespace chunk) from current position,
 \ skipping any leading whitespace. returns void if no more words.
 \ ( stream -- stream word )
-:V2 stream-reader-next-word 
+: stream-reader-next-word 
 	stream-reader-skip-whitespace
 	"" ( stream word )
 	@loop ( stream word )
@@ -666,7 +666,7 @@
 		drop void
 	;
 
-:V2 stream-reader-peek-word ( stream -- stream word )
+: stream-reader-peek-word ( stream -- stream word )
 	@locals [ savepos ]
 	stream 2 get savepos!
 	stream stream-reader-next-word word!
@@ -678,7 +678,7 @@
 \ discards any \r or \n line ending so an empty line will return ""
 \ returns void if no more lines
 \ ( stream -- stream line )
-:V2 stream-reader-next-line
+: stream-reader-next-line
 	""
 	@loop ( stream s )
 		\ "@loop:" . .S CR
@@ -715,7 +715,7 @@
 		drop void
 		;
 		
-:V2 stream-reader-peek-line ( stream -- stream line )
+: stream-reader-peek-line ( stream -- stream line )
 	@locals [ savepos ]
 	stream 2 get savepos!
 	stream stream-reader-next-line line!

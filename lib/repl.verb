@@ -5,7 +5,7 @@
 
 \ at this point, the compiler/init must be loaded, so i can use any words now
 \ ( -- )
-:V2 repl
+: repl
 	\ set flags instead of assuming defaults are in effect --
 	\ i do NOT want host to exit on exception, but restart me
 	false set-exit-on-exception
@@ -34,7 +34,7 @@
 
 \ load & run file (whole program mode)
 \ ( filename -- )
-:V2 run-file
+: run-file
 	\ i want to exit on exceptions to avoid infinite loops
 	true set-exit-on-exception
 	\ show stacktraces
@@ -61,7 +61,7 @@
 'TEST_MODE_CURLINE null make-var
 
 \ ( filename -- )
-:V2 run-test
+: run-test
 	TEST_MODE_FILENAME!
 	\ i want to restart on errors so i can continue after the line that crashed
 	false set-exit-on-exception
@@ -112,7 +112,7 @@
 'FILENAME void make-var
 'TESTMODE false make-var
 
-:V2 repl-main
+: repl-main
 	\ parse SCRIPT-ARGS and filter out my options
 	[ ] >L ( L0 = new script args being built )
 	0
