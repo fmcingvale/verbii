@@ -1,3 +1,7 @@
+\ *FOR HISTORICAL REFERENCE ONLY*
+\
+\ This sample will no longer run - I was testing v1 vs v2 closures speed before removing v1
+\
 \ Some benchmarking of nested looping with v1 vs v2 closures
 \
 \ Results (C++):

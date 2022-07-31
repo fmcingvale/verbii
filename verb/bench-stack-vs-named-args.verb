@@ -4,17 +4,19 @@
 \
 \ Results (C++):
 \	stack operations only: 34.1 seconds
-\	named-arguments, 'version 1': 8.3 seconds (using self-based closures)
+\	named-arguments, 'version 1': 8.3 seconds (using self-based closures -- these no longer exist)
 \	named-arguments, 'version 2': 3.5 seconds (using callframe-based closures)
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-: int-range ( start end -- list ; makes list of integers from start to end [inclusive] by +1 )
+\ ( start end -- list ; makes list of integers from start to end [inclusive] by +1 )
+: int-range 
 	[ ] -rot 1 swap '<= 2 make-list make-lambda ( [ ] start 1 { end != } ) 
 	{ append } for-while
 	;
 
-: for-while ( start increment cond-while lambda )
+\ ( start increment cond-while lambda )
+: for-while
 	>L >L >L >L ( L3: lambda, L2: cond-while, L1: increment, L0: current )
 	@loop
 		L0 ref L2 ref call if >>continue >>end ( cond-end true|false for current counter? )
@@ -37,7 +39,9 @@
 \ @demo
 \ 12 prime? . CR
 \ 31 prime? . CR
-: prime? ( n -- true|false )
+\
+\ ( n -- true|false )
+: prime? 
 	dup 1 <= if >>below2
 	dup 2 == if >>is2
 
@@ -58,32 +62,8 @@
 		drop true return
 	;
 
-\ 'version 1' closures
-: prime-2? @( n -- out )
-	@locals [ i stop ]
-	n 1 <= if >>below2
-	n 2 == if >>is2
-
-	2 i! \ i = next value to try (n/i)
-	n 2 / stop! \ no need to check values beyond n/2
-
-	@loop
-		i stop > if >>isprime \ i>stop, no divisor found
-		n i mod 0 == if >>notprime \ found divisor, so not prime
-		i 1 + i!
-		<<loop
-	@notprime
-		false return
-	@isprime
-		true return
-	@below2 
-		false return
-	@is2
-		true return
-	;
-
 \ 'version 2' closures
-:V2 prime-3? ( n -- out )
+: prime-3? ( n -- out )
 	@locals [ i stop ]
 	n 1 <= if >>below2
 	n 2 == if >>is2
@@ -118,19 +98,6 @@
 NUMRANGE { prime? } filter . CR
 
 'T1 run-time make-var
-
-"TIME:" . T1 T0 - . CR
-
-\ ====== version 1 closures ===========
-
-run-time T0!
-
-"* primes *" . CR
-"Expect [ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]:" . CR
-"      " .
-NUMRANGE { prime-2? } filter . CR
-
-run-time T1!
 
 "TIME:" . T1 T0 - . CR
 
