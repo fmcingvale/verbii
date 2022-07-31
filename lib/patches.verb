@@ -13,4 +13,36 @@
 			
 ( ------ init ----------- )
 
+\ create a new dictionary as one of:
+\
+\ 	a list of tuples and makes a dictionary:
+\		[ [ "foo" 123 ] [ "bar" 678 ] ] make-dict
+\		=>
+\		{ "bar" => 678 "foo" => 123 }
+\
+\	a list of lambdas that returns ( key val ):
+\		[ { "a" 10 5 + } { "b" 100 200 + } ]
+\		=>
+\		{ "a" => 15 "b" => 300 }
+\
+\	The above forms can be mixed together in the same list
+\
+\ treating this as experimental so not replacing make-dict yet.
+: make-dict* ( pairs -- D )
+	,,new-dict D!
+	pairs
+	{ ( item )
+		item list? if >>list
+		item lambda? if >>lambda
+		item bound-lambda? if >>lambda
+		"Bad item passed to make-dict: " item str + error
+		
+		@list
+			D item 0 get item 1 get put D! return
+		@lambda
+			D item call put D! return
+	} for-each
+	D
+	;
+	
 ( ------ compiler ------- )
