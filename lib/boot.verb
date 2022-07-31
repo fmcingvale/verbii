@@ -165,6 +165,12 @@
 		1 + <<parse-cmdline
 	@got-dashdash ( i "--" )
 		drop
+		\ NOTE: the '--' is KEPT here since repl does its own parsing
+		\ so for example:
+		\	verbii -nocache compile.verb -- file.verb
+		\ will be passed to repl as:
+		\	verbii compile.verb -- file.verb
+		\ ... which is what repl would expect to see
 		LP 1 + ref swap -1 slice LP ref swap + LP set! >>end
 	@done ( i )
 		drop
