@@ -2,14 +2,14 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-:V2 test-digit?
+: test-digit?
 	"0" digit? expectTrue
 	"5" digit? expectTrue
 	"0" ord 1 - chr digit? expectFalse
 	"9" ord 1 + chr digit? expectFalse
 	;
 	
-:V2 test-any-digits?
+: test-any-digits?
 	"abc3de" any-digits? expectTrue
 	"3abc" any-digits? expectTrue
 	"abc6" any-digits? expectTrue
@@ -21,7 +21,7 @@
 	"" any-digits? expectFalse
 	;
 	
-:V2 test-ltrim-char
+: test-ltrim-char
 	"abc" "*abc" "*" ltrim-char expect==
 	"abc" "abc" "*" ltrim-char expect==
 	
@@ -29,7 +29,7 @@
 	"" "" "*" ltrim-char expect==
 	;
 	
-:V2 test-ltrim-sign
+: test-ltrim-sign
 	"123" "+123" ltrim-sign expect==
 	"+123" "++123" ltrim-sign expect==
 	"123" "-123" ltrim-sign expect==
@@ -40,14 +40,14 @@
 	"" "-" ltrim-sign expect==
 	;
 
-:V2 test-ltrim-digits
+: test-ltrim-digits
 	"abc" "123abc" ltrim-digits expect==
 	"" "123" ltrim-digits expect==
 	"abc" "abc" ltrim-digits expect==
 	"" "" ltrim-digits expect==
 	;
 	
-:V2 test-int-string?
+: test-int-string?
 	"123" int-string? expectTrue
 	"+123" int-string? expectTrue
 	"-123" int-string? expectTrue
@@ -63,7 +63,7 @@
 	"123.4" int-string? expectFalse
 	;
 	
-:V2 test-float-string?
+: test-float-string?
 	"123" float-string? expectTrue
 	"123." float-string? expectTrue
 	"123.5" float-string? expectTrue

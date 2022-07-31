@@ -6,7 +6,7 @@
 "hashing" import
 "unittest" import
 
-:V2 test-hash-djb2
+: test-hash-djb2
 	[ 	[ 24858410 "Hello World 12345 ^.^" ]
 		[ 2070383472 "the djb2 hashing function" ]
 		[ 2915615060 "Some Day somewhere In THE futurE 9.8.7.6.5.4.3.2.1.ZeRo" ]
@@ -18,7 +18,7 @@
 	{ unmake drop hash-djb2 expect== } for-each
 	;
 
-:V2 test-hash-fnv-32
+: test-hash-fnv-32
 	[
 		[ "7a78f512" "Hello world!" ]
 		[ "b1ea4872" "Hello World!" ]

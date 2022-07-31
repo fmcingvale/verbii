@@ -4,7 +4,7 @@
 
 "unittest" import
 
-:V2 test-string-compares
+: test-string-compares
 	"abcde" "abcde" expect==
 	"aBcdE" "aBcdE" expect==
 	"aBcdE" "aBcde" expect!=
@@ -17,7 +17,7 @@
 	"abcdef" "abcde" expect>
 	;
 	
-:V2 test-string-make-unmake
+: test-string-make-unmake
 	"abcde" unmake 
 	"[ 97 98 99 100 101 5 ]" expect-stack 6 ndrop
 	
@@ -27,7 +27,7 @@
 	"verbii" 118 101 114 98 105 105 6 make-string expect==
 	;
 
-:V2 test-string-get
+: test-string-get
 	"a" "abcdefgh" 0 get expect==
 	"b" "abcdefgh" 1 get expect==
 	"f" "abcdefgh" 5 get expect==
@@ -40,7 +40,7 @@
 	void "abcdefgh" 8 get expect==
 	;
 	
-:V2 test-string-slicing
+: test-string-slicing
 	"cde" "abcdefgh" 2 3 slice expect==
 	"f" "abcdefgh" 5 1 slice expect==
 	"efgh" "abcdefgh" 4 -1 slice expect==
@@ -50,7 +50,7 @@
 	"fgh" "abcdefgh" 5 100 slice expect==
 	;
 	
-:V2 test-string-ops
+: test-string-ops
 	6 "abcdef" length expect==
 	0 "" length expect==
 	

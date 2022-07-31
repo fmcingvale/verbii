@@ -2,7 +2,7 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-:V2 test-stream-reader
+: test-stream-reader
 	"""		   AB     C    DE   """ stream-reader-open-string
 	stream-reader-skip-whitespace
 	stream-reader-peek-char "A" expect==

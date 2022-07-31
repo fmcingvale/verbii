@@ -36,14 +36,14 @@
 'FAIL-BY-NAME [ ] make-dict make-var
 
 \ get all user functions starting with 'test-'
-:V2 get-all-tests
+: get-all-tests
 	@locals [ words ]
 	.wordlist
 	{ 0 5 slice 'test- == } filter
 	;
 
 \ run test by name (symbol)
-:V2 run-test-by-name ( namesym )
+: run-test-by-name ( namesym )
 	@locals [ fails-before fails-after ]
 	\ see if i get any new failures while running this test
 	UNITTEST-NR-FAIL fails-before!
@@ -58,7 +58,7 @@
 		FAIL-BY-NAME namesym str fails-after fails-before - put FAIL-BY-NAME!
 	;
 		
-:V2 do-run-test-modules ( module-names )
+: do-run-test-modules ( module-names )
 	\ import all test modules
 	module-names ::{ ( name ) name import } for-each
 	
@@ -82,11 +82,11 @@
 		} for-each-dict
 	;
 	
-:V2 do-run-all-tests
+: do-run-all-tests
 	ALL-TEST-MODULES do-run-test-modules
 	;
 	
-:V2 parse-cmdline-and-run
+: parse-cmdline-and-run
 	@locals [ filename is-verbii-filename ]
 	\ see if I got a test script name on the cmdline
 	SCRIPT-ARGS length 0 == if >>run-all

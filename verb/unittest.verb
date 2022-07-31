@@ -25,18 +25,18 @@
 	LP UNITTEST-LP0!
 	;
 
-:V2 unittest-report-pass ( msg )
+: unittest-report-pass ( msg )
 	"    " . msg . CR
 	UNITTEST-NR-PASS 1 + UNITTEST-NR-PASS!
 	;
 
-:V2 unittest-report-fail ( msg )
+: unittest-report-fail ( msg )
 	"*** ERROR ***" . msg . CR
 	UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
 	;
 	
 \ test is called with stack: ( expect actual )
-:V2 expect-generic ( test testname expect actual )
+: expect-generic ( test testname expect actual )
 	expect actual test call if >>ok
 		"*** ERROR *** Expecting" . expect repr . "but got" . actual repr . CR 
 		UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
@@ -47,7 +47,7 @@
 	;
 
 \ test must be a comparison operator taking args ( A B ) and producing a result that is checked vs expect
-:V2 expect-generic-compare ( test testname A B expect )
+: expect-generic-compare ( test testname A B expect )
 	@locals [ actual ]
 	A B test call actual!
 	actual expect == if >>ok
@@ -60,27 +60,27 @@
 	;	
 
 \ exact equality, no coercion allowed other than usual int+float comparison
-:V2 expect== ( A B )
+: expect== ( A B )
 	{ == } "==" A B true expect-generic-compare
 	;
 
-:V2 expect!= ( A B )
+: expect!= ( A B )
 	{ != } "!=" A B true expect-generic-compare
 	;
 
-:V2 expect> ( A B )
+: expect> ( A B )
 	{ > } ">" A B true expect-generic-compare
 	;
 
-:V2 expect>= ( A B )
+: expect>= ( A B )
 	{ >= } ">=" A B true expect-generic-compare
 	;
 
-:V2 expect< ( A B )
+: expect< ( A B )
 	{ < } "<" A B true expect-generic-compare
 	;
 
-:V2 expect<= ( A B )
+: expect<= ( A B )
 	{ <= } "<=" A B true expect-generic-compare
 	;
 
@@ -139,7 +139,7 @@
 	
 \ get stack representation as a string "[ .. ]".
 \ does not affect stack.
-:V2 str.stack ( -- s )
+: str.stack ( -- s )
 	"]" s!
 	::{ ( i )
 		SP i + ref repr " " + s + s!
@@ -148,7 +148,7 @@
 	;
 	
 \ expect a stack string like "[ ... ]"
-:V2 expect-stack ( expect )
+: expect-stack ( expect )
 	@locals [ actual ]
 	str.stack actual!
 	{ == } "stack?" expect actual expect-generic

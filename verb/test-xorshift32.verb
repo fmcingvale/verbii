@@ -6,7 +6,7 @@
 "random-xorshift32" import
 
 \ seed is an integer
-:V2 *test-xorshift32-case ( seed skip vals -- )
+: *test-xorshift32-case ( seed skip vals -- )
 	"SEED:" . seed . CR
 	"SKIP:" . skip . CR
 	"VALS:" . vals . CR
@@ -19,7 +19,7 @@
 	} 0 1 vals length for-range
 	;
 
-:V2 test-xorshift32
+: test-xorshift32
 	\ list of:
 	\	[ seed skip vals ]
 	\

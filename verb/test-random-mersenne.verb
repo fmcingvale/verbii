@@ -8,7 +8,7 @@
 
 \ unittest-init
 
-:V2 test-mersenne-twister
+: test-mersenne-twister
 	\ this is a list of:
 	\	[ seed skip [ expect0 ... ] ]
 

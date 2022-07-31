@@ -2,7 +2,7 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-:V2 test-dictionaries-basic
+: test-dictionaries-basic
 	@locals [ D ]
 	
 	[ [ "zzz" 444 ] [ "uuu" 333 ] [ "bbb" 555 ] [ "eee" 999 ] ] make-dict D!
@@ -29,7 +29,7 @@
 
 	;
 	
-:V2 test-dictionary-deepcopy
+: test-dictionary-deepcopy
 	[ [ "aaa" 1 ] [ "bbb" 2 ] [ "ccc" 3 ] ] make-dict dup
 	deepcopy
 	\ should not affect original

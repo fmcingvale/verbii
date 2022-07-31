@@ -5,7 +5,7 @@
 "unittest" import
 "numeric" import
 
-:V2 test-parse-hex
+: test-parse-hex
 	2595453966 "9ab37c0e" parse-hex expect==
 	2068551320 "7b4b9698" parse-hex expect==
 	2503746217 "953c22a9" parse-hex expect==
@@ -18,7 +18,7 @@
 	  11259375   "ABCDEF" parse-hex expect==
 	;
 	
-:V2 test-str.hex
+: test-str.hex
 	2882400152 str.hex "abcdef98" expect==
 	2271562428 str.hex "87654abc" expect==
 	4275830784 str.hex "fedc0000" expect==
@@ -28,7 +28,7 @@
 			 0 str.hex "00000000" expect==
 	;
 	
-:V2 test-bit-not-and-or-xor
+: test-bit-not-and-or-xor
 	\ 11001001100010100110001011100110
 	\ 00110110011101011001110100011001
 
@@ -50,14 +50,14 @@
 	3850888180 3544819506 919487686 bit-xor expect==
 	;
 
-:V2 test-str.bin 
+: test-str.bin 
 	"00000000.00010010.11010110.10000111" 1234567 str.bin expect==
 	"10100100.10001011.11010011.11001111" 2760627151 str.bin expect==
 	"11110100.11010000.01111011.11100011" 4107303907 str.bin expect==
 	"00000011.01000100.11010111.10011111" 54843295 str.bin expect==
 	;
 	
-:V2 test-bit-shr
+: test-bit-shr
 	"0fedcba9" "fedcba98" parse-hex  4 bit-shr str.hex expect==
 	"00fedcba" "fedcba98" parse-hex  8 bit-shr str.hex expect==
 	"000fedcb" "fedcba98" parse-hex 12 bit-shr str.hex expect==
@@ -81,7 +81,7 @@
 	536870912  1 31 bit-shl 2 bit-shr expect==
 	;
 	
-:V2 test-bit-shl
+: test-bit-shl
 	"8abcdef0" "98abcdef" parse-hex  4 bit-shl str.hex expect==
 	"abcdef00" "98abcdef" parse-hex  8 bit-shl str.hex expect==
 	"bcdef000" "98abcdef" parse-hex 12 bit-shl str.hex expect==
@@ -102,7 +102,7 @@
 	0 3 32 bit-shl expect==
 	;
 
-:V2 test-bit-rotl
+: test-bit-rotl
 	"876abcd9" "9876abcd" parse-hex  4 bit-rotl str.hex expect==
 	"76abcd98" "9876abcd" parse-hex  8 bit-rotl str.hex expect==
 	"6abcd987" "9876abcd" parse-hex 12 bit-rotl str.hex expect==
@@ -113,13 +113,13 @@
 	"9876abcd" "9876abcd" parse-hex 32 bit-rotl str.hex expect==
 	;
 	
-:V2 test-bit-low32
+: test-bit-low32
 	\ have to test numerically since e.g. str.hex always truncates to 32 bits
 	\ so would not be a valid test
 	188900976391764 bit-low32 4019746388 expect==
 	;
 	
-:V2 test-basic-mathops
+: test-basic-mathops
 	12 12 expect==
 	-34 -34 expect==
 	20 8 expect!=
@@ -250,7 +250,7 @@
 	0 0 abs expect==
 	;
 	
-:V2 test-float-precision
+: test-float-precision
 	@locals [ list ]
 	#1.2345678 #0.3456789 #8.8567843 3 make-list list!
 
@@ -272,7 +272,7 @@
 	;
 	
 
-:V2 test-sin
+: test-sin
 	\ 0, 90, 180, 270
 	0 0 sin expect==f 
 	1 PI 2 / sin expect==f 
@@ -289,7 +289,7 @@
 	0.5299192642332 321 180 / PI * sin expect==f 
 	;
 	
-:V2 test-cos
+: test-cos
 	\ 0, 90, 180, 270
 	1 0 cos expect==f 
 	0 PI 2 / cos expect==f 
@@ -306,7 +306,7 @@
 	0.7771459614569711 321 180 / PI * cos expect==f 
 	;
 	
-:V2 test-sqrt
+: test-sqrt
 	\ integers
 	47453132.81212578 2251799813685248 sqrt expect==f 
 	31487.864424250813 991485606 sqrt expect==f
@@ -318,7 +318,7 @@
 	1.3407807929942596e+154 FLOAT-MAX sqrt expect==f
 	;
 	
-:V2 test-log
+: test-log
 	1 E-VAL log expect==f 
 	14.442702213911256 1872345 log expect==f 
 	299.322976849677283 987e127 log expect==f

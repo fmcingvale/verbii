@@ -4,7 +4,7 @@
 
 "unittest" import
 
-:V2 test-push
+: test-push
 	"[ ]" expect-stack
 	111
 	"[ 111 ]" expect-stack
@@ -22,7 +22,7 @@
 	clear
 	;
 	
-:V2 test-ops-1
+: test-ops-1
 	"[ ]" expect-stack
 	11 22
 	"[ 11 22 ]" expect-stack
@@ -100,7 +100,7 @@
 	5 ndrop
 	;
 
-:V2 test-logical-ops 
+: test-logical-ops 
 	true true and expectTrue
 	true false and expectFalse
 	false true and expectFalse
@@ -115,7 +115,7 @@
 	false not expectTrue
 	;
 	
-:V2 test-locals
+: test-locals
 	10 20 30 40
 	"[ 10 20 30 40 ]" expect-stack
 	>L 

@@ -6,7 +6,7 @@
 
 "unittest" import
 
-:V2 test-symbol-compares
+: test-symbol-compares
 	'abcde 'abcde expect==
 	'aBcdE 'aBcdE expect==
 	'aBcdE 'aBcde expect!=
@@ -19,7 +19,7 @@
 	'abcdef 'abcde expect>
 	;
 	
-:V2 test-symbol-make-unmake
+: test-symbol-make-unmake
 	'abcde unmake 
 	"[ 97 98 99 100 101 5 ]" expect-stack 6 ndrop
 	
@@ -29,7 +29,7 @@
 	'verbii 118 101 114 98 105 105 6 make-symbol expect==
 	;
 
-:V2 test-symbol-get
+: test-symbol-get
 	'a 'abcdefgh 0 get expect==
 	'b 'abcdefgh 1 get expect==
 	'f 'abcdefgh 5 get expect==
@@ -42,7 +42,7 @@
 	void 'abcdefgh 8 get expect==
 	;
 	
-:V2 test-symbol-slicing
+: test-symbol-slicing
 	'cde 'abcdefgh 2 3 slice expect==
 	'f 'abcdefgh 5 1 slice expect==
 	'efgh 'abcdefgh 4 -1 slice expect==
@@ -52,7 +52,7 @@
 	'fgh 'abcdefgh 5 100 slice expect==
 	;
 	
-:V2 test-symbol-ops
+: test-symbol-ops
 	6 'abcdef length expect==
 	0 "" string->symbol length expect==
 	

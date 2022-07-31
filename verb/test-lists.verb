@@ -4,7 +4,7 @@
 
 "unittest" import
 
-:V2 test-make-list
+: test-make-list
 	@locals [ A B ]
 	10 20 30 40 4 make-list "[ [ 10 20 30 40 ] ]" expect-stack A!
 	4 A length expect==
@@ -26,7 +26,7 @@
 	[ 11 22 33 44 ] unmake "[ 11 22 33 44 4 ]" expect-stack 5 ndrop
 	;
 	
-:V2 test-list-literals
+: test-list-literals
 	[ 11 22 33 ] "[ [ 11 22 33 ] ]" expect-stack drop
 	[ ] "[ [ ] ]" expect-stack drop
 	[ 11 [ 22 [ 33 [ 44 [ 55 66 ] 77 ] 88 ] 99 ] 100 ] 
@@ -38,7 +38,7 @@
 
 	;
 	
-:V2 test-list-comparison
+: test-list-comparison
 	[ 11 22 33 44 ] [ 11 22 33 44 ] expect==
 	[ 11 22 33 44 ] [ 11 22 31 44 ] expect!=
 	[ 11 22 33 44 ] [ 11 22 3 44 ] expect>
@@ -65,7 +65,7 @@
 	[ 1 2 3 ] [ 1 2 3 4 ] expect<
 	;
 	
-:V2 test-list-identity
+: test-list-identity
 	\ dup maintains object identity
 	[ 11 22 33 ] dup 44 append "[ [ 11 22 33 44 ] [ 11 22 33 44 ] ]" expect-stack drop drop
 	\ deepcopy makes new object
@@ -78,7 +78,7 @@
 	[ 11 22 ] dup [ 33 44 ] + "[ [ 11 22 ] [ 11 22 33 44 ] ]" expect-stack drop drop
 	;
 	
-:V2 test-list-get-put
+: test-list-get-put
 	\ list get
 	11 [ 11 22 33 44 55 66 ] 0 get expect==
 	22 [ 11 22 33 44 55 66 ] 1 get expect==
@@ -105,7 +105,7 @@
 	"""[ [ 'world 22 #8.125 44 "hello" ] ]""" expect-stack drop
 	;
 	
-:V2 test-list-slice
+: test-list-slice
 	[ 50 60 70 ] [ 10 20 30 40 50 60 70 80 90 100 ] 4 3 slice expect==
 	[ 60 70 80 90 ] [ 10 20 30 40 50 60 70 80 90 100 ] -5 4 slice expect==
 	[ 40 50 60 70 80 90 100 ] [ 10 20 30 40 50 60 70 80 90 100 ] 3 100 slice expect==
@@ -114,7 +114,7 @@
 	[ 80 ] [ 10 20 30 40 50 60 70 80 90 100 ] 7 1 slice expect==
 	;
 	
-:V2 test-list-misc
+: test-list-misc
 	5 [ 11 22 33 44 55 ] length expect==
 	3 [ 11 [ 22 [ 33 [ 44 ] 55 ] 66 ] 77 ] length expect==
 	;

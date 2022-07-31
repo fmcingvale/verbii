@@ -4,7 +4,7 @@
 
 "unittest" import
 
-:V2 test-is-alphabetic?
+: test-is-alphabetic?
 	"A" is-alphabetic? expectTrue
 	"M" is-alphabetic? expectTrue
 	"Z" is-alphabetic? expectTrue
@@ -17,7 +17,7 @@
 	"!" is-alphabetic? expectFalse
 	;
 	
-:V2 test-seq-head-tail
+: test-seq-head-tail
 	[ ] [ 11 22 33 44 55 66 77 88 99 ] 0 head expect==
 	[ 11 ] [ 11 22 33 44 55 66 77 88 99 ] 1 head expect==
 	[ 11 22 ] [ 11 22 33 44 55 66 77 88 99 ] 2 head expect==
@@ -63,20 +63,20 @@
 	"" "abcdefg" 7 tail-drop expect==
 	;
 	
-:V2 test-file-path-split
+: test-file-path-split
 	[ "usr" "local" "bin" "verbii" "verbii.exe" ] "/usr/local/bin/verbii/verbii.exe" file-path-split expect==
 	[ "usr" "bin" ".." "verbii" "verbii.exe" ] "/usr\bin\..\verbii\verbii.exe" file-path-split expect==
 	[ "c:" "aaa" "bbb" "ccc" ] "c:\aaa\bbb\ccc" file-path-split expect==
 	;
 
-:V2 test-file-path-basename
+: test-file-path-basename
 	"verbii.exe" "/usr/local/bin/verbii/verbii.exe" "/a/b/c" file-path-basename/cwd expect==
 	"verbii.exe" "verbii.exe" "/usr/local/bin" file-path-basename/cwd expect==
 	"verbii.exe" "/usr\bin\..\verbii\verbii.exe" "/a/b/c" file-path-basename/cwd expect==
 	"ccc" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-basename/cwd expect==
 	;
 
-:V2 test-file-path-pathname
+: test-file-path-pathname
 	"/usr/local/bin/verbii" "/usr/local/bin/verbii/verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
 	"/usr/verbii" "/usr\bin\..\verbii\verbii.exe" "/x/y/z" file-path-pathname/cwd expect==
 	"/usr/bin" "verbii.exe" "/usr/bin" file-path-pathname/cwd expect==
@@ -85,7 +85,7 @@
 	"c:/aaa/bbb" "c:\aaa\bbb\ccc" "c:\x\y\z" file-path-pathname/cwd expect==
 	;
 
-:V2 test-file-path-abspath
+: test-file-path-abspath
 	\ pass a cwd so test is portable
 	"/usr/local/bin" "." "/usr/local/bin" file-path-abspath/cwd expect==
 	"/usr/local" ".." "/usr/local/bin" file-path-abspath/cwd expect==

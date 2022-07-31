@@ -5,13 +5,13 @@
 "unittest" import
 "xoshiro128++" import
 
-:V2 test-xoshiro128pp-seeding
+: test-xoshiro128pp-seeding
 	11 22 33 44 xoshiro128pp-seed
 	[ 11 22 33 44 ] XOSHIRO128PP-STATE expect==
 	;
 	
 \ seed is a list of 4 values (name with '*' so test runner doesn't run it by itself)
-:V2 *test-xoshiro128pp-case ( seed skip vals -- )
+: *test-xoshiro128pp-case ( seed skip vals -- )
 	"SEED:" . seed . CR
 	"SKIP:" . skip . CR
 	"VALS:" . vals . CR
@@ -24,7 +24,7 @@
 	} 0 1 vals length for-range
 	;
 
-:V2 test-xoshiro128pp
+: test-xoshiro128pp
 	\ list of:
 	\	[ seedlist skip vals ]
 	\
