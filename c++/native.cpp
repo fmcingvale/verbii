@@ -859,6 +859,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"string?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isString()));}},
 	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
 	{"lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isLambda()));}},
+	{"bound-lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isBoundLambda()));}},
 	{"closure?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isClosure()));}},
 	{"opcode?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isOpcode()));}},
 
