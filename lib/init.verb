@@ -118,17 +118,7 @@
 		1 + <<loop
 	@done 2drop
 	;
-	
-\ *DEPRECATED* -- use make-var in new code
-\ compiler turns "var NAME COUNT" into ( name count ,,var )
-\ ( name count -- ; creates new variable )
-:V2 ,,var 
-	alloc ( name addr )
-	( make word that pushes addr onto stack )
-	1 make-list ( name [ addr ] )
-	swap make-word
-	;
-	
+		
 \ *SEMI-DEPRECATED* -- named variables are much easier to use than locals, so
 \ the entire locals stack may eventually go away
 ( shortcuts for addresses of first 10 locals )

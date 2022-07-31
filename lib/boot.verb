@@ -1,6 +1,6 @@
 
 \
-\ Experimental verbii bootloader/repl
+\ verbii bootloader - inits interpreter and launches repl
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 \
@@ -129,22 +129,6 @@
 	init-interpreter
 
 		\ "AT INIT INTERPRETER, STACK:" . .S CR
-
-	\ *VERY BAD VERBII STYLE HERE* ... out of necessity
-	\ (1) vars should not be declared inside a function
-	\		* since boot-main only runs once, it's ok here
-	\ (2) they are out of place .. see below
-
-	\ this belongs with 'import' but again it cannot be parsed sitting up there
-	\ var IMPORTED_MODULES 1
-	\ ,,new-dict IMPORTED_MODULES set!
-
-	\ this belongs with load-file-maybe-cached, but again has to sit here to be parsed
-	\ var NOCACHE 1
-	\ false NOCACHE set!
-
-	\ args that get passed to repl (and on to other scripts after that)
-	\ var SCRIPT-ARGS 1
 
 	>L ( L1 = cmdline args -- pushed from host )
 	[ ] >L ( L0 = new script args being built )

@@ -253,7 +253,6 @@
 	dup ':W == if >>v2-worddef
 	dup ':V2 == if >>v2-worddef
 	dup 'def == if >>worddef ( synonym for ':' )
-	dup 'var == if >>var
 	dup 'del == if >>del
 	dup 'true == if >>true-literal
 	dup 'false == if >>false-literal
@@ -277,8 +276,6 @@
 		drop syntax-define-word return
 	@v2-worddef
 		drop v2-syntax-define-word return
-	@var
-		drop syntax-var return
 	@del
 		drop syntax-del return
 	@comment
@@ -437,30 +434,6 @@
 		( save names & compiled words )
 		outlist name save-defined-word
 		syntax-next ( save-defined-word has no return value, so return NEXT object )
-	;
-
-\ var NAME COUNT -- 'var' was already read
-:V2 syntax-var
-	syntax-next ( name should be next )
-	dup symbol? not if >>badname
-	'' swap + ( make quoted name )
-	syntax-next ( count should be next )
-	dup int? not if >>badcount
-
-	\ general note for here and below -- syntax-next has to return ONE object to
-	\ avoid complicating all callers, so when a syntax element expands to multiple
-	\ objects, those objects are returned as a list: [ ,,inline obj ... ]. this
-	\ list will then be flattened as needed, but intermediate routines can just pass
-	\ the list as-is and not worry about it representing multiple objects.
-	
-	',,inline -rot ( ,,inline name count )
-	',,var ( ,,inline ,,var name count ,,var )
-	4 make-list
-	 \ "SYNTAX VAR MADE:" . .S CR
-	return
-
-	@badname str "Bad name in var: " swap + error
-	@badcount str "Bad count in var: " swap + error
 	;
 
 \ del NAME -- 'del' was already read

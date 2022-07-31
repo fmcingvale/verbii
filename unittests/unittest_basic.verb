@@ -14,25 +14,6 @@ SP 3 + SP!
 "Hello world!" . CR
 clear
 
-clear
-: zzz { 10 . 20 . "Hello lambda!" . 30 . 40 . } call CR ;
-( THE FOLLOWING IS OBSOLETE -- this was how it worked when lambas were replaced at runtime )
-( subtlety here -- have to run zzz at least twice to make sure it's working -- )
-( the FIRST time, the { .. } will be parsed and directly pushed as a lambda object ... )
-( ... modifying the source to remove the { .. } and replacing it with the lambda object that )
-( ... will be pushed as an immediate value on subsequent runs )
-( so have to run the SECOND time to make sure the modified wordlist is correct )
-zzz
-zzz
-zzz ( once more for good measure )
-
-( this will fail if comments aren't removed in the syntax layer since the )
-( interpreter expects the name immediately after 'var' )
-var ( hello ) t33 ( there ) 1
-1445 t33 set! 
-t33 ref . CR
-
-clear
 ( line comments )
 "Expect 1 2 3 4: 1 2" . ( make sure \ inside a comment is ignored ) "3 4" . CR
 "Expect 5 6 7 8: 5 6 7 8" . CR \ ( this comment should be ignored ) "9 10 11 12" . CR
@@ -49,9 +30,10 @@ clear
 "Expect A B C D: A B" . ( make sure these are ignored \n \r \t \b ) "C D" . CR
 ( make sure saving lambdas to vars works )
 clear
-{ 133 244 355 } t33 set!
-t33 ref call 
-t33 ref call
+'t33 void make-var
+{ 133 244 355 } t33!
+t33 call 
+t33 call
 
 clear
 123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
@@ -76,35 +58,8 @@ clear
 clear
 
 
-\ ** BELOW ARE ALL DEPRECATED so not moved to new unittests **
-
-clear
-( closures )
-[ 11 22 33 ] "hello world" make-closure
-clear
-[ 11 self 22 self 33 self ] 7654 make-closure
-call
-clear
-[ 111 222 333 ] [ "hello" 4321 "world!" false ] make-closure
-unmake
-clear
-
-\ bind list in closure, modify list in closure and show that
-\ the changes are visible afterwards in var
-var MYSTATE 1
-0 make-list MYSTATE set!
-{ self 99 append drop self 88 append drop self 77 append drop } MYSTATE ref make-closure
-call
-"Expect [ 99 88 77 ]:" . MYSTATE ref . CR
-
-\ this was a bug in the interpreters -- bad assumption that closures & dicts didn't need to be
+\ this was a bug in the interpreters -- bad assumption that dicts didn't need to be
 \ pushed as literals ...
-10 20 [ 111 222 333 ] 77 :: 30 40 5 make-list make-lambda
-call
-clear
-111 222 [ 33 44 55 ] 888 :: 333 444 5 make-list make-lambda
-call
-clear
 11 22 [ ] make-dict 33 44 5 make-list make-lambda
 call
 clear

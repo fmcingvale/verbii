@@ -1,4 +1,4 @@
-L 94
+L 93
 W .
 L 4
 y str
@@ -289,13 +289,6 @@ y +
 y <<loop
 y @done
 y 2drop
-W ,,var
-L 5
-y alloc
-i 1
-y make-list
-y swap
-y make-word
 W L0
 L 1
 y LP

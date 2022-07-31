@@ -1,26 +1,7 @@
 ( -- unittest_core - test basic language features, roughly in the order that they will usually be implemented -- )
 ( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
 
-( var )
 clear
-var x 4
-11 x set! 22 x 1 + set! 33 x 2 + set! 44 x 3 + set!
-x 1 + ref
-x 3 + ref
-x 2 + ref
-x ref
-
-( check that int+addr works as well )
-clear
-123 3 x + set!
-3 x + ref
-
-clear
-( show that address math works )
-
-var y 4
-y dup 1 + dup 1 + dup 1 + ( y y+1 y+2 y+3 ) 123 swap set! 456 swap set! 789 swap set! 910 swap set!
-y 3 + dup 1 - dup 1 - dup 1 - ref . ref . ref . ref . CR
 
 ( check that 'return' at the top level works correctly )
 clear
