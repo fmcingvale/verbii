@@ -13,7 +13,8 @@
 
 "numeric" import
 
-: hash-fnv-32 ( text -- hash, as integer, 32-bits )
+\ ( text -- hash, as integer, 32-bits )
+: hash-fnv-32 
 	\ for each byte:
 	\	hash = hash XOR byte
 	\	hash = hash * FNV32-PRIME
@@ -34,7 +35,9 @@
 'MAX_INT32 4294967295 make-var
 
 \ ref: https://theartincode.stanis.me/008-djb2/ (djb2 hash)
-: hash-djb2 ( string -- hash )
+\
+\ ( string -- hash )
+: hash-djb2
 	\ for each char in string, hash = hash * 33 + c, with initial value 5381
 	{ ord swap 33 * + } 5381 fold
 	MAX_INT32 bit-and ( keep 32 bits only )

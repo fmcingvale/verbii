@@ -247,7 +247,7 @@
 	dup '::{ == if >>v2-closure
 	dup '[ == if >>list
 	dup '#op( == if >>opcode  \ )
-	dup ': == if >>worddef
+	dup ': == if >>v2-worddef
 	\ eventually these will replace : once all code has been ported
 	dup ':V2 == if >>v2-worddef
 	dup 'del == if >>del
@@ -269,8 +269,6 @@
 		return
 	@void
 		return ( leave void on stack )
-	@worddef
-		drop syntax-define-word return
 	@v2-worddef
 		drop v2-syntax-define-word return
 	@del
@@ -332,53 +330,11 @@
 		drop outlist
 	;
 	
-\ assumes ':' was just read
-:V2 syntax-define-word
-	@locals [ SP-start name ]
-	syntax-next ( name must be next )
-	dup symbol? not if >>badname
-	\ call syntax-next repeatedly until ';' is found. this will leave all parsed
-	\ words on stack that i'll then make into a list. easy way to do this is remember
-	\ starting value of SP then subtract from SP at end to get # of items parsed.
-	name! SP SP-start!
-	@loop
-		syntax-next ( get next processed object )
-		dup void? if >>eof
-		dup '@( == if >>arglist \ ) <- freaks out notepad++ styling here
-		dup '; == if >>endword
-		dup list? if >>list \ lists may need special handling, see below
-		<<loop
-	@arglist ( obj )
-		\ i do not check here to see if i have multiple @( .. ) constructs; that can
-		\ be handled at the rewrite stage
-		drop
-		syntax-parse-decl-arglist <<loop
-		
-	\ when i get a list i need to see if it is [ ,,inline ... ] and flatten it if so
-	@list ( list )
-		flatten-if-inline <<loop
-
-	@badname str "Invalid name after ':' : " swap + error
-	@eof "Unexpected end of input looking for ';'" error
-	@endword
-		drop ( drop ; )
-		\ does word end with 'return? if not, add it
-		dup 'return == if >>finish
-		\ add return
-		'return
-	@finish
-		SP-start SP - 1 - ( calc number of items )
-		make-list
-		( save names & compiled words )
-		name save-defined-word
-		syntax-next ( save-defined-word has no return value, so return NEXT object )
-	;
-
-\ assumes ':W' was just read
+\ assumes ':V2' was just read
 \
 \ TODO --- there should be a common routine to parse functions & lambdas since they
 \ are so similar ... 
-\	:W name ( args ) STUFF ... ;
+\	:V2 name ( args ) STUFF ... ;
 \ vs
 \	::{ ( args ) STUFF ... }
 :V2 v2-syntax-define-word

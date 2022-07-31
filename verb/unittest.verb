@@ -36,7 +36,7 @@
 	;
 	
 \ test is called with stack: ( expect actual )
-: expect-generic @( test testname expect actual )
+:V2 expect-generic ( test testname expect actual )
 	expect actual test call if >>ok
 		"*** ERROR *** Expecting" . expect repr . "but got" . actual repr . CR 
 		UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
@@ -84,16 +84,16 @@
 	{ <= } "<=" A B true expect-generic-compare
 	;
 
-: expectTrue @( actual )
+: expectTrue ( actual )
 	{ == } "true?" true actual expect-generic
 	;
 
-: expectFalse @( actual )
+: expectFalse ( actual )
 	{ == } "false?" false actual expect-generic
 	;
 	
 \ % difference between a & b as [0..1]
-: %diff @( a b -- p )
+: %diff ( a b -- p )
 	\ special cases
 	a 0 == b 0 == and if >>zerozero  \ divide by zero
 	a b + 0 == if >>zerosum \ divide by zero
@@ -117,12 +117,12 @@
 	;
 
 \ test that values are equal within UNITTEST-MAX-PCTDIFF
-: expect==f @( A B )
+: expect==f ( A B )
 	{ %diff UNITTEST-MAX-PCTDIFF <= } "~=" A B true expect-generic-compare
 	;
 
 \ test that values are not equal (more than UNITTEST-MAX-PCTDIFF)
-: expect!=f @( A B )
+: expect!=f ( A B )
 	{ %diff UNITTEST-MAX-PCTDIFF > } "~!=" A B true expect-generic-compare
 	;
 	
