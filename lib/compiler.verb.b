@@ -344,7 +344,7 @@ y <<loop
 y @done
 o 0
 W syntax-next
-L 166
+L 156
 y reader-next
 y dup
 y void?
@@ -366,11 +366,6 @@ y ==
 y if
 y >>v2-closure
 y dup
-y '::{
-y ==
-y if
-y >>v2-closure
-y dup
 y '[
 y ==
 y if
@@ -382,11 +377,6 @@ y if
 y >>opcode
 y dup
 y ':
-y ==
-y if
-y >>v2-worddef
-y dup
-y ':V2
 y ==
 y if
 y >>v2-worddef
@@ -607,7 +597,7 @@ o 131073
 y <<loop
 y @eof
 y drop
-s End%32of%32input%32inside%32:W
+s End%32of%32input%32inside%32:%32...%32;
 y error
 y @done
 y drop

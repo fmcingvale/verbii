@@ -243,13 +243,9 @@
 	dup '( == if >>comment \ )
 	dup '\ == if >>line-comment
 	dup '{ == if >>v2-closure
-	\ **REMOVE LATER** should become just { .. }
-	dup '::{ == if >>v2-closure
 	dup '[ == if >>list
 	dup '#op( == if >>opcode  \ )
 	dup ': == if >>v2-worddef
-	\ eventually these will replace : once all code has been ported
-	dup ':V2 == if >>v2-worddef
 	dup 'del == if >>del
 	dup 'true == if >>true-literal
 	dup 'false == if >>false-literal
@@ -330,16 +326,16 @@
 		drop outlist
 	;
 	
-\ assumes ':V2' was just read
+\ assumes ':' was just read
 \
 \ TODO --- there should be a common routine to parse functions & lambdas since they
 \ are so similar ... 
-\	:V2 name ( args ) STUFF ... ;
+\	: name ( args ) STUFF ... ;
 \ vs
-\	::{ ( args ) STUFF ... }
+\	{ ( args ) STUFF ... }
 : v2-syntax-define-word
 	@locals [ SP-start name outlist ]
-		\ "V2 define word" . CR
+		\ "define word" . CR
 	syntax-next ( name must be next )
 	dup symbol? not if >>badname
 	name!
@@ -366,18 +362,11 @@
 		\ else append object and continue
 		outlist swap append outlist! <<loop
 	@eof
-		drop "End of input inside :W" error
+		drop "End of input inside : ... ;" error
 	@done
 		drop \ drop '}
-		\ "RETURN OUTLIST:" . outlist . CR
-		\ outlist
 		
 	@finish
-			\ "FINISHING" . CR
-		\ SP-start SP - 1 - ( calc number of items )
-			\ "MAKING" . CR
-		\ make-list
-			\ "MADE" . dup . CR
 		( save names & compiled words )
 		outlist name save-defined-word
 		syntax-next ( save-defined-word has no return value, so return NEXT object )
@@ -421,12 +410,10 @@
 		list length 4 == if >>make-opcode 
 		list "0" append list! <<padlist
 	@make-opcode
-			\ "READY TO MAKE WITH LIST:" . list str . CR
 		\ put name on stack
 		list 0 get 
 		\ parse A,B,C as ints
 		list 1 -1 slice { parse-int } map unmake drop 
-			\ "READY TO CALL:" . .S CR
 		make-opcode \ make-opcode will check for errors as well
 		return
 	@no-name
@@ -555,7 +542,8 @@
 		drop ( discard char and return )
 	;
 
-\ parses { .. } into a lambda
+\ parses { .. } into a lambda (will potentially be converted to a closure (bound-lambda)
+\ during finalization)
 \
 \ assumes { was just read, parses until } as an object list
 : syntax-v2-closure
@@ -571,7 +559,6 @@
 	reader-next drop \ read the ( now \ )
 	syntax-parse-decl-arglist 
 	outlist swap append outlist! \ fall through to loop
-		\ "AFTER ARGLIST:" . outlist . CR
 	
 	@loop
 		syntax-next
@@ -583,7 +570,6 @@
 		drop "End of input inside { .. }" error
 	@done
 		drop \ drop '}
-			\ "RETURN OUTLIST:" . outlist . CR
 		outlist make-lambda
 	;
 	
@@ -623,13 +609,13 @@
 
 \ general note: the following is NOT intended to be a general-purpose serialization format.
 \ 				its only purpose is to be able to serialize byte-compiled verbii source.
-\				primarily it is for compiler.verb and init.verb, but is general enough to
+\				primarily it is for compiler.verb/init.verb/boot.verb, but is general enough to
 \				serialize any verbii source file.
 \
 \				as a consequence, there is no need to serialize anything that cannot exist
 \				in source form. this includes:
 \					* void - no source format (void is a word)
-\					* closure - no source format - requires :: at runtime
+\					* bound-lambda - no source format - requires binding at runtime
 \					* dict - no source format - requires make-dict or ,,new-dict at runtime
 \
 \				technically floats are not needed in compiler.verb nor init.verb, however,
@@ -856,6 +842,7 @@
 		void void
 	;
 	
+\ make opcode to either set or get a var (based on whether name ends in "!")
 : closure-env-make-ref-or-set ( name level index -- opcode )
 	name -1 get '! == if >>set 
 	\ make a get 
@@ -871,17 +858,9 @@
 : v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist nr-rewritten )
 	@locals [ argnames localnames env i ]
 			
-			\ "* V2-rewrite-args-locals" . CR
-			\ "OBJLIST:" . objlist . CR
-			\ "PLAIN-LIST?:" . plain-list . CR
-			
 		\ scan objlist for , @( ... ), @args, @locals
 		objlist
 		compile-collect-args-locals localnames! argnames! new-objlist!
-		
-			\ "ARGS:" . argnames . CR
-			\ "LOCALS:" . localnames . CR
-			\ "NEW-OBJLIST:" . new-objlist . CR
 		
 		\ track number of var references i rewrite
 		0 nr-rewritten!
@@ -904,8 +883,6 @@
 			-1 								\ count by -1
 				argnames length for-range	\ for argnames args
 		
-			\ "NEW-OBJLIST:" . new-objlist . CR
-		
 		\ create an environment to resolve names 
 		plain-list if >>make-env-plain-list
 		
@@ -916,7 +893,6 @@
 		\ -- arg names are NOT allowed to repeat
 		argnames
 		{ ( name )
-			\ "ARGNAME:" . name . CR
 			env name closure-env-add-name
 		} for-each
 
@@ -933,9 +909,7 @@
 		\ env localnames closure-env-add-namelist
 		localnames
 		{ ( name )
-			\ "LOCAL NAME:" . name . CR
 			env closure-env-dict name str get void? not if >>dup-name 
-			\ "LOCAL ADD:" . name . CR
 			env name closure-env-add-name
 			@dup-name \ not an error, just ignored
 		} for-each
@@ -943,10 +917,9 @@
 		\ .. and chain to my outer scope
 		env outer-env closure-env-set-up
 		>>begin-rewrite
-			\ "ENV NOW:" . env . CR
 		
 	@make-env-plain-list
-		\ i'm rewriting a LIST not code -- list will be flattened (see below) so will
+		\ i'm rewriting a LIST, not code -- list will be flattened (see below) so will
 		\ run IN the outer-env, not a new environment
 		outer-env env!
 		\ IMPORTANT! nothing below here is allowed to modify env since that would modify
@@ -958,7 +931,6 @@
 	@rewrite-loop
 		\ i objlist length >= if >>done 
 		
-			\ "OBJLIST[i]:" . objlist i get . CR
 		objlist i get void? if >>done 
 		objlist i get symbol? if >>symbol
 		objlist i get list? if >>rewrite-inner-plain-list
@@ -973,9 +945,9 @@
 		\ see if symbol is in my env or any outer scope
 		env sym closure-env-lookup-name index! level!
 		index void? if <<copy-element \ not in environment, so copy as is 
-		\ turn symbol into get/set opcode (going along with the comment on voids above, this should
-		\ never be able to add voids into the lists -- all rewriting does is turns names into
-		\ FRAME-GET or FRAME-SET opcodes)
+		\ turn symbol into get/set opcode (tied into the comments below, this never
+		\ changes the size of the list -- the symbol & the opcode that replaces it
+		\ are both single objects)
 		new-objlist
 			sym level index closure-env-make-ref-or-set
 			append new-objlist!
@@ -983,21 +955,11 @@
 		nr-rewritten 1 + nr-rewritten!
 		>>next 
 		
-	\ @list			
-	\	\ look for [ ,,v2-closure ... ] (parsed from ::{ .. })
-	\	objlist i get 0 get ',,v2-closure == if >>rewrite-inner-closure \ got [ ,,v2-closure .. ]
-	\	
-	\	\ else, recurse normal list looking for names to be rewritten
-	\	>>rewrite-inner-plain-list
-		
 	@rewrite-inner-lambda
 		@locals [ sub-objlist sub-nr-rewritten ]
-			\ "REWRITE SUBLIST:" . CR
 		\ call rewrite recursively with my env as the outer scope
 		objlist i get unmake \ get lambda as list to pass
 		env false v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
-			\ "GOT NEW SUBLIST:" . sub-objlist . CR
-			\ "NEW OBJLIST:" . new-objlist . CR
 		\ turn new sub-objlist back into lambda now that its rewritten and add to new-objlist
 		new-objlist
 			sub-objlist make-lambda append new-objlist!
@@ -1014,7 +976,6 @@
 		
 	@rewrite-inner-plain-list
 		@locals [ list-length ]
-			\ "PLAIN LIST:" . objlist i get . CR
 		\ rewrite vars inside a list without binding frame to it at runtime (since the list will
 		\ be expanded, it will be filled from MY frame) -- also see code at beginning that
 		\ knows not to create a new env for plain lists
@@ -1024,11 +985,10 @@
 		\	AFTER: a b c d e f 2 make-list 3 make-list 3 make-list
 		\ in other words, the inner lists have been flattened so the literal length is longer, but the
 		\ RUNTIME length (i.e. for make-list) is the same -- rewriting is a 1-to-1 replacement of varnames
-		\ with a single opcode, so the ending RUNTIME length will be the same.
+		\ with a single opcode, so the final RUNTIME length will be the same.
 		objlist i get length list-length!
 		\ rewrite list
 		objlist i get env true v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
-			\ "SUB RESULT:" . sub-objlist . CR
 		\ did I rewrite anything?
 		sub-nr-rewritten 0 == if >>plain-list-no-rewrites
 		\ else, the rewrites occurred in MY ENV so flatten list so runtime references are correct
@@ -1044,7 +1004,7 @@
 		\ nothing rewritten, so leave list as-is and it can be instantiated by deepcopy at runtime
 		new-objlist objlist i get append new-objlist!
 		
-		>>next
+		>>next \ just to be clear ...
 		
 	@next
 		i 1 + i! <<rewrite-loop
@@ -1058,30 +1018,15 @@
 \
 \ returns a new list, does NOT modify objlist
 : compile-finalize-word ( objlist -- newlist )
-
-	\ TODO -- I should only ever see one type of closure now ... 
-	
-	\ see if i got a [ ,,v2closure ... ]
-	\ objlist 0 get ',,v2-closure == if >>v2-closure
-	
-	\ not a v2-closure -- can this still happen??????? need to check later
-	\ return as-is ...
-	\ "NOT CHANGING V2 WORD:" . objlist . CR 
-	
-	\ no ,,v2-closure but still handle any rewriting to recursively find any underneath it
-	\ objlist return
-	\ objlist void false v2-compile-rewrite-args-locals
-	\ drop 
-	\ return
-	
-	\ @v2-closure
-		\ toplevel function - no outer environment
-		objlist void false v2-compile-rewrite-args-locals
-		drop \ don't need nr-rewritten here; top level is never bound anyways
-		return \ return new objlist
+	\ always a toplevel function - no outer environment
+	objlist void false v2-compile-rewrite-args-locals
+	drop \ don't need nr-rewritten here; top level is never bound anyways
+	return \ return new objlist
 	;
 	
 'COMPILED-NAMELISTS void make-var
+
+\ *TODO* this REALLY needs to be rewritten with named args for clarity ...
 
 \ take the parsed COMPILED-NAMELISTS and perform finalization on the words.
 \ see compiled-finalize-wprd for details. saves finalized lists back to COMPILED-NAMELISTS
@@ -1093,16 +1038,12 @@
 	@loop ( i )
 		dup COMPILED-NAMELISTS length >= ( i >= #lists ) if >>done 
 		COMPILED-NAMELISTS over get ( i lists[i] )
-			\ "READY FOR PAIR:" . .S CR
 		1 get ( i objlist )
-			\ "REWRITING OBJLIST:" . dup . CR
 		compile-finalize-word ( i new-objlist )
 		over COMPILED-NAMELISTS swap get ( i newlist LISTS[i] )
-			\ "READY TO PUT:" . .S CR
 		1 rot put drop ( i )
 		1 + <<loop ( ++i )
 	@done
-		\ "FINAL NAMELISTS:" . COMPILED-NAMELISTS . CR
 		drop
 	;
 	
@@ -1126,7 +1067,6 @@
 	dup list? if >>list
 	<<loop
 	@list
-	\ **TODO** change this to use flatten-if-inline
 	\ check for [ ,,inline ... ] and flatten
 	flatten-if-inline <<loop
 	@done
@@ -1145,7 +1085,6 @@
 : byte-compile-file ( filename -- output-list )
 	filename reader-open-file byte-compile
 	;
-
 
 \ leaves list of [ name list ] on stack
 : byte-compile-string ( text -- output-list )

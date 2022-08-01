@@ -45,12 +45,6 @@
 \ ( a b c d -- a b c d a b ) 
 : 2over 4 pick 4 pick ; 
 
-\ ==============================================================================
-\ FIXME -- many arglists below are gross like ( a b -- B A ) since the current
-\ version of the compiler (at the time of writing this) doesn't allow dup names
-\ for locals ... once i rebootstrap, fix these 
-\ ==============================================================================
-
 : 2swap ( a b c d -- C D A B ) c d a b ;
 
 \ ( xn .. x1 N -- ) - drop N items
@@ -98,9 +92,6 @@
 : // /mod swap drop ;
 \ ( a b -- remainder a/b )
 : mod /mod drop ;
-
-\ *DEPRECATED*
-: :: make-closure ;
 
 \ .S - print stack without affecting it - good for debugging
 : .S "=>" . depth 
@@ -245,7 +236,6 @@
 	str \ symbol->string is included for completeness, but just 'str' is guraranteed to work
 	;
 	
-
 \ ( string -- ascii ; get ASCII value of first char of string )
 : ord 
 	0 get unmake drop

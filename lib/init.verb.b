@@ -1,4 +1,4 @@
-L 93
+L 92
 W .
 L 4
 y str
@@ -226,9 +226,6 @@ W mod
 L 2
 y /mod
 y drop
-W ::
-L 1
-y make-closure
 W .S
 L 27
 s =>
