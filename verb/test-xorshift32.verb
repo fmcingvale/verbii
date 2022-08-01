@@ -14,7 +14,7 @@
 	\ skip first values
 	{ xorshift32 drop } skip repeat
 	
-	::{ ( i ) 
+	{ ( i ) 
 		vals i get xorshift32 expect==
 	} 0 1 vals length for-range
 	;
@@ -31,7 +31,7 @@
 		[ 3216424659 2937 [ 1390856612 4052977133 2766326330 1226533352 2699625627 2403250278 2138686239 2757366482 637803410   196553737 ] ]
 	]
 	
-	::{ ( P )
+	{ ( P )
 		P unmake drop *test-xorshift32-case 
 	} for-each
 	;

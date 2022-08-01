@@ -20,7 +20,7 @@
 		[ 4215500625 2308 [ 3261760948 3188707330 3861210396 2790928619 957735764 2489449590 2713238053 1647536910 3333617583 2743762793 ] ]
 		[ 908173132 2308 [ 3414088778 935425508 1441170774 3805015074 1708230973 3914393856 2485104423 3664976330 2659085511 4249820528 ] ]
 	]
-	::{ ( P )
+	{ ( P )
 		@locals [ seed skip vals ]
 		\ just to make code more readable
 		P 0 get seed!
@@ -35,7 +35,7 @@
 		\ skip first 'skip' numbers
 		{ mersenne-random-extract drop } skip repeat
 		\ now next #vals generated numbers must match vals
-		::{ ( i )
+		{ ( i )
 			vals i get 
 			mersenne-random-extract expect==
 			} 0 1 vals length for-range

@@ -61,7 +61,7 @@
 		
 : do-run-test-modules ( module-names )
 	\ import all test modules
-	module-names ::{ ( name ) name import } for-each
+	module-names { ( name ) name import } for-each
 	
 	\ run all the tests
 	unittest-init
@@ -78,7 +78,7 @@
 	@show-fails-by-name
 		"Failures by test:" . CR
 		FAIL-BY-NAME
-		::{ ( key val )
+		{ ( key val )
 			"    " key + ": " + val str + . CR
 		} for-each-dict
 	;
@@ -109,12 +109,12 @@
 		SCRIPT-ARGS 0 get filename!
 		\ make sure filename ends in .verb or .verb.b
 		filename 2 tail ".b" ==
-			::{
+			{
 				filename 2 tail-drop filename!
 			} ifthen
 			
 		filename 5 tail ".verb" ==
-			::{
+			{
 				filename 5 tail-drop filename!
 				true is-verbii-filename!
 			} ifthen

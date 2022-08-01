@@ -19,7 +19,7 @@
 	\ skip first values
 	{ xoshiro128pp-next drop } skip repeat
 	
-	::{ ( i ) 
+	{ ( i ) 
 		vals i get xoshiro128pp-next expect==
 	} 0 1 vals length for-range
 	;
@@ -36,7 +36,7 @@
 		[ [ 1009041585  640321664  227863596 3216424659 ] 2937 [ 2807136937 4202527007 4287486246 2220436088 3150721872  582691852 3039164032 4268054016 1232183370 2601915274 ] ]
 	]
 	
-	::{ ( P )
+	{ ( P )
 		P unmake drop *test-xoshiro128pp-case
 	} for-each
 	;

@@ -141,7 +141,7 @@
 \ does not affect stack.
 : str.stack ( -- s )
 	"]" s!
-	::{ ( i )
+	{ ( i )
 		SP i + ref repr " " + s + s!
 	} 0 1 depth 3 - for-range \ subtract off 3 for (lambda 0 1)
 	"[ " s +

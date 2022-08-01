@@ -14,7 +14,7 @@
 	
 	\ for each list item ...
 	list
-	::{ ( elem )
+	{ ( elem )
 		elem test call if >>true
 		falselist elem append falselist! return
 		@true truelist elem append truelist! return
@@ -36,7 +36,7 @@
 	list 0 get x! 			\ x = list[0]
 	list 1 -1 slice list! 	\ list = list[1:] 		
 	\ split into <x and >=x lists
-	list ::{ x < } partition B! A!
+	list { x < } partition B! A!
 	\ recursively sort A & B lists
 	A quicksort A!
 	B quicksort B!

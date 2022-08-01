@@ -125,7 +125,7 @@
 	@walk
 		\ fold over all parts-in to build parts-out
 		parts-in
-		::{ ( newparts part )
+		{ ( newparts part )
 			part ".." == if >>two-dots
 			part "." == if >>one-dot
 			\ else append to newparts and continue

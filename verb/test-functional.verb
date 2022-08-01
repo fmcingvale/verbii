@@ -128,12 +128,12 @@
 	"[ 'aa 11 'bb 22 'cc 5 ]" expect-stack 6 ndrop
 	
 	( -- simple example of passing lambdas to another function -- )
-	'saything ::{ ( lambda -- ) "The " 1 lambda call + " is " + 2 lambda call + } make-var
+	'saything { ( lambda -- ) "The " 1 lambda call + " is " + 2 lambda call + } make-var
 
 	( called with cmd on TOS )
-	"The ocean is blue" ::{ ( cmd ) cmd 1 == if >>one "blue" return @one "ocean" } saything call expect==
-	"The grass is green" ::{ ( cmd ) cmd 1 == if >>one "green" return @one "grass" } saything call expect==
-	"The rose is red" ::{ ( cmd ) cmd 1 == if >>one "red" return @one "rose" } saything call expect==
+	"The ocean is blue" { ( cmd ) cmd 1 == if >>one "blue" return @one "ocean" } saything call expect==
+	"The grass is green" { ( cmd ) cmd 1 == if >>one "green" return @one "grass" } saything call expect==
+	"The rose is red" { ( cmd ) cmd 1 == if >>one "red" return @one "rose" } saything call expect==
 	;
 	
 : test-any-all
@@ -154,7 +154,7 @@
 : test-repeat
 	@locals [ s ]
 	"" s!
-	::{ s "A" + s! } 8 repeat
+	{ s "A" + s! } 8 repeat
 	"AAAAAAAA" s expect==
 	;
 
@@ -162,7 +162,7 @@
 	@locals [ L ]
 	[ ] L!
 	[ 10 20 30 40 50 ]
-	::{ ( elem ) [ ] elem append L + L! } for-each
+	{ ( elem ) [ ] elem append L + L! } for-each
 	[ 50 40 30 20 10 ] L expect==
 	;
 	
@@ -170,7 +170,7 @@
 	@locals [ s ]
 	"" s!
 	"ABCDEF"
-	::{ ( c ) s c + s! } for-each-reverse 
+	{ ( c ) s c + s! } for-each-reverse 
 	"FEDCBA" s expect==
 	;
 	
@@ -178,7 +178,7 @@
 	@locals [ L ]
 	[ ] L!
 	"ABCD"
-	::{ ( i c )
+	{ ( i c )
 		L i 3 * append c append L!
 	} for-each-i 
 	[ 0 "A" 3 "B" 6 "C" 9 "D" ] L expect==
@@ -188,7 +188,7 @@
 	@locals [ sum ]
 	0 sum!
 	[ [ "A" 13 ] [ "E" 71 ] [ "Z" 107 ] [ "D" 257 ] ] make-dict
-	::{ ( key val )
+	{ ( key val )
 		\ since iteration order isn't guaranteed, make a sum from (key,val) that doesn't depend on order
 		sum key ord val * + sum!
 	} for-each-dict
@@ -203,14 +203,14 @@
 : test-for-range
 	@locals [ L ]
 	[ ] L!
-	::{ ( i )
+	{ ( i )
 		L i append L!
 	}
 	10 4 8 for-range
 	[ 10 14 18 22 26 30 34 38 ] L expect==
 	
 	[ ] L!
-	::{ ( i )
+	{ ( i )
 		L i append L!
 	}
 	2.5 -0.5 10 for-range
@@ -242,7 +242,7 @@
 	"*a*b*c*d*"
 	
 		"abcd"
-		::{ ( accum c )
+		{ ( accum c )
 			accum c + "*" +
 		} "*" fold 
 		
@@ -251,7 +251,7 @@
 	[ 5 15 6 18 7 21 8 24 ]
 	
 		[ 5 6 7 8 ]
-		::{ ( accum n )
+		{ ( accum n )
 			accum n append n 3 * append
 		} [ ] fold 
 		
@@ -261,11 +261,11 @@
 	
 : test-map
 	"DEFG"
-		"ABCD" ::{ ( c ) c ord 3 + chr } map
+		"ABCD" { ( c ) c ord 3 + chr } map
 	expect==
 	
 	[ 15 25 35 45 ]
-		[ 10 20 30 40 ] ::{ ( n ) n 5 + } map
+		[ 10 20 30 40 ] { ( n ) n 5 + } map
 	expect==
 	
 	\ contrived example to test with closure
@@ -273,17 +273,17 @@
 	[ [ "A" "Z" ] [ "B" "F" ] [ "C" "R" ] [ "D" "T" ] ] make-dict lettermap!
 	
 	"TZRF"
-		"DACB" ::{ ( c ) lettermap c get } map
+		"DACB" { ( c ) lettermap c get } map
 	expect==
 	;
 	
 : test-filter
 	"zqvur"
-		"zhqpvuanr" ::{ ( c ) c "q" >= } filter
+		"zhqpvuanr" { ( c ) c "q" >= } filter
 	expect==
 	
 	[ 55 17 ]
-		[ 55 10 -14 8 17 1 -6 ] ::{ ( n ) n 10 > } filter
+		[ 55 10 -14 8 17 1 -6 ] { ( n ) n 10 > } filter
 	expect==
 	;
 	

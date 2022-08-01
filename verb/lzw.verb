@@ -20,7 +20,7 @@
 	[ ] make-dict cmap! \ maps text sequences to codes
 	
 	\ start by adding all single characters to the map as chr(i) -> i
-	::{ ( i )
+	{ ( i )
 			cmap i chr i put cmap!
 	} 0 1 256 for-range
 
@@ -28,7 +28,7 @@
 
 	\ fold over all chars in text, updating cmap, output and leaving remaining text in accumulator ...
 	text
-	::{	( buf c )	\ args from fold (accumulator & next char of text)
+	{	( buf c )	\ args from fold (accumulator & next char of text)
 		@locals [ buf+c ]	\ <- closures can have their own locals, instead of cluttering namespace in outer scope
 		
 		buf c + buf+c! \ add c to current input buffer
@@ -59,7 +59,7 @@
 	
 	[ ] make-dict dmap! \ this maps codes -> strings
 	\ init dict to contain 0..255 mapping to first 256 ascii chars
-	::{  ( i )
+	{  ( i )
 		\ general note: dict keys have to be strings, so 'i str' will be the pattern here and below
 		dmap i str i chr put dmap!
 	} 0 1 256 for-range
@@ -70,7 +70,7 @@
 	compressed 0 get chr w! \ w = chr(compressed[0])
 	
 	compressed 1 -1 slice \ fold over compressed[1:]
-	::{ ( text code ) \ args from fold -- accumulator & next element from compressed
+	{ ( text code ) \ args from fold -- accumulator & next element from compressed
 		@locals [ entry ]
 		dmap code str get void? not if >>in-dmap \ true if code is in dmap
 		dmap length code == if >>new-code \ code i haven't seen before?

@@ -62,7 +62,7 @@
 : parse-hex ( hex -- i )
 	\ fold
 	hex
-	::{ ( accum h ) 
+	{ ( accum h ) 
 		h hex-char-to-int 
 		accum 16 * + 
 	} 0 fold
