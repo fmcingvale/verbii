@@ -2,21 +2,21 @@
 Code sizes of all ports. 
 
 Stats that interest me ...
-	- Average port size: 1297 lines (initial goal was 1000)
-	- Verbii code makes up 41% of total lines of code
+	- Average port size: 1396 lines (initial goal was 1000)
+	- Verbii code makes up 52% of total lines of code
 	- Python has most compact code, followed closely by Scheme
 
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-Verbii                          28           1007            959           4540
-C++                             12            332            384           1773
-Lua                              5            212            165           1357
-C#                               6            209            164           1354
-Scheme                           6            195            273           1072
-Python                           6            219            168            930
+Forth                           64           1878           2103           7417
+C++                             14            453            517           2183
+C#                               6            216            164           1385
+Lua                              5            217            170           1381
+Scheme                           6            199            273           1093
+Python                           6            223            168            942
 -------------------------------------------------------------------------------
-SUM:                            63           2174           2113          11026
+SUM:                           101           3186           3395          14401
 -------------------------------------------------------------------------------
 
 (as measured by cloc, github.com/AlDanial/cloc)
