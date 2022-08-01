@@ -83,24 +83,19 @@ class Interpreter {
 
 	Object nextSymbolOrFail(const char *failmsg);
 
-	// for 'version 1' closures, new_closure is used to resolve 'self' references.
-	// for 'version 2' if the code is from a BoundLambda, pass it as the 3rd parameter
-	void code_call(ObjList *new_code, Closure *new_closure=NULL, BoundLambda *bound_lambda=NULL);
+	// if the code is from a BoundLambda, pass it as the 3rd parameter
+	void code_call(ObjList *new_code, BoundLambda *bound_lambda=NULL);
 	bool havePushedFrames();
 	void code_return();
 	
 	// current running code & callstack of previous frames
 	ObjList *code; // NULL if not code loaded
 	size_t codepos;
-	// 'version 1' closures
-	Closure *closure; // current closure running or NULL
 	// 'version 2' closures (frame data)
 	CallFrameData *cur_framedata; // current call frame data or NULL
 
 	std::vector<ObjList*> callstack_code;
 	std::vector<size_t> callstack_pos;
-	// 'version 1' closures
-	std::vector<Closure*> callstack_closure;
 	// 'version 2' closures
 	std::vector<CallFrameData*> callstack_frame_data;
 

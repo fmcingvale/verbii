@@ -23,14 +23,6 @@ const unsigned char TYPE_FLOAT = 4;
 const unsigned char TYPE_STRING = 5;
 const unsigned char TYPE_SYMBOL = 6;
 const unsigned char TYPE_LIST = 7;
-// ** THIS IS FOR 'VERSION 1' CLOSURES ONLY --- 'VERSION 2' closures act like e.g. scheme
-// verbii's idea of a closure is little different that in other languages -- mainly
-// that it does not capture by name (since verbii functions do not have named args)
-// and doesn't capture any outer scope (since, again, there are no names to capture).
-// instead it binds an object and a function together, thereby giving the function
-// a state. instead of inventing a new word for "function with state", i'm calling
-// them closures since they are at least similar in concept.
-const unsigned char TYPE_CLOSURE = 8;
 // a void type which is differentiated from null.
 // in general, void is used in eof-type situations but can be used in any context
 // where a function needs to differentiate a return value of null from a
@@ -39,12 +31,12 @@ const unsigned char TYPE_CLOSURE = 8;
 // would recur that there would be no way to differentiate a parsed void from eof.
 // void will only ever be a word, so it will always be parsed as a symbol. since void
 // normally shouldn't be used in data anyways, i don't think that's a problem.
-const unsigned char TYPE_VOID = 9;
-const unsigned char TYPE_DICT = 10;
+const unsigned char TYPE_VOID = 8;
+const unsigned char TYPE_DICT = 9;
 // 'version 2' closure
-const unsigned char TYPE_BOUND_LAMBDA = 11;
+const unsigned char TYPE_BOUND_LAMBDA = 10;
 // interpreter opcodes
-const unsigned char TYPE_OPCODE = 12;
+const unsigned char TYPE_OPCODE = 11;
 
 class Object;
 
@@ -88,8 +80,6 @@ class Object {
 	bool isFloat() const { return type == TYPE_FLOAT; }
 	bool isString() const { return type == TYPE_STRING; }
 	bool isSymbol() const { return type == TYPE_SYMBOL; }
-	// 'version 1' closures
-	bool isClosure() const { return type == TYPE_CLOSURE; }
 	// 'version 2' closures
 	bool isBoundLambda() const { return type == TYPE_BOUND_LAMBDA; }
 	bool isOpcode() const { return type == TYPE_OPCODE; }
@@ -113,9 +103,6 @@ class Object {
 	 
 	const char *asString() const { return data.str; }
 	const char *asSymbol() const { return data.str; }
-
-	ObjList *asClosureFunc() const;
-	Object asClosureState() const;
 
 	uint64_t asOpcode() const { return data.opcode; }
 
@@ -171,17 +158,9 @@ class Object {
 		ObjDict *objdict; // for dict
 		double d;
 		const char *str; // strings & symbols, immutable
-		Closure *closure;
 		BoundLambda *boundLambda;
 		uint64_t opcode;
 	} data;
-};
-
-// 'version 1' closure
-class Closure {
-	public:
-	ObjList *objlist; // the function
-	Object state; // the bound state
 };
 
 // for simplicity all call frames are the same size, so this may
@@ -259,8 +238,6 @@ Object newList(ObjList *); // wraps existing list, does NOT copy
 
 Object newDict(); // make an empty dict
 
-// 'version 1' closures
-Object newClosure(ObjList *, Object);
 // 'version 2' closures
 // NOTE: *my* frame is not known until bound-lambda is called.
 // however, outerFrame is set when bind-lambda is called.

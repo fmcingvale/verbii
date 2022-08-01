@@ -44,11 +44,6 @@ Interpreter::Interpreter() {
 	// not running
 	code = NULL;
 
-	// 'version 1' closures
-	// init to "not set" -- NOTE I have to remember the Closure, NOT just the state data,
-	// so that I can update the Closure correctly in self!
-	closure = NULL;
-
 	// 'version 2' closures
 	// initially no call frame, so this is NULL
 	cur_framedata = NULL;
@@ -247,20 +242,17 @@ ObjList* Interpreter::lookup_word(const char *name) {
 		return NULL;
 }
 
-void Interpreter::code_call(ObjList *new_code, Closure *new_closure, BoundLambda *bound_lambda) {
+void Interpreter::code_call(ObjList *new_code, BoundLambda *bound_lambda) {
 	if(!code) {
 		throw LangError("code_call but no code is running");
 	}
 	callstack_code.push_back(code);
 	callstack_pos.push_back(codepos);
-	callstack_closure.push_back(closure);
 	callstack_frame_data.push_back(cur_framedata);
 
 	code = new_code;
 	codepos = 0;
-	// 'version 1' closures -- this is 'self' 
-	closure = new_closure; // can be null
-	// 'version 2' closures -- this is used for framedata references (TBD)
+	// 'version 2' closures -- this is used for framedata references
 	// FOR NOW at least, a new frame is created for each call -- eventually the
 	// compiler could optimize this if the function doesn't use any locals or take args etc.
 	// (these are pooled since the common case is where a frame is not linked to an inner
@@ -296,9 +288,7 @@ void Interpreter::code_return() {
 	callstack_code.pop_back();
 	codepos = callstack_pos.back();
 	callstack_pos.pop_back();
-	closure = callstack_closure.back();
-	callstack_closure.pop_back();
-
+	
 	// if frame not linked as an outer frame anywhere, then return it
 	// to the pool
 	if(cur_framedata != NULL && !cur_framedata->isLinked())
@@ -352,7 +342,6 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 
 	code = to_run;
 	codepos = 0;
-	closure = NULL; // "not set"
 	cur_framedata = NULL; // not set
 
 	// run one word at a time in a loop, with the reader position as the continuation
@@ -443,17 +432,13 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 					//syntax->pushObjList(val.asLambda());
 					code_call(val.asLambda());
 				}
-				else if(val.isClosure()) {
-					// as above but with self
-					code_call(val.asClosureFunc(), val.data.closure);
-				}
 				else if(val.isBoundLambda()) {
 					// as above but pass bound lambda so its new call frame will be
 					// connected the same outer frame that was captured with bind-lambda
-					code_call(val.data.boundLambda->objlist, NULL, val.data.boundLambda);
+					code_call(val.data.boundLambda->objlist, val.data.boundLambda);
 				}
 				else {
-					throw LangError("call expects a lambda or closure, but got: " + val.fmtStackPrint());
+					throw LangError("call expects a lambda or bound-lambda, but got: " + val.fmtStackPrint());
 				}
 				continue;
 			}
@@ -528,12 +513,13 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		}
 		
 		// check for literal objects that just get pushed 
-		// ORIGINAL ASSUMPTION (see below) -- ONLY objects that have a parseable form need to be here
 		else if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool() ||
 			obj.isNull()) {
 			push(obj);
 			continue;
 		}
+
+		// i broke out special cases of lists & dicts ...
 
 		// if object was created from a list literal ( [ ... ] ), then it must be deepcopied
 		// (see DESIGN-NOTES.md)
@@ -542,13 +528,10 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			continue;
 		}
 		
-		// oops ... the above assumption (about only pushing literals) is wrong .. quick example:
-		//	[ 10 20 30 ] 123 :: 1 make-list call --> pushes closure when list is called
+		// even though a dict is not directly parseable, it has to be pushed when
+		// encoutered -- quick example:
 		//  [ ] make-dict 1 make-list call --> pushes dict when list is called
-		//
-		// i'm breaking these two cases out separately to point out why this is needed since it
-		// wasn't obvious to me at the time
-		else if(obj.isClosure() || obj.isDict()) {
+		else if(obj.isDict()) {
 			push(obj);
 			continue;
 		}

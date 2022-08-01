@@ -502,12 +502,6 @@ static void builtin_unmake(Interpreter *intr) {
 		// -- see DESIGN-NOTES.md
 		intr->push(newList(deepcopy(obj.data.objlist)));
 	}
-	else if(obj.isClosure()) {
-		// break into ( list state ) so make-closure would work
-		// as above, push a deepcopy of list so it can't be used to modify the closure
-		intr->push(newList(deepcopy(obj.asClosureFunc())));
-		intr->push(obj.asClosureState());
-	}
 	else
 		throw LangError("Object cannot be unmade: " + obj.fmtStackPrint());
 }
@@ -539,34 +533,6 @@ static void builtin_dumpword(Interpreter *intr) {
 		throw LangError("No such word in .dumpword: " + string(symbol));
 	}
 	intr->push(newList(deepcopy(wordlist)));
-}
-
-static void builtin_make_closure(Interpreter *intr) {
-	Object state = intr->pop();
-	Object obj = intr->pop();
-	// can be called with [ .. ] or { .. } as function
-	if(obj.isList())
-		// must deepcopy lists so future changes to original list do not affect this
-		intr->push(newClosure(deepcopy(obj.asList()), state));
-	else if(obj.isLambda())
-		// as above
-		intr->push(newClosure(deepcopy(obj.asLambda()), state));
-	else
-		throw LangError("make-closure expects list or lambda, got:" + obj.fmtStackPrint());
-}
-	
-static void builtin_self_get(Interpreter *intr) {
-	if(!intr->closure)
-		throw LangError("Attempting to reference unbound self");
-	
-	intr->push(intr->closure->state);
-}
-
-static void builtin_self_set(Interpreter *intr) {
-	if(!intr->closure)
-		throw LangError("Attempting to set unbound self");
-	
-	intr->closure->state = intr->pop();
 }
 
 static void builtin_deepcopy(Interpreter *intr) {
@@ -860,7 +826,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
 	{"lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isLambda()));}},
 	{"bound-lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isBoundLambda()));}},
-	{"closure?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isClosure()));}},
 	{"opcode?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isOpcode()));}},
 
 	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
@@ -891,9 +856,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"parse-float", [](Interpreter *intr){intr->push(parseFloat(popStringOrSymbol(intr)));}},
 	{"void", [](Interpreter *intr){intr->push(newVoid());}},
 	
-	{"make-closure", builtin_make_closure},
-	{"self", builtin_self_get},
-	{"self!", builtin_self_set},
 	{"put", builtin_put},
 	{"get", builtin_get},
 	{"deepcopy", builtin_deepcopy},

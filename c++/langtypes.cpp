@@ -150,18 +150,6 @@ Object newSymbol(const string& s) {
 	return newSymbol(s.c_str(), s.length());
 }
 
-Object newClosure(ObjList *objlist, Object state) {
-	Object obj;
-	obj.type = TYPE_CLOSURE;
-	obj.data.closure = (Closure*)x_malloc(sizeof(Closure));
-	obj.data.closure->objlist = objlist;
-	obj.data.closure->state = state;
-	return obj;
-}
-
-ObjList *Object::asClosureFunc() const { return data.closure->objlist; }
-Object Object::asClosureState() const { return data.closure->state; }
-
 CallFrameData::CallFrameData() {
 	outer = NULL;
 	linked = false;
@@ -295,7 +283,6 @@ bool Object::opEqual(const Object &other) const {
 							(other.type == TYPE_INT && other.data.i == data.d);
 		case TYPE_BOOL: return other.type == TYPE_BOOL && other.data.b == data.b;
 		case TYPE_LAMBDA: return false; // lambdas never equal any other object, even themselves
-		case TYPE_CLOSURE: return false; // same for closures
 		case TYPE_BOUND_LAMBDA: return false; // same
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
@@ -428,7 +415,6 @@ Object Object::opAdd(const Object &other) const {
 			break;
 		case TYPE_BOOL: break;
 		case TYPE_LAMBDA: break;
-		case TYPE_CLOSURE: break;
 		case TYPE_BOUND_LAMBDA: break;
 		// strings & symbols defined as immutable, so no changing this
 		case TYPE_STRING:
@@ -604,9 +590,6 @@ string Object::fmtDisplay() const {
 		// these two are not meant to be printed, but can be shown in stack
 		case TYPE_LAMBDA:
 			return fmtDisplayObjList(data.objlist, "{", "}");
-		case TYPE_CLOSURE:
-			return "<" + fmtDisplayObjList(data.closure->objlist, "{", "}") +
-				" :: " + data.closure->state.fmtDisplay() + ">";
 		case TYPE_BOUND_LAMBDA:
 			return "<bound " + fmtDisplayObjList(data.boundLambda->objlist, "{", "}") + ">";
 		// *IMPORTANT* code is allowed to rely on being able to call 'str' on either a string or
@@ -669,9 +652,6 @@ string Object::fmtStackPrint() const {
 		case TYPE_BOOL: return data.b ? "<true>" : "<false>";
 		case TYPE_LAMBDA:
 			return fmtStackPrintObjList(data.objlist, "{", "}");
-		case TYPE_CLOSURE:
-			return "<" + fmtStackPrintObjList(data.closure->objlist, "{", "}") +
-				" :: " + data.closure->state.fmtStackPrint() + ">";
 		case TYPE_BOUND_LAMBDA:
 			return "<bound " + fmtStackPrintObjList(data.boundLambda->objlist, "{", "}") + ">";
 		// add " .. " so its clear on stack that it is a string
@@ -725,7 +705,6 @@ Object Object::deepcopy() const {
 		case TYPE_FLOAT: 
 		case TYPE_BOOL:
 		case TYPE_LAMBDA:
-		case TYPE_CLOSURE:
 		case TYPE_BOUND_LAMBDA:
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
