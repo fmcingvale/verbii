@@ -109,6 +109,9 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* now that v1 closures have been removed from compiler, can remove associated internals from c++ then bring
+  other ports up to date
+  
 * this is broken (del in v2 funcs) ...
 	>> :V2 foo 'ZZZ 1 make-var del ZZZ ;
 	=>
@@ -116,25 +119,12 @@ Global TODO
 	=> [ ''ZZZ 1 'make-var [ ',,inline ''ZZZ ',,del ] ]
 	>> foo
 	=> [ ''ZZZ 1 'make-var [ ',,inline ''ZZZ ',,del ] ] [ ',,inline ''ZZZ ',,del ]
-
-* rework init/compiler/boot to use named args style 
-
-* nested @[ ] lists not being expanded correctly:
-	: x @[ 1 2 @[ 111 222 333 ] ] ;
-	'x .dumpword
-
-	shows:
-		[ 1 2 [ ',,inline 111 222 333 3 'make-list ] 3 'make-list 'return ]
-
-	... so inner ,,inlines are not being flattened
 	
 * + on lists is kind of unsafe -- extend is better since it maintains object identity (important across
   closure boundaries). a list+ could be defined as:
 	: list+ @( list1 list2 ) [ ] list1 extend list2 extend ;
 
 * change all verbii code to use make-var instead of var then get rid of old ,,var/var -- can replace with make-var based function
-
-* collect-args-locals should give error on duplicated names
 
 * chicken - minimize imports across all files
 
@@ -156,9 +146,6 @@ Global TODO
 
 ---[ Optimization ]------------------------------------------------------
 
-* why do interpreters check for symbols last in main loop? symbols account for about 70-80% of
-  code (going by boot/init/compiler .b files) so shouldn't they be checked first?
-
 * compiler.verb -- in byte-compile, all words for __main__ get pushed to stack and then
   a huge list made at the end. this leads to stack overflows for large files (like the unittests
   where everything is in __main__). would be better to add items in chunks (maybe do an append
@@ -169,13 +156,6 @@ Global TODO
   make-word should be implemented in verbii and perform optimizations at creation time
   examples:
 	* convert jumps into offsets so no searching is required at runtime
-
-	* convert words into indexes so they can be called without lookup at runtime
-		* WORDS in interpreter would then be a list
-
-	* accept : name @( arg ... -- local ... ) as an alternate way to specify
-		@args and @locals. this should be additive so code can also do @locals
-		when more temporaries are needed than make sense to list in the function signature
 
 	* try inlining small functions
 		* the question would be should this be done recursively and to what depth?
