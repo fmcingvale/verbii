@@ -222,7 +222,7 @@
 \ ( list separator -- string )
 : string-join ( list sep )
 	list
-	::{ ( accum elem )
+	{ ( accum elem )
 		accum length 0 == if >>skip \ skip separator before first string
 		accum sep + elem + return
 		@skip elem return
@@ -300,7 +300,7 @@
 	@loop
 		text i get c!
 		c void? if >>got-end \ end of string
-		delims ::{ c == } find void? not if >>got-delim \ found delimiter
+		delims { c == } find void? not if >>got-delim \ found delimiter
 		\ not a delim, add to piece
 		piece c + piece! >>next
 	@got-delim

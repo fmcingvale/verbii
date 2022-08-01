@@ -965,7 +965,7 @@ o 1
 y <<loop
 y @eof
 y drop
-s End%32of%32input%32inside%32::{
+s End%32of%32input%32inside%32{%32..%32}
 y error
 y @done
 y drop
