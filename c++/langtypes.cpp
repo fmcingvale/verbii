@@ -159,60 +159,40 @@ bool CallFrameData::isLinked() const {
 	return linked;
 }
 
-// get/set an object in my local frame
-Object
- CallFrameData::getLocalObj(int index) {
-	//printf("GET LOCAL OBJ, index=%d\n", index);
-	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
-		throw LangError("Out of bounds in getLocalObj()");
-
-	return data[index];
-}
-
-void CallFrameData::setLocalObj(int index, Object obj) {
-	//printf("SET LOCAL OBJ, index=%d\n", index);
-	
-	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
-		throw LangError("Out of bounds in setLocalObj()");
-
-	data[index] = obj;
-}
-
 void CallFrameData::setOuterFrame(CallFrameData *outer) {
 	this->outer = outer;
 	// NOTE!! this is NOT the place to mark the outer frame
 	// as linked -- it is marked when bind-lambda is called
 }
 
-Object CallFrameData::getOuterObj(int levels, int index) {
-	//printf("GET OUTER OBJ, level=%d, index=%d\n", levels, index);
-	// go up number of levels
-	auto frame = outer;
-	while(--levels > 0) {
+CallFrameData *CallFrameData::findFrameUp(int levels) {
+	auto frame = this;
+	while(levels > 0) {
 		if(!frame || !frame->outer)
-			throw LangError("Bad level number in getOuterObj()");
+			throw LangError("Bad level number in findFrameUp()");
 
+		levels -= 1;
 		frame = frame->outer;
 	}
-
-	if(!frame)
-		throw LangError("Null outer frame in getOuterObj()");
-
-	return frame->getLocalObj(index);
+	return frame; // cannot be NULL due to above checks
 }
 
-void CallFrameData::setOuterObj(int levels, int index, Object obj) {
-	//printf("SET OUTER OBJ, level=%d, index=%d\n", levels, index);
+Object CallFrameData::getFrameObj(int levels, int index) {
+	//printf("GET OUTER OBJ, level=%d, index=%d\n", levels, index);
+	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
+		throw LangError("Out of bounds in CallFrameData::setLocalObj()");
 	// go up number of levels
-	auto frame = outer;
-	while(--levels > 0) {
-		if(!frame || !frame->outer)
-			throw LangError("Bad level number in setOuterObj()");
+	auto frame = findFrameUp(levels);
+	return frame->data[index];
+}
 
-		frame = frame->outer;
-	}
-
-	frame->setLocalObj(index, obj);
+void CallFrameData::setFrameObj(int levels, int index, Object obj) {
+	//printf("SET OUTER OBJ, level=%d, index=%d\n", levels, index);
+	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
+		throw LangError("Out of bounds in CallFrameData::setLocalObj()");
+	// go up number of levels
+	auto frame = findFrameUp(levels);
+	frame->data[index] = obj;
 }
 
 #define COLLECT_CALLFRAME_ALLOC_STATS

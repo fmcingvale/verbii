@@ -179,9 +179,6 @@ class CallFrameData : public gc_cleanup {
 	CallFrameData();
 	~CallFrameData() 
 		{ outer = NULL; /* printf("CALLFRAME DATA DTOR\n"); */ }
-	// get/set an object in my local frame
-	Object getLocalObj(int index);
-	void setLocalObj(int index, Object obj);
 
 	// frames begin disconnected from any other context. this
 	// can be used to tie this frame to an outer context so that
@@ -189,10 +186,9 @@ class CallFrameData : public gc_cleanup {
 	// disconnect this frame from any outer context)
 	void setOuterFrame(CallFrameData *outer);
 
-	// once an outer frame is connected, these can be used
-	// to get/set objects in the outer frame(s)
-	Object getOuterObj(int levels, int index);
-	void setOuterObj(int levels, int index, Object obj);
+	// get/set object in frame up #levels (0 == this frame)
+	Object getFrameObj(int levels, int index);
+	void setFrameObj(int levels, int index, Object obj);
 
 	bool isLinked() const;
 	void setLinked(bool l) { linked = l; }
@@ -201,6 +197,8 @@ class CallFrameData : public gc_cleanup {
 	Object data[MAX_CALLFRAME_SLOTS]; // args+locals for function
 	CallFrameData *outer;
 	bool linked; // has this been linked as an outer frame to any other frame?
+
+	CallFrameData *findFrameUp(int levels);
 };
 
 extern std::vector<CallFrameData*> callframe_pool;

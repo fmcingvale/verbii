@@ -56,10 +56,7 @@ void opcode_FRAME_GET(Interpreter *intr, uint8_t levels, uint16_t index, uint32_
 	if(!intr->cur_framedata)
 		throw LangError("opcode FRAME-GET called on null frame");
 
-	if(levels == 0) // local frame
-		intr->push(intr->cur_framedata->getLocalObj(index));
-	else // outer frame
-		intr->push(intr->cur_framedata->getOuterObj(levels, index));
+	intr->push(intr->cur_framedata->getFrameObj(levels, index));
 }
 
 // A = number of frames up (0 means my frame); B = index of var in outer frame
@@ -68,13 +65,9 @@ void opcode_FRAME_SET(Interpreter *intr, uint8_t levels, uint16_t index, uint32_
 		throw LangError("opcode FRAME-SET called on null frame");
 
 	auto obj = intr->pop(); // get obj to be stored
-
-	if(levels == 0) // local frame
-		intr->cur_framedata->setLocalObj(index, obj);
-	else // outer frame
-		intr->cur_framedata->setOuterObj(levels, index, obj);
+	intr->cur_framedata->setFrameObj(levels, index, obj);
 }
 
-// make sure order is correct!
+// make sure order matches ordering of values!
 std::vector<opcode_func> OPCODE_FUNCTIONS {
 	opcode_FRAME_GET, opcode_FRAME_SET };
