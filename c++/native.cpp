@@ -752,6 +752,8 @@ static void builtin_opcode_packed(Interpreter *intr) {
 	if(!op.isOpcode())
 		throw LangError("Expecting opcode in opcode-packed but got: " + op.fmtStackPrint());
 
+	// this is (for example) why opcodes need to fit into 52-bits -- so they can be moved
+	// around as regular ints and not some wrapped object
 	intr->push(newInt(op.asOpcode()));
 }
 

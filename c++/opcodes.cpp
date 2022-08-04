@@ -9,19 +9,19 @@
 #include <map>
 using namespace std;
 
-uint64_t opcode_pack(uint8_t code, uint8_t A, uint16_t B, uint32_t C) {
+int64_t opcode_pack(uint8_t code, uint8_t A, uint16_t B, uint32_t C) {
 	// C is max 20 bits
 	if(C > 0x000fffff)
 		throw LangError("C > 20 bits in opcode_pack()");
 
-	return code | (A<<8) | (B<<16) | (((uint64_t)C)<<32);
+	return (int64_t)(code | (A<<8) | (B<<16) | (((int64_t)C)<<32));
 }
 
-void opcode_unpack(uint64_t opcode, uint8_t &code, uint8_t &A, uint16_t &B, uint32_t &C) {
-	code = opcode & 0xff;
-	A = (opcode >> 8) & 0xff;
-	B = (opcode >> 16) & 0xffff;
-	C = (opcode >> 32) & 0x000fffff;
+void opcode_unpack(int64_t packed, uint8_t &code, uint8_t &A, uint16_t &B, uint32_t &C) {
+	code = ((uint64_t)packed) & 0xff;
+	A = (((uint64_t)packed) >> 8) & 0xff;
+	B = (((uint64_t)packed) >> 16) & 0xffff;
+	C = (((uint64_t)packed) >> 32) & 0x000fffff;
 }
 
 // use maps so this is order-independent
