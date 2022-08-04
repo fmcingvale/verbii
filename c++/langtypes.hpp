@@ -159,7 +159,7 @@ class Object {
 		double d;
 		const char *str; // strings & symbols, immutable
 		BoundLambda *boundLambda;
-		uint64_t opcode;
+		int64_t opcode;
 	} data;
 };
 
@@ -169,6 +169,8 @@ class Object {
 // allocation when creating a CallFrameData
 //
 // this is the maximum number args + locals a function can have
+//
+// *** WHEN CHANGING THIS, MUST CHANGE IT IN ALL PORTS AS WELL ***
 const int MAX_CALLFRAME_SLOTS = 255; // probably way too much, but have to start somewhere 
 
 // 'version 2' closures based on persistent frames
