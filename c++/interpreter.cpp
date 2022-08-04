@@ -260,10 +260,10 @@ void Interpreter::code_call(ObjList *new_code, BoundLambda *bound_lambda) {
 	// benchmark run 20x slower ... with pooling there was no slowdown versus 
 	// just setting this to NULL)
 	cur_framedata = callframe_alloc();
-	// when bound lambda was created, the current frame (at the time) was saved
-	// so it can access it later ('closure'). so when bound lambda is passed here,
-	// make te connection from the bound lambdas runtime frame (i.e. cur_framedata)
-	// to its saved outer frame
+	// when the bound lambda was created, the current frame (at the time) was saved
+	// as its .outer frame. when the bound lambda runs here in a new frame, it needs
+	// to have its .outer frame connected to the same .outer as when it was created,
+	// so it has access to the saved data (closure)
 	if(bound_lambda)
 		cur_framedata->setOuterFrame(bound_lambda->outer);
 
