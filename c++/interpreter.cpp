@@ -512,30 +512,24 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			}
 		}
 		
-		// check for literal objects that just get pushed 
-		else if(obj.isInt() || obj.isLambda() || obj.isString() || obj.isFloat() || obj.isBool() ||
-			obj.isNull()) {
-			push(obj);
-			continue;
-		}
-
-		// i broke out special cases of lists & dicts ...
-
 		// if object was created from a list literal ( [ ... ] ), then it must be deepcopied
-		// (see DESIGN-NOTES.md)
+		// (see DESIGN-NOTES.md).
 		else if(obj.isList()) {
 			push(obj.deepcopy());
 			continue;
 		}
-		
-		// even though a dict is not directly parseable, it has to be pushed when
-		// encoutered -- quick example:
-		//  [ ] make-dict 1 make-list call --> pushes dict when list is called
-		else if(obj.isDict()) {
+
+		// everything else gets pushed -- initially i was only pushing objects that could be
+		// parsed from source. however, given the dynamic nature of verbii, every type of
+		// of object can end up in runnable code ... for example, dictionaries are not 
+		// parseable from source but:
+		//	[ ] make-dict 1 make-list make-lambda 
+		// ... now the dictionary object is in runnable code
+		else {
 			push(obj);
 			continue;
 		}
 		
-		throw LangError(string("Unknown word ") + obj.fmtDisplay());
+		//throw LangError(string("Unknown word ") + obj.fmtDisplay());
 	}
 }
