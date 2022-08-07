@@ -109,6 +109,15 @@ Global TODO
  
 ---[   Clean-up   ]------------------------------------------------------
 
+* maybe? rename bitops for readability:
+	bit-shr -> bit>>
+	bit-shl -> bit<<
+	
+* I think lambda & bound-lambda should be merged, so it's just a lambda with or
+  without an outer frame set
+
+	* then, words should be lambdas instead of objlists so they can be bound as well
+
 * now that v1 closures have been removed from compiler, can remove associated internals from c++ then bring
   other ports up to date
   
