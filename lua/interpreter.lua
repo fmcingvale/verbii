@@ -426,8 +426,8 @@ function Interpreter:new(obj)
 	-- code currently being run or nil for not running
 	obj.code = nil
 	obj.codepos = 1 -- index into code list
-	obj.closure = nil -- current Closure or nil
-
+	obj.framedata = nil
+	
 	-- stack of previous frames to return to
 	obj.callstack = {}
 

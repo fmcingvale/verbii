@@ -311,25 +311,6 @@ function CallFrameData:setFrameObj(levels, index, obj)
 	frame.slots[index+1] = obj
 end
 
--- closure
-local Closure = {}
-function Closure:new(obj, objlist, state)
-	setmetatable(obj, self)
-	self.__index = self
-	obj.__class__ = "Closure"
-	obj.objlist = objlist
-	obj.state = state
-	return obj
-end
-
-function new_Closure(objlist, state)
-	return Closure:new({},objlist,state)
-end
-
-function isClosure(obj)
-	return type(obj) == "table" and obj.__class__ == "Closure"
-end
-
 -- normal lua strings are used as symbols
 function isSymbol(obj)
 	return type(obj) == "string"
@@ -422,9 +403,6 @@ function fmtDisplay(obj)
 		end
 		s = s .. "}"
 		return s
-	elseif isClosure(obj) then
-		return "<" .. fmtDisplayObjlist(obj.objlist,"{","}") .. " :: " ..
-				fmtDisplay(obj.state) .. ">"
 	else
 		error(">>>Don't know how to print object: " .. tostring(obj))
 	end
@@ -469,9 +447,6 @@ function fmtStackPrint(obj)
 		end
 		s = s .. "}"
 		return s
-	elseif isClosure(obj) then
-		return "<" .. fmtStackPrintObjlist(obj.objlist,"{","}") .. " :: " ..
-				fmtStackPrint(obj.state) .. ">"
 	elseif isOpcode(obj) then
 		return fmtDisplay(obj)
 	elseif isString(obj) then
@@ -497,7 +472,7 @@ end
 
 function deepcopy(obj)
 	if isNull(obj) or isInt(obj) or isFloat(obj) or
-		isBool(obj) or isLambda(obj) or isClosure(obj) or
+		isBool(obj) or isLambda(obj) or
 		isString(obj) or isSymbol(obj) or isVoid(obj) or
 		isOpcode(obj) then
 		return obj

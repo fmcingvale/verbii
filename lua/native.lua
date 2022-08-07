@@ -455,10 +455,6 @@ function builtin_unmake(intr, obj)
 	elseif isLambda(obj) then
 		-- make deepcopy - see DESIGN-NOTES.md
 		intr:push(deepcopy(obj.objlist))
-	elseif isClosure(obj) then
-		-- as above, deepcopy list
-		intr:push(deepcopy(obj.objlist))
-		intr:push(obj.state) -- state is mutable so do NOT deepcopy
 	end
 end
 
@@ -546,33 +542,6 @@ function builtin_file_read(intr)
 	local buf = f:read("a")
 	io.close(f)
 	intr:push(new_String(buf))
-end
-
-function builtin_make_closure(intr)
-	local state = intr:pop()
-	local obj = intr:pop()
-	-- as above, must deepcopy lists
-	if isList(obj) then
-		intr:push(new_Closure(deepcopy(obj),state))
-	elseif isLambda(obj) then
-		intr:push(new_Closure(deepcopy(obj.objlist),state))
-	else
-		error(">>>make-closure expects list or lambda but got:" .. fmtStackPrint(obj))
-	end
-end
-
-function builtin_self_get(intr)
-	if intr.closure == nil then
-		error(">>>Attempting to reference unbound self")
-	end
-	intr:push(intr.closure.state)
-end
-
-function builtin_self_set(intr)
-	if intr.closure == nil then
-		error(">>>Attempting to set unbound self")
-	end
-	intr.closure.state = intr:pop()
 end
 
 function builtin_get(intr)
@@ -777,7 +746,6 @@ BUILTINS = {
 	["lambda?"] = { {"any"}, function(intr,o) intr:push(isLambda(o)) end},
 	["bound-lambda?"] = { {"any"}, function(intr,o) intr:push(isBoundLambda(o)) end},
 	["opcode?"] = { {"any"}, function(intr,o) intr:push(isOpcode(o)) end},
-	["closure?"] = { {"any"}, function(intr,o) intr:push(isClosure(o)) end},
 	["repr"] = { {}, builtin_repr },
 	["str"] = { {}, builtin_str },
 	["puts"] = { {}, builtin_puts },
@@ -809,9 +777,6 @@ BUILTINS = {
 	["void"] = { {}, function(intr) intr:push(new_Void()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	
-	["make-closure"] = { {}, builtin_make_closure},
-	["self"] = { {}, builtin_self_get},
-	["self!"] = { {}, builtin_self_set},
 	["put"] = { {}, builtin_put},
 	["get"] = { {}, builtin_get},
 	["deepcopy"] = { {"any"}, function(intr,obj) intr:push(deepcopy(obj)) end},
