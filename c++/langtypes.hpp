@@ -50,9 +50,6 @@ extern int FLOAT_PRECISION;
 // verbii's integer type
 typedef int64_t VINT;
 
-// 'version 1' closures (for @{ .. })
-class Closure;
-
 class CallFrameData;
 
 // a Lambda that is bound to a CallFrameData, thereby giving it access
