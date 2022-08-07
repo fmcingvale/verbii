@@ -212,9 +212,6 @@
 ; holds a List (llist) and a CallFrameData (outer)
 (define-record BoundLambda llist outer)
 
-; holds a List and an arbitrary object
-(define-record Closure llist state)
-
 ; verbii string type
 (define-record String value)
 
@@ -269,10 +266,6 @@
 		((String? obj) (string-append "\"" (value obj) "\""))
 		((List? obj)
 			(fmtStackPrintObjlist (List-objlist obj) "[" "]"))
-		((Closure? obj)
-			(string-append "<" 
-				(fmtStackPrintObjlist (List-objlist (Closure-llist obj)) "{" "}")
-				" :: " (fmtStackPrint (Closure-state obj)) ">"))
 		((Null? obj) "<null>")
 		((Void? obj) "<*void*>")
 		((Lambda? obj)
@@ -321,10 +314,6 @@
 			(string-append 
 				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtDisplay obj))) "[" 
 					(List-objlist obj)) " ]"))
-		((Closure? obj)
-			(string-append "<" 
-				(fmtDisplayObjlist (List-objlist (Closure-llist obj)) "{" "}")
-				" :: " (fmtDisplay (Closure-state obj)) ">"))
 		((Null? obj) "<null>")
 		((Void? obj) "<*void*>")
 		((Lambda? obj)
@@ -356,7 +345,6 @@
 			(Symbol? obj)
 			(String? obj)
 			(Opcode? obj)
-			(Closure? obj)
 			(Null? obj)
 			(Void? obj)
 			(Lambda? obj)

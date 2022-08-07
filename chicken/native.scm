@@ -319,10 +319,6 @@
 		((Lambda? obj)
 			; like other ports, push a deepcopy of objlist
 			(push intr (deepcopy (Lambda-llist obj))))
-		; same with closures
-		((Closure? obj)
-			(push intr (deepcopy (Closure-llist obj)))
-			(push intr (Closure-state obj)))
 		(else (lang-error 'unmake "Don't know how to unmake object: " obj))))
 
 ; pop N objects and return as list in stack order
@@ -551,7 +547,6 @@
 		(list "lambda?" (list '*)  (lambda (intr obj) (push intr (Lambda? obj))))
 		(list "bound-lambda?" (list '*)  (lambda (intr obj) (push intr (BoundLambda? obj))))
 		(list "opcode?" (list '*)  (lambda (intr obj) (push intr (Opcode? obj))))
-		(list "closure?" (list '*)  (lambda (intr obj) (push intr (Closure? obj))))
 		(list "void" 	'() (lambda (intr) (push intr (make-Void))))
 		(list "make-list" (list 'i) builtin-make-list)
 		(list "set!" 	(reverse (list '* 'i)) builtin-set)
