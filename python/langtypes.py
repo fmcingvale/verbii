@@ -73,16 +73,6 @@ class LangLambda(object):
 
 def isLambda(obj): return isinstance(obj, LangLambda)
 
-class LangClosure(object):
-	def __init__(self, objlist, state):
-		self.objlist = objlist
-		self.state = state
-
-	def __str__(self):
-		pass
-
-def isClosure(obj): return isinstance(obj, LangClosure)
-
 class LangOpcode(object):
 	def __init__(self, packed):
 		self.code,self.A,self.B,self.C = opcode_unpack(packed)
@@ -164,8 +154,6 @@ def fmtDisplay(obj):
 		return  fmtDisplayObjlist(obj.objlist,"{","}")
 	elif isBoundLambda(obj):
 		return '<bound ' + fmtDisplayObjlist(obj.objlist,"{","}") + '>'
-	elif isClosure(obj):
-		return "<" + fmtDisplayObjlist(obj.objlist,"{","}") + " :: " + fmtDisplay(obj.state) + ">"
 	elif isList(obj):
 		return fmtDisplayObjlist(obj, '[', ']')
 	elif isDict(obj):
@@ -212,8 +200,6 @@ def fmtStackPrint(obj):
 		return fmtStackPrintObjlist(obj.objlist,"{","}")
 	elif isBoundLambda(obj):
 		return '<bound ' + fmtStackPrintObjlist(obj.objlist,"{","}") + '>'
-	elif isClosure(obj):
-		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + " :: " + fmtStackPrint(obj.state) + ">"
 	elif isString(obj):
 		# in a stack display, strings get " ... "
 		return '"' + obj.s + '"'
@@ -249,7 +235,7 @@ def deepcopyObjlist(objlist):
 # see c++ implementation & DESIGN-NOTES.md
 def deepcopy(obj):
 	if isNull(obj) or isVoid(obj) or isNumeric(obj) or isBool(obj) or \
-		isLambda(obj) or isClosure(obj) or \
+		isLambda(obj) or \
 		isString(obj) or isSymbol(obj) or isOpcode(obj):
 		return obj
 	elif isList(obj):

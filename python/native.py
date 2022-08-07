@@ -11,9 +11,9 @@ from xml.dom.minidom import ReadOnlySequentialNamedNodeMap
 from errors import LangError
 from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
-				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
-				isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
-				isNull, parseBool, LangVoid, isVoid, LangNull, LangOpcode, \
+				isNumeric, deepcopy, isString, isSymbol, \
+				isList, isLambda, isDict, isInt, isFloat, isBool, \
+				isNull, LangVoid, isVoid, LangOpcode, \
 				LangBoundLambda, isBoundLambda, isOpcode
 from opcodes import opcode_pack, opcode_name_to_code
 import time, sys, os
@@ -345,11 +345,6 @@ def builtin_unmake(I, obj):
 		# must deepcopy, see DESIGN-NOTES.md
 		I.push(deepcopy(obj.objlist))
 		return
-	elif isClosure(obj):
-		# as above, must deepcopy list -- state is meant to be modified, so it stays as-is
-		I.push(deepcopy(obj.objlist))
-		I.push(obj.state)
-		return
 	else:
 		raise LangError("Don't know how to unmake object: " + fmtStackPrint(obj))
 
@@ -408,25 +403,6 @@ def builtin_extend(I):
 	_list.extend(src)
 	I.push(_list)
 
-def builtin_make_closure(I):
-	state = I.pop()
-	obj = I.pop()
-	if isList(obj):
-		# as with lambda, deepcopy objlist
-		I.push(LangClosure(deepcopy(obj),state))
-	elif isLambda(obj):
-		I.push(LangClosure(deepcopy(obj.objlist),state))
-	else:
-		raise LangError("make-closure expects list or lambda but got:" + fmtStackPrint(obj))
-
-def builtin_self_get(I):
-	if I.closure is None: raise LangError("Attempting to reference unbound self")
-	I.push(I.closure.state)
-
-def builtin_self_set(I):
-	if I.closure is None: raise LangError("Attempting to set unbound self")
-	I.closure.state = I.pop()
-	
 def builtin_put(I):
 	obj = I.pop()
 	index = I.pop()
@@ -621,7 +597,6 @@ BUILTINS = {
 	'lambda?': ([object], lambda I,o: I.push(isLambda(o))),
 	'opcode?': ([object], lambda I,o: I.push(isOpcode(o))),
 	'bound-lambda?': ([object], lambda I,o: I.push(isBoundLambda(o))),
-	'closure?': ([object], lambda I,o: I.push(isClosure(o))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
 	'ref': ([int], builtin_ref),
@@ -650,9 +625,6 @@ BUILTINS = {
 	'extend': ([], builtin_extend),
 	'void': ([], lambda I: I.push(LangVoid())),
 	'.dumpword': ([], lambda I: I.push(deepcopy(I.lookupWordOrFail(popSymbol(I))))),
-	'make-closure': ([], builtin_make_closure),
-	'self': ([], builtin_self_get),
-	'self!': ([], builtin_self_set),
 	'put': ([], builtin_put),
 	'get': ([], builtin_get),
 	'deepcopy': ([object], lambda I,o: I.push(deepcopy(o))),
