@@ -29,9 +29,9 @@
 :V2 lots-of-loops-v2 ( NR )
 	@locals [ total ]
 	0 total! \ inner scopes can modify even atoms in v2 closures
-	::{
-		::{
-			::{
+	{
+		{
+			{
 				\ now this looks much more natural compared to the code above
 				total 1 + total!
 			} NR repeat

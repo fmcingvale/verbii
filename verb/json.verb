@@ -15,17 +15,20 @@
 'JSON_READER_TEXT_LEN null make-var
 'JSON_READER_POS null make-var
 
-: json-reader-open-string ( string -- ; open string for parsing JSON )
+\ ( string -- ; open string for parsing JSON )
+: json-reader-open-string 
 	JSON_READER_TEXT!
 	JSON_READER_TEXT length JSON_READER_TEXT_LEN!
 	0 JSON_READER_POS!
 	;
 
-: json-reader-open-file ( filename -- ; open file for parsing JSON )
+\ ( filename -- ; open file for parsing JSON )
+: json-reader-open-file 
 	file-read json-reader-open-string
 	;
 
-: json-reader-peek-char ( -- c ; peek next char [as string] from JSON text )
+\ ( -- c ; peek next char [as string] from JSON text )
+: json-reader-peek-char 
 	JSON_READER_POS JSON_READER_TEXT_LEN >= if >>eof
 	
 	JSON_READER_TEXT JSON_READER_POS get return 
@@ -33,7 +36,8 @@
 	@eof null
 	;
 
-: json-reader-next-char ( -- c ; read next char from JSON text )
+\ ( -- c ; read next char from JSON text )
+: json-reader-next-char
 	JSON_READER_POS JSON_READER_TEXT_LEN >= if >>eof
 	JSON_READER_TEXT JSON_READER_POS get
 	JSON_READER_POS 1 + JSON_READER_POS! return
@@ -41,7 +45,8 @@
 	@eof null
 	;
 
-: json-skip-whitespace ( -- ; skip any whitespace from current position in JSON text )
+\ ( -- ; skip any whitespace from current position in JSON text )
+: json-skip-whitespace
 	@loop
 		json-reader-peek-char 
 		dup null? if >>done
@@ -52,7 +57,8 @@
 		drop
 	;
 
-: json-read-word ( -- word ; read next word [non-whitespace chunk] from JSON text )
+\ ( -- word ; read next word [non-whitespace chunk] from JSON text )
+: json-read-word
 	""
 	@loop ( str )
 		json-reader-peek-char
@@ -221,7 +227,9 @@
 	;
 
 \ parse JSON from a string and return parsed valud
-: json-parse ( string -- object )
+\
+\ ( string -- object )
+: json-parse
 	json-reader-open-string
 	json-parse-next
 	;

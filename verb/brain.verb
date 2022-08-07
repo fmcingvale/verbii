@@ -23,18 +23,18 @@
 'CODE void make-var \ currently running code string
 
 \ create CELLS list and fill all with val
-:V2 init-cells ( val -- )
+: init-cells ( val -- )
 	[ ] CELLS!
-	::{ CELLS val append CELLS! } NRCELLS repeat
+	{ CELLS val append CELLS! } NRCELLS repeat
 	;
 
 \ print all cells (debugging)
-:V2 print-cells
+: print-cells
 	"Cells:" . CELLS { . } for-each CR
 	;
 
 \ ++IP until matching ] is found; assumes IP is just past the [
-:V2 jump-forward 
+: jump-forward 
 	@locals [ nesting ]
 	1 nesting!
 	@loop
@@ -58,7 +58,7 @@
 	;
 
 \ --IP until matching [[ is found; assumes IP is @ ]
-:V2 jump-backward 
+: jump-backward 
 	@locals [ nesting ]
 	1 nesting!
 	@loop
@@ -84,7 +84,7 @@
 		IP 1 + IP!
 	;
 
-:V2 brain-run ( text -- )
+: brain-run ( text -- )
 	"brain-run starting!" . .S CR
 	text CODE! ( store text in CODE )
 	0 DP! ( DP = 0 )
