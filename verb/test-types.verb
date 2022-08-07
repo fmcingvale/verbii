@@ -3,6 +3,63 @@
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 : test-type-comparisons
+	\ NOTE -- when testing '==', need to swap args as well when types are different.
+	\ i.e. 'int == string' might be checked but 'string == int' could have been missed
+	\ in implementing ==
+	
+	\ there is some overlap between this and other tests like test-numeric and test-string, but
+	\ this is specifically for the two-sided test, not an exhastive test of the == for any specific
+	\ type, as is done in other test modules
+	
+	\ for each type, test == then != on both sides
+	
+	\ int 
+	123 123 == expectTrue
+	123 "123" == expectFalse
+	"123" 123 == expectFalse
+	
+	\ float
+	123.25 123.25 == expectTrue
+	123.25 "123.25" == expectFalse
+	"123.25" 123.25 == expectFalse
+	
+	\ string
+	"abcd" "abcd" == expectTrue
+	"abcd" 'abcd == expectFalse
+	'abcd "abcd" == expectFalse
+	
+	\ symbol
+	'abcd 'abcd == expectTrue
+	'abcd "abcd" == expectFalse
+	"abcd" 'abcd == expectFalse
+	
+	\ bool
+	true true == expectTrue
+	true "true" == expectFalse
+	"true" true == expectFalse
+	
+	\ null
+	null null == expectTrue
+	null void == expectFalse
+	void null == expectFalse
+	
+	\ list
+	[ 1 2 3 ] [ 1 2 3 ] == expectTrue
+	[ 1 2 3 ] "[ 1 2 3 ]" == expectFalse
+	"[ 1 2 3 ]" [ 1 2 3 ] == expectFalse
+	
+	\ void
+	void void == expectTrue
+	void 'void == expectFalse
+	'void void == expectFalse
+	
+	\ dict
+	[ [ "one" 1 ] [ "two" 2 ] ] make-dict
+	[ [ "one" 1 ] [ "two" 2 ] ] make-dict == expectTrue
+	[ [ "one" 1 ] [ "two" 2 ] ] make-dict [ [ "one" 1 ] [ "two" 2 ] ] == expectFalse
+	[ [ "one" 1 ] [ "two" 2 ] ] [ [ "one" 1 ] [ "two" 2 ] ] make-dict == expectFalse
+	
+	
 	\ lambdas are never equal to anything, but it should not cause an error to compare them
 	\ -> why? compiler does transformations/optimizations so user code should not rely on the
 	\     source form of a lambda being equal to the compiled version so I think it's better to
@@ -10,6 +67,20 @@
 	{ 1 2 3 } { 1 2 3 } == expectFalse
 	{ 10 20 30 } dup == expectFalse
 	{ 11 22 33 } 112233 == expectFalse
+	112233 { 11 22 33 } == expectFalse
+	
+	\ same for bound lambdas
+	{ 1 2 3 } bind-lambda dup == expectFalse
+	{ 1 2 3 } bind-lambda { 1 2 3 } bind-lambda == expectFalse
+	{ 1 2 3 } bind-lambda { 1 2 3 } == expectFalse
+	{ 1 2 3 } { 1 2 3 } bind-lambda == expectFalse
+	
+	\ opcodes (have to use make-opcode, not literal notation, since that would run them)
+	'FRAME-GET 1 2 3 make-opcode 'FRAME-GET 1 2 3 make-opcode == expectTrue
+	'FRAME-GET 1 2 3 make-opcode [ 1 2 3 ] == expectFalse
+	[ 1 2 3 ] 'FRAME-GET 1 2 3 make-opcode == expectFalse
+	
+	\ now a few more random things ...
 	
 	\ bool correctness
 	1 1 == 2 2 == == expectTrue
@@ -29,6 +100,9 @@
 	2 void == expectFalse
 	void 2 == expectFalse
 	void void == expectTrue
+	
+	'FRAME-GET 1 2 3 make-opcode 123 == expectFalse
+	123 'FRAME-GET 1 2 3 make-opcode == expectFalse
 	;
 	
 : test-types-testing
@@ -53,6 +127,14 @@
 	void void? expectTrue
 	void null? expectFalse
 	0 void? expectFalse
+	
+	{ 1 2 3 } lambda? expectTrue
+	{ 1 2 3 } bind-lambda lambda? expectFalse
+	{ 1 2 3 } bound-lambda? expectFalse
+	{ 1 2 3 } bind-lambda bound-lambda? expectTrue
+
+	'FRAME-GET 11 22 33 make-opcode opcode? expectTrue
+	123 opcode? expectFalse
 	;
 	
 : test-repr
@@ -64,10 +146,13 @@
 	"<false>" false repr expect==
 	"[ 10 20 'hello #11.5 ]" 10 20 'hello 11.5 4 make-list repr expect==
 	"{ 1 2 3 'a 'b 'c }" { 1 2 3 a b c } repr expect==
+	"<bound { 1 2 3 'x 'y 'z }>" { 1 2 3 x y z } bind-lambda repr expect==
 	"'a-long-symbol" 'a-long-symbol repr expect==
 	""""hello there world"""" "hello there world" repr expect== \ """ <- so notepad++ sees end of string
 	"<null>" null repr expect==
 	"<*void*>" void repr expect==
+	"#op( FRAME-GET 11 22 33 )" 'FRAME-GET 11 22 33 make-opcode repr expect==
+	"#op( FRAME-SET 44 55 66 )" 'FRAME-SET 44 55 66 make-opcode repr expect==
 	;
 	
 : test-str
@@ -79,8 +164,11 @@
 	"false" false str expect==
 	"[ 10 20 hello 11.5 ]" 10 20 'hello 11.5 4 make-list str expect==
 	"{ 1 2 3 a b c }" { 1 2 3 a b c } str expect==
+	"<bound { 1 2 3 x y z }>" { 1 2 3 x y z } bind-lambda str expect==
 	"a-long-symbol" 'a-long-symbol str expect==
 	"""hello there world""" "hello there world" str expect== 
 	"<null>" null str expect==
 	"<*void*>" void str expect==
+	"#op( FRAME-GET 11 22 33 )" 'FRAME-GET 11 22 33 make-opcode str expect==
+	"#op( FRAME-SET 44 55 66 )" 'FRAME-SET 44 55 66 make-opcode str expect==
 	;

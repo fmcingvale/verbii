@@ -101,3 +101,46 @@
 	"+123.45z6e-5" float-string? expectFalse
 	;
 	
+: test-opcodes
+	\ use make-opcode since #op causes immediate execution
+	'FRAME-GET 10 20 30 make-opcode
+	'FRAME-GET 10 20 30 make-opcode expect==
+	
+	'FRAME-GET 10 20 30 make-opcode
+	'FRAME-GET 10 20 31 make-opcode expect!=
+	
+	'FRAME-GET 10 20 30 make-opcode
+	'FRAME-SET 10 20 30 make-opcode expect!=
+	
+	\ make sure packed format is correct
+	240520399873 'FRAME-SET 12 34 56 make-opcode opcode-packed expect==
+	;
+	
+: test-string-compile
+	\ since the test suite may be running pre-compiled, the compiler itself isn't getting
+	\ checked if the .b files exist. so test compiling from strings to ensure the compiler
+	\ is working.
+	@locals [ f ]
+	"""
+	\ closures are the most complex part of the compiler, so this should be a good sanity check
+	: foo-758 ( a b )
+		{ ( c d )
+			{ ( e f )
+				a b c d e f * + - * -
+			}
+		}
+		;
+	"""
+	compile-and-load-string
+	12 34 foo-758 f!
+	56 78 f call f!
+	91 23 f call
+	
+	\ rewriting to check value ...
+	\ (a - (b * (c - (d + (e * f)))))
+	\ python test code:
+	\ $ 12 - (34 * (56 - (78 + (91 * 23))))) = 71922
+	71922 expect==
+	;
+	
+	

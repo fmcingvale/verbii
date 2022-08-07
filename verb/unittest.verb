@@ -157,7 +157,7 @@
 : unittest-summary
 	"* Summary:" . CR
 	"    Tests passed:" . UNITTEST-NR-PASS . CR
-	"    Test failed:" . UNITTEST-NR-FAIL . CR
+	"    Tests failed:" . UNITTEST-NR-FAIL . CR
 	SP UNITTEST-SP0 ==
 		{ "    Stack: ok" . CR }
 		{ "    ** ERROR ** Items left on stack" . CR }

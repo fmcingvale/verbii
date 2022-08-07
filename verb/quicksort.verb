@@ -50,19 +50,21 @@
 		list 1 get list 0 get 2 make-list return
 	;
 	
-"* Split into positive and negative lists ..." . CR
-[ 50 -22 10 81 -71 45 ] { 0 > } partition swap . . CR
+: zzz-tests
+	"* Split into positive and negative lists ..." . CR
+	[ 50 -22 10 81 -71 45 ] { 0 > } partition swap . . CR
 
-"* Split into >2 and <=2 length ..." . CR
-[ "ab" "cdef" "g" "hi" "jklmo" "pqr" "st" "uvwx" "yz" ] { length 2 > } partition swap . . CR
-
-: test-quicksort ( items )
-	"Quicksorting:" . items . CR
-	items quicksort . CR
+	"* Split into >2 and <=2 length ..." . CR
+	[ "ab" "cdef" "g" "hi" "jklmo" "pqr" "st" "uvwx" "yz" ] { length 2 > } partition swap . . CR
 	;
 	
-[ 10 5 9 2 3 8 16 32 ] test-quicksort
+: zzz-test-quicksort ( items )
+	"Quicksorting:" . items . CR
+	items quicksort . CR
+	
+	[ 10 5 9 2 3 8 16 32 ] test-quicksort
 
-[ "horse" "bear" "elephant" "zebra" "ant" "lemming" ] test-quicksort
-
+	[ "horse" "bear" "elephant" "zebra" "ant" "lemming" ] test-quicksort
+	;
+	
 	

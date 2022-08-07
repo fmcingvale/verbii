@@ -12,6 +12,7 @@
 
 "unittest" import
 "paths" import \ for tail/tail-drop until they are moved to init
+"quicksort" import
 
 \ list all the test modules
 'ALL-TEST-MODULES [
@@ -41,6 +42,8 @@
 	@locals [ words ]
 	.wordlist
 	{ 0 5 slice 'test- == } filter
+	\ sort so tests run in same order on all platforms
+	quicksort
 	;
 
 \ run test by name (symbol)
