@@ -521,11 +521,6 @@ class Builtins {
 			// push a deepcopy - see DESIGN-NOTES.md
 			intr.push(new LangList(LangList.deepcopyObjlist((obj as LangLambda)!.objlist)));
 		}
-		else if(obj is LangClosure) {
-			// as above, deepcopy list. state is mutable, so do not deepcopy it
-			intr.push(new LangList(LangList.deepcopyObjlist((obj as LangClosure)!.objlist)));
-			intr.push((obj as LangClosure)!.state);
-		}
 		else {
 			throw new LangError("Object cannot be unmade: " + obj.fmtStackPrint());
 		}
@@ -592,32 +587,6 @@ class Builtins {
 			throw new LangError("No such word in .dumpword: " + symbol);
 		else
 			intr.push(new LangList(LangList.deepcopyObjlist(list)));
-	}
-
-	public static void make_closure(Interpreter intr) {
-		var state = intr.pop();
-		var obj = intr.pop();
-		// as above, deepcopy list
-		if(obj is LangList)
-			intr.push(new LangClosure(LangList.deepcopyObjlist((obj as LangList)!.objlist), state));
-		else if(obj is LangLambda)
-			intr.push(new LangClosure(LangList.deepcopyObjlist((obj as LangLambda)!.objlist), state));
-		else
-			throw new LangError("make-closure expects list or lambda but got:" + obj.fmtStackPrint());
-	}
-
-	public static void self_get(Interpreter intr) {
-		if(intr.closure == null)
-			throw new LangError("Attempting to reference unbound self");
-		else
-			intr.push(intr.closure.state);
-	}
-
-	public static void self_set(Interpreter intr) {
-		if(intr.closure == null)
-			throw new LangError("Attempting to set unbound self");
-		else
-			intr.closure.state = intr.pop();
 	}
 
 	public static void obj_get(Interpreter intr) {
@@ -889,9 +858,6 @@ class Builtins {
 		{".dumpword", dumpword},
 		{".wordlist", wordlist},
 		{"error", intr => throw new LangError(popString(intr,"error")) },
-		{"make-closure", make_closure},
-		{"self", self_get},
-		{"self!", self_set},
 		{"put", obj_put},
 		{"get", obj_get},
 		{"deepcopy", intr => intr.push(intr.pop().deepcopy())},

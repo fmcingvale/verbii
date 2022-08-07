@@ -39,9 +39,8 @@ public class Interpreter {
 	public List<LangObject>? code;
 	public int codepos;
 	public CallFrameData? framedata;
-	public LangClosure? closure; // the currently running closure or null
 	// stack of previous frames (code,codepos for each)
-	public List<Tuple<List<LangObject>,int,CallFrameData?,LangClosure?>> callstack;
+	public List<Tuple<List<LangObject>,int,CallFrameData?>> callstack;
 
 	// stats
 	public int max_callstack;
@@ -75,8 +74,7 @@ public class Interpreter {
 		code = null;
 		codepos = -1;
 		framedata = null;
-		closure = null;
-		callstack = new List<Tuple<List<LangObject>,int,CallFrameData?,LangClosure?>>();
+		callstack = new List<Tuple<List<LangObject>,int,CallFrameData?>>();
 
 		// stats
 		max_callstack = 0;
@@ -234,19 +232,18 @@ public class Interpreter {
 		}
 	}
 
-	public void code_call(List<LangObject> objlist, LangBoundLambda? boundlambda=null, LangClosure? new_closure=null) {
+	public void code_call(List<LangObject> objlist, LangBoundLambda? boundlambda=null) {
 		//Console.WriteLine("CALLING");
 		if(code == null) {
 			throw new LangError("call while not running");
 		}
-		callstack.Add(Tuple.Create(code,codepos,framedata,closure));
+		callstack.Add(Tuple.Create(code,codepos,framedata));
 		code = objlist;
 		codepos = 0;
 		framedata = new CallFrameData();
 		if(boundlambda != null)
 			framedata.setOuterFrame(boundlambda.outer);
 
-		closure = new_closure;
 		// stats
 		max_callstack = Math.Max(max_callstack,callstack.Count);
 	}
@@ -264,7 +261,6 @@ public class Interpreter {
 		code = tup.Item1;
 		codepos = tup.Item2;
 		framedata = tup.Item3;
-		closure = tup.Item4;
 		callstack.RemoveAt(callstack.Count-1);
 	}
 
@@ -320,8 +316,7 @@ public class Interpreter {
 		code = objlist;
 		codepos = 0;
 		framedata = null;
-		closure = null;
-
+		
 		//Console.WriteLine("RUNNING LIST:");
 		//foreach(var obj in objlist) {
 		//	Console.WriteLine("     " + obj.fmtStackPrint() + "(" + obj.typename() + ")");
@@ -389,7 +384,6 @@ public class Interpreter {
 					var lambda = val as LangLambda;
 					var list = val as LangList;
 					var boundlambda = val as LangBoundLambda;
-					var closure = val as LangClosure;
 					if(lambda != null) {
 						// now this is just like calling a userword, below
 						// TODO -- tail call elimination??

@@ -364,22 +364,3 @@ public class CallFrameData {
 	private LangObject[] data;
 	private CallFrameData? outer;
 }
-
-public class LangClosure : LangObject {
-	public LangClosure(List<LangObject> runlist, LangObject state) {
-		this.objlist = runlist;
-		this.state = state;
-	}
-
-	public List<LangObject> objlist;
-	public LangObject state;
-	public override string typename() { return "closure"; }
-	public override string fmtDisplay() { 
-		return "<" + LangList.fmtDisplayObjlist(objlist,"{","}") +
-			" :: " + state.fmtDisplay() + ">";
-	 }
-	public override string fmtStackPrint() {
-		return "<" + LangList.fmtStackPrintObjlist(objlist,"{","}") +
-			" :: " + state.fmtStackPrint() + ">";
-	}
-}
