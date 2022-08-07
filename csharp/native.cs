@@ -52,6 +52,15 @@ class Builtins {
 		return s.value;
 	}
 
+	public static LangOpcode popOpcode(Interpreter intr, string where) {
+		var obj = intr.pop();
+		var op = obj as LangOpcode;
+		if(op == null) {
+			throw new LangError("Expecting opcode (in " + where + ") but got: " + obj.fmtStackPrint());
+		}
+		return op;
+	}
+
 	public static string popStringOrSymbol(Interpreter intr, string where) {
 		var obj = intr.pop();
 		var s = obj as LangString;
@@ -85,6 +94,15 @@ class Builtins {
 			throw new LangError("Expecting list (in " + where + ") but got: " + obj.fmtStackPrint());
 		}
 		return list;
+	}
+
+	public static LangLambda popLambda(Interpreter intr, string where) {
+		var obj = intr.pop();
+		var l = obj as LangLambda;
+		if(l == null) {
+			throw new LangError("Expecting lambda (in " + where + ") but got: " + obj.fmtStackPrint());
+		}
+		return l;
 	}
 
 	public static LangDict popDict(Interpreter intr, string where) {
@@ -350,17 +368,25 @@ class Builtins {
 		if(a is LangNull) { return b is LangNull; }
 		else if(a.isNumeric()) { return b.isNumeric() && a.asFloat() == b.asFloat(); }
 		else if(a is LangBool) { 
-			return b is LangBool && ((a as LangBool).value == (b as LangBool).value);
+			return b is LangBool && ((a as LangBool)!.value == (b as LangBool)!.value);
 		}
 		else if(a is LangLambda) { return false; } // lambdas never equal to anything
+		else if(a is LangBoundLambda) { return false; } // same for bound lambdas
 		else if(a is LangString) { 
-			return b is LangString && ((a as LangString).value == (b as LangString).value);
+			return b is LangString && ((a as LangString)!.value == (b as LangString)!.value);
 		}
 		else if(a is LangSymbol) { 
-			return b is LangSymbol && ((a as LangSymbol).value == (b as LangSymbol).value);
+			return b is LangSymbol && ((a as LangSymbol)!.value == (b as LangSymbol)!.value);
 		}
 		else if(a is LangVoid)
 			return b is LangVoid;
+		else if(a is LangOpcode) {
+			return b is LangOpcode && 
+				((a as LangOpcode)!.code == (b as LangOpcode)!.code) &&
+				((a as LangOpcode)!.A == (b as LangOpcode)!.A) &&
+				((a as LangOpcode)!.B == (b as LangOpcode)!.B) &&
+				((a as LangOpcode)!.C == (b as LangOpcode)!.C);
+		}
 		// lists are deep compared with test_equal() on each element
 		else if(a is LangList) {
 			var aList = a as LangList;
@@ -374,6 +400,26 @@ class Builtins {
 
 			for(var i=0; i<aList.objlist.Count; ++i) {
 				if(!test_equal(aList.objlist[i], bList.objlist[i]))
+					return false;
+			}
+			return true;
+		}
+		// similar for Dict - make sure they have the same keys & then test values recursively
+		else if(a is LangDict) {
+			var aDict = a as LangDict;
+			var bDict = b as LangDict;
+			if(aDict == null || bDict == null)
+				return false;
+
+			if(aDict.getLength() != bDict.getLength())
+				return false;
+
+			// 
+			foreach(KeyValuePair<string,LangObject> pair in aDict.dict) {
+				if(!bDict.dict.ContainsKey(pair.Key))
+					return false;
+
+				if(!test_equal(pair.Value,bDict.dict[pair.Key]))
 					return false;
 			}
 			return true;
@@ -523,6 +569,13 @@ class Builtins {
 		var obj = intr.pop();
 		var list = popList(intr,"append");
 		list.objlist.Add(obj);
+		intr.push(list);
+	}
+
+	public static void extend(Interpreter intr) {
+		var src = popList(intr,"extend");
+		var list = popList(intr,"extend");
+		list.objlist.AddRange(src.objlist);
 		intr.push(list);
 	}
 		
@@ -733,6 +786,58 @@ class Builtins {
 		intr.push(list);
 	}
 
+	public static void make_opcode(Interpreter intr) {
+		var C = popInt(intr,"make-opcode");
+		var B = popInt(intr,"make-opcode");
+		var A = popInt(intr,"make-opcode");
+		var name = popStringOrSymbol(intr,"make-opcode");
+
+		// range checks
+		if(A < 0 || A > 255)
+			throw new LangError("A must be [0-255] in make-opcode, got: " + A.ToString());
+
+		if(B < 0 || B > 65535)
+			throw new LangError("B must be [0-65535] in make-opcode, got: " + B.ToString());
+
+		if(C < 0 || C > 0x000fffff)
+			throw new LangError("C must be [0-1048575] in make-opcode, got: " + C.ToString());
+
+		intr.push(new LangOpcode(Opcodes.opcode_name_to_code(name), (byte)A, (ushort)B, (uint)C));
+	}		
+
+	public static void opcode_packed(Interpreter intr) {
+		LangOpcode op = popOpcode(intr,"opcode-packed");
+		intr.push(new LangInt(op.packed()));
+	}
+
+	public static void bind_lambda(Interpreter intr) {
+		var lambda = popLambda(intr, "bind-lambda");
+		// remember currently active frame -- when bound-lambda is called
+		// later, this frame will be set as its outer frame
+		intr.push(new LangBoundLambda(lambda, intr.framedata));
+		// mark current frame as being linked now so it isn't freed
+		// TODO
+		// intr->cur_framedata->setLinked(true);
+	}
+
+	public static void getenv(Interpreter intr) {
+		var name = popString(intr,"os-getenv");
+		var v = Environment.GetEnvironmentVariable(name);
+		if(v == null)
+			intr.push(new LangVoid());
+		else
+			intr.push(new LangString(v));
+	}
+
+	public static void getcwd(Interpreter intr) {
+		var name = Directory.GetCurrentDirectory();
+		intr.push(new LangString(name));
+	}
+	
+	public static void wordlist(Interpreter intr) {
+		intr.push(intr.getWordlist());
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -752,6 +857,8 @@ class Builtins {
 		{"string?", intr => intr.push(new LangBool(intr.pop() is LangString))},
 		{"symbol?", intr => intr.push(new LangBool(intr.pop() is LangSymbol))},
 		{"lambda?", intr => intr.push(new LangBool(intr.pop() is LangLambda))},
+		{"bound-lambda?", intr => intr.push(new LangBool(intr.pop() is LangBoundLambda))},
+		{"opcode?", intr => intr.push(new LangBool(intr.pop() is LangOpcode))},
 		{"void", intr => intr.push(new LangVoid())},
 		{".c", printchar},
 		{"repr", intr => intr.push(new LangString(intr.pop().fmtStackPrint()))},
@@ -774,11 +881,13 @@ class Builtins {
 		{"length", length},
 		{"make-word", make_word},
 		{"append", append},
+		{"extend", extend},
 		{"parse-int", intr => intr.push(new LangInt(long.Parse(popStringOrSymbol(intr,"parse-int"))))},
 		{"parse-float", intr => intr.push(new LangFloat(double.Parse(popStringOrSymbol(intr,"parse-float"))))},
 		{"make-lambda", make_lambda},
 		{"make-symbol", make_symbol},
 		{".dumpword", dumpword},
+		{".wordlist", wordlist},
 		{"error", intr => throw new LangError(popString(intr,"error")) },
 		{"make-closure", make_closure},
 		{"self", self_get},
@@ -825,5 +934,14 @@ class Builtins {
 		{"cos", intr => intr.push(new LangFloat(Math.Cos(popFloatOrInt(intr,"cos"))))},
 		{"sqrt", intr => intr.push(new LangFloat(Math.Sqrt(popFloatOrInt(intr,"sqrt"))))},
 		{"log", intr => intr.push(new LangFloat(Math.Log(popFloatOrInt(intr,"log"))))},
+
+		{"make-opcode", make_opcode},
+		{"opcode-packed", opcode_packed},
+		{"bind-lambda", bind_lambda},
+
+		{"file-sep", intr => intr.push(new LangString(new string(Path.DirectorySeparatorChar, 1)))},
+		{"os-getenv", getenv},
+		{"os-getcwd", getcwd},
+
 	};
 }

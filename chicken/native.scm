@@ -82,6 +82,30 @@
 				#f 
 				(loop (+ i 1))))))
 
+; moved this out of line since its a long function
+(import continuations)
+
+(define (compare-dicts A B)
+	(catch return
+		(if (or (not (Dict? A)) (not (Dict? B)))
+			(throw return #f))
+
+		(if (not (equal? (len A) (len B)))
+			(throw return #f))
+
+		(hash-table-walk (Dict-table A)
+			(lambda (k v)
+				; if B is missing key, then not equal
+				(if (not (hash-table-exists? (Dict-table B) k))
+					(throw return #f))
+
+				; if A[k] != B[k] then not equal
+				(if (not (test-equal v (hash-table-ref (Dict-table B) k)))
+					(throw return #f))))
+
+		; all entries equal
+		#t))
+
 (define (test-equal A B)
 	(cond
 		((Null? A) (Null? B))
@@ -102,13 +126,22 @@
 		((boolean? A)
 			(and (boolean? B) (eq? A B)))
 		((Lambda? A) #f) ; lambdas never equal to anything else even themselves
+		((BoundLambda? A) #f) ; same as lambdas
 		((Void? A) (Void? B))
 		((List? A)
 			(cond
 				((not (List? B)) #f)
 				((not (= (dynvector-length (List-objlist A)) (dynvector-length (List-objlist B)))) #f)
 				(else (test-equal-lists A B))))
-
+		((Dict? A) (compare-dicts A B))	
+		((Opcode? A)
+			(if (not (Opcode? B))
+				#f 
+				(and 
+					(equal? (Opcode-code A) (Opcode-code B))
+					(equal? (Opcode-A A) (Opcode-A B))
+					(equal? (Opcode-B A) (Opcode-B B))
+					(equal? (Opcode-C A) (Opcode-C B)))))
 		(else (lang-error '== "Don't know how to compare " A " and " B))))
 
 (define (builtin-equal intr A B)
@@ -285,7 +318,7 @@
 			(push-int intr (len obj)))
 		((Lambda? obj)
 			; like other ports, push a deepcopy of objlist
-			(push intr (deepcopy (lambda-llist obj))))
+			(push intr (deepcopy (Lambda-llist obj))))
 		; same with closures
 		((Closure? obj)
 			(push intr (deepcopy (Closure-llist obj)))
@@ -306,6 +339,37 @@
 			((Float? obj) (value obj))
 			(else (lang-error wheresym "Expecting float or int but got: " obj)))))
 
+(define (popInt intr wheresym)
+	(let ((obj (pop intr)))
+		(if (integer? obj)
+			obj 
+			(lang-error wheresym "Expecting integer but got: " obj))))
+
+(define (popStringOrSymbol intr wheresym)
+	(let ((obj (pop intr)))
+		(cond
+			((String? obj) obj)
+			((string? obj) obj)
+			(else (lang-error wheresym "Expecting string or symbol but got: " obj)))))
+
+(define (popList intr wheresym)
+	(let ((obj (pop intr)))
+		(if (List? obj)
+			obj 
+			(lang-error wheresym "Expecting list but got: " obj))))
+
+(define (popLambda intr wheresym)
+	(let ((obj (pop intr)))
+		(if (Lambda? obj)
+			obj 
+			(lang-error wheresym "Expecting lambda but got: " obj))))
+
+(define (popOpcode intr wheresym)
+	(let ((obj (pop intr)))
+		(if (Opcode? obj)
+			obj 
+			(lang-error wheresym "Expecting opcode but got: " obj))))
+
 (define (builtin-make-string intr NR)
 	; pop list of integers into lst and make string
 	(push intr (make-String (apply string (map integer->char (pop-nr-objs intr NR))))))
@@ -322,6 +386,19 @@
 	; modify in place and push back on stack
 	(llist-push-back llist obj)
 	(push intr llist))
+
+(define (builtin-extend intr)
+	(let* ((src (popList intr 'extend))
+			(dest (popList intr 'extend)))
+		(dynvector-for-each (lambda (i elem) (llist-push-back dest elem)) (List-objlist src))
+		(push intr dest)))
+
+(define (builtin-wordlist intr)
+	(let ((newlist (new-lang-list)))
+		(hash-table-walk (intr-WORDS intr)
+			(lambda (k v)
+				(llist-push-back newlist k)))
+		(push intr newlist)))
 
 (define (String-or-Symbol? o) (or (String? o) (Symbol? o)))
 	
@@ -342,16 +419,6 @@
 	(let* ((fileIn (file-open filename open/rdonly))
 			(text (car (file-read fileIn (file-size fileIn)))))
 		(push intr (make-String text))))
-
-(define (builtin-self-get intr)
-	(if (null? (intr-closure intr))
-		(lang-error 'self "Attempting to reference unbound self")
-		(push intr (Closure-state (intr-closure intr)))))
-
-(define (builtin-self-set intr)
-	(if (null? (intr-closure intr))
-		(lang-error 'self "Attempting to set unbound self")
-		(Closure-state-set! (intr-closure intr) (pop intr))))
 
 (define (builtin-put intr dest index obj)
 	(cond
@@ -430,15 +497,6 @@
 			((Float? obj) (push intr (inexact->exact (floor (value obj)))))
 			(else (lang-error 'floor "Floor expects number but got:" obj)))))
 
-(define (make-closure intr obj state)
-	(cond
-		((List? obj)
-			(push intr (make-Closure (deepcopy obj) state)))
-		((Lambda? obj)
-			(push intr (make-Closure (deepcopy (lambda-llist obj)) state)))
-		(else
-			(lang-error 'make-closure "make-closure expects list or lambda, got:" obj))))
-
 (define (builtin-keys intr)
 	(let ((dict (popTypeOrFail intr Dict? "dict" 'keys))
 			(newlist (new-lang-list)))
@@ -446,6 +504,31 @@
 			(lambda (k v)
 				(llist-push-back newlist (make-String k))))
 		(push intr newlist)))
+
+(define (builtin-make-opcode intr)
+	(let* (	(C (popInt intr 'make-opcode))
+			(B (popInt intr 'make-opcode))
+			(A (popInt intr 'make-opcode))
+			(name (popStringOrSymbol intr 'make-opcode)))
+
+		(if (or (< A 0) (> A 255))
+			(lang-error 'make-opcode "A must be [0-255] in make-opcode, got: " A))
+
+		(if (or (< B 0) (> B 65535))
+			(lang-error 'make-opcode "B must be [0-65535] in make-opcode, got: " B))
+
+		(if (or (< C 0) (> C #x000fffff))
+			(lang-error 'make-opcode "C must be [0-1048575] in make-opcode, got: " C))
+
+		(push intr (make-Opcode (opcode-name-to-code name) A B C))))
+		
+(define (builtin-opcode-packed intr)
+	(let ((op (popOpcode intr 'opcode-packed)))
+		(push intr (opcode-pack (Opcode-code op) (Opcode-A op) (Opcode-B op) (Opcode-C op)))))
+
+(define (builtin-bind-lambda intr)
+	(let ((_lambda (popLambda intr 'bind-lambda)))
+		(push intr (make-BoundLambda (Lambda-llist _lambda) (intr-framedata intr)))))
 
 (import (chicken bitwise))
 (import (chicken time))
@@ -466,6 +549,8 @@
 		(list "string?" (list '*)  (lambda (intr obj) (push intr (String? obj))))
 		(list "symbol?" (list '*)  (lambda (intr obj) (push intr (string? obj))))
 		(list "lambda?" (list '*)  (lambda (intr obj) (push intr (Lambda? obj))))
+		(list "bound-lambda?" (list '*)  (lambda (intr obj) (push intr (BoundLambda? obj))))
+		(list "opcode?" (list '*)  (lambda (intr obj) (push intr (Opcode? obj))))
 		(list "closure?" (list '*)  (lambda (intr obj) (push intr (Closure? obj))))
 		(list "void" 	'() (lambda (intr) (push intr (make-Void))))
 		(list "make-list" (list 'i) builtin-make-list)
@@ -494,6 +579,7 @@
 		(list "make-word" 	(list 'y) builtin-make-word)
 		(list "length" 		(list '*)  builtin-length)
 		(list "append"	 	(reverse (list 'L '*)) builtin-append)
+		(list "extend"	 	'() builtin-extend)
 		(list "parse-int"	'() (lambda (intr) 
 			(push-int intr (string->number (value 
 				(popTypeOrFail intr String-or-Symbol? "string|symbol" "parse-int"))))))
@@ -529,12 +615,10 @@
 		(list "make-lambda" (list 'L) (lambda (intr llist) (push intr (make-Lambda (deepcopy llist)))))
 		(list "make-symbol" (list 'i) builtin-make-symbol)
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
+		(list ".wordlist"   '() builtin-wordlist)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
 		; as above, must deepcopy list
-		(list "make-closure" (reverse (list '* '*)) make-closure)
-		(list "self"		'() builtin-self-get)
-		(list "self!"		'() builtin-self-set)
 		(list "put" (reverse (list '* '* '*)) builtin-put)
 		(list "get" (reverse (list '* '*)) builtin-get)
 		(list "deepcopy" (list '*) (lambda (intr obj) (push intr (deepcopy obj))))
@@ -600,8 +684,41 @@
 		(list "cos" '() (lambda (intr) (push intr (make-Float (cos (pop-float-or-int intr 'cos))))))
 		(list "sqrt" '() (lambda (intr) (push intr (make-Float (sqrt (pop-float-or-int intr 'sqrt))))))
 		(list "log" '() (lambda (intr) (push intr (make-Float (log (pop-float-or-int intr 'log))))))
+
+		(list "make-opcode" '() builtin-make-opcode)
+		(list "opcode-packed" '() builtin-opcode-packed)
+		(list "bind-lambda" '() builtin-bind-lambda)
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))
+
+; ================================================================
+; Opcodes
+;
+; This is NOT an ideal place to define these, however, after having a lot
+; of trouble with module imports & mututal dependencies, I gave up
+; and moved these here ... would be nice to split these back into
+; opcodes.scm later
+; ================================================================
+
+; opcode implementations
+(define (opcode-FRAME-GET intr framedata levels index _unused)
+	(if (null? framedata)
+		(lang-error "FRAME-GET called with null frame"))
+
+	(push intr (CallFrameData-getFrameObj framedata levels index)))
+
+(define (opcode-FRAME-SET intr framedata levels index _unused)
+	(if (null? framedata)
+		(lang-error "FRAME-SET called with null frame"))
+
+	(let ((obj (pop intr)))
+		(CallFrameData-setFrameObj framedata levels index obj)))
+
+; defined in interpreter.scm
+; order must be same as numeric order of opcodes
+(set! OPCODE-FUNCTIONS
+	(list->vector
+		(list opcode-FRAME-GET opcode-FRAME-SET)))
 
 ) ; end of modules

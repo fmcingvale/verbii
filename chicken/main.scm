@@ -40,6 +40,7 @@
 (import native)
 
 (define SHOW_RUNTIME_STATS #f)
+(define NO_CATCH_EXCEPTIONS #f)
 (define BOOTFILE "../lib/boot.verb.b")
 
 (import (chicken file posix))
@@ -76,6 +77,7 @@
 					; else process as normal
 					(cond
 						((string=? arg "-stats") (set! SHOW_RUNTIME_STATS #t))
+						((string=? arg "-noexn") (set! NO_CATCH_EXCEPTIONS #t))
 						((string=? arg "--") 
 							; the '--' stays in the list passed to boot.verb
 							(llist-push-back cmdline-args (make-String arg))
@@ -84,30 +86,37 @@
 							; anything else goes to script
 							(llist-push-back cmdline-args (make-String arg)))))) (cdr (argv))))
 
-		(let ((done #f))
-			(do-while (not done)
+		(if NO_CATCH_EXCEPTIONS
+			; when things are really broken, run with -noexn to see raw crash from 
+			; chicken, instead of catching exceptions
 			(let ((intr (make-Interpreter)))
-				(handle-exceptions exn
-					(cond
-						; for verbii (lang-error) print string (usercode error)
-						(((exception-of? 'lang-error) exn) 
-							; TODO -- stack trace
-							(print (message exn))
-							; stop or continue based on EXIT_ON_EXCEPTION
-							(set! done EXIT_ON_EXCEPTION))
-						; for scheme errors (i.e. bugs in the interpreter, not user code,
-						; re-raise the error to show the full traceback - don't try and continue)
-						(else (abort exn)))
-					;(print "Compile ...")
-					;(print "About to run ...")
-					; boot.verb expects cmdline args on top of stack
-					(push intr cmdline-args)
-					(deserialize-and-run intr BOOTFILE)
-					; if i made it here, then the above ran OK, so exit now
-					(if SHOW_RUNTIME_STATS
-						(print-stats intr))
-					(set! done #t)))))))
-								
+				(push intr cmdline-args)
+				(deserialize-and-run intr BOOTFILE))
+			; else, in the normal case, run with exception catching
+			(let ((done #f))
+				(do-while (not done)
+				(let ((intr (make-Interpreter)))
+					(handle-exceptions exn
+						(cond
+							; for verbii (lang-error) print string (usercode error)
+							(((exception-of? 'lang-error) exn) 
+								; TODO -- stack trace
+								(print (message exn))
+								; stop or continue based on EXIT_ON_EXCEPTION
+								(set! done EXIT_ON_EXCEPTION))
+							; for scheme errors (i.e. bugs in the interpreter, not user code,
+							; re-raise the error to show the full traceback - don't try and continue)
+							(else (abort exn)))
+						;(print "Compile ...")
+						;(print "About to run ...")
+						; boot.verb expects cmdline args on top of stack
+						(push intr cmdline-args)
+						(deserialize-and-run intr BOOTFILE)
+						; if i made it here, then the above ran OK, so exit now
+						(if SHOW_RUNTIME_STATS
+							(print-stats intr))
+						(set! done #t))))))))
+									
 (main)
 
 

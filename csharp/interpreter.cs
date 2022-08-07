@@ -38,9 +38,10 @@ public class Interpreter {
 	// code currently running
 	public List<LangObject>? code;
 	public int codepos;
+	public CallFrameData? framedata;
 	public LangClosure? closure; // the currently running closure or null
 	// stack of previous frames (code,codepos for each)
-	public List<Tuple<List<LangObject>,int,LangClosure?>> callstack;
+	public List<Tuple<List<LangObject>,int,CallFrameData?,LangClosure?>> callstack;
 
 	// stats
 	public int max_callstack;
@@ -73,8 +74,9 @@ public class Interpreter {
 
 		code = null;
 		codepos = -1;
+		framedata = null;
 		closure = null;
-		callstack = new List<Tuple<List<LangObject>,int,LangClosure?>>();
+		callstack = new List<Tuple<List<LangObject>,int,CallFrameData?,LangClosure?>>();
 
 		// stats
 		max_callstack = 0;
@@ -232,14 +234,18 @@ public class Interpreter {
 		}
 	}
 
-	public void code_call(List<LangObject> objlist, LangClosure? new_closure=null) {
+	public void code_call(List<LangObject> objlist, LangBoundLambda? boundlambda=null, LangClosure? new_closure=null) {
 		//Console.WriteLine("CALLING");
 		if(code == null) {
 			throw new LangError("call while not running");
 		}
-		callstack.Add(Tuple.Create(code,codepos,closure));
+		callstack.Add(Tuple.Create(code,codepos,framedata,closure));
 		code = objlist;
 		codepos = 0;
+		framedata = new CallFrameData();
+		if(boundlambda != null)
+			framedata.setOuterFrame(boundlambda.outer);
+
 		closure = new_closure;
 		// stats
 		max_callstack = Math.Max(max_callstack,callstack.Count);
@@ -257,7 +263,8 @@ public class Interpreter {
 		var tup = callstack[callstack.Count-1];
 		code = tup.Item1;
 		codepos = tup.Item2;
-		closure = tup.Item3;
+		framedata = tup.Item3;
+		closure = tup.Item4;
 		callstack.RemoveAt(callstack.Count-1);
 	}
 
@@ -296,6 +303,15 @@ public class Interpreter {
 		}
 	}
 
+	public LangObject getWordlist() {
+		var list = new LangList();
+		foreach(var pair in WORDS) {
+			// no ordering requirement
+			list.objlist.Add(new LangSymbol(pair.Key));
+		}
+		return list;
+	}
+
 	public void run(List<LangObject> objlist, Func<Interpreter,LangObject,int>? debug_hook) {
 		if(callstack.Count > 0) {
 			throw new LangError("Interpreter::run called recursively");
@@ -303,6 +319,7 @@ public class Interpreter {
 
 		code = objlist;
 		codepos = 0;
+		framedata = null;
 		closure = null;
 
 		//Console.WriteLine("RUNNING LIST:");
@@ -368,20 +385,21 @@ public class Interpreter {
 				if(sym!.match("call")) {
 					// top of stack must be a lambda
 					var val = pop();
+					// try all casts to see what i have ...
 					var lambda = val as LangLambda;
 					var list = val as LangList;
+					var boundlambda = val as LangBoundLambda;
 					var closure = val as LangClosure;
 					if(lambda != null) {
 						// now this is just like calling a userword, below
 						// TODO -- tail call elimination??
 						code_call(lambda.objlist);
 					}
-					else if(closure != null) {
-						// like above but sets closure
-						code_call(closure.objlist, closure);
+					else if(boundlambda != null) {
+						code_call(boundlambda.objlist, boundlambda);
 					}
 					else {			
-						throw new LangError("call expects a lambda or closure but got: " + val.fmtStackPrint());
+						throw new LangError("call expects a lambda or bound-lambda but got: " + val.fmtStackPrint());
 					}
 					continue;
 				}
@@ -412,6 +430,11 @@ public class Interpreter {
 				}
 			}
 
+			else if(obj is LangOpcode) {
+				Opcodes.runOpcode(this, (obj as LangOpcode)!);
+				continue;
+			}
+
 			else if(obj is LangVoid) {
 				//Console.WriteLine("GOT VOID");
 				// i could be returning from a word that had no 'return',
@@ -429,17 +452,16 @@ public class Interpreter {
 			//Console.WriteLine("STACK NOW: " + reprStack());
 			//Console.WriteLine("RUN OBJ: " + obj.fmtStackPrint());
 
-			// all object types except lists, symbols & void are pushed here (see c++ notes for more)
-			else if(obj is LangInt || obj is LangFloat || obj is LangString || obj is LangLambda ||
-					obj is LangBool || obj is LangNull || obj is LangClosure || obj is LangDict) {
-				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
-				push(obj);
-				continue;
-			}
-
 			// list literals are deepcopied (see DESIGN-NOTES.md)
 			else if(obj is LangList) {
 				push(obj.deepcopy());
+				continue;
+			}
+
+			// everything else gets pushed here (see c++ notes for more)
+			else {
+				//Console.WriteLine("INTR PUSH LITERAL: " + obj.fmtStackPrint());
+				push(obj);
 				continue;
 			}
 

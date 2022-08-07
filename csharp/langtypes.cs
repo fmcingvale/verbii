@@ -8,6 +8,7 @@
 	unions and not sure if faking it with StructLayout mechanism is
 	a great idea or not.
 */
+#nullable enable
 using System;
 using System.Collections.Generic;
 
@@ -79,6 +80,30 @@ public class LangInt : LangObject {
 	public override double asFloat() { return value; }
 }
 
+public class LangOpcode : LangObject {
+	// see c++ notes on packed format
+	public LangOpcode(byte code, byte A, ushort B, uint C) { 
+		this.code = code;
+		this.A = A;
+		this.B = B;
+		this.C = C;
+	}
+
+	public byte code;
+	public byte A;
+	public ushort B;
+	public uint C;
+
+	public long packed() { return Opcodes.opcode_pack(code, A, B, C); }
+
+	public override string typename() { return "opcode"; }
+	public override string fmtDisplay() {
+		return "#op( " + Opcodes.opcode_code_to_name(code) + " " + 
+			A.ToString() + " " + B.ToString() + " " + C.ToString() + " )";
+	}
+	public override string fmtStackPrint() { return fmtDisplay(); }
+}
+
 public class LangFloat : LangObject {
 	public LangFloat(double d) {
 		value = d;
@@ -92,7 +117,8 @@ public class LangFloat : LangObject {
 	public override string fmtDisplay() { 
 		// there has to be a better way .....
 		string fmt = "{0:G" + FLOAT_PRECISION.ToString() + "}"; 
-		return String.Format(fmt, value); 
+		// seems to use 'E' instead of 'e' so make sure its lowercase
+		return String.Format(fmt, value).ToLower();
 	}
 
 	public override string fmtStackPrint() { 
@@ -172,11 +198,28 @@ public class LangLambda : LangObject {
 	public List<LangObject> objlist;
 	public override string typename() { return "lambda"; }
 	public override string fmtDisplay() { 
-		return "<" + LangList.fmtDisplayObjlist(objlist,"{","}") + ">";
+		return LangList.fmtDisplayObjlist(objlist,"{","}");
 	 }
 	public override string fmtStackPrint() {
-		return "<" + LangList.fmtStackPrintObjlist(objlist,"{","}") + ">";
+		return LangList.fmtStackPrintObjlist(objlist,"{","}");
 	}
+}
+
+public class LangBoundLambda : LangObject {
+	public List<LangObject> objlist;
+	public CallFrameData? outer;
+
+	public LangBoundLambda(LangLambda lambda, CallFrameData? outer) {
+		this.objlist = lambda.objlist;
+		this.outer = outer;
+	}
+	public override string typename() { return "bound-lambda"; }
+	public override string fmtDisplay() { 
+		return "<bound " + LangList.fmtDisplayObjlist(objlist,"{","}") + ">";
+	 }
+	public override string fmtStackPrint() {
+		return "<bound " + LangList.fmtStackPrintObjlist(objlist,"{","}") + ">";
+	 }
 }
 
 public class LangDict : LangObject {
@@ -272,6 +315,54 @@ public class LangList : LangObject {
 	public override LangObject deepcopy() {
 		return new LangList(deepcopyObjlist(objlist));
 	}
+}
+
+// NOTE this is a naive implementation -- later needs to be able to reuse
+// frames that didn't get linked to anything instead of creating a new frame
+// at each function call
+public class CallFrameData {
+	// *** SYNC THIS WITH C++ IMPLEMENTATION ***
+	const int MAX_CALLFRAME_SLOTS = 255; 
+
+	public CallFrameData() { 
+		outer = null;
+		data = new LangObject[MAX_CALLFRAME_SLOTS];
+	}
+	
+	public void setOuterFrame(CallFrameData? _outer) { outer = _outer; }
+	public CallFrameData? getOuterFrame() { return outer; }
+
+	// get/set object in frame up #levels (0 == this frame)
+	public LangObject getFrameObj(int levels, int index) {
+		if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
+			throw new LangError("Out of bounds in CallFrameData::setLocalObj()");
+		
+		var frame = findFrameUp(levels);
+		return frame.data[index];
+	}
+
+	public void setFrameObj(int levels, int index, LangObject obj) {
+		if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
+			throw new LangError("Out of bounds in CallFrameData::setLocalObj()");
+
+		var frame = findFrameUp(levels);
+		frame.data[index] = obj;
+	}
+
+	private CallFrameData findFrameUp(int levels) {
+		var frame = this;
+		while(levels > 0) {
+			if(frame == null || frame.outer == null)
+				throw new LangError("Bad level number in findFrameUp()");
+
+			levels -= 1;
+			frame = frame.outer;
+		}
+		return frame; // cannot be NULL due to above checks
+	}
+
+	private LangObject[] data;
+	private CallFrameData? outer;
 }
 
 public class LangClosure : LangObject {

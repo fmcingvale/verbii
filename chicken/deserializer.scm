@@ -54,6 +54,9 @@
 					((#\f) (make-lang-float (string->number (string-drop line 2))))
 					((#\b) (parse-bool (string-drop line 2)))
 					((#\n) (make-Null))
+					((#\o) 
+						(let ((unpacked (opcode-unpack (string->number (string-drop line 2)))))
+							(apply make-Opcode unpacked)))
 					((#\s) 
 						(if (>= (string-length line) 2) ; watch for empty string
 							(make-String (replace-escapes (string-drop line 2)))

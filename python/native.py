@@ -12,9 +12,11 @@ from errors import LangError
 from interpreter import Interpreter
 from langtypes import LangLambda, LangString, fmtDisplay, fmtStackPrint, \
 				isNumeric, LangClosure, deepcopy, isString, isSymbol, \
-					isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
-						isNull, parseBool, LangVoid, isVoid, LangNull
-import time, sys
+				isList, isClosure, isLambda, isDict, isInt, isFloat, isBool, \
+				isNull, parseBool, LangVoid, isVoid, LangNull, LangOpcode, \
+				LangBoundLambda, isBoundLambda, isOpcode
+from opcodes import opcode_pack, opcode_name_to_code
+import time, sys, os
 
 # has to be set externally
 ALLOW_OVERWRITE_WORDS = False
@@ -130,6 +132,13 @@ def popStringOrSymbol(I,where):
 	elif isString(obj): return obj.s
 	else: raise LangError("Expecting string or symbol (in {0}) but got: {1}".format(where,fmtStackPrint(obj)))
 
+def popLambda(I):
+	obj = I.pop()
+	if isLambda(obj):
+		return obj
+	else:
+		raise LangError("Expecting lambda but got: " + fmtStackPrint(obj))
+
 def popList(I):
 	obj = I.pop()
 	if isList(obj):
@@ -222,7 +231,7 @@ def builtin_puts(I, obj):
 	FILE_STDOUT.write(obj.s)
 
 def builtin_wordlist(I):
-	I.push(list(I.WORDS.keys()))
+	I.push(list(I._WORDS.keys()))
 
 def builtin_file_read(I):
 	filename = popString(I, "file-read")
@@ -243,6 +252,11 @@ def test_equal(a,b):
 	elif isSymbol(a): return isSymbol(b) and a==b
 	elif isString(a): return isString(b) and a.s == b.s
 	elif isLambda(a): return False # lambdas are never equal, even if its the same object
+	elif isBoundLambda(a): return False # same for bound lambdas
+	elif isOpcode(a): 
+		from opcodes import opcode_unpack
+		if not isOpcode(b): return False
+		return a.packed == b.packed
 	elif isVoid(a): return isVoid(b)
 	elif isList(a):
 		if not isList(b): return False
@@ -388,6 +402,12 @@ def builtin_append(I):
 	_list.append(obj)
 	I.push(_list)
 
+def builtin_extend(I):
+	src = popList(I)
+	_list = popList(I)
+	_list.extend(src)
+	I.push(_list)
+
 def builtin_make_closure(I):
 	state = I.pop()
 	obj = I.pop()
@@ -525,9 +545,53 @@ def builtin_file_append(I):
 def builtin_file_delete(I):
 	filename = popString(I,'file-delete')
 	if os.path.isfile(filename):
-		os.unlink(filename)
+		os.remove(filename)
 	
-import os
+# name A B C make-opcode -> opcode
+def builtin_make_opcode(I):
+	C = popInt(I)
+	B = popInt(I)
+	A = popInt(I)
+	name = popStringOrSymbol(I,"make-opcode")
+	
+	# range checks
+	if A < 0 or A > 255:
+		raise LangError("A must be [0-255] in make-opcode, got: " + str(A))
+
+	if B < 0 or B > 65535:
+		raise LangError("B must be [0-65535] in make-opcode, got: " + str(B));
+
+	if C < 0 or C > 0x000fffff:
+		raise LangError("C must be [0-1048575] in make-opcode, got: " + str(C))
+
+	I.push(LangOpcode(opcode_pack(opcode_name_to_code(name), A, B, C)))
+
+def builtin_opcode_packed(I):
+	op = I.pop()
+	if not isOpcode(op):
+		raise LangError("Expecting opcode in opcode-packed but got: " + fmtStackPrint(op))
+
+	I.push(op.packed)
+
+def builtin_bind_lambda(I):
+	_lambda = popLambda(I)
+	# remember currently active frame -- when bound-lambda is called
+	# later, this frame will be set as its outer frame
+	I.push(LangBoundLambda(_lambda, I.framedata))
+	
+def builtin_file_sep(I):
+	I.push(LangString(os.sep))
+
+def builtin_os_getenv(I):
+	name = popString(I)
+	if name in os.environ:
+		I.push(LangString(os.environ(name)))
+	else:
+		I.push(LangVoid())
+	
+def builtin_os_getcwd(I):
+	I.push(LangString(os.getcwd()))
+	
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
 	'+': ([], builtin_add),
@@ -555,6 +619,8 @@ BUILTINS = {
 	'null?': ([object], lambda I,o: I.push(isNull(o))),
 	'void?': ([object], lambda I,o: I.push(isVoid(o))),
 	'lambda?': ([object], lambda I,o: I.push(isLambda(o))),
+	'opcode?': ([object], lambda I,o: I.push(isOpcode(o))),
+	'bound-lambda?': ([object], lambda I,o: I.push(isBoundLambda(o))),
 	'closure?': ([object], lambda I,o: I.push(isClosure(o))),
 	# [] for no args
 	'depth': ([], lambda I: I.push(I.SP_EMPTY - I.SP)),
@@ -581,6 +647,7 @@ BUILTINS = {
 	'make-word': ([], builtin_make_word),
 	'make-lambda': ([], builtin_make_lambda),
 	'append': ([], builtin_append),
+	'extend': ([], builtin_extend),
 	'void': ([], lambda I: I.push(LangVoid())),
 	'.dumpword': ([], lambda I: I.push(deepcopy(I.lookupWordOrFail(popSymbol(I))))),
 	'make-closure': ([], builtin_make_closure),
@@ -630,5 +697,14 @@ BUILTINS = {
 	'sqrt': ([], lambda I: I.push(math.sqrt(popIntOrFloat(I)))),
 	'log': ([], lambda I: I.push(math.log(popIntOrFloat(I)))),
 
+	# 'version 2' closures
+	'make-opcode': ([], builtin_make_opcode),
+	'opcode-packed': ([], builtin_opcode_packed),
+	'bind-lambda': ([], builtin_bind_lambda),
+
+	# more os/fileops
+	'file-sep': builtin_file_sep,
+	'os-getenv': builtin_os_getenv,
+	'os-getcwd': builtin_os_getcwd,
 }
 

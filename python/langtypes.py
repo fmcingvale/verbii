@@ -81,6 +81,58 @@ class LangClosure(object):
 
 def isClosure(obj): return isinstance(obj, LangClosure)
 
+class LangOpcode(object):
+	def __init__(self, packed):
+		self.packed = packed # packed value
+
+def isOpcode(obj): return isinstance(obj, LangOpcode)
+
+class CallFrameData(object):
+	# this is the maximum number args + locals a function can have
+	#
+	# ** KEEP THIS SYNCED WITH THE C++ VALUE **
+	MAX_CALLFRAME_SLOTS = 255
+
+	def __init__(self):
+		self.slots = [0] * self.MAX_CALLFRAME_SLOTS
+		self.outer = None
+
+	def setOuterFrame(self, outer): 
+		self.outer = outer
+
+	def findFrameUp(self, levels):
+		frame = self
+		while levels > 0:
+			if not frame.outer:
+				raise LangError("Null outer frame in findFrameUp()")
+
+			levels -= 1
+			frame = frame.outer
+
+		return frame
+
+	# get/set object in frame @ given levels up (0 == local frame)
+	def getFrameObj(self, levels, index):
+		if index < 0 or index >= len(self.slots):
+			raise LangError("Out of bounds in CallFrameData.getLocalObj()")
+
+		frame = self.findFrameUp(levels)
+		return frame.slots[index]
+
+	def setFrameObj(self, levels, index, obj):
+		if index < 0 or index >= len(self.slots):
+			raise LangError("Out of bounds in CallFrameData.getLocalObj()")
+
+		frame = self.findFrameUp(levels)
+		frame.slots[index] = obj
+
+class LangBoundLambda(object):
+	def __init__(self, _lambda, outer):
+		self.objlist = _lambda.objlist
+		self.outer = outer
+
+def isBoundLambda(obj): return isinstance(obj, LangBoundLambda)
+
 def fmtDisplayObjlist(objlist, open_delim, close_delim):
 	rlist = [open_delim]
 	for o in objlist:
@@ -104,7 +156,9 @@ def fmtDisplay(obj):
 		if obj is True: return "true"
 		else: return "false"
 	elif isLambda(obj):
-		return "<" + fmtDisplayObjlist(obj.objlist,"{","}") + ">"
+		return  fmtDisplayObjlist(obj.objlist,"{","}")
+	elif isBoundLambda(obj):
+		return '<bound ' + fmtDisplayObjlist(obj.objlist,"{","}") + '>'
 	elif isClosure(obj):
 		return "<" + fmtDisplayObjlist(obj.objlist,"{","}") + " :: " + fmtDisplay(obj.state) + ">"
 	elif isList(obj):
@@ -120,6 +174,8 @@ def fmtDisplay(obj):
 		return obj.s
 	elif isSymbol(obj):
 		return obj
+	elif isOpcode(obj):
+		return fmtStackPrint(obj)
 	else:
 		# special case ... very like i'm being called from an exception so 
 		# print & exit() instead of raising LangError
@@ -148,7 +204,9 @@ def fmtStackPrint(obj):
 		return '#' + fmt.format(obj)
 	elif isBool(obj): return "<true>" if obj else "<false>"
 	elif isLambda(obj):
-		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + ">"
+		return fmtStackPrintObjlist(obj.objlist,"{","}")
+	elif isBoundLambda(obj):
+		return '<bound ' + fmtStackPrintObjlist(obj.objlist,"{","}") + '>'
 	elif isClosure(obj):
 		return "<" + fmtStackPrintObjlist(obj.objlist,"{","}") + " :: " + fmtStackPrint(obj.state) + ">"
 	elif isString(obj):
@@ -164,6 +222,16 @@ def fmtStackPrint(obj):
 		for k in sorted(obj.keys()):
 			s += '"' + k.s + '" => ' + fmtStackPrint(obj[k]) + " "
 		s += "}"
+		return s
+	elif isOpcode(obj):
+		from opcodes import opcode_unpack, opcode_code_to_name
+		code, A, B, C = opcode_unpack(obj.packed)
+		s = "#op( "
+		s += opcode_code_to_name(code)
+		s += " " + str(A)
+		s += " " + str(B)
+		s += " " + str(C)
+		s += " )"
 		return s
 	else:
 		# as above
@@ -182,7 +250,7 @@ def deepcopyObjlist(objlist):
 def deepcopy(obj):
 	if isNull(obj) or isVoid(obj) or isNumeric(obj) or isBool(obj) or \
 		isLambda(obj) or isClosure(obj) or \
-		isString(obj) or isSymbol(obj):
+		isString(obj) or isSymbol(obj) or isOpcode(obj):
 		return obj
 	elif isList(obj):
 		return deepcopyObjlist(obj)

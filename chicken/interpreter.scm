@@ -37,6 +37,8 @@
 
 ; populated from native.scm
 (define BUILTINS (make-hash-table))
+; populated from opcodes.scm
+(define OPCODE-FUNCTIONS (make-vector 1))
 
 (define-record-type Interpreter	
 	(make-empty-Interpreter) ;; don't use this, use make-Interpreter, below
@@ -57,7 +59,7 @@
 
 	(code intr-code intr-code-set!) ; currently running code (List)
 	(codepos intr-codepos intr-codepos-set!) ; next obj to run as index into code
-	(closure intr-closure intr-closure-set!) ; current closure or '()
+	(framedata intr-framedata intr-framedata-set!) ; current CallFrameData or '()
 	(callstack intr-callstack intr-callstack-set!) ; frame pushed here on call (pushed to head), as (code,codepos)
 
 	; stats
@@ -86,7 +88,7 @@
 
 		(intr-code-set! intr '())
 		(intr-codepos-set! intr 0)
-		(intr-closure-set! intr '())
+		(intr-framedata-set! intr '())
 		(intr-callstack-set! intr '())
 
 		; stats
@@ -168,14 +170,18 @@
 
 (define (_WORDS intr) (intr-WORDS intr))
 
-(define (code-call intr objlist new-closure)		
+(define (code-call intr objlist bound-lambda)		
 	(if (not (null? (intr-code intr)))
 		(begin
 			(intr-callstack-set! intr 
-				(cons (list (intr-code intr) (intr-codepos intr) (intr-closure intr)) (intr-callstack intr)))
+				(cons (list (intr-code intr) (intr-codepos intr) (intr-framedata intr)) 
+					(intr-callstack intr)))
 			(intr-code-set! intr objlist)
 			(intr-codepos-set! intr 0)
-			(intr-closure-set! intr new-closure)
+			(intr-framedata-set! intr (new-CallFrameData))
+			(if (not (null? bound-lambda))
+				(CallFrameData-outer-set! (intr-framedata intr) (BoundLambda-outer bound-lambda)))
+
 			; stats
 			(callstack-depth-set! intr (+ 1 (callstack-depth intr)))
 			(max-callstack-set! intr (max (max-callstack intr) (callstack-depth intr))))
@@ -189,7 +195,7 @@
 			;(print "POS: " (cadar (slot intr 'callstack)))
 			(intr-code-set! intr (caar (intr-callstack intr)))
 			(intr-codepos-set! intr (cadar (intr-callstack intr)))
-			(intr-closure-set! intr (caddar (intr-callstack intr)))
+			(intr-framedata-set! intr (caddar (intr-callstack intr)))
 			(intr-callstack-set! intr (cdr (intr-callstack intr)))
 			; stats
 			(callstack-depth-set! intr (- (callstack-depth intr) 1)))
@@ -324,7 +330,7 @@
 		(lang-error 'intepreter "Interpreter called recursively!"))
 	(intr-code-set! intr objlist)
 	(intr-codepos-set! intr 0)
-	(intr-closure-set! intr '())
+	(intr-framedata-set! intr '())
 	(let ((exit-loop #f))
 		(do-while (not exit-loop)
 			(let ((obj (nextObj intr)))
@@ -359,11 +365,11 @@
 									(cond
 										((Lambda? L)
 											; TODO - tail call elimination??
-											(code-call intr (lambda-llist L) '()))
-										((Closure? L)
-											(code-call intr (Closure-llist L) L))
+											(code-call intr (Lambda-llist L) '()))
+										((BoundLambda? L)
+											(code-call intr (BoundLambda-llist L) L))
 										(else
-											(lang-error 'call "Expecting lambda or closure but got:" L)))))
+											(lang-error 'call "Expecting lambda or bound-lambda but got:" L)))))
 
 							; builtin (native) functions
 							((hash-table-exists? BUILTINS obj)
@@ -400,6 +406,11 @@
 							(else
 								(lang-error 'intepreter "Unknown word" obj))))
 
+					((Opcode? obj)
+						;(print "OPCODE:" (fmtStackPrint obj))
+						((vector-ref OPCODE-FUNCTIONS (Opcode-code obj))
+							intr (intr-framedata intr) (Opcode-A obj) (Opcode-B obj) (Opcode-C obj)))
+
 					((Void? obj)
 						;(print "RETURN OR EXIT:")
 						; either return or exit
@@ -409,17 +420,13 @@
 							(begin
 								(intr-code-set! intr '())
 								(set! exit-loop #t))))
-					; push everything except lists/symbols/void (see c++ notes for more)
-					((integer? obj) (push-int intr obj))
-					((or (Float? obj) (String? obj) (Lambda? obj) (boolean? obj) (Null? obj)
-							(Closure? obj) (Dict? obj))
-						(push intr obj))
 
 					; list literals are deepcopied (see DESIGN-NOTES.txt)
 					((List? obj)
 						(push intr (deepcopy obj)))
 
-					(else
-						(lang-error 'interpreter "Unknown word" obj)))))))
+					; see c++ notes on pushing everything else
+					(else 
+						(push intr obj)))))))
 
 ) ; end of module

@@ -124,9 +124,93 @@
 ;(define (new-Dict) (make-Dict (make-hash-table #:test string=?)))
 (define (new-Dict) (make-Dict (make-hash-table)))
 
+; makes:
+;	(make-Opcode code A B C)
+;	(Opcode? obj)
+;	(Opcode-code obj)
+;	(Opcode-code-set! obj)
+;	.. etc .. for A,B,C
+(import (chicken bitwise))
+
+(define-record Opcode code A B C)
+
+; I really want these to be in opcodes.scm but had so much trouble
+; with mutual dependency issues I gave in and put these here ...
+
+; keep these synced with c++
+(define OPCODE-FRAME-GET 0)
+(define OPCODE-FRAME-SET 1)
+
+(define OPCODE-NAME-TO-CODE
+	(alist->hash-table
+		`(	("FRAME-GET" . ,OPCODE-FRAME-GET)
+			("FRAME-SET" . ,OPCODE-FRAME-SET))))
+
+(define OPCODE-CODE-TO-NAME
+	(alist->hash-table
+		`(	(,OPCODE-FRAME-GET . "FRAME-GET")
+			(,OPCODE-FRAME-SET . "FRAME-SET"))))
+
+(define (opcode-pack code A B C)
+	(if (> C #x000fffff)
+		(langtype-error 'opcode-pack "C > 20 bits in opcode_pack()")
+		(bitwise-ior code (arithmetic-shift A 8) (arithmetic-shift B 16)
+			(arithmetic-shift C 32))))
+
+; returns (code A B C)
+(define (opcode-unpack packed)
+	(list
+		(bitwise-and packed #x00ff)
+		(bitwise-and (arithmetic-shift packed -8)  #x000000ff)
+		(bitwise-and (arithmetic-shift packed -16) #x0000ffff)
+		(bitwise-and (arithmetic-shift packed -32) #x000fffff)))
+
+(define (opcode-name-to-code name)
+	(if (hash-table-exists? OPCODE-NAME-TO-CODE name)
+		(hash-table-ref OPCODE-NAME-TO-CODE name)
+		(langtype-error 'opcode-name-to-code "No such opcode name: " name)))
+
+(define (opcode-code-to-name code)
+	(if (hash-table-exists? OPCODE-CODE-TO-NAME code)
+		(hash-table-ref OPCODE-CODE-TO-NAME code)
+		(langtype-error 'opcode-code-to-name "No such opcode number: " code)))
+
+; *** SYNC THIS WITH C++ ***
+(define MAX-CALLFRAME-SLOTS 255)
+
+; DON'T USE THIS DIRECTLY -- use new-CallFrameData
+(define-record CallFrameData outer data)
+(define (new-CallFrameData)
+	(make-CallFrameData '() (make-vector MAX-CALLFRAME-SLOTS (make-Void))))
+
+(define (CallFrameData-findFrameUp frame levels)
+	(let loop ((current frame)(nr levels))
+		(if (null? frame)
+			(langtype-error 'findFrameUp "Bad level number in findFrameUp"))
+
+		(if (> nr 0)
+			(loop (CallFrameData-outer current) (- nr 1))
+			current)))
+
+(define (CallFrameData-getFrameObj frame levels index)
+	(if (or (< index 0) (>= index MAX-CALLFRAME-SLOTS))
+		(langtype-error 'getFrameObj "Bad index in getFrameObj"))
+
+	(let ((found (CallFrameData-findFrameUp frame levels)))
+		(vector-ref (CallFrameData-data found) index)))
+
+(define (CallFrameData-setFrameObj frame levels index obj)
+	(if (or (< index 0) (>= index MAX-CALLFRAME-SLOTS))
+		(langtype-error 'getFrameObj "Bad index in setFrameObj"))
+
+	(let ((found (CallFrameData-findFrameUp frame levels)))
+		(vector-set! (CallFrameData-data found) index obj)))
+
 ; holds a List as llist
 (define-record Lambda llist)
-(define (lambda-llist obj) (Lambda-llist obj))
+
+; holds a List (llist) and a CallFrameData (outer)
+(define-record BoundLambda llist outer)
 
 ; holds a List and an arbitrary object
 (define-record Closure llist state)
@@ -192,9 +276,14 @@
 		((Null? obj) "<null>")
 		((Void? obj) "<*void*>")
 		((Lambda? obj)
-			(string-append "<"
-				(fmtStackPrintObjlist (List-objlist (lambda-llist obj)) "{" "}")
-				">"))
+			(fmtStackPrintObjlist (List-objlist (Lambda-llist obj)) "{" "}"))
+		((BoundLambda? obj)
+			(string-append "<bound " 
+				(fmtStackPrintObjlist (List-objlist (BoundLambda-llist obj)) "{" "}") ">"))
+		((Opcode? obj)
+			(string-append "#op( " (opcode-code-to-name (Opcode-code obj))
+				" " (fmtDisplay (Opcode-A obj)) " " (fmtDisplay (Opcode-B obj))
+				" " (fmtDisplay (Opcode-C obj)) " )"))
 		((Dict? obj)
 			(let* ((u-keys (hash-table-keys (Dict-table obj)))
 					(keys (sort u-keys string<?)))
@@ -239,9 +328,11 @@
 		((Null? obj) "<null>")
 		((Void? obj) "<*void*>")
 		((Lambda? obj)
-			(string-append "<"
-				(fmtDisplayObjlist (List-objlist (lambda-llist obj)) "{" "}")
-				">"))
+			(fmtDisplayObjlist (List-objlist (Lambda-llist obj)) "{" "}"))
+		((BoundLambda? obj)
+			(string-append "<bound "
+				(fmtDisplayObjlist (List-objlist (BoundLambda-llist obj)) "{" "}") ">"))
+		((Opcode? obj) (fmtStackPrint obj))
 		((Dict? obj)
 			(let* ((u-keys (hash-table-keys (Dict-table obj)))
 					(keys (sort u-keys string<?)))
@@ -264,10 +355,12 @@
 			(boolean? obj)
 			(Symbol? obj)
 			(String? obj)
+			(Opcode? obj)
 			(Closure? obj)
 			(Null? obj)
 			(Void? obj)
-			(Lambda? obj))
+			(Lambda? obj)
+			(BoundLambda? obj))
 			obj)
 		((List? obj)
 			(let ((newlist (new-lang-list)))

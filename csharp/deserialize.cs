@@ -34,6 +34,15 @@ public class Deserializer {
 				case 'f': return new LangFloat(double.Parse(line.Substring(2)));
 				case 'b': return new LangBool(parseBool(line.Substring(2)));
 				case 'n': return new LangNull();
+				case 'o': 
+					{ 
+						byte code, A;
+						ushort B;
+						uint C;
+						Opcodes.opcode_unpack(long.Parse(line.Substring(2)),
+											out code, out A, out B, out C);
+						return new LangOpcode(code, A, B, C);
+					}
 				case 's':
 					line = line.Substring(2);
 					line = line.Replace("%32", " ");

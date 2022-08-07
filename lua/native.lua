@@ -189,12 +189,34 @@ function popStringOrSymbol(intr)
 	end
 end
 
+function popType(intr, test, name)
+	local obj = intr:pop()
+	if test(obj) then
+		return obj
+	else
+		error(">>>Expecting " .. name .. " but got: " .. fmtStackPrint(obj))
+	end
+end
+
+function popOpcode(intr)
+	return popType(intr, isOpcode, "opcode")
+end
+
 function popList(intr)
 	local obj = intr:pop()
 	if isList(obj) then
 		return obj
 	else
 		error(">>>Expecting list but got: " .. fmtStackPrint(obj))
+	end
+end
+
+function popLambda(intr)
+	local obj = intr:pop()
+	if isLambda(obj) then
+		return obj
+	else
+		error(">>>Expecting lambda but got: " .. fmtStackPrint(obj))
 	end
 end
 
@@ -301,6 +323,11 @@ function test_equal(a, b)
 		return isBool(b) and a==b
 	elseif isLambda(a) then
 		return false -- lambdas never compare equal, even if same object
+	elseif isBoundLambda(a) then
+		return false -- same as lambdas
+	elseif isOpcode(a) then
+		return isOpcode(b) and a.code == b.code and a.A == b.A and 
+				a.B == b.B and a.C == b.C
 	elseif isVoid(a) then
 		return isVoid(b)
 	elseif isList(a) then
@@ -323,7 +350,7 @@ function test_equal(a, b)
 			return false
 		else
 			for k,v in pairs(a.dict) do
-				if not test_equals(a.dict[k],b.dict[k]) then
+				if not test_equal(a.dict[k],b.dict[k]) then
 					return false
 				end
 			end
@@ -470,6 +497,15 @@ function builtin_append(intr, list, obj)
 	else
 		error(">>>append expects list but got: " .. fmtStackPrint(list))
 	end
+end
+
+function builtin_extend(intr)
+	local src = popList(intr)
+	local dest = popList(intr)
+	for i=1,#src do
+		table.insert(dest, src[i])
+	end
+	intr:push(dest)
 end
 
 function builtin_length(intr, obj)
@@ -681,7 +717,43 @@ end
 
 function builtin_keys(intr)
 	local dict = popDict(intr)
-	intr:push(dictKeysStringObjects(dict))
+	intr:push(dictKeysStringObjects(dict.dict))
+end
+
+function builtin_wordlist(intr)
+	intr:push(dictKeys(intr._WORDS))
+end
+
+function builtin_make_opcode(intr)
+	local C = popInt(intr)
+	local B = popInt(intr)
+	local A = popInt(intr)
+	local name = popStringOrSymbol(intr)
+
+	-- range checks
+	if A < 0 or A > 255 then
+		error("A must be [0-255] in make-opcode, got: " .. tostring(A))
+	end
+
+	if B < 0 or B > 65535 then
+		error("B must be [0-65535] in make-opcode, got: " .. tostring(B))
+	end
+
+	if C < 0 or C > 0x000fffff then
+		error("C must be [0-1048575] in make-opcode, got: " .. tostring(C))
+	end
+
+	intr:push(new_Opcode(opcode_name_to_code(name), A, B, C))
+end
+
+function builtin_opcode_packed(intr)
+	local op = popOpcode(intr)
+	intr:push(op:packed())
+end
+
+function builtin_bind_lambda(intr)
+	local lambda = popLambda(intr)
+	intr:push(new_BoundLambda(lambda.objlist, intr.framedata))
 end
 
 -- this is global so interpreter can access
@@ -703,6 +775,8 @@ BUILTINS = {
 	["string?"] = { {"any"}, function(intr,o) intr:push(isString(o)) end},
 	["symbol?"] = { {"any"}, function(intr,o) intr:push(isSymbol(o)) end},
 	["lambda?"] = { {"any"}, function(intr,o) intr:push(isLambda(o)) end},
+	["bound-lambda?"] = { {"any"}, function(intr,o) intr:push(isBoundLambda(o)) end},
+	["opcode?"] = { {"any"}, function(intr,o) intr:push(isOpcode(o)) end},
 	["closure?"] = { {"any"}, function(intr,o) intr:push(isClosure(o)) end},
 	["repr"] = { {}, builtin_repr },
 	["str"] = { {}, builtin_str },
@@ -725,11 +799,13 @@ BUILTINS = {
 	["length"] = { {"any"}, builtin_length},
 	["make-word"] = { {}, builtin_make_word},
 	["append"] = { {"any","any"}, builtin_append},
+	["extend"] = { {}, builtin_extend},
 	["parse-int"] = { {}, function(intr) intr:pushInt(tonumber(popStringOrSymbol(intr))) end},
 	["parse-float"] = { {}, function(intr) intr:push(new_Float(tonumber(popStringOrSymbol(intr)))) end},
 	["make-symbol"] = { {"number"}, builtin_make_symbol},
 	["make-lambda"] = { {}, builtin_make_lambda},
 	[".dumpword"] = { {}, function(intr) intr:push(deepcopy(intr:lookupWordOrFail(popSymbol(intr)))) end},
+	[".wordlist"] = { {}, builtin_wordlist},
 	["void"] = { {}, function(intr) intr:push(new_Void()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	
@@ -778,4 +854,8 @@ BUILTINS = {
 	["cos"] = { {}, function(intr) intr:push(new_Float(math.cos(popFloatOrInt(intr)))) end},
 	["sqrt"] = { {}, function(intr) intr:push(new_Float(math.sqrt(popFloatOrInt(intr)))) end},
 	["log"] = { {}, function(intr) intr:push(new_Float(math.log(popFloatOrInt(intr)))) end},
+
+	["make-opcode"] = { {}, builtin_make_opcode },
+	["opcode-packed"] = { {}, builtin_opcode_packed },
+	["bind-lambda"] = { {}, builtin_bind_lambda },
 }

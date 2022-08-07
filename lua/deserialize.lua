@@ -22,6 +22,8 @@ function deserialize_stream(intr, fileIn)
 		return parseBool(line:sub(3))
 	elseif line:sub(1,1) == "n" then
 		return new_Null()
+	elseif line:sub(1,1) == "o" then
+		return opcode_from_packed(tonumber(line:sub(3)))
 	elseif line:sub(1,1) == "s" then
 		local s = line:sub(3)
 		-- unescape string

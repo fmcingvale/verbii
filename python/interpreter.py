@@ -1,7 +1,7 @@
 from __future__ import annotations
-from langtypes import LangLambda, LangString, fmtStackPrint, MAX_VINT, MIN_VINT, \
-			LangClosure, isBool, isClosure, isLambda, isFloat, isInt, isString, isSymbol, isNumeric, \
-			isList, isDict, isVoid, LangVoid, isNull
+from langtypes import fmtStackPrint, MAX_VINT, MIN_VINT, \
+			isLambda, isSymbol, \
+			isList, isVoid, LangVoid, CallFrameData, isBoundLambda, isOpcode
 """
 	Interpreter - runs code deserialized from bytecode.
 
@@ -43,7 +43,7 @@ class Interpreter(object):
 
 		self.code = None
 		self.codepos = 0
-		self.closure = None # currently running Closure or None
+		self.framedata = None # current CallFrameData
 		self.callstack = []
 
 		# stats
@@ -74,12 +74,14 @@ class Interpreter(object):
 		self.HEAP_NEXTFREE += nr
 		return addr
 
-	def code_call(self, code, new_closure=None):
+	def code_call(self, code, bound_lambda=None):
 		#print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
-		self.callstack.append((self.code,self.codepos,self.closure))
+		self.callstack.append((self.code,self.codepos,self.framedata))
 		self.code = code
 		self.codepos = 0
-		self.closure = new_closure
+		self.framedata = CallFrameData()
+		if bound_lambda:
+			self.framedata.setOuterFrame(bound_lambda.outer)
 		# stats
 		self.max_callstack = max(self.max_callstack,len(self.callstack))
 
@@ -87,7 +89,7 @@ class Interpreter(object):
 		return len(self.callstack) > 0
 
 	def code_return(self):
-		self.code,self.codepos,self.closure = self.callstack.pop()
+		self.code,self.codepos,self.framedata = self.callstack.pop()
 		#print("CODE RETURN (POS={0}): {1}".format(self.codepos, fmtStackPrint(self.code)))
 
 	def push(self, obj):
@@ -217,7 +219,7 @@ class Interpreter(object):
 		#self.code_call(objlist)
 		self.code = objlist
 		self.codepos = 0
-		self.closure = None
+		self.framedata = None
 
 		from native import BUILTINS
 		# run one object at a time in a loop	
@@ -277,11 +279,11 @@ class Interpreter(object):
 						# now this is just like calling a userword, below
 						# TODO -- tail call elimination??
 						self.code_call(obj.objlist)
-					elif isClosure(obj):
-						# like above but sets closure
+					elif isBoundLambda(obj):
+						# like above but sets bound lambda
 						self.code_call(obj.objlist, obj)
 					else:				
-						raise LangError("call expects a lambda or closure but got: " + fmtStackPrint(obj))
+						raise LangError("call expects a lambda or bound_lambda but got: " + fmtStackPrint(obj))
 
 					continue
 			
@@ -321,6 +323,15 @@ class Interpreter(object):
 					self.code_call(self._WORDS[word])
 					continue
 
+			elif isOpcode(word):
+				from opcodes import opcode_unpack, OPCODE_FUNCTIONS
+				code,A,B,C = opcode_unpack(word.packed)
+				if code < 0 or code >= len(OPCODE_FUNCTIONS):
+					raise LangError("Bad opcode: " + str(code))
+
+				OPCODE_FUNCTIONS[code](self, A, B, C)
+				continue
+
 			elif isVoid(word):
 				# i could be returning from a word that had no 'return',
 				# so do return, if possible
@@ -331,19 +342,16 @@ class Interpreter(object):
 					self.code = None # mark self as not running
 					return
 
-			#print("RUN OBJ:",word)
-			#print(" => " + self.reprStack())
-								
-			# all objects excepts lists, void & symbols are pushed here -- see c++ notes for this
-			elif isNumeric(word) or isString(word) or isLambda(word) or isBool(word) or \
-				isNull(word) or isClosure(word) or isDict(word):
-				self.push(word)
-				continue
-
 			# list literals are deepcopied (see DESIGN-NOTES.txt)
 			elif isList(word):
 				self.push(deepcopy(word))
 				continue
 
-			raise LangError("Unknown word " + word)
+			# see C++ notes -- everything else gets pushed
+			else:
+				self.push(word)
+				continue
+
+			# not reached
+			#raise LangError("Unknown word " + word)
 			

@@ -8,6 +8,7 @@
 
 require("native")
 require("langtypes")
+require("opcodes")
 
 local Interpreter = {}
 
@@ -177,12 +178,15 @@ function Interpreter:havePrevFrames()
 	return #self.callstack > 0
 end
 
-function Interpreter:code_call(objlist,new_closure)
-	table.insert(self.callstack, {self.code,self.codepos,self.closure})
+function Interpreter:code_call(objlist,bound_lambda)
+	table.insert(self.callstack, {self.code,self.codepos,self.framedata})
 	--print("CALL - DEPTH NOW: " .. tostring(#self.callstack))
 	self.code = objlist
 	self.codepos = 1
-	self.closure = new_closure
+	self.framedata = new_CallFrameData()
+	if bound_lambda ~= nil then
+		self.framedata:setOuterFrame(bound_lambda.outer)
+	end
 	-- stats
 	self.max_callstack = math.max(self.max_callstack, #self.callstack)
 end
@@ -193,7 +197,7 @@ function Interpreter:code_return()
 		--print("RETURN - DEPTH NOW: " .. tostring(#self.callstack))
 		self.code = entry[1]
 		self.codepos = entry[2]
-		self.closure = entry[3]
+		self.framedata = entry[3]
 	else
 		error(">>>Trying to return without call")
 	end
@@ -240,7 +244,7 @@ function Interpreter:run(objlist, stephook)
 
 	self.code = objlist
 	self.codepos = 1
-	self.closure = nil
+	self.framedata = new_CallFrameData()
 	
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
@@ -308,10 +312,10 @@ function Interpreter:run(objlist, stephook)
 					-- now this is just like calling a userword, below
 					-- TODO -- tail call elimination??
 					self:code_call(obj.objlist)
-				elseif isClosure(obj) then
+				elseif isBoundLambda(obj) then
 					self:code_call(obj.objlist,obj)
 				else
-					error(">>>call expects a lambda or closure but got: " .. fmtStackPrint(obj))
+					error(">>>call expects a lambda or bound-lambda but got: " .. fmtStackPrint(obj))
 				end
 
 				goto MAINLOOP
@@ -357,6 +361,13 @@ function Interpreter:run(objlist, stephook)
 			end
 		end
 
+		if isOpcode(obj) then
+			--print("OPCODE: " .. fmtStackPrint(obj))
+			--print(OPCODE_FUNCTIONS[obj.code+1])
+			OPCODE_FUNCTIONS[obj.code+1](self, obj.A, obj.B, obj.C)
+			goto MAINLOOP
+		end
+
 		if isVoid(obj) then
 			--print("RETURNING FROM WORD")
 			-- i could be returning from a word that had no 'return',
@@ -370,20 +381,16 @@ function Interpreter:run(objlist, stephook)
 			end
 		end
 
-		-- push everything here excepts lists/symbols/void -- see c++ notes for more
-		if isInt(obj) or isFloat(obj) or isString(obj) or isLambda(obj) or
-			isBool(obj) or isNull(obj) or isClosure(obj) or isDict(obj) then
-			self:push(obj)
-			goto MAINLOOP
-		end
-
 		-- list literals are deepcopied (see DESIGN-NOTES.md)
 		if isList(obj) then
 			self:push(deepcopy(obj))
 			goto MAINLOOP
 		end
 
-		error(">>>Unknown word " .. fmtDisplay(obj))
+		-- see c++ notes on why everything else is pushed
+		-- push everything here excepts lists/symbols/void -- see c++ notes for more
+		self:push(obj)
+		goto MAINLOOP
 	end
 end
 
