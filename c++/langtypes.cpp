@@ -264,6 +264,8 @@ bool Object::opEqual(const Object &other) const {
 		case TYPE_BOOL: return other.type == TYPE_BOOL && other.data.b == data.b;
 		case TYPE_LAMBDA: return false; // lambdas never equal any other object, even themselves
 		case TYPE_BOUND_LAMBDA: return false; // same
+		case TYPE_OPCODE: return (other.type == TYPE_OPCODE) &&
+				(other.data.opcode == data.opcode);
 		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
 		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
 		case TYPE_VOID: return other.type == TYPE_VOID;
