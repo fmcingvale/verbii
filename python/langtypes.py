@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from opcodes import opcode_pack, opcode_unpack
 """
 	Langtypes - Types that don't exist in the host language.
 	
@@ -83,7 +85,10 @@ def isClosure(obj): return isinstance(obj, LangClosure)
 
 class LangOpcode(object):
 	def __init__(self, packed):
-		self.packed = packed # packed value
+		self.code,self.A,self.B,self.C = opcode_unpack(packed)
+		
+	def packed(self):
+		return opcode_pack(self.code,self.A,self.B,self.C)
 
 def isOpcode(obj): return isinstance(obj, LangOpcode)
 
@@ -224,14 +229,9 @@ def fmtStackPrint(obj):
 		s += "}"
 		return s
 	elif isOpcode(obj):
-		from opcodes import opcode_unpack, opcode_code_to_name
-		code, A, B, C = opcode_unpack(obj.packed)
-		s = "#op( "
-		s += opcode_code_to_name(code)
-		s += " " + str(A)
-		s += " " + str(B)
-		s += " " + str(C)
-		s += " )"
+		from opcodes import opcode_code_to_name
+		s = "#op( " + opcode_code_to_name(obj.code) + " " + str(obj.A) + " " + \
+				str(obj.B) + " " + str(obj.C) + " )"
 		return s
 	else:
 		# as above

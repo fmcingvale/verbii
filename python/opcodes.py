@@ -5,7 +5,6 @@ from __future__ import annotations
 # Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 from errors import LangError
-from interpreter import Interpreter
 
 # C++ is the reference -- see docs there
 
@@ -32,14 +31,14 @@ def opcode_unpack(packed):
 # --- opcode functions ---
 
 # A = number of frames up (0 means my frame); B = index of var in outer frame
-def opcode_FRAME_GET(intr: Interpreter, levels, index, _unused):
+def opcode_FRAME_GET(intr, levels, index, _unused):
 	if intr.framedata is None:
 		raise LangError("opcode FRAME-GET called on null frame")
 
 	intr.push(intr.framedata.getFrameObj(levels, index))
 
 # A = number of frames up (0 means my frame); B = index of var in outer frame
-def opcode_FRAME_SET(intr: Interpreter, levels, index, _unused):
+def opcode_FRAME_SET(intr, levels, index, _unused):
 	if intr.framedata is None:
 		raise LangError("opcode FRAME-SET called on null frame")
 

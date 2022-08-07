@@ -324,12 +324,11 @@ class Interpreter(object):
 					continue
 
 			elif isOpcode(word):
-				from opcodes import opcode_unpack, OPCODE_FUNCTIONS
-				code,A,B,C = opcode_unpack(word.packed)
-				if code < 0 or code >= len(OPCODE_FUNCTIONS):
-					raise LangError("Bad opcode: " + str(code))
+				from opcodes import OPCODE_FUNCTIONS
+				if word.code < 0 or word.code >= len(OPCODE_FUNCTIONS):
+					raise LangError("Bad opcode: " + str(word.code))
 
-				OPCODE_FUNCTIONS[code](self, A, B, C)
+				OPCODE_FUNCTIONS[word.code](self, word.A, word.B, word.C)
 				continue
 
 			elif isVoid(word):

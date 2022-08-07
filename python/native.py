@@ -256,7 +256,7 @@ def test_equal(a,b):
 	elif isOpcode(a): 
 		from opcodes import opcode_unpack
 		if not isOpcode(b): return False
-		return a.packed == b.packed
+		return a.code == b.code and a.A == b.A and a.B == b.B and a.C == b.C
 	elif isVoid(a): return isVoid(b)
 	elif isList(a):
 		if not isList(b): return False
@@ -571,7 +571,7 @@ def builtin_opcode_packed(I):
 	if not isOpcode(op):
 		raise LangError("Expecting opcode in opcode-packed but got: " + fmtStackPrint(op))
 
-	I.push(op.packed)
+	I.push(op.packed())
 
 def builtin_bind_lambda(I):
 	_lambda = popLambda(I)
