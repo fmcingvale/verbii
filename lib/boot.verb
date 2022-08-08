@@ -58,16 +58,54 @@
 	safe-run-and-delete-main
 	;
 	
+'IMPORT-SEARCH-PATHS [ ] make-var
+
+\ search IMPORT-SEARCH-PATHS for filename or fail
+: find-filename-module-path ( filename -- fullname )
+	@locals [ i ]
+	0 i!
+	@loop
+		IMPORT-SEARCH-PATHS i get void? if >>not-found 
+		IMPORT-SEARCH-PATHS i get file-pathsep + filename + fullname!
+		fullname file-exists? if >>found 
+		i 1 + i! <<loop
+		
+	@not-found
+		"Unable to find module '" filename + "' on path " + IMPORT-SEARCH-PATHS str + error
+		
+	@found
+		fullname
+	;
+	
+\ add some more standard search paths, in addition to any that were passed via -libdir
+\ (paths passed with -libdir are already in IMPORT-SEARCH-PATHS)
+: add-standard-import-search-paths ( -- )
+	@locals [ bootdir ]
+	
+	\ add VERBII_BOOT (*DEPRECATED* since getenv not reliable across ports ....)
+	"VERBII_BOOT" os-getenv bootdir!
+	bootdir void? if >>missing-bootdir 
+	IMPORT-SEARCH-PATHS bootdir append
+	\ add current directory as well
+	os-getcwd append
+	
+	IMPORT-SEARCH-PATHS!
+	return
+	
+	@missing-bootdir
+		"VERBII_BOOT must be set" error
+	;
+	
 \ assumes interpreter has just started - get init & compiler loaded
 : init-interpreter ( -- )
 
 	\ load precompiled init & compiler libraries
-	"../lib/init.verb.b" deserialize-and-run 
-	"../lib/compiler.verb.b" deserialize-and-run
-
+	"init.verb.b" find-filename-module-path deserialize-and-run
+	\ "../lib/init.verb.b" deserialize-and-run 
+	"compiler.verb.b" find-filename-module-path deserialize-and-run
 	\ load patches file -- .verb only for now, add caching later once this is working
 	
-	"../lib/patches.verb" file-read
+	"patches.verb" find-filename-module-path file-read
 	\ compile & load words into interpreter
 	true set-allow-overwrite-words
 	compile-and-load-string
@@ -103,8 +141,6 @@
 \ ( name -- )
 : import
 	\ see if name has been imported already and don't import again
-	\ (NOTE this is declared below like the other vars since the parser can't handle
-	\ seeing it up here)
 	*_IMPORTED-MODULES over get void? not if >>already-imported
 	\ not yet imported - go ahead and mark as imported - if the below fails then 
 	\ the program will crash anyways
@@ -126,6 +162,8 @@
 'SCRIPT-ARGS [ ] make-var
 
 : boot-main
+	add-standard-import-search-paths
+	
 	\ first, must init interpreter for anything else to work
 	\ (no userwords are loaded yet .. no compiler, no init lib)
 	init-interpreter
@@ -166,7 +204,7 @@
 
 		\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
 
-	"../lib/repl.verb" load-file-maybe-cached 
+	"repl.verb" find-filename-module-path load-file-maybe-cached 
 	safe-run-and-delete-main
 
 	repl-main
