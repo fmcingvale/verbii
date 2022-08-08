@@ -161,7 +161,8 @@
 	
 'SCRIPT-ARGS [ ] make-var
 
-: boot-main
+: boot-main ( args -- )
+	@locals [ i ]
 	add-standard-import-search-paths
 	
 	\ first, must init interpreter for anything else to work
@@ -170,37 +171,32 @@
 
 		\ "AT INIT INTERPRETER, STACK:" . .S CR
 
-	>L ( L1 = cmdline args -- pushed from host )
-	[ ] >L ( L0 = new script args being built )
-	0 
-	@parse-cmdline ( i )
-		dup LP 1 + ref length >= if >>done 
-		LP 1 + ref over get ( i arg[i] )
-			\ "BOOT ARG:" . .S CR
-		dup "--" == if >>got-dashdash \ ignore everything after --
-		dup "-nocache" == if >>set-nocache
+	\ >L ( L1 = cmdline args -- pushed from host )
+	\ [ ] >L ( L0 = new script args being built )
+	[ ] SCRIPT-ARGS! \ building new script args
+	0 i!
+	@parse-cmdline
+		args i get void? if >>done
+		args i get "--" == if >>got-dashdash \ ignore everything after --
+		args i get "-nocache" == if >>set-nocache
 		\ keep other args
-		LP ref swap append LP set!
-		1 + <<parse-cmdline
-	@set-nocache ( i arg[i] )
-		drop
-		\ true NOCACHE set! 
+		SCRIPT-ARGS args i get append SCRIPT-ARGS!
+		i 1 + i! <<parse-cmdline
+	@set-nocache
 		true *_NOCACHE! \ forward compat
-		1 + <<parse-cmdline
-	@got-dashdash ( i "--" )
-		drop
+		i 1 + i! <<parse-cmdline
+	@got-dashdash
 		\ NOTE: the '--' is KEPT here since repl does its own parsing
 		\ so for example:
 		\	verbii -nocache compile.verb -- file.verb
 		\ will be passed to repl as:
 		\	verbii compile.verb -- file.verb
 		\ ... which is what repl would expect to see
-		LP 1 + ref swap -1 slice LP ref swap + LP set! >>end
-	@done ( i )
-		drop
-	@end
-	L> SCRIPT-ARGS!
-	LP 1 + LP! \ drop cmdline-args from locals
+		SCRIPT-ARGS args i -1 slice + SCRIPT-ARGS! >>done
+	@done
+		
+	\ L> SCRIPT-ARGS!
+	\ LP 1 + LP! \ drop cmdline-args from locals
 
 		\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
 
