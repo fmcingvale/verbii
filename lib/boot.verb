@@ -66,7 +66,9 @@
 	0 i!
 	@loop
 		IMPORT-SEARCH-PATHS i get void? if >>not-found 
-		IMPORT-SEARCH-PATHS i get file-pathsep + filename + fullname!
+		\ search paths are requrired to have / or \ already appended, so i 
+		\ can just add the filename directly to it
+		IMPORT-SEARCH-PATHS i get filename + fullname!
 		fullname file-exists? if >>found 
 		i 1 + i! <<loop
 		
@@ -85,11 +87,9 @@
 	\ add VERBII_BOOT (*DEPRECATED* since getenv not reliable across ports ....)
 	"VERBII_BOOT" os-getenv bootdir!
 	bootdir void? if >>missing-bootdir 
-	IMPORT-SEARCH-PATHS bootdir append
+	IMPORT-SEARCH-PATHS bootdir append IMPORT-SEARCH-PATHS!
 	\ add current directory as well
-	os-getcwd append
-	
-	IMPORT-SEARCH-PATHS!
+	IMPORT-SEARCH-PATHS os-getcwd file-pathsep + append IMPORT-SEARCH-PATHS!
 	return
 	
 	@missing-bootdir
@@ -161,24 +161,37 @@
 	
 'SCRIPT-ARGS [ ] make-var
 
+\ does the given name end with \ or / ?
+: pathname-ends-in-separator? ( name -- result )
+	\ 'or' is a userword, so do this the strange way ...
+	name -1 get "\" == if >>yes
+	name -1 get "/" == if >>yes
+	false return
+	@yes true return
+	;
+	
+\ print debug message to stderr -- printed + CRLF
+: .dbg ( msg -- )
+	msg 13 chr + 10 chr + puts-stderr
+	;
+	
 : boot-main ( args -- )
 	@locals [ i ]
+	
+	\ NOTE! all code from here down to init-interpreter can ONLY use builtin words --
+	\ there is no compiler and no init loaded, so NO userwords are available yet
+	
 	add-standard-import-search-paths
 	
-	\ first, must init interpreter for anything else to work
-	\ (no userwords are loaded yet .. no compiler, no init lib)
-	init-interpreter
-
-		\ "AT INIT INTERPRETER, STACK:" . .S CR
-
-	\ >L ( L1 = cmdline args -- pushed from host )
-	\ [ ] >L ( L0 = new script args being built )
+	\ "boot-main args: " args str + .dbg
+	
 	[ ] SCRIPT-ARGS! \ building new script args
 	0 i!
 	@parse-cmdline
 		args i get void? if >>done
 		args i get "--" == if >>got-dashdash \ ignore everything after --
 		args i get "-nocache" == if >>set-nocache
+		args i get "-libdir" == if >>got-libdir
 		\ keep other args
 		SCRIPT-ARGS args i get append SCRIPT-ARGS!
 		i 1 + i! <<parse-cmdline
@@ -193,13 +206,31 @@
 		\	verbii compile.verb -- file.verb
 		\ ... which is what repl would expect to see
 		SCRIPT-ARGS args i -1 slice + SCRIPT-ARGS! >>done
-	@done
+	@got-libdir
+		\ "boot got libdir: " args i 1 + get str + .dbg
+		args i 1 + get void? if >>missing-libdir 
+		\ required all paths passed via -libdir to end with a separator character
+		\ to avoid cross-platform issues -- now can just form fullnames by append filename to paths
+		args i 1 + get pathname-ends-in-separator? if >>good-libdir \ weird since i can't use 'not' yet (userword)
+		>>missing-libdir-sep
+	@good-libdir
+		\ path looks ok, add to search dirs
+		IMPORT-SEARCH-PATHS args i 1 + get append IMPORT-SEARCH-PATHS!
+		\ "search paths now: " IMPORT-SEARCH-PATHS str + .dbg
+		i 2 + i! <<parse-cmdline
 		
-	\ L> SCRIPT-ARGS!
-	\ LP 1 + LP! \ drop cmdline-args from locals
+	@missing-libdir
+		"Path is required after -libdir" error
+	@missing-libdir-sep 
+		"Paths passed to -libdir must end in \ or /, got: " args i 1 + get + error
+	@done
 
 		\ "FILTERED SCRIPT ARGS:" . SCRIPT-ARGS ref . CR
 
+	\ now that search paths are setup, i'm ready to load compiler & init ...
+	init-interpreter
+
+	\ compiler should be running now, so i can load .verb files ...
 	"repl.verb" find-filename-module-path load-file-maybe-cached 
 	safe-run-and-delete-main
 

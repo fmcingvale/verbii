@@ -45,3 +45,4 @@ verb/.vscode/settings.json
 reference/mersenne_twister_stdlib
 reference/xoshiro128plusplus
 verb/TEST-RESULTS/
+c++/main

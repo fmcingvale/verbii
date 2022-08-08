@@ -1,6 +1,6 @@
 
-LIB_SRC = interpreter.cpp native.cpp langtypes.cpp xmalloc.cpp deserialize.cpp opcodes.cpp
-HEADERS = interpreter.hpp native.hpp langtypes.hpp xmalloc.hpp deserialize.hpp opcodes.hpp
+LIB_SRC = interpreter.cpp native.cpp langtypes.cpp xmalloc.cpp deserialize.cpp opcodes.cpp util.cpp
+HEADERS = interpreter.hpp native.hpp langtypes.hpp xmalloc.hpp deserialize.hpp opcodes.hpp util.hpp
 
 LIB_OBJS = $(LIB_SRC:.cpp=.o)
 
@@ -26,7 +26,7 @@ endif
 # this optimization level works fine under Ubuntu
 CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
 
-all: verbii
+all: main
 
 %.o: %.cpp $(HEADERS)
 	g++ $(CFLAGS) -Wall -c $< -o $@
@@ -37,5 +37,5 @@ libverbii.a: $(LIB_OBJS)
 clean:
 	rm -f *.exe gmon.out *.o *.a verbii
 
-verbii: main.cpp libverbii.a
-	g++ $(CFLAGS) -Wall -o verbii main.cpp libverbii.a $(GC_LIBS)
+main: main.cpp libverbii.a
+	g++ $(CFLAGS) -Wall -o main main.cpp libverbii.a $(GC_LIBS)

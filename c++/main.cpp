@@ -46,6 +46,7 @@ void print_backtrace(Interpreter *intr) {
 
 void deserialize_and_run(Interpreter *intr, string filename) {
 	ifstream fileIn(filename);
+	//printf("DESERIALIZE: %s\n", filename.c_str());
 	if(!fileIn)
 		throw LangError("No such file: " + filename);
 
@@ -64,6 +65,7 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 
 #include <limits.h>
 #include <stdlib.h>
+#include "util.hpp"
 
 int main(int argc, char *argv[]) {
 	// under gcc 9.4 this is not necessary -- STARTUP_TIME is set automatically from
@@ -74,14 +76,38 @@ int main(int argc, char *argv[]) {
 
 	bool SHOW_RUN_STATS = false;
 	bool DO_PROFILING = false;
+	string BOOTFILE = "";
 	// collect args that should be passed on to boot.verb, filtering out mine
 	auto cmdline_args = newList();
 
 	// catch only the flags that have to be implemented natively
 	// pass the rest through as-is to boot.verb code
-	for(int i=1; i<argc; ++i) {
+	int i=1;
+	while(i<argc) {
 		if(!strcmp(argv[i], "-stats")) {
 			SHOW_RUN_STATS = true;
+		}
+		else if(!strcmp(argv[i], "-libdir")) {
+			if(i >= (argc-1)) {
+				printf("Missing argument after -libdir\n");
+				exit(1);
+			}
+			string name = argv[i+1];
+			//printf("NAME: %s\n", name.c_str());
+			if(name[name.length()-1] != '/' && name[name.length()-1] != '\\') {
+				printf("-libdir paths must end with / or \\, got: %s\n", name.c_str());
+				exit(1);
+			}
+			name += "boot.verb.b";
+			if(file_exists(name)) {
+				//printf("EXISTS: %s\n", name.c_str());
+				BOOTFILE = name;
+			}
+			// *ALSO* pass to script args since boot needs to know the paths
+			cmdline_args.data.objlist->push_back(newString(argv[i]));
+			cmdline_args.data.objlist->push_back(newString(argv[i+1]));
+
+			++i;
 		}
 		else if(!strcmp(argv[i], "-profile")) {
 			DO_PROFILING = true;
@@ -90,22 +116,13 @@ int main(int argc, char *argv[]) {
 		else {
 			cmdline_args.data.objlist->push_back(newString(argv[i]));
 		}
+		++i;
 	}
-	
-	// set path to bootfile -- require VERBII_BOOT to be set to avoid duplicating the
-	// path functions that are in verbii code
-	char bootfile[PATH_MAX];
-	char *rootdir = getenv("VERBII_BOOT");
-	if(!rootdir) {
-		printf("* VERBII_BOOT must be set to the path where boot.verb.b is located.\n");
+	if(BOOTFILE.length() == 0) {
+		printf("Cannot find boot.verb.b -- maybe you need to pass '-libdir PATH'?\n");
 		exit(1);
 	}
-	strcpy(bootfile, rootdir);
-	if(bootfile[strlen(bootfile)-1] != '/') {
-		strcat(bootfile, "/");
-	}
-	strcat(bootfile, "boot.verb.b");
-	//printf("** BOOTFILE: %s\n", bootfile);
+	//printf("** BOOTFILE: %s\n", BOOTFILE.c_str());
 
 	Interpreter *intr = NULL;
 	while(1) {
@@ -115,7 +132,7 @@ int main(int argc, char *argv[]) {
 			// boot.verb expects cmdline args on top of stack on entry
 			intr->push(cmdline_args);
 			//printf("STACK BEFORE BOOT: %s\n", intr->reprStack().c_str());
-			deserialize_and_run(intr, bootfile);
+			deserialize_and_run(intr, BOOTFILE);
 			if(SHOW_RUN_STATS)
 				intr->print_stats();
 			break;
@@ -132,4 +149,3 @@ int main(int argc, char *argv[]) {
 		}
 	}
 }
-

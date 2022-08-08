@@ -37,25 +37,9 @@ bool STACKTRACE_ON_EXCEPTION = true;
 std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
 
 #include <iostream>
-#include <sys/stat.h>
 #include <malloc.h>
+#include "util.hpp"
 using namespace std;
-
-bool file_exists(const string &filename) {
-	struct stat st;
-	if(stat(filename.c_str(),&st)<0)
-		return false;
-
-	return S_ISREG(st.st_mode) != 0;
-}
-
-int file_size(const string &filename) {
-	struct stat st;
-	if(stat(filename.c_str(),&st)<0)
-		throw LangError("Trying to get size of nonexistent file: " + filename);
-
-	return (int)st.st_size;
-}
 
 void file_write(const string &filename, const string &text) {
 	FILE *fp = fopen(filename.c_str(),"w");
@@ -806,7 +790,10 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 			else
 				printf("%s", popString(intr,"puts"));
 		}},
-	
+	{"puts-stderr", [](Interpreter *intr) 
+		{
+			fprintf(stderr, "%s", popString(intr,"puts"));			
+		}},
 	// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
 	//          implemented natively anyways for internal error printing, so
 	//          no purpose in implementing twice
