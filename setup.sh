@@ -17,4 +17,7 @@ SCRIPT_PATH="$(readlink -f "${SCRIPT_PATH}")"
 SCRIPT_DIR="$(cd -P "$(dirname -- "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
 
 echo "*** Setting VERBII_BOOT ..."
-export VERBII_BOOT=${SCRIPT_DIR}/lib
+
+# NOTE: path MUST include trailing slash to avoid cross-platform issues
+# with \ vs /
+export VERBII_BOOT=${SCRIPT_DIR}/lib/

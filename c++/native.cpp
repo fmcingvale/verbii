@@ -757,15 +757,6 @@ static void builtin_file_pathsep(Interpreter *intr) {
 }
 
 #include <stdlib.h>
-
-static void builtin_os_getenv(Interpreter *intr) {
-	char *val = getenv(popString(intr,"os-getenv"));
-	if(!val)
-		intr->push(newVoid());
-	else
-		intr->push(newString(val));
-}
-
 #include <unistd.h>
 #include <limits.h>
 
@@ -908,6 +899,5 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 
 	// more os/fileops
 	{"file-pathsep", builtin_file_pathsep},
-	{"os-getenv", builtin_os_getenv},
 	{"os-getcwd", builtin_os_getcwd},
 };

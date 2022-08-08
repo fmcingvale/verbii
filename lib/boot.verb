@@ -82,18 +82,18 @@
 \ add some more standard search paths, in addition to any that were passed via -libdir
 \ (paths passed with -libdir are already in IMPORT-SEARCH-PATHS)
 : add-standard-import-search-paths ( -- )
-	@locals [ bootdir ]
+	\ @locals [ bootdir ]
 	
 	\ add VERBII_BOOT (*DEPRECATED* since getenv not reliable across ports ....)
-	"VERBII_BOOT" os-getenv bootdir!
-	bootdir void? if >>missing-bootdir 
-	IMPORT-SEARCH-PATHS bootdir append IMPORT-SEARCH-PATHS!
+	\ "VERBII_BOOT" os-getenv bootdir!
+	\ bootdir void? if >>missing-bootdir 
+	\ IMPORT-SEARCH-PATHS bootdir append IMPORT-SEARCH-PATHS!
 	\ add current directory as well
 	IMPORT-SEARCH-PATHS os-getcwd file-pathsep + append IMPORT-SEARCH-PATHS!
 	return
 	
-	@missing-bootdir
-		"VERBII_BOOT must be set" error
+	\ @missing-bootdir
+	\	"VERBII_BOOT must be set" error
 	;
 	
 \ assumes interpreter has just started - get init & compiler loaded
