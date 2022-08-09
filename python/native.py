@@ -558,13 +558,6 @@ def builtin_bind_lambda(I):
 def builtin_file_sep(I):
 	I.push(LangString(os.sep))
 
-def builtin_os_getenv(I):
-	name = popString(I)
-	if name in os.environ:
-		I.push(LangString(os.environ(name)))
-	else:
-		I.push(LangVoid())
-	
 def builtin_os_getcwd(I):
 	I.push(LangString(os.getcwd()))
 	
@@ -675,8 +668,7 @@ BUILTINS = {
 	'bind-lambda': ([], builtin_bind_lambda),
 
 	# more os/fileops
-	'file-sep': builtin_file_sep,
-	'os-getenv': builtin_os_getenv,
-	'os-getcwd': builtin_os_getcwd,
+	'file-pathsep': ([], builtin_file_sep),
+	'os-getcwd': ([], builtin_os_getcwd),
 }
 
