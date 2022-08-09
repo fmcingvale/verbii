@@ -10,8 +10,6 @@ from errors import LangError
 from langtypes import LangString, fmtStackPrint, isVoid
 from interpreter import Interpreter
 
-BOOTFILE = "../lib/boot.verb.b"
-
 def backtrace_curframe(intr: Interpreter):
 	trace = ""
 	nr = 7; # number of words to print in each frame
@@ -50,15 +48,37 @@ def deserialize_and_run(intr, filename):
 	intr.run(code)
 	
 if __name__ == '__main__':
-	import sys
+	import sys, os
 	showstats = False
+	BOOTFILE = ""
 	import native
 	# build list of args to pass to boot.verb
 	cmdline_args = []
-	for i,arg in enumerate(sys.argv[1:]):
+	i = 1
+	while i < len(sys.argv):
+		arg = sys.argv[i]
 		#print("ARG:",arg)
 		if arg == '-stats':
 			showstats = True
+		elif arg == '-libdir':
+			if (i+1) >= len(sys.argv):
+				print("Missing path after -libdir")
+				sys.exit(1)
+
+			name = sys.argv[i+1]
+			if name[-1] not in "\\/":
+				print("Paths passed with -libdir must end in \\ or /")
+				sys.exit(1)
+
+			name += "boot.verb.b"
+			if os.path.isfile(name):
+				BOOTFILE = name
+
+			# pass all '-libdir path' args to scripts since they need to have them as well
+			cmdline_args.append(LangString(arg))
+			cmdline_args.append(LangString(sys.argv[i+1]))
+
+			i += 1
 		elif arg == '--':
 			# once I find '--', pass everything else (including '--') to boot.verb
 			# this will be pushed directly, so make into list of string objects
@@ -70,6 +90,12 @@ if __name__ == '__main__':
 		else:
 			# unknown - pass to script
 			cmdline_args.append(LangString(arg))
+
+		i += 1
+
+	if len(BOOTFILE) == 0:
+		print("Unable to find boot.verb.b - maybe you need to use '-libdir path' or set VERBII_BOOT?")
+		sys.exit(1)
 
 	intr = None
 	while True:

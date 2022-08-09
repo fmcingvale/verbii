@@ -12,5 +12,17 @@ done
 SCRIPT_PATH="$(readlink -f "${SCRIPT_PATH}")"
 SCRIPT_DIR="$(cd -P "$(dirname -- "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
 
-# now run script with full path
-python "${SCRIPT_DIR}/main.py" "$@"
+# now run script with full pathname
+
+# the -z test (to test if VERBII_BOOT is set) is from:
+#  https://stackoverflow.com/a/13864829
+if [ -z ${VERBII_BOOT+x} ]; then 
+	# VERBII_BOOT not set, which might be ok depending on how verbii is installed,
+	# so run without -libdir
+	python "${SCRIPT_DIR}/main.py" "$@"
+else 
+	# pass VERBII_BOOT with -libdir
+	python "${SCRIPT_DIR}/main.py" -libdir "$VERBII_BOOT" "$@"
+
+fi
+
