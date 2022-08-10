@@ -46,3 +46,4 @@ reference/mersenne_twister_stdlib
 reference/xoshiro128plusplus
 verb/TEST-RESULTS/
 c++/main
+csharp/main.pdb
