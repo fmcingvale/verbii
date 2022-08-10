@@ -789,15 +789,6 @@ class Builtins {
 		// intr->cur_framedata->setLinked(true);
 	}
 
-	public static void getenv(Interpreter intr) {
-		var name = popString(intr,"os-getenv");
-		var v = Environment.GetEnvironmentVariable(name);
-		if(v == null)
-			intr.push(new LangVoid());
-		else
-			intr.push(new LangString(v));
-	}
-
 	public static void getcwd(Interpreter intr) {
 		var name = Directory.GetCurrentDirectory();
 		intr.push(new LangString(name));
@@ -905,9 +896,7 @@ class Builtins {
 		{"opcode-packed", opcode_packed},
 		{"bind-lambda", bind_lambda},
 
-		{"file-sep", intr => intr.push(new LangString(new string(Path.DirectorySeparatorChar, 1)))},
-		{"os-getenv", getenv},
+		{"file-pathsep", intr => intr.push(new LangString(new string(Path.DirectorySeparatorChar, 1)))},
 		{"os-getcwd", getcwd},
-
 	};
 }

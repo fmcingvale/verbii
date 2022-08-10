@@ -4,12 +4,12 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 using System;
+using System.IO;
 using System.Text.RegularExpressions;
 
 public class MinRepl {
-	public static string BOOTFILE = "../lib/boot.verb.b";
 	public static bool SHOW_RUNTIME_STATS = false;
-
+	
 	static void backtrace_curframe(Interpreter intr) {
 		string trace = "";
 		int nr = 7; // number of words to print in each frame
@@ -58,9 +58,37 @@ public class MainProgram
     public static void Main(string[] args)
     {
 		var args_to_script = new LangList();
-		for(int i=0; i<args.Length; ++i) {
+		int i=0;
+		string BOOTFILE = "";
+		while(i<args.Length) {
+			//Console.Write("ARG:" + args[i]);
 			if(args[i] == "-stats") {
 				MinRepl.SHOW_RUNTIME_STATS = true;
+			}
+			else if(args[i] == "-libdir") {
+				if(i >= (args.Length-1)) {
+					Console.WriteLine("Missing path after -libdir");
+					return;
+				}
+				if(args[i+1][args[i+1].Length-1] != '/' &&
+					args[i+1][args[i+1].Length-1] != '\\') {
+					Console.WriteLine("-libdir paths must end with \\ or /");
+					return;
+					}
+				string name = args[i+1] + "boot.verb.b";
+				// use the first path where boot.verb.b exists
+				//Console.WriteLine("TRYING PATH:" + name);
+				if(File.Exists(name)) {
+					//Console.WriteLine("Exists!");
+					BOOTFILE = name;
+				}
+				
+				// pass same args on to script since it needs to see the -libdirs too
+				args_to_script.objlist.Add(new LangString(args[i]));
+				args_to_script.objlist.Add(new LangString(args[i+1]));
+				
+				++i;
+				
 			}
 			else if(args[i] == "--") {
 				// rest of args (including '--') go to script
@@ -72,15 +100,22 @@ public class MainProgram
 			else {
 				// unknown arg - goes to script
 				args_to_script.objlist.Add(new LangString(args[i]));
-			}			
+			}		
+			++i;	
 		}
 		
+		//Console.WriteLine("BOOTFILE:" + BOOTFILE);
+		if(BOOTFILE.Length == 0) {
+			Console.WriteLine("Cannot find boot.verb.b (you may need to add '-libdir PATH' to command line)");
+			return;
+		}
+
 		while(true) {
 			var intr = new Interpreter();
 			try {
 				// boot.verb expects cmdline args on top of stack
 				intr.push(args_to_script);
-				MinRepl.deserialize_and_run(intr, MinRepl.BOOTFILE);
+				MinRepl.deserialize_and_run(intr, BOOTFILE);
 				if(MinRepl.SHOW_RUNTIME_STATS)
 					intr.printStats();
 				break;
