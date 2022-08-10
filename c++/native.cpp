@@ -67,7 +67,7 @@ string file_read(const string &filename) {
 	int nr = file_size(filename);
 	buf = (char*)x_malloc(nr*sizeof(char));
 	
-	FILE *fp = fopen(filename.c_str(), "r");
+	FILE *fp = fopen(filename.c_str(), "rb");
 	int r = fread(buf, sizeof(char), nr, fp);
 	if(r != nr)
 		throw LangError("Bad number of bytes read from " + filename);
@@ -566,7 +566,7 @@ static void builtin_bit_shr(Interpreter *intr) {
 	if(nr >= 32)
 		intr->push(newInt(0));
 	else
-	intr->push(newInt((((unsigned long)a)>>nr) & MASK32));
+		intr->push(newInt((((unsigned long)a)>>nr) & MASK32));
 }
 
 static void builtin_bit_shl(Interpreter *intr) {
@@ -576,7 +576,7 @@ static void builtin_bit_shl(Interpreter *intr) {
 	if(nr >= 32)
 		intr->push(newInt(0));
 	else
-	intr->push(newInt((((unsigned long)a)<<nr) & MASK32));
+		intr->push(newInt((((unsigned long)a)<<nr) & MASK32));
 }
 
 static void builtin_run_time(Interpreter *intr) {
