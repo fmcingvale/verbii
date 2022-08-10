@@ -561,12 +561,21 @@ static void builtin_bit_not(Interpreter *intr) {
 static void builtin_bit_shr(Interpreter *intr) {
 	auto nr = popInt(intr,"bit-shr");
 	auto a = popInt(intr,"bit-shr");
+	// apparently it is undefined behavior to shift >= 32 bits so check for that
+	// (without this check, it fails under mingw w/gcc 12)
+	if(nr >= 32)
+		intr->push(newInt(0));
+	else
 	intr->push(newInt((((unsigned long)a)>>nr) & MASK32));
 }
 
 static void builtin_bit_shl(Interpreter *intr) {
 	auto nr = popInt(intr,"bit-shl");
 	auto a = popInt(intr,"bit-shl");
+	// workaround as above
+	if(nr >= 32)
+		intr->push(newInt(0));
+	else
 	intr->push(newInt((((unsigned long)a)<<nr) & MASK32));
 }
 
