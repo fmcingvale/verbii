@@ -11,8 +11,6 @@ require("interpreter")
 require("langtypes")
 require("native")
 
-local BOOTFILE = "../lib/boot.verb.b"
-
 local SHOW_RUNTIME_STATS = false
 
 function backtrace_curframe(intr)
@@ -58,10 +56,34 @@ function deserialize_and_run(intr, filename)
 end
 
 local args_to_script = {}
+local BOOTFILE = ""
 
-for i=1,#arg do
+local i=1
+while i <= #arg do
 	if arg[i] == "-stats" then
 		SHOW_RUNTIME_STATS = true
+	elseif arg[i] == "-libdir" then
+		if (i+1) > #arg then
+			print("Missing path after -libdir")
+			os.exit(1)
+		end
+
+		local name = arg[i+1]
+		if name:sub(#name) ~= "\\" and name:sub(#name) ~= "/" then
+			print("Paths to -libdir must end in \\ or /. got: " .. name)
+			os.exit(1)
+		end
+
+		name = name .. "boot.verb.b"
+		if file_exists(name) then
+			BOOTFILE = name
+		end
+
+		-- pass -libdir to scripts as well
+		table.insert(args_to_script, new_String(arg[i]))
+		table.insert(args_to_script, new_String(arg[i+1]))
+		
+		i = i + 1
 	elseif arg[i] == "--" then
 		-- rest of args (including '--') go to boot.verb
 		while i <= #arg do
@@ -73,6 +95,12 @@ for i=1,#arg do
 		-- unknown args go to script
 		table.insert(args_to_script, new_String(arg[i]))
 	end
+	i = i + 1
+end
+
+if #BOOTFILE == 0 then
+	print("Unable to find boot.verb.b -- maybe you need to use -libdir or set VERBII_BOOT?")
+	os.exit(1)
 end
 
 local intr = nil
