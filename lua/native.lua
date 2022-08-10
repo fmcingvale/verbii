@@ -725,6 +725,14 @@ function builtin_bind_lambda(intr)
 	intr:push(new_BoundLambda(lambda.objlist, intr.framedata))
 end
 
+function builtin_file_pathsep(intr)
+	intr:push(new_String("/")) -- assume posix for now
+end
+
+function builtin_getcwd(intr)
+	intr:push(new_String(POSIX.getcwd()))
+end
+
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -823,4 +831,7 @@ BUILTINS = {
 	["make-opcode"] = { {}, builtin_make_opcode },
 	["opcode-packed"] = { {}, builtin_opcode_packed },
 	["bind-lambda"] = { {}, builtin_bind_lambda },
+
+	["file-pathsep"] = { {}, builtin_file_pathsep },
+	["os-getcwd"] = { {}, builtin_getcwd },
 }
