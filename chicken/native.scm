@@ -531,6 +531,8 @@
 (import (chicken time posix))
 (import (chicken file))
 (import (chicken platform))
+(import filepath)
+(import (chicken process-context))
 
 ; TODO -- some of the above can be lambdas here instead
 (define N_BUILTINS
@@ -683,6 +685,9 @@
 		(list "make-opcode" '() builtin-make-opcode)
 		(list "opcode-packed" '() builtin-opcode-packed)
 		(list "bind-lambda" '() builtin-bind-lambda)
+
+		(list "file-pathsep" '() (lambda (intr) (push intr (make-String (make-string 1 (filepath:path-separator))))))
+		(list "os-getcwd" '()  (lambda (intr) (push intr (make-String (current-directory)))))
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

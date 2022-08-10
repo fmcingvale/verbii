@@ -41,7 +41,6 @@
 
 (define SHOW_RUNTIME_STATS #f)
 (define NO_CATCH_EXCEPTIONS #f)
-(define BOOTFILE "../lib/boot.verb.b")
 
 (import (chicken file posix))
 
@@ -68,23 +67,51 @@
 ;(repl)
 
 (define (main)
-	(let ((cmdline-args (new-lang-list)))
+	(let ((cmdline-args (new-lang-list))
+			(current-arg (cdr (argv)))
+			(BOOTFILE ""))
 		(let ((rest-to-script #f))
-			(for-each (lambda (arg)
+			(do-while (not (null? current-arg))
 				; once i get '--' all the remaining args go to NATIVE_CMDLINE_ARGS
 				(if rest-to-script
-					(llist-push-back cmdline-args (make-String arg))
+					(llist-push-back cmdline-args (make-String (car current-arg)))
 					; else process as normal
 					(cond
-						((string=? arg "-stats") (set! SHOW_RUNTIME_STATS #t))
-						((string=? arg "-noexn") (set! NO_CATCH_EXCEPTIONS #t))
-						((string=? arg "--") 
+						((string=? (car current-arg) "-stats") (set! SHOW_RUNTIME_STATS #t))
+						((string=? (car current-arg) "-libdir")
+							(if (null? (cdr current-arg))
+								(begin
+									(print "Missing path after -libdir")
+									(exit 1)))
+
+							(let ((name (car (cdr current-arg))))
+								(if (and (not (equal? (string-ref name (- (string-length name) 1)) #\\))
+										(not (equal? (string-ref name (- (string-length name) 1)) #\/)))
+									(begin
+										(print "-libdir path must end with \\ or /")
+										(exit 1)))
+								(set! name (string-append name "boot.verb.b"))
+								(if (regular-file? name)
+									(set! BOOTFILE name)))
+
+							; push -libdir path to script args as well
+							(llist-push-back cmdline-args (make-String (car current-arg)))
+							(llist-push-back cmdline-args (make-String (car (cdr current-arg))))
+							(set! current-arg (cdr current-arg)))
+						((string=? (car current-arg) "-noexn") (set! NO_CATCH_EXCEPTIONS #t))
+						((string=? (car current-arg) "--") 
 							; the '--' stays in the list passed to boot.verb
-							(llist-push-back cmdline-args (make-String arg))
+							(llist-push-back cmdline-args (make-String (car current-arg)))
 							(set! rest-to-script #t)) ; rest go to NATIVE_CMDLINE_ARGS
 						(else
 							; anything else goes to script
-							(llist-push-back cmdline-args (make-String arg)))))) (cdr (argv))))
+							(llist-push-back cmdline-args (make-String (car current-arg))))))
+					(set! current-arg (cdr current-arg))))
+
+		(if (equal? (string-length BOOTFILE) 0)
+			(begin
+				(print "Unable to find boot.verb.b -- maybe you need to pass -libdir or set VERBII_BOOT?")
+				(exit 1)))
 
 		(if NO_CATCH_EXCEPTIONS
 			; when things are really broken, run with -noexn to see raw crash from 
