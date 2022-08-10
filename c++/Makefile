@@ -35,7 +35,7 @@ libverbii.a: $(LIB_OBJS)
 	ar rvs libverbii.a $(LIB_OBJS)
 
 clean:
-	rm -f *.exe gmon.out *.o *.a verbii
+	rm -f *.exe gmon.out *.o *.a
 
 main: main.cpp libverbii.a
 	g++ $(CFLAGS) -Wall -o main main.cpp libverbii.a $(GC_LIBS)
