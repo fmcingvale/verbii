@@ -47,3 +47,4 @@ reference/xoshiro128plusplus
 verb/TEST-RESULTS/
 c++/main
 csharp/main.pdb
+chicken/main
