@@ -1,2 +1,2 @@
 #!/bin/bash
-./local-chicken/bin/csi $@
+~/local-chicken/bin/csi $@
