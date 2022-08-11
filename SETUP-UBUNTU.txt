@@ -1,0 +1,91 @@
+
+Setting up the ports from a fresh install of Ubuntu 22.04:
+
+General:
+--------
+
+* When starting a fresh shell, cd to verbii root and do "source setup.sh"; this
+  sets VERBII_BOOT correctly
+
+C++:
+----
+
+* sudo apt-get install g++ make libgc-dev
+
+* For reference, this installs g++ 11.2.0
+
+Python:
+-------
+* sudo apt-get install python-is-python3
+
+* Note: Python 3.10.4 was already installed by default.
+
+
+Lua:
+----
+
+The default version of lua-posix is for lua 5.3, but I want lua 5.4, so I build my own:
+
+*NOTE* Do ALL builds from a directory OUTSIDE of the verbii source tree.
+
+* wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
+* tar zxf lua-5.4.4.tar.gz
+* cd lua-5.4.4
+* make
+* sudo make install
+
+Install luarocks per: https://luarocks.org/#quick-start
+
+What I did ...
+  * wget https://luarocks.org/releases/luarocks-3.9.1.tar.gz
+  * tar zxpf luarocks-3.9.1.tar.gz
+  * cd luarocks-3.9.1
+  * ./configure && make && sudo make install
+
+  NOTE: REMOVE built directory BEFORE running 'luarocks install', else it will 
+  install to the built directory.
+
+* sudo luarocks install luaposix
+
+C#
+--
+Install mono per directions at: https://www.mono-project.com/download/stable/
+
+What I did ...
+* sudo apt install gnupg ca-certificates
+* sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+* echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+* sudo apt update
+
+* sudo apt install mono-devel
+
+Chicken
+-------
+* OUTSIDE of the verbii source tree, make a directory, e.g. ~/local-chicken
+* download latest chicken, e.g. chicken-5.3.0.tar.gz
+* unpack then cd chicken-5.3.0
+* make PLATFORM=linux PREFIX=~/local-chicken install
+
+* ~/local-chicken/bin/chicken-install srfi-13
+* ~/local-chicken/bin/chicken-install srfi-34
+* ~/local-chicken/bin/chicken-install srfi-1
+* ~/local-chicken/bin/chicken-install srfi-69
+* ~/local-chicken/bin/chicken-install dyn-vector
+* ~/local-chicken/bin/chicken-install miscmacros
+* ~/local-chicken/bin/chicken-install simple-exceptions
+* ~/local-chicken/bin/chicken-install continuations
+* ~/local-chicken/bin/chicken-install filepath
+
+* make
+
+----------------------
+
+Once built, you can test each port out by going into the verb/ subdirectory and running
+run-all-tests.verb with each port, e.g:
+
+$ ../c++/verbii run-all-tests.verb
+$ ../python/verbii run-all-tests.verb
+$ ../csharp/verbii run-all-tests.verb
+$ ../lua/verbii run-all-tests.verb
+$ ../chicken/verbii run-all-tests.verb
+
