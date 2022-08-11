@@ -82,7 +82,7 @@ if __name__ == '__main__':
 		elif arg == '--':
 			# once I find '--', pass everything else (including '--') to boot.verb
 			# this will be pushed directly, so make into list of string objects
-			for narg in sys.argv[i+1:]:
+			for narg in sys.argv[i:]:
 				cmdline_args.append(LangString(narg))
 
 			#print("CMDLINE ARGS TO SCRIPT:",sys.argv[i+2:])
