@@ -1,6 +1,8 @@
 #!/bin/bash
 #
-# another sanity check that all ports compile init.verb and compiler.verb identically.
+# another sanity check that all ports compile boot/init/compiler.verb identically.
+#
+# Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 echo "There should be no output below this line, except for port names:"
 
@@ -20,9 +22,9 @@ echo "C++ ..."
 
 echo "Python ..."
 # check with python port running compiler.verb
-( cd ../python; ./verbii $COMPILER -- ../lib/boot.verb > ../bootstrap/test-output/boot-c-PY.txt )
-( cd ../python; ./verbii $COMPILER -- ../lib/init.verb > ../bootstrap/test-output/init-c-PY.txt )
-( cd ../python; ./verbii $COMPILER -- ../lib/compiler.verb > ../bootstrap/test-output/compiler-c-PY.txt )
+../python/verbii $COMPILER -- ../lib/boot.verb > ../bootstrap/test-output/boot-c-PY.txt
+../python/verbii $COMPILER -- ../lib/init.verb > ../bootstrap/test-output/init-c-PY.txt
+../python/verbii $COMPILER -- ../lib/compiler.verb > ../bootstrap/test-output/compiler-c-PY.txt
 
 diff -u -b -B test-output/boot-c-PY.txt test-output/boot-c-CPP.txt
 diff -u -b -B test-output/init-c-PY.txt test-output/init-c-CPP.txt
@@ -30,9 +32,9 @@ diff -u -b -B test-output/compiler-c-PY.txt test-output/compiler-c-CPP.txt
 
 echo "Lua ..."
 # check with lua port running compiler.verb
-( cd ../lua ; ./verbii $COMPILER -- ../lib/boot.verb > ../bootstrap/test-output/boot-c-LUA.txt )
-( cd ../lua ; ./verbii $COMPILER -- ../lib/init.verb > ../bootstrap/test-output/init-c-LUA.txt )
-( cd ../lua ; ./verbii $COMPILER -- ../lib/compiler.verb > ../bootstrap/test-output/compiler-c-LUA.txt )
+../lua/verbii $COMPILER -- ../lib/boot.verb > ../bootstrap/test-output/boot-c-LUA.txt
+../lua/verbii $COMPILER -- ../lib/init.verb > ../bootstrap/test-output/init-c-LUA.txt
+../lua/verbii $COMPILER -- ../lib/compiler.verb > ../bootstrap/test-output/compiler-c-LUA.txt
 
 diff -u -b -B test-output/boot-c-LUA.txt test-output/boot-c-CPP.txt
 diff -u -b -B test-output/init-c-LUA.txt test-output/init-c-CPP.txt
