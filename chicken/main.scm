@@ -58,7 +58,7 @@
 (import simple-exceptions) ; with-exn-handler
 
 (import (chicken process-context))
-(import simple-loops)
+(import miscmacros)
 
 ;(import srfi-193) ; command line ... is this not in a base chicken library??
 ;(import (chicken file))
@@ -71,7 +71,7 @@
 			(current-arg (cdr (argv)))
 			(BOOTFILE ""))
 		(let ((rest-to-script #f))
-			(do-while (not (null? current-arg))
+			(while (not (null? current-arg))
 				; once i get '--' all the remaining args go to NATIVE_CMDLINE_ARGS
 				(if rest-to-script
 					(llist-push-back cmdline-args (make-String (car current-arg)))
@@ -121,7 +121,7 @@
 				(deserialize-and-run intr BOOTFILE))
 			; else, in the normal case, run with exception catching
 			(let ((done #f))
-				(do-while (not done)
+				(while (not done)
 				(let ((intr (make-Interpreter)))
 					(handle-exceptions exn
 						(cond

@@ -23,10 +23,9 @@
 (import (chicken format)) ; fprintf
 (import srfi-1) ; list library
 (import dyn-vector)
-(import miscmacros) ; inc! dec! 
+(import miscmacros) ; inc! dec! while
 (import srfi-69) ; hash-tables
 (import (chicken gc)) ; memory-statistics
-(import simple-loops)
 
 (import langtypes)
 (import errors)
@@ -332,7 +331,7 @@
 	(intr-codepos-set! intr 0)
 	(intr-framedata-set! intr '())
 	(let ((exit-loop #f))
-		(do-while (not exit-loop)
+		(while (not exit-loop)
 			(let ((obj (nextObj intr)))
 				;(print "RUN OBJ: " (fmtStackPrint obj))
 				(cond
