@@ -1,2 +1,2 @@
 #!/bin/bash
-~/local-chicken/bin/csc $@
+/usr/local/chicken/bin/csc $@

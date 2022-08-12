@@ -6,7 +6,7 @@ CFLAGS=-O3
 #CFLAGS=-O4
 #CFLAGS=-profile
 
-CSC=~/local-chicken/bin/csc
+CSC=/usr/local/chicken/bin/csc
 
 clean:
 	rm -f *.o main *.import.scm *.link PROFILE.*
