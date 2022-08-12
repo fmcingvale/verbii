@@ -1,0 +1,82 @@
+
+Setting up ports from a fresh Cygwin installation
+	(Should work fine on an existing installation too, I'm just showing everything starting from scratch)
+	
+Get setup from https://www.cygwin.com/ and run.
+	* Click through to accept default packages.
+	
+Once installed, there will be packages to add for each port:
+
+C++:
+	* Add cygwin packages:
+		* make 
+		* gcc-g++
+		* libgc-devel
+		
+	* Build:
+		$ cd c++
+		$ make
+	
+	* Test:
+		$ cd ../verb
+		$ ../c++/verbii run-all-tests.verb
+		
+Python:
+	* Add cygwin packages:
+		* python3
+		
+	* Test:
+		$ cd verb 
+		$ ../python/verbii run-all-tests.verb
+	
+Chicken:
+	* Cygwin still on chicken 4.x, so build it ...
+	
+	* Add cygwin packages:
+		* wget
+		
+	$ wget https://code.call-cc.org/releases/5.3.0/chicken-5.3.0.tar.gz
+	$ tar zxf chicken-5.3.0.tar.gz
+	$ make PLATFORM=cygwin PREFIX=/usr/local/chicken
+	$ make PLATFORM=cygwin PREFIX=/usr/local/chicken install
+	
+	$ /usr/local/chicken/bin/chicken-install.exe srfi-13
+	$ /usr/local/chicken/bin/chicken-install.exe srfi-34
+	$ /usr/local/chicken/bin/chicken-install.exe srfi-1
+	$ /usr/local/chicken/bin/chicken-install.exe srfi-69
+	$ /usr/local/chicken/bin/chicken-install.exe dyn-vector
+	$ /usr/local/chicken/bin/chicken-install.exe miscmacros
+	$ /usr/local/chicken/bin/chicken-install.exe simple-exceptions
+	$ /usr/local/chicken/bin/chicken-install.exe continuations
+	$ /usr/local/chicken/bin/chicken-install.exe filepath
+
+	$ cd chicken
+	$ make
+	$ cd ../verb
+	$ ../chicken/verbii run-all-tests.verb
+
+
+
+====================================================================================
+ Currently broken -- NOTE -- these are not broken PORTS, they are broken build tools
+ under mingw (i.e. the builds that break are not verbii but 3rd party sources)
+====================================================================================
+
+Lua:	
+	** BROKEN ** luarocks can't find luaposix **
+	** Tried building my own lua 5.4.x with same result **
+	
+	* lua (5.3.6)
+	* liblua-devel (5.3.6)
+	* unzip
+	
+Cygwin doesn't seem to have luarocks, so:
+	* wget https://luarocks.org/releases/luarocks-3.9.1.tar.gz
+	* tar zxpf luarocks-3.9.1.tar.gz
+	* cd luarocks-3.9.1
+	* ./configure && make && make install
+		
+	
+C#:
+	* No semi-easy way to install mono under cygwin 
+	

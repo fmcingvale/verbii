@@ -1,0 +1,92 @@
+
+Setting up the ports from a fresh mingw-64 installation:
+
+* Go to https://www.msys2.org/ and get the latest installer (msys2-x86_64-YYYYMMDD.exe)
+  Follow instructions on website.
+  
+
+	* I just selected 'all' when installing the mingw-w64-x86_64-toolchain
+
+** The rest of this assumes you are using the 64-bit gcc **
+
+* Start "MSYS MinGW x64" from Start menu
+
+General:
+--------
+
+* When starting a fresh shell, cd to verbii root and do "source setup.sh"; this
+  sets VERBII_BOOT correctly
+  
+  * Alternatively, you can set VERBII_BOOT to the location of the lib/ directory
+    in the verbii source tree. Make sure to add a trailing / to the path.
+
+* C++:
+	
+	$ pacman mingw-w64-x86_64-gc
+	
+	* Edit c++/Makefile and uncomment this CFLAGS line:
+		CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
+	  
+	  Comment-out the other CFLAGS line.
+	  
+	  (Otherwise main crashes with an immediate segfault in libgc)
+	  
+	$ make
+	
+	Now ./verbii should bring up the repl.
+
+	To run the test suite:
+	
+	$ cd verb 
+	$ ../c++/verbii run-all-tests.verb
+	
+* Python:
+
+	The base setup already includes Python, so you can run the
+	test suite immediately:
+	
+	$ cd verb 
+	$ ../python/verbii run-all-tests.verb
+	
+* C#:
+
+	$ pacman -S mingw-w64-x86_64-mono
+	$ ../csharp/verbii run-all-tests.verb
+	
+====================================================================================
+ Currently broken -- NOTE -- these are not broken PORTS, they are broken build tools
+ under mingw (i.e. the builds that break are not verbii but 3rd party sources)
+====================================================================================
+
+* Chicken:
+	
+	** BROKEN **
+	
+	* The chicken with mingw conflicts with c# (both compilers are called 'csc'),
+	  so I build my own in a unique location.
+	  
+	$ wget https://code.call-cc.org/releases/5.3.0/chicken-5.3.0.tar.gz
+	$ tar zxf chicken-5.3.0.tar.gz
+	$ make PLATFORM=mingw-msys PREFIX=/usr/local/chicken
+	
+* Lua:
+
+	** BROKEN **
+
+	$ wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
+	$ tar zxf lua-5.4.4.tar.gz
+	$ cd lua-5.4.4
+	$ make PLAT=mingw
+	$ make PLAT=mingw install
+	
+	Install leaves out a file ...
+	$ cp src/lua54.dll /usr/local/bin/
+	
+	$ wget https://luarocks.org/releases/luarocks-3.9.1.tar.gz
+	$ tar zxf luarocks-3.9.1.tar.gz
+	$ cd luarocks-3.9.1
+	$ ./configure && make && sudo make install
+	
+
+ 
+

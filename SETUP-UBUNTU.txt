@@ -6,6 +6,9 @@ General:
 
 * When starting a fresh shell, cd to verbii root and do "source setup.sh"; this
   sets VERBII_BOOT correctly
+  
+  * Alternatively, you can set VERBII_BOOT to the location of the lib/ directory
+    in the verbii source tree. Make sure to add a trailing / to the path.
 
 C++:
 ----
