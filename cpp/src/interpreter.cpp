@@ -289,7 +289,7 @@ void Interpreter::code_return() {
 	codepos = callstack_pos.back();
 	callstack_pos.pop_back();
 	
-	// if frame not linked as an outer frame anywhere, then return it
+	// if frame was not linked as an outer frame anywhere, then return it
 	// to the pool
 	if(cur_framedata != NULL && !cur_framedata->isLinked())
 		callframe_free(cur_framedata);

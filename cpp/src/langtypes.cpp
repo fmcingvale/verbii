@@ -163,6 +163,12 @@ void CallFrameData::setOuterFrame(CallFrameData *outer) {
 	this->outer = outer;
 	// NOTE!! this is NOT the place to mark the outer frame
 	// as linked -- it is marked when bind-lambda is called
+	//
+	// setOuterFrame is called on an invocation of a bound lambda
+	// when a NEW frame needs to be linked to the original outer frame
+	// that existed when the lambda was originally bound. so setOuterFrame
+	// is not making a NEW permanent link to outer, only a link that exists as
+	// long as this frame exists
 }
 
 CallFrameData *CallFrameData::findFrameUp(int levels) {
