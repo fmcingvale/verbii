@@ -786,7 +786,9 @@ static void builtin_os_getcwd(Interpreter* intr) {
 #else // assume posix
 static void builtin_os_getcwd(Interpreter *intr) {
 	char buf[PATH_MAX+1];
-	getcwd(buf, PATH_MAX);
+	if(!getcwd(buf, PATH_MAX))
+		throw LangError("Error in getcwd()");
+	
 	intr->push(newString(buf));
 }
 #endif
