@@ -25,15 +25,15 @@ C++:
 			- [Optional] Just in time debugger
 			- C++ CMake tools
 			
-	* In VS, open project c++\vs-verbii.sln
+	* In VS, open project cpp\vs-verbii.sln
 		* Make sure configuration is set to Release
 		* Build
 		
-	* This should leave main.exe in c++ folder
+	* This should leave main.exe in cpp/ 
 	
 	* Test (from shell):
 		cd verb 
-		..\c++\verbii.bat run-all-tests.verb
+		..\cpp\verbii.bat run-all-tests.verb
 		
 	** NOTE: Windows port is not currently built with garbage collection, so it would below
 			 unsuitable for long-running processes.

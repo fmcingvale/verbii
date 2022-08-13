@@ -3,7 +3,6 @@ Setting up the ports from a fresh mingw-64 installation:
 
 * Go to https://www.msys2.org/ and get the latest installer (msys2-x86_64-YYYYMMDD.exe)
   Follow instructions on website.
-  
 
 	* I just selected 'all' when installing the mingw-w64-x86_64-toolchain
 
@@ -22,9 +21,10 @@ General:
 
 * C++:
 	
-	$ pacman mingw-w64-x86_64-gc
+	$ pacman -S mingw-w64-x86_64-gc
+	$ pacman -S mingw-w64-x86_64-cmake
 	
-	* Edit c++/Makefile and uncomment this CFLAGS line:
+	* Edit cpp/Makefile and uncomment this CFLAGS line:
 		CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
 	  
 	  Comment-out the other CFLAGS line.
@@ -38,7 +38,7 @@ General:
 	To run the test suite:
 	
 	$ cd verb 
-	$ ../c++/verbii run-all-tests.verb
+	$ ../cpp/verbii run-all-tests.verb
 	
 * Python:
 

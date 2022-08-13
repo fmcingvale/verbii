@@ -16,7 +16,7 @@
 rm TEST-RESULTS/output-*.txt
 
 echo "C++ ..."
-../c++/verbii run-all-tests.verb > TEST-RESULTS/output-cpp.txt
+../cpp/verbii run-all-tests.verb > TEST-RESULTS/output-cpp.txt
 echo "C# ..."
 ../csharp/verbii run-all-tests.verb > TEST-RESULTS/output-csharp.txt
 echo "Python ..."

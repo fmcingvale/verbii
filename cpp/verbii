@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# NOTE: The following code (finding the absolute pathname of this script)
+# is from https://www.baeldung.com/linux/bash-get-location-within-script
+
+SCRIPT_PATH="${BASH_SOURCE}"
+while [ -L "${SCRIPT_PATH}" ]; do
+  SCRIPT_DIR="$(cd -P "$(dirname "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
+  SCRIPT_PATH="$(readlink "${SCRIPT_PATH}")"
+  [[ ${SCRIPT_PATH} != /* ]] && SCRIPT_PATH="${SCRIPT_DIR}/${SCRIPT_PATH}"
+done
+SCRIPT_PATH="$(readlink -f "${SCRIPT_PATH}")"
+SCRIPT_DIR="$(cd -P "$(dirname -- "${SCRIPT_PATH}")" >/dev/null 2>&1 && pwd)"
+
+# now run script with full pathname
+
+# the -z test (to test if VERBII_BOOT is set) is from:
+#  https://stackoverflow.com/a/13864829
+if [ -z ${VERBII_BOOT+x} ]; then 
+	# VERBII_BOOT not set, which might be ok depending on how verbii is installed,
+	# so run without -libdir
+	"${SCRIPT_DIR}/main" "$@"
+else 
+	# pass VERBII_BOOT with -libdir
+	"${SCRIPT_DIR}/main" -libdir "$VERBII_BOOT" "$@"
+fi
+

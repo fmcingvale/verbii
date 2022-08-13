@@ -14,9 +14,9 @@ COMPILER="../verb/compile.verb"
 
 # treat the c++ port as the reference
 echo "C++ ..."
-../c++/verbii $COMPILER -- ../lib/boot.verb > test-output/boot-c-CPP.txt
-../c++/verbii $COMPILER -- ../lib/init.verb > test-output/init-c-CPP.txt
-../c++/verbii $COMPILER -- ../lib/compiler.verb > test-output/compiler-c-CPP.txt
+../cpp/verbii $COMPILER -- ../lib/boot.verb > test-output/boot-c-CPP.txt
+../cpp/verbii $COMPILER -- ../lib/init.verb > test-output/init-c-CPP.txt
+../cpp/verbii $COMPILER -- ../lib/compiler.verb > test-output/compiler-c-CPP.txt
 
 # now test others against it
 

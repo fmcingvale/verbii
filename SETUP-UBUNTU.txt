@@ -86,7 +86,7 @@ Chicken
 Once built, you can test each port out by going into the verb/ subdirectory and running
 run-all-tests.verb with each port, e.g:
 
-$ ../c++/verbii run-all-tests.verb
+$ ../cpp/verbii run-all-tests.verb
 $ ../python/verbii run-all-tests.verb
 $ ../csharp/verbii run-all-tests.verb
 $ ../lua/verbii run-all-tests.verb

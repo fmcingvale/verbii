@@ -14,12 +14,12 @@ C++:
 		* libgc-devel
 		
 	* Build:
-		$ cd c++
+		$ cd cpp
 		$ make
 	
 	* Test:
 		$ cd ../verb
-		$ ../c++/verbii run-all-tests.verb
+		$ ../cpp/verbii run-all-tests.verb
 		
 Python:
 	* Add cygwin packages:
