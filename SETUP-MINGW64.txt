@@ -24,20 +24,12 @@ General:
 	$ pacman -S mingw-w64-x86_64-gc
 	$ pacman -S mingw-w64-x86_64-cmake
 	
-	* Edit cpp/Makefile and uncomment this CFLAGS line:
-		CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
-	  
-	  Comment-out the other CFLAGS line.
-	  
-	  (Otherwise main crashes with an immediate segfault in libgc)
-	  
-	$ make
+	$ cd cpp 
+	$ ./setup-mingw.sh
+	$ ./make.sh
 	
-	Now ./verbii should bring up the repl.
-
-	To run the test suite:
-	
-	$ cd verb 
+	* Test
+	$ cd ../verb 
 	$ ../cpp/verbii run-all-tests.verb
 	
 * Python:

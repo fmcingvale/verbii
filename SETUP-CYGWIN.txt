@@ -15,9 +15,10 @@ C++:
 		
 	* Build:
 		$ cd cpp
-		$ make
+		$ ./setup-linux.sh
+		$ ./make.sh
 	
-	* Test:
+	* Test
 		$ cd ../verb
 		$ ../cpp/verbii run-all-tests.verb
 		

@@ -6,7 +6,7 @@
 #pragma once
 
 #if defined(USE_GCMALLOC)
-#include <gc/gc_cpp.h>
+#include <gc_cpp.h>
 #else // !USE_GCMALLOC
 #include <stdlib.h>
 extern unsigned long long X_BYTES_ALLOCATED;

@@ -6,14 +6,14 @@ NOTE: The below assumes you are running in a Command Prompt shell, NOT Powershel
 Python:
 	* Download & install Python 3.x from http://www.python.org
 	* cd to verbii source directory
-	* setup.bat
+	* setenv.bat
 	* cd verb
 	* ..\python\verbii.bat run-all-tests.verb
 	
 C#:
 	* Get .NET SDK x64 6.0 from https://dotnet.microsoft.com/en-us/download
 	* cd to verbii source directory
-	* setup.bat
+	* setenv.bat
 	* cd verb
 	* ..\csharp\verbii.bat run-all-tests.verb
 	
@@ -25,16 +25,40 @@ C++:
 			- [Optional] Just in time debugger
 			- C++ CMake tools
 			
-	* In VS, open project cpp\vs-verbii.sln
-		* Make sure configuration is set to Release
-		* Build
+	* Get libgc source from: https://github.com/ivmai/bdwgc/releases
+		* Latest tested version = 8.0.6
 		
-	* This should leave main.exe in cpp/ 
+	* Unpack libgc sources under verbii/cpp/, which will give you e.g. verbii/cpp/gc-8.0.6
+	  Rename folder to libgc, so that it is now verbii/cpp/libgc
 	
-	* Test (from shell):
-		cd verb 
-		..\cpp\verbii.bat run-all-tests.verb
+	* Get libatomic_ops from: https://github.com/ivmai/libatomic_ops/releases/
+		* Latest test version = 7.6.12
 		
-	** NOTE: Windows port is not currently built with garbage collection, so it would below
-			 unsuitable for long-running processes.
-			 
+	* Unpack libatomic_ops under verbii/cpp/libgc which will give you e.g. verbii/cpp/libgc/libatomic_ops-7.6.12
+	  Rename folder to: verbii/cpp/libgc/libatomic_ops
+	  
+	* From Start menu, open Visual Studio 2022 -> x64 Native Tools Command Prompt
+	
+		** IMPORTANT - make sure to use the x64 native tools, otherwise libgc will be
+	       built as 32 bit and won't link with the verbii executable
+	
+		Start in the verbii root folder
+		
+		$ setenv.bat
+		
+		$ cd cpp\libgc
+		$ nmake -f NT_MAKEFILE cpu=amd64
+		$ copy gc64.dll ..
+		$ cd ..
+		$ vc-setup.bat
+		$ vc-make.bat
+	
+		* Test
+		$ cd ..\verb
+		$ ..\cpp\verbii.bat run-all-tests.verb
+		
+
+	** NOTE ** For some reason, the build uses Debug mode even through the setup script 
+	specifies Release.
+	
+	

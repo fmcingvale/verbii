@@ -50,3 +50,11 @@ csharp/main.pdb
 chicken/main
 c++/.vs/
 c++/x64/
+cpp/main
+cpp/main.gc.log
+cpp/temp-out.txt
+cpp/.vs/
+cpp/bin/
+cpp/gc-8.0.6/
+cpp/libgc/
+cpp/gc64.dll

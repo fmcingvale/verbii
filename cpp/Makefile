@@ -19,17 +19,17 @@ else
 #GC_LIBS = 
 
 GC_FLAGS = -DUSE_GCMALLOC
-GC_LIBS = -lgc -lgccpp
+GC_LIBS = -lgccpp -lgc
 endif
 
 # uncomment one CFLAGS
 # safe, slow, debugging build
 #CFLAGS = -g $(GC_FLAGS)
 #CFLAGS = -pg $(GC_FLAGS)
-# max optimization that works under mingw-x64 (gcc 11)
-#CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
+# max optimization that works under mingw-x64 (gcc 11/12)
+CFLAGS = -Os -DNDEBUG $(GC_FLAGS)
 # this optimization level works fine under Ubuntu
-CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
+#CFLAGS = -O3 -DNDEBUG $(GC_FLAGS)
 
 all: main
 
@@ -40,7 +40,7 @@ libverbii.a: $(LIB_OBJS)
 	ar rvs libverbii.a $(LIB_OBJS)
 
 clean:
-	rm -f main main.exe gmon.out *.o *.a
+	rm -rf main main.exe gmon.out *.o *.a x64
 
 main: main.cpp libverbii.a
 	g++ $(CFLAGS) -Wall -o main main.cpp libverbii.a $(GC_LIBS)

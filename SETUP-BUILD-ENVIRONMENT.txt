@@ -1,4 +1,15 @@
 
+************************************************************
+
+This is out of date. See platform-specific file:
+
+	SETUP-UBUNTU.txt
+	SETUP-MINGW.txt
+	SETUP-CYGWIN.txt
+	
+	
+************************************************************
+
 Setting up build environment:
 
 * mingw-x64
@@ -7,12 +18,10 @@ Setting up build environment:
 * ubuntu:
 	- Add packages: gcc, g++, make and libgc-dev
 
-* C#:
-	- Get .NET SDK x64 6.0 from https://dotnet.microsoft.com/en-us/download
 
 ==================
 
-More Ubuntu stuff ...
+More Ubuntu stuff ... 
 
 * /etc/inputrc:
 	set bell-style none
