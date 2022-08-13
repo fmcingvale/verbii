@@ -5,6 +5,11 @@ HEADERS = interpreter.hpp native.hpp langtypes.hpp xmalloc.hpp deserialize.hpp o
 LIB_OBJS = $(LIB_SRC:.cpp=.o)
 
 ifdef REPL_ID # don't try to use libgc on repl.it
+NO_GC = 1
+endif
+
+# run like "env NO_GC=1 make" to not use libgc without having to edit Makefile
+ifdef NO_GC
 GC_FLAGS =
 GC_LIBS =
 else
@@ -35,7 +40,7 @@ libverbii.a: $(LIB_OBJS)
 	ar rvs libverbii.a $(LIB_OBJS)
 
 clean:
-	rm -f *.exe gmon.out *.o *.a
+	rm -f main main.exe gmon.out *.o *.a
 
 main: main.cpp libverbii.a
 	g++ $(CFLAGS) -Wall -o main main.cpp libverbii.a $(GC_LIBS)
