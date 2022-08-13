@@ -29,6 +29,9 @@
 (import srfi-69) ; hash-tables
 (import (chicken gc)) ; memory-statistics
 
+(declare (uses langtypes))
+(declare (uses errors))
+
 (import langtypes)
 (import errors)
 

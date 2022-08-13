@@ -32,6 +32,11 @@
 (import (chicken flonum)) ; flonum-print-precision
 (import (chicken time)) ; current-process-milliseconds
 
+(declare (uses langtypes))
+(declare (uses errors))
+(declare (uses interpreter))
+(declare (uses deserializer))
+
 (import langtypes)
 (import errors)
 (import interpreter)

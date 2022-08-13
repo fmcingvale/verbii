@@ -32,6 +32,10 @@
 (import srfi-69) ; hash-tables
 (import (chicken io))
 
+(declare (uses interpreter))
+(declare (uses langtypes))
+(declare (uses errors))
+
 (import interpreter)
 (import langtypes)
 (import errors)

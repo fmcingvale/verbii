@@ -21,6 +21,8 @@
 
 ; start of module code
 
+(declare (uses langtypes))
+
 (import langtypes)
 (import simple-exceptions)
 
