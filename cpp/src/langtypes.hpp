@@ -62,7 +62,13 @@ class BoundLambda {
 
 // this is intended to be a POD type, so no non-default constructors, destructors, base classes,
 // and small enough to pass as value -- any large parts will be stored in pointers
+#if defined(USE_GCMALLOC)
+// note -- adding 'public gc' here, in contradiction of the above ... not sure if
+// this is necessary or not
+class Object : public gc {
+#else
 class Object {
+#endif	
 	public:
 	// not normally used -- use the new* functions below to create Objects
 	// this is only used to create the NULLOBJ
@@ -173,7 +179,11 @@ const int MAX_CALLFRAME_SLOTS = 255; // probably way too much, but have to start
 // 'version 2' closures based on persistent frames
 // every time a userword is called (or lambda via 'call')
 // a new frame data is created for it.
+#if defined(USE_GCMALLOC)
 class CallFrameData : public gc_cleanup {
+#else
+class CallFrameData {
+#endif
 	public:
 	CallFrameData();
 	~CallFrameData() 
