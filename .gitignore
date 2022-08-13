@@ -48,3 +48,5 @@ verb/TEST-RESULTS/
 c++/main
 csharp/main.pdb
 chicken/main
+c++/.vs/
+c++/x64/
