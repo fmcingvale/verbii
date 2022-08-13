@@ -1,0 +1,40 @@
+
+Setting up ports under Windows (native):
+
+NOTE: The below assumes you are running in a Command Prompt shell, NOT Powershell.
+
+Python:
+	* Download & install Python 3.x from http://www.python.org
+	* cd to verbii source directory
+	* setup.bat
+	* cd verb
+	* ..\python\verbii.bat run-all-tests.verb
+	
+C#:
+	* Get .NET SDK x64 6.0 from https://dotnet.microsoft.com/en-us/download
+	* cd to verbii source directory
+	* setup.bat
+	* cd verb
+	* ..\csharp\verbii.bat run-all-tests.verb
+	
+C++:
+	* Install Visual Studio (tested with 2022 Community Edition / 17.3)
+		* Include components:
+			- MSVC vNNN ...
+			- Windows 10 SDK
+			- [Optional] Just in time debugger
+			- C++ CMake tools
+			
+	* In VS, open project c++\vs-verbii.sln
+		* Make sure configuration is set to Release
+		* Build
+		
+	* This should leave main.exe in c++ folder
+	
+	* Test (from shell):
+		cd verb 
+		..\c++\verbii.bat run-all-tests.verb
+		
+	** NOTE: Windows port is not currently built with garbage collection, so it would below
+			 unsuitable for long-running processes.
+			 
