@@ -11,6 +11,8 @@
 (declare (extended-bindings))
 
 ; module header
+(declare (unit errors))
+
 (module errors *
 (import scheme)
 (import (chicken base))

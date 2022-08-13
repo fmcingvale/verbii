@@ -23,6 +23,8 @@
 (declare (extended-bindings))
 
 ; module header
+(declare (unit langtypes))
+
 (module langtypes *
 (import scheme)
 (import (chicken base))

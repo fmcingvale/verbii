@@ -33,6 +33,12 @@
 		(load "deserializer.scm")
 		(load "native.scm")))
 
+(declare (uses langtypes))
+(declare (uses errors))
+(declare (uses interpreter))
+(declare (uses deserializer))
+(declare (uses native))
+
 (import langtypes)
 (import errors)
 (import interpreter)

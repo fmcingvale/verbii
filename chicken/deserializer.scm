@@ -10,6 +10,8 @@
 (declare (extended-bindings))
 
 ; module header
+(declare (unit deserializer))
+
 (module deserializer *
 (import scheme)
 (import (chicken base))

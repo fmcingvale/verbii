@@ -10,6 +10,8 @@
 (declare (extended-bindings))
 
 ; module header
+(declare (unit interpreter))
+
 (module interpreter *
 (import scheme)
 (import (chicken base))
