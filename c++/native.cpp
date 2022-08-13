@@ -765,15 +765,31 @@ static void builtin_file_pathsep(Interpreter *intr) {
 	intr->push(newString("/"));
 }
 
+#ifdef _MSC_VER
+#include <direct.h>
+#else
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
+#endif
 
+#ifdef _MSC_VER
+static void builtin_os_getcwd(Interpreter* intr) {
+	char* buf = _getcwd(NULL, 0);
+	if (!buf)
+		throw LangError("Error in getcwd()");
+
+	auto s = newString(buf);
+	free(buf);
+	intr->push(s);
+}
+#else // assume posix
 static void builtin_os_getcwd(Interpreter *intr) {
 	char buf[PATH_MAX+1];
 	getcwd(buf, PATH_MAX);
 	intr->push(newString(buf));
 }
+#endif
 
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
@@ -794,104 +810,108 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 		{
 			fprintf(stderr, "%s", popString(intr,"puts"));			
 		}},
-	// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
-	//          implemented natively anyways for internal error printing, so
-	//          no purpose in implementing twice
+		// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
+		//          implemented natively anyways for internal error printing, so
+		//          no purpose in implementing twice
 
-	// convert TOS to verbose printable string (like for stack display)
-	{"repr", [](Interpreter *intr) {intr->push(newString(intr->pop().fmtStackPrint()));}},
-	// convert TOS to normal printable string (like for '.')
-	{"str", [](Interpreter *intr) {intr->push(newString(intr->pop().fmtDisplay()));}},
-	{"==", [](Interpreter *intr) {pushBool(intr, intr->pop().opEqual(intr->pop()));}},
-	{">", builtin_greater},
-	
-	{"int?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isInt()));}},
-	{"float?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isFloat()));}},
-	{"bool?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isBool()));}},
-	{"null?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isNull()));}},
-	{"void?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isVoid()));}},
-	{"list?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isList()));}},
-	{"string?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isString()));}},
-	{"symbol?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isSymbol()));}},
-	{"lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isLambda()));}},
-	{"bound-lambda?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isBoundLambda()));}},
-	{"opcode?", [](Interpreter *intr) {intr->push(newBool(intr->pop().isOpcode()));}},
+		// convert TOS to verbose printable string (like for stack display)
+		{ "repr", [](Interpreter* intr) {intr->push(newString(intr->pop().fmtStackPrint())); } },
+			// convert TOS to normal printable string (like for '.')
+		{ "str", [](Interpreter* intr) {intr->push(newString(intr->pop().fmtDisplay())); } },
+		{ "==", [](Interpreter* intr) {pushBool(intr, intr->pop().opEqual(intr->pop())); } },
+		{ ">", builtin_greater },
 
-	{"length", [](Interpreter *intr) {intr->push(intr->pop().opLength());}},
-	{"SP", [](Interpreter *intr){intr->push(newInt(intr->SP));}},
-	{"SP!", builtin_setsp},
-	{"LP", [](Interpreter *intr){intr->push(newInt(intr->LP));}},
-	{"LP!", builtin_setlp},
-	{">L", builtin_tolocal},
-	{"L>", builtin_fromlocal},
-	{"ref", builtin_ref},
-	{"set!", builtin_set},
-	{".wordlist", [](Interpreter *intr) {intr->push(intr->getWordlist());}},
-	{".dumpword", builtin_dumpword},
-	{"error", builtin_error},
+		{ "int?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isInt())); } },
+		{ "float?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isFloat())); } },
+		{ "bool?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isBool())); } },
+		{ "null?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isNull())); } },
+		{ "void?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isVoid())); } },
+		{ "list?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isList())); } },
+		{ "string?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isString())); } },
+		{ "symbol?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isSymbol())); } },
+		{ "lambda?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isLambda())); } },
+		{ "bound-lambda?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isBoundLambda())); } },
+		{ "opcode?", [](Interpreter* intr) {intr->push(newBool(intr->pop().isOpcode())); } },
 
-	{"make-list", builtin_make_list},
-	{"make-string", builtin_make_string},
-	{"make-symbol", builtin_make_symbol},
-	{"make-lambda", builtin_make_lambda},
-	{"make-word", builtin_make_word},
-	{"unmake", builtin_unmake},
-	{"slice", builtin_slice},
-	{"append", builtin_append},
-	{"extend", builtin_extend},
-	// could implement next two in script, however, host language has to have this
-	// function anyways to deserialize programs, so just use that
-	{"parse-int", [](Interpreter *intr){intr->push(parseInt(popStringOrSymbol(intr)));}},
-	{"parse-float", [](Interpreter *intr){intr->push(parseFloat(popStringOrSymbol(intr)));}},
-	{"void", [](Interpreter *intr){intr->push(newVoid());}},
-	
-	{"put", builtin_put},
-	{"get", builtin_get},
-	{"deepcopy", builtin_deepcopy},
-	{"alloc", builtin_alloc},
-	{",,del", builtin_del},
+		{ "length", [](Interpreter* intr) {intr->push(intr->pop().opLength()); } },
+		{ "SP", [](Interpreter* intr) {intr->push(newInt(intr->SP)); } },
+		{ "SP!", builtin_setsp },
+		{ "LP", [](Interpreter* intr) {intr->push(newInt(intr->LP)); } },
+		{ "LP!", builtin_setlp },
+		{ ">L", builtin_tolocal },
+		{ "L>", builtin_fromlocal },
+		{ "ref", builtin_ref },
+		{ "set!", builtin_set },
+		{ ".wordlist", [](Interpreter* intr) {intr->push(intr->getWordlist()); } },
+		{ ".dumpword", builtin_dumpword },
+		{ "error", builtin_error },
 
-	// bitops - defined with long names so user can pick their own shorthand
-	{"bit-and", builtin_bit_and},
-	{"bit-or", builtin_bit_or},
-	{"bit-not", builtin_bit_not},
-	{"bit-xor", builtin_bit_xor},
-	{"bit-shr", builtin_bit_shr},
-	{"bit-shl", builtin_bit_shl},
+		{ "make-list", builtin_make_list },
+		{ "make-string", builtin_make_string },
+		{ "make-symbol", builtin_make_symbol },
+		{ "make-lambda", builtin_make_lambda },
+		{ "make-word", builtin_make_word },
+		{ "unmake", builtin_unmake },
+		{ "slice", builtin_slice },
+		{ "append", builtin_append },
+		{ "extend", builtin_extend },
+			// could implement next two in script, however, host language has to have this
+			// function anyways to deserialize programs, so just use that
+		{ "parse-int", [](Interpreter* intr) {intr->push(parseInt(popStringOrSymbol(intr))); } },
+		{ "parse-float", [](Interpreter* intr) {intr->push(parseFloat(popStringOrSymbol(intr))); } },
+		{ "void", [](Interpreter* intr) {intr->push(newVoid()); } },
 
-	{"run-time", builtin_run_time},
-	{",,new-dict", builtin_new_dict},
+		{ "put", builtin_put },
+		{ "get", builtin_get },
+		{ "deepcopy", builtin_deepcopy },
+		{ "alloc", builtin_alloc },
+		{ ",,del", builtin_del },
 
-	// new words needed for running boot.verb
-	{"file-exists?", builtin_file_exists},
-	{"file-mtime", builtin_file_mtime},
-	{"open-as-stdout", builtin_open_as_stdout},
-	{"deserialize", builtin_deserialize},
-	{"prompt", builtin_prompt},
-	{"set-exit-on-exception", [](Interpreter *intr){EXIT_ON_EXCEPTION = popBool(intr);}},
-	{"set-allow-overwrite-words", [](Interpreter *intr){ALLOW_OVERWRITING_WORDS = popBool(intr);}},
-	{"set-stacktrace-on-exception", [](Interpreter *intr){STACKTRACE_ON_EXCEPTION = popBool(intr);}},
+			// bitops - defined with long names so user can pick their own shorthand
+		{ "bit-and", builtin_bit_and },
+		{ "bit-or", builtin_bit_or },
+		{ "bit-not", builtin_bit_not },
+		{ "bit-xor", builtin_bit_xor },
+		{ "bit-shr", builtin_bit_shr },
+		{ "bit-shl", builtin_bit_shl },
 
-	// more words added while making the random module
-	{"time-string", builtin_time_string},
-	// this is commonly defined as returning a float, but i'm defining it to return an int --
-	// will make no difference in any math operation and this allows the result to be used
-	// in an integer context
-	{"floor", [](Interpreter *intr){intr->push(newInt((VINT)floor(popFloatOrInt(intr,"floor"))));}},
+		{ "run-time", builtin_run_time },
+		{ ",,new-dict", builtin_new_dict },
 
-	// instead of introducing another language-specific object that has to be wrapped (FILE*, file handle, etc.),
-	// the file I/O operations are defined atomically - they open the file, perform an action, and close the file.
-	{"file-write", builtin_file_write},
-	{"file-append", builtin_file_append},
-	// what the above SHOULD be named ...
-	{"file-read", builtin_file_read},
-	{"file-delete", builtin_file_delete},
+			// new words needed for running boot.verb
+		{ "file-exists?", builtin_file_exists },
+		{ "file-mtime", builtin_file_mtime },
+		{ "open-as-stdout", builtin_open_as_stdout },
+		{ "deserialize", builtin_deserialize },
+		{ "prompt", builtin_prompt },
+		{ "set-exit-on-exception", [](Interpreter* intr) {EXIT_ON_EXCEPTION = popBool(intr); } },
+		{ "set-allow-overwrite-words", [](Interpreter* intr) {ALLOW_OVERWRITING_WORDS = popBool(intr); } },
+		{ "set-stacktrace-on-exception", [](Interpreter* intr) {STACKTRACE_ON_EXCEPTION = popBool(intr); } },
 
-	{"sys-platform", [](Interpreter *intr){intr->push(newString(
-		 string("g++ ") + to_string(__GNUC__) + "." + 
-		 	to_string(__GNUC_MINOR__) + "." + to_string(__GNUC_PATCHLEVEL__)));}},
+			// more words added while making the random module
+		{ "time-string", builtin_time_string },
+			// this is commonly defined as returning a float, but i'm defining it to return an int --
+			// will make no difference in any math operation and this allows the result to be used
+			// in an integer context
+		{ "floor", [](Interpreter* intr) {intr->push(newInt((VINT)floor(popFloatOrInt(intr,"floor")))); } },
 
-	{"depth", [](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
+			// instead of introducing another language-specific object that has to be wrapped (FILE*, file handle, etc.),
+			// the file I/O operations are defined atomically - they open the file, perform an action, and close the file.
+		{ "file-write", builtin_file_write },
+		{ "file-append", builtin_file_append },
+			// what the above SHOULD be named ...
+		{ "file-read", builtin_file_read },
+		{ "file-delete", builtin_file_delete },
+
+#if defined( __GNUC__)
+		{ "sys-platform", [](Interpreter* intr) {intr->push(newString(
+			 string("g++ ") + to_string(__GNUC__) + "." +
+				to_string(__GNUC_MINOR__) + "." + to_string(__GNUC_PATCHLEVEL__))); } },
+#elif defined(_MSC_VER)
+		{ "sys-platform", [](Interpreter* intr) {intr->push(newString(
+			 string("msvc++ ") + to_string(_MSC_FULL_VER))); } },
+#endif
+		{"depth", [](Interpreter *intr){intr->push(newInt(intr->SP_EMPTY - intr->SP));}},
 
 	{"keys", builtin_keys},
 
