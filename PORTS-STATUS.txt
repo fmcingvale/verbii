@@ -7,8 +7,13 @@ Windows  |   Y    |    Y   |   Y    |        |        |
          +--------+--------+--------+--------+--------+
 Linux    |   Y    |    Y   |   Y    |   Y    |   Y    |
          +--------+--------+--------+--------+--------+
-Mingw64  |   Y    |    Y   |   Y    |        |        |
+Mingw64  |   Y    |    Y   |   Y    |        |  Y[*1] |
          +--------+--------+--------+--------+--------+
 Cygwin   |   Y    |    Y   |        |        |   Y    |
          +--------+--------+--------+--------+--------+
 
+Notes:
+
+[*1] WORKS but is very slow and stdio hangs so executable has to be run
+     in a normal command prompt, NOT within a mingw shell.
+	

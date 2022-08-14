@@ -22,15 +22,7 @@
 (declare (standard-bindings))
 (declare (extended-bindings))
 
-; module header
 (declare (unit langtypes))
-
-(module langtypes *
-(import scheme)
-(import (chicken base))
-(import (chicken syntax))
-
-; start of module code
 
 ; could probably trim some of these ...
 ;(import coops-primitive-objects)
@@ -366,5 +358,3 @@
 				newdict))
 		(else 
 			(print "Don't know how to deepcopy object:" (fmtStackPrint obj) ) (exit 1))))
-
-) ; end of module

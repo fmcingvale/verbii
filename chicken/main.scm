@@ -20,30 +20,12 @@
 ;(import (chicken io))
 
 (import (chicken platform))
-(cond-expand
-	(compiling #t)
-	; call load only when running as a script, not when compiled
-	; (if called in the compiled version, it appears to run the .scm instead
-	; of the compiled versions)
-	(else
-		;(print "LOADING .SCM FILES")
-		(load "langtypes.scm")
-		(load "errors.scm")
-		(load "interpreter.scm")
-		(load "deserializer.scm")
-		(load "native.scm")))
 
 (declare (uses langtypes))
 (declare (uses errors))
 (declare (uses interpreter))
 (declare (uses deserializer))
 (declare (uses native))
-
-(import langtypes)
-(import errors)
-(import interpreter)
-(import deserializer)
-(import native)
 
 (define SHOW_RUNTIME_STATS #f)
 (define NO_CATCH_EXCEPTIONS #f)

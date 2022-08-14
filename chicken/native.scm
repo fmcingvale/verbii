@@ -12,13 +12,6 @@
 ; module header
 (declare (unit native))
 
-(module native *
-(import scheme)
-(import (chicken base))
-(import (chicken syntax))
-
-; start of module code
-
 ; could probably trim some of these ...
 ;(import coops-primitive-objects)
 (import srfi-13) ; string library
@@ -36,11 +29,6 @@
 (declare (uses errors))
 (declare (uses interpreter))
 (declare (uses deserializer))
-
-(import langtypes)
-(import errors)
-(import interpreter)
-(import deserializer)
 
 (define ALLOW_OVERWRITING_WORDS #f)
 (define EXIT_ON_EXCEPTION #t)
@@ -727,5 +715,3 @@
 (set! OPCODE-FUNCTIONS
 	(list->vector
 		(list opcode-FRAME-GET opcode-FRAME-SET)))
-
-) ; end of modules

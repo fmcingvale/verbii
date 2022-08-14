@@ -58,3 +58,4 @@ cpp/bin/
 cpp/gc-8.0.6/
 cpp/libgc/
 cpp/gc64.dll
+*.obj

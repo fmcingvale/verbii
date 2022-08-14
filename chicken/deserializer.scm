@@ -12,13 +12,6 @@
 ; module header
 (declare (unit deserializer))
 
-(module deserializer *
-(import scheme)
-(import (chicken base))
-(import (chicken syntax))
-
-; start of module code
-
 ; could probably trim some of these ...
 ;(import coops-primitive-objects)
 (import srfi-13) ; string library
@@ -35,10 +28,6 @@
 (declare (uses interpreter))
 (declare (uses langtypes))
 (declare (uses errors))
-
-(import interpreter)
-(import langtypes)
-(import errors)
 
 (define (replace-escapes text)
 	(cond ; recursively apply until no more escapes remain
@@ -99,5 +88,3 @@
 		)
 	)
 )
-
-) ; end of module

@@ -12,13 +12,6 @@
 ; module header
 (declare (unit interpreter))
 
-(module interpreter *
-(import scheme)
-(import (chicken base))
-(import (chicken syntax))
-
-; start of module code
-
 ; could probably trim some of these ...
 (import srfi-13) ; string library
 (import srfi-34) ; exceptions
@@ -31,9 +24,6 @@
 
 (declare (uses langtypes))
 (declare (uses errors))
-
-(import langtypes)
-(import errors)
 
 (define STACK_SIZE (expt 2 16))
 (define LOCALS_SIZE (expt 2 10))
@@ -432,5 +422,3 @@
 					; see c++ notes on pushing everything else
 					(else 
 						(push intr obj)))))))
-
-) ; end of module

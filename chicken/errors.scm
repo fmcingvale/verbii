@@ -13,17 +13,10 @@
 ; module header
 (declare (unit errors))
 
-(module errors *
-(import scheme)
-(import (chicken base))
-(import (chicken syntax))
 (import srfi-13)
-
-; start of module code
 
 (declare (uses langtypes))
 
-(import langtypes)
 (import simple-exceptions)
 
 (define lang-error (lambda (wheresym msg . args)
@@ -38,4 +31,3 @@
 						) 
 						args) " ") " ***") 'lang-error) 'lang-error))))
 
-) ; end of module

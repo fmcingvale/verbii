@@ -43,24 +43,50 @@ General:
 * C#:
 
 	$ pacman -S mingw-w64-x86_64-mono
+	$ cd csharp 
+	$ ./mono-build.sh
+	$ cd ../verb
 	$ ../csharp/verbii run-all-tests.verb
+	
+
+* Chicken:
+	
+	| This *WORKS* but with two caveats:
+	| 	1. verbii has to be run from a normal command prompt, not with the mingw shell
+	|		-- stdio appears to get hung up when running under mingw
+	|	2. It is very slow compared to linux
+		
+	* The chicken with mingw conflicts with c# (both compilers are called 'csc'),
+	  so I build my own in a unique location.
+	  
+	$ wget https://code.call-cc.org/releases/5.3.0/chicken-5.3.0.tar.gz
+	$ tar zxf chicken-5.3.0.tar.gz
+	
+	**NOTE** the PREFIX must be an absoluate path *WITH DRIVE LETTER* (per chicken docs)
+	So adjust this for the location of msys2 on your system:
+	
+	$ make PLATFORM=mingw-msys PREFIX=c:/msys2/usr/local/chicken
+	$ make PLATFORM=mingw-msys PREFIX=c:/msys2/usr/local/chicken install
+	
+	$ for name in srfi-13 srfi-34 srfi-1 srfi-69 dyn-vector miscmacros simple-exceptions continuations filepath ; do
+		/usr/local/chicken/bin/chicken-install $name ; done
+		
+	$ cd verbii
+	$ source setup.sh 
+	$ cd chicken
+	$ make
+	
+	* Test [from NORMAL command prompt, NOT mingw shell]
+		$ cd verbii
+		$ setupenv.bat
+		$ cd verb
+		$ ..\chicken\verbii.bat run-all-tests.verb		
 	
 ====================================================================================
  Currently broken -- NOTE -- these are not broken PORTS, they are broken build tools
  under mingw (i.e. the builds that break are not verbii but 3rd party sources)
 ====================================================================================
 
-* Chicken:
-	
-	** BROKEN **
-	
-	* The chicken with mingw conflicts with c# (both compilers are called 'csc'),
-	  so I build my own in a unique location.
-	  
-	$ wget https://code.call-cc.org/releases/5.3.0/chicken-5.3.0.tar.gz
-	$ tar zxf chicken-5.3.0.tar.gz
-	$ make PLATFORM=mingw-msys PREFIX=/usr/local/chicken
-	
 * Lua:
 
 	** BROKEN **
