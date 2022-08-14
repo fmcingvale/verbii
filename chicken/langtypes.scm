@@ -5,7 +5,7 @@
 ;;;
 ;;; Type mappings:
 ;;;
-;;;	verbii		Lua
+;;;	verbii		Chicken
 ;;;	------		---
 ;;;	null		Null (class) 
 ;;; void		Void (class)
