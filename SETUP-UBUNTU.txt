@@ -87,19 +87,14 @@ Chicken
 
 	* Download latest chicken, e.g. chicken-5.3.0.tar.gz
 	* unpack, then cd chicken-5.3.0
-	* make PLATFORM=linux PREFIX=/usr/local/chicken install
+	$ make PLATFORM=linux PREFIX=/usr/local/chicken
+	$ sudo make PLATFORM=linux PREFIX=/usr/local/chicken install
 
-	* /usr/local/chicken/bin/chicken-install srfi-13
-	* /usr/local/chicken/bin/chicken-install srfi-34
-	* /usr/local/chicken/bin/chicken-install srfi-1
-	* /usr/local/chicken/bin/chicken-install srfi-69
-	* /usr/local/chicken/bin/chicken-install dyn-vector
-	* /usr/local/chicken/bin/chicken-install miscmacros
-	* /usr/local/chicken/bin/chicken-install simple-exceptions
-	* /usr/local/chicken/bin/chicken-install continuations
-	* /usr/local/chicken/bin/chicken-install filepath
-
-	* make
+	$ for name in srfi-13 srfi-34 srfi-1 srfi-69 dyn-vector miscmacros simple-exceptions continuations filepath ; do
+		sudo /usr/local/chicken/bin/chicken-install $name ; done
+		
+	$ cd verbii/chicken
+	$ make
 
 	Test:
 	
