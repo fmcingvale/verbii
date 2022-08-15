@@ -1,5 +1,5 @@
 
-\ Hashing functions
+\ Hashing & checksum functions
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
@@ -43,4 +43,50 @@
 	MAX_INT32 bit-and ( keep 32 bits only )
 	;
 
+\ CRC32 algorithm
+\
+\ Based on: http://www.libpng.org/pub/png/spec/1.2/PNG-CRCAppendix.html
 
+"numeric" import
+
+'CRC32-TABLE null make-var
+'CRC32-CONST "edb88320" parse-hex make-var
+'CRC32-ALL1s "ffffffff" parse-hex make-var
+
+: initialize-crc32-table ( -- )
+	@locals [ c n k ]
+	[ ] CRC32-TABLE!
+	\ for n = 0..255
+	{ ( n )
+		n c!
+		\ for k = 0..7
+		{ ( k )
+			c 1 bit-and 0 !=
+				\ c = 0xedb88320L ^ (c >> 1)
+				{ CRC32-CONST c 1 bit-shr bit-xor c! }
+				\ c = c >> 1
+				{ c 1 bit-shr c! }
+				ifelse
+		} 0 1 8 for-range
+		CRC32-TABLE c append drop
+	} 0 1 256 for-range
+	;
+	
+: crc32-update ( crc text -- crc )
+	CRC32-TABLE null? not if >>begin
+	initialize-crc32-table
+	@begin
+		\ n = 0..len-1
+		{ ( n )
+			CRC32-TABLE
+				\ crc_table[(c ^ buf[n]) & 0xff]
+				crc text n get ord bit-xor 255 bit-and get
+			crc 8 bit-shr bit-xor
+			crc!
+		} 0 1 text length for-range
+	crc
+	;
+		
+: crc32-calc ( text -- crc )
+	CRC32-ALL1s text crc32-update CRC32-ALL1s bit-xor
+	;
