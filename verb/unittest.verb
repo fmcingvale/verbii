@@ -6,7 +6,6 @@
 'UNITTEST-NR-PASS 0 make-var
 'UNITTEST-NR-FAIL 0 make-var
 'UNITTEST-SP0 void make-var
-'UNITTEST-LP0 void make-var
 \ maximum % difference when checking floating point results, on [0..1]
 'UNITTEST-MAX-PCTDIFF 1e-6 make-var
 \ NOT the smallest float that can be represented, but the value that is
@@ -20,9 +19,8 @@
 
 \ must call this once
 : unittest-init
-	\ remember starting values of SP/LP to make sure they match at end
+	\ remember starting value of SP to make sure it matches at end
 	SP UNITTEST-SP0!
-	LP UNITTEST-LP0!
 	;
 
 : unittest-report-pass ( msg )
@@ -161,10 +159,5 @@
 	SP UNITTEST-SP0 ==
 		{ "    Stack: ok" . CR }
 		{ "    ** ERROR ** Items left on stack" . CR }
-		ifelse
-		
-	LP UNITTEST-LP0 ==
-		{ "    Locals: ok" . CR }
-		{ "    ** ERROR ** Items left in locals" . CR }
 		ifelse
 	;
