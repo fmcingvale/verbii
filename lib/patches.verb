@@ -56,4 +56,41 @@
 
 : -rot ( b c a -- a b c ) a b c ;
 
+: nip ( a b -- b ) b ;
+
 ( ------ compiler ------- )
+
+\ byte-compile source from current reader stream
+: byte-compile ( -- names wordlists )
+	\ do NOT store compiled words into interpreter since that would prevent compiling
+	\  any code that contained a name that was already defined -- for example when
+	\  compiling this file
+	\
+	\ instead, store as a list of [name,wordlist] to COMPILED-NAMELISTS
+	@locals [ SP-START ]
+	
+	0 make-list COMPILED-NAMELISTS!
+
+	\ i need to count the number of parsed words that DID NOT go into COMPILED-NAMELISTS, so
+	\ save starting SP so I can count at the end
+	SP SP-START!
+	@loop
+	( read all parsed objects then make into a list )
+	syntax-next
+	dup void? if >>done 
+	dup list? if >>list
+	<<loop
+	@list
+	\ check for [ ,,inline ... ] and flatten
+	flatten-if-inline <<loop
+	@done
+	drop
+	( count # items added to stack and make list )
+	SP-START SP - 1 - make-list
+	( save this code under __main__ )
+	'__main__ save-defined-word
+	( perform finalization of all words )
+	compiler-finalize-all-words
+	( leave list of [ name list ] on stack )
+	COMPILED-NAMELISTS
+	;

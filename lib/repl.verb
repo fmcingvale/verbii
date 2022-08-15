@@ -114,7 +114,8 @@
 
 : repl-main
 	\ parse SCRIPT-ARGS and filter out my options
-	[ ] >L ( L0 = new script args being built )
+	@locals [ NEWARGS ]
+	[ ] NEWARGS! \ new script args being built
 	0
 	@parse-script-args
 		dup SCRIPT-ARGS length >= if >>done 
@@ -134,7 +135,7 @@
 	@got-dashdash ( i "--" )
 		drop
 		\ these are the args for the script to be run, excluding the '--'
-		SCRIPT-ARGS swap 1 + -1 slice LP ref swap + LP set! >>end
+		SCRIPT-ARGS swap 1 + -1 slice NEWARGS swap + NEWARGS! >>end
 	@set-filename ( i filename )
 		FILENAME void? not if >>have-filename
 		FILENAME! 1 + <<parse-script-args
@@ -147,7 +148,7 @@
 		drop
 	@end
 	\ set the filtered SCRIPT-ARGS that the next script will see now
-	L> SCRIPT-ARGS!
+	NEWARGS SCRIPT-ARGS!
 		\ "REPL FILTERED ARGS:" . SCRIPT-ARGS . CR
 
 	

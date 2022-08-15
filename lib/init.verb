@@ -99,30 +99,30 @@
 	dup 0 > if >>true >>done @true dup SP + 1 + ref repr puts 32 .c 1 - <<LOOP @done drop CR ;
 
 \ ( N -- print first N locals .. meant for debugging, like .S )
-: .L 
-	0 ( N index )
-	"Locals:" .
-	@loop
-		( N index )
-		2dup == if >>done
-		dup str "L" swap + ":" + . dup LP + ref repr puts 32 .c
-		1 + <<loop
-	@done 2drop
-	;
+\ : .L 
+\	0 ( N index )
+\	"Locals:" .
+\	@loop
+\		( N index )
+\		2dup == if >>done
+\		dup str "L" swap + ":" + . dup LP + ref repr puts 32 .c
+\		1 + <<loop
+\	@done 2drop
+\	;
 		
 \ *SEMI-DEPRECATED* -- named variables are much easier to use than locals, so
 \ the entire locals stack may eventually go away
 ( shortcuts for addresses of first 10 locals )
-: L0 LP ;
-: L1 LP 1 + ;
-: L2 LP 2 + ;
-: L3 LP 3 + ;
-: L4 LP 4 + ;
-: L5 LP 5 + ;
-: L6 LP 6 + ;
-: L7 LP 7 + ;
-: L8 LP 8 + ;
-: L9 LP 9 + ;
+\ : L0 LP ;
+\ : L1 LP 1 + ;
+\ : L2 LP 2 + ;
+\ : L3 LP 3 + ;
+\ : L4 LP 4 + ;
+\ : L5 LP 5 + ;
+\ : L6 LP 6 + ;
+\ : L7 LP 7 + ;
+\ : L8 LP 8 + ;
+\ : L9 LP 9 + ;
 
 \ same as get but leaves obj on stack
 : +get 
@@ -162,18 +162,18 @@
 \ *SEMI-DEPRECATED* -- this is to support v1 closures
 \ copy first nr locals into list [ LP LP+1 LP+2 ... ]
 \ ( nr -- list )
-: copy-locals-to-list
-	\ cannot use @( .. ) params since that would mess up the locals
-	[ ]
-	0
-	@loop ( nr list i )
-		dup SP 3 + ref ( nr list i i nr ) >= if >>done
-		dup LP + ref ( nr list i Li )
-		SP 2 + ref swap ( nr list i list Li ) append drop ( nr list i )
-		1 + ( nr list i+1 ) <<loop
-	@done ( nr list i )
-		drop nip
-	;
+\ : copy-locals-to-list
+\	\ cannot use @( .. ) params since that would mess up the locals
+\	[ ]
+\	0
+\	@loop ( nr list i )
+\		dup SP 3 + ref ( nr list i i nr ) >= if >>done
+\		dup LP + ref ( nr list i Li )
+\		SP 2 + ref swap ( nr list i list Li ) append drop ( nr list i )
+\		1 + ( nr list i+1 ) <<loop
+\	@done ( nr list i )
+\		drop nip
+\	;
 	
 \ ========================================================================
 \ String functions
