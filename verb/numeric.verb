@@ -8,8 +8,18 @@
 \ ======================================================================
 'PI    3.141592653589793 make-const \ to limit of double precision
 'E-VAL 2.718281828459045 make-const
-'FLOAT-MAX 1.7976931348623157E+308 make-const
-'FLOAT-MIN -1.7976931348623157E+308 make-const
+
+\ FLOAT-MAX SHOULD BE: 1.7976931348623157E+308
+\ however, chicken seems to not be able to print this and rounds it to 1.79769313486232E+308,
+\ which is too large for a double. so if the chicken port creates a .b file containing 1.7976931348623157E+308,
+\ it will be serialized as an invalid value and crash the other ports when they try to load it.
+\ so the FLOAT-MAX below is the highest exact value that chicken will print correctly.
+\
+\ random trivia: the real value of FLOAT-MAX, in hex, is 0x7fefffffffffffff
+\ so i decremented that until i got a value that ended in 14x instead of 15x.
+\ the hex value of the number below is 0x7feffffffffffffb
+'FLOAT-MAX 1.7976931348623149E+308 make-const
+'FLOAT-MIN -1.7976931348623149E+308 make-const
 
 \ ( n -- ; get n as binary string )
 : str.bin
