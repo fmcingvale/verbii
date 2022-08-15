@@ -14,6 +14,11 @@ static void string_replace(string &s, const char *from, const char *to) {
 		s.replace(i, strlen(from), to);
 }
 
+static void trimCRLF(string &s) {
+	while(s.size() > 0 && (s.back() == '\n' || s.back() == '\r'))
+		s.pop_back();
+}
+	
 // FYI -- stream from compiler will be a single list containing word definitions
 
 // see compiler.verb:serialize-object, but briefly, I only have to deserialize the
@@ -23,6 +28,9 @@ static void string_replace(string &s, const char *from, const char *to) {
 Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 	string line;
 	if(getline(fileIn, line)) {
+		// in case i'm reading a file generated on a different platform, and getline didn't
+		// remove the entire line ending
+		trimCRLF(line);
 		switch(line[0]) {
 			case 'i': return parseInt(line.substr(2));
 			case 'f': return parseFloat(line.substr(2));

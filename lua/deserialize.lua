@@ -8,11 +8,22 @@
 
 require("interpreter")
 
+function trimCRLF(text)
+	while text:sub(#text) == "\n" or text:sub(#text) == "\r" do
+		text = text:sub(1,#text-1)
+	end
+	
+	return text
+end
+
 function deserialize_stream(intr, fileIn)
 	local line = fileIn:read('l')
 	if line == fail then
 		return new_Void()
 	end
+	-- get rid of extra CR/LF -- could have been written by another platform so the
+	-- above :read('l') didn't remove the entire line ending
+	line = trimCRLF(line)
 	--print("LINE: " .. line)
 	if line:sub(1,1) == "i" then
 		return tonumber(line:sub(3))
