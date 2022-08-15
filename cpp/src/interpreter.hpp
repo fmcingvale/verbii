@@ -15,7 +15,6 @@
 
 // setting these small for now to help detect runaway code filling up the stack.
 const int STACK_SIZE = (1<<16);
-const int LOCALS_SIZE = (1<<10);
 const int HEAP_STARTSIZE = (1<<16);
 
 class Interpreter {
@@ -37,10 +36,10 @@ class Interpreter {
 	
 	// all are public so builtins can use without a hassle
 	
-	// 3 memory areas: stack, locals, free memory
+	// 2 memory areas: stack & free memory
 	//
-	// the stack & locals are both of fixed size, so live at the bottom of memory.
-	// program-allocated memory (vars) lives above them in a space that will be
+	// the stack is of fixed size, so it lives at the bottom of memory.
+	// program-allocated memory (vars) lives above it in a space that will be
 	// reallocated as needed
 	//
 	// plain integers are used to address all 3 areas
@@ -48,8 +47,6 @@ class Interpreter {
 	
 	// current stack pointer (points to item on top of stack), empty value and lowest usable index
 	int SP, SP_EMPTY, SP_MIN;
-	// same for locals
-	int LP, LP_EMPTY, LP_MIN;
 	// starting index for program-allocatable memory
 	int HEAP_START;
 	// last valid index
@@ -104,7 +101,6 @@ class Interpreter {
 	void print_stats();
 	int max_callstack;
 	int min_run_SP;
-	int min_run_LP;
 	unsigned long nr_tailcalls;
 
 	protected:

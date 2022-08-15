@@ -23,15 +23,12 @@ public class Interpreter {
 	// without searching for (int) casts to change as well.
 
 	public const int STACK_SIZE = (1<<16);
-	public const int LOCALS_SIZE = (1<<10);
 	public const int HEAP_STARTSIZE = (1<<16);
 
 	public List<LangObject> OBJMEM;
 	
 	// current stack pointer (points to item on top of stack), empty value and lowest usable index
 	public int SP, SP_EMPTY, SP_MIN;
-	// same for locals
-	public int LP, LP_EMPTY, LP_MIN;
 	// next free index to allocate in heap
 	public int HEAP_NEXTFREE;
 
@@ -45,7 +42,6 @@ public class Interpreter {
 	// stats
 	public int max_callstack;
 	public int min_run_SP;
-	public int min_run_LP;
 	public ulong nr_tailcalls;
 
 	// user defined words - access with methods only
@@ -53,9 +49,9 @@ public class Interpreter {
 	
 	public Interpreter() {
 		//Console.WriteLine("*** STARTING INTERPRETER ***");
-		OBJMEM = new List<LangObject>(STACK_SIZE+LOCALS_SIZE+HEAP_STARTSIZE);
+		OBJMEM = new List<LangObject>(STACK_SIZE+HEAP_STARTSIZE);
 		// any better way to do this??
-		for(int i=0; i<(STACK_SIZE+LOCALS_SIZE+HEAP_STARTSIZE); ++i) {
+		for(int i=0; i<(STACK_SIZE+HEAP_STARTSIZE); ++i) {
 			OBJMEM.Add(new LangInt(0));
 		}
 
@@ -63,11 +59,7 @@ public class Interpreter {
 		SP_EMPTY = SP_MIN + STACK_SIZE;
 		SP = SP_EMPTY;
 		
-		LP_MIN = SP_EMPTY;
-		LP_EMPTY = LP_MIN + LOCALS_SIZE;
-		LP = LP_EMPTY;
-
-		HEAP_NEXTFREE = LP_EMPTY;
+		HEAP_NEXTFREE = SP_EMPTY;
 
 		WORDS = new Dictionary<string,List<LangObject>>();
 
@@ -79,7 +71,6 @@ public class Interpreter {
 		// stats
 		max_callstack = 0;
 		min_run_SP = SP;
-		min_run_LP = LP;
 		nr_tailcalls = 0;
 	}
 
@@ -90,15 +81,12 @@ public class Interpreter {
 		Console.WriteLine("  Builtin words: " + Builtins.builtins.Count);
 		Console.WriteLine("  User-defined words: " + WORDS.Count);
 		Console.WriteLine("  Max stack depth: " + (SP_EMPTY - min_run_SP));
-		Console.WriteLine("  Max locals depth: " + (LP_EMPTY - min_run_LP));
 		Console.WriteLine("  Max callstack depth: " + max_callstack);
 		Console.WriteLine("  Tail calls: " + nr_tailcalls);
 
 		Console.WriteLine("* Notices:");
 		if(SP != SP_EMPTY)
-			Console.WriteLine("  Stack is not empty! (" + (SP_EMPTY-SP) + " items)");
-		if(LP != LP_EMPTY)
-			Console.WriteLine("  Locals are not empty! (" + (LP_EMPTY-LP) + " items)");
+			Console.WriteLine("  Stack is not empty! (" + (SP_EMPTY-SP) + " items)");		
 	}
 
 	// allocate space for nr objects, returning starting index

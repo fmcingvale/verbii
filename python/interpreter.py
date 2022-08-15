@@ -14,26 +14,21 @@ from errors import LangError
 
 class Interpreter(object):
 	STACK_SIZE = (1<<16)
-	LOCALS_SIZE = (1<<10)
 	HEAP_STARTSIZE = (1<<16) # grows as needed
 
 	def __init__(self):
-		# 3 memory areas here: stack, locals and heap (program allocatable memory)
+		# 2 memory areas here: stack and heap (program allocatable memory)
 		# these are object slots - can each hold any size object
-		self.OBJMEM = [0] * (self.STACK_SIZE + self.LOCALS_SIZE + self.HEAP_STARTSIZE)
+		self.OBJMEM = [0] * (self.STACK_SIZE + self.HEAP_STARTSIZE)
 		# indexes: stack pointer, empty value and lowest usable index
 		# stack is first:
 		self.SP_MIN = 0
 		self.SP_EMPTY = self.SP_MIN + self.STACK_SIZE
 		self.SP = self.SP_EMPTY
-		# locals are next:
-		self.LP_MIN = self.SP_EMPTY
-		self.LP_EMPTY = self.LP_MIN + self.LOCALS_SIZE
-		self.LP = self.LP_EMPTY
 		# next free heap index to allocate
 		# note -- heap never shrinks even when vars are deleted. however, vars are intended to
 		# be toplevel only, so this is not really a practical problem
-		self.HEAP_NEXTFREE = self.LP_EMPTY
+		self.HEAP_NEXTFREE = self.SP_EMPTY
 
 		self.re_integer = re.compile(r"""(^[+\-]?[0-9]+$)""")
 		self.re_lambda = re.compile(r"""\$<lambda ([0-9]+)>""")
@@ -49,7 +44,6 @@ class Interpreter(object):
 		# stats
 		self.max_callstack = 0
 		self.min_run_SP = self.SP
-		self.min_run_LP = self.LP
 		self.nr_tailcalls = 0
 
 	def print_stats(self):
@@ -60,7 +54,6 @@ class Interpreter(object):
 		print("  Builtin words: {0}".format(len(BUILTINS)))
 		print("  User-defined words: {0}".format(len(self._WORDS)))
 		print("  Max stack depth: {0}".format(self.SP_EMPTY - self.min_run_SP))
-		print("  Max locals depth: {0}".format(self.LP_EMPTY - self.min_run_LP))
 		print("  Max callstack depth: {0}".format(self.max_callstack))
 		print("  Tail calls: {0}".format(self.nr_tailcalls))
 

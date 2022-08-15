@@ -26,7 +26,6 @@
 (declare (uses errors))
 
 (define STACK_SIZE (expt 2 16))
-(define LOCALS_SIZE (expt 2 10))
 (define HEAP_STARTSIZE (expt 2 16))
 
 ; populated from native.scm
@@ -43,9 +42,6 @@
 	(SP_EMPTY intr-SP_EMPTY intr-SP_EMPTY-set!)
 	(SP intr-SP intr-SP-set!)
 
-	(LP_MIN intr-LP_MIN intr-LP_MIN-set!)
-	(LP_EMPTY intr-LP_EMPTY intr-LP_EMPTY-set!)
-	(LP intr-LP intr-LP-set!)
 	; heap will grow as needed, thanks to dynvector
 	(HEAP_NEXTFREE intr-HEAP_NEXTFREE intr-HEAP_NEXTFREE-set!)
 	; WORDS[name: string] = List
@@ -60,22 +56,17 @@
 	(callstack-depth callstack-depth callstack-depth-set!)
 	(max-callstack max-callstack max-callstack-set!)
 	(min-run-SP min-run-SP min-run-SP-set!)
-	(min-run-LP min-run-LP min-run-LP-set!)
 	(nr-tail-calls nr-tail-calls nr-tail-calls-set!))
 
 (define (make-Interpreter)
 	(let ((intr (make-empty-Interpreter)))
-		(intr-OBJMEM-set! intr (make-dynvector (+ STACK_SIZE LOCALS_SIZE HEAP_STARTSIZE) 0))
+		(intr-OBJMEM-set! intr (make-dynvector (+ STACK_SIZE HEAP_STARTSIZE) 0))
 		
 		(intr-SP_MIN-set! intr 0)
 		(intr-SP_EMPTY-set! intr STACK_SIZE)
 		(intr-SP-set! intr (intr-SP_EMPTY intr))
 
-		(intr-LP_MIN-set! intr STACK_SIZE)
-		(intr-LP_EMPTY-set! intr (+ STACK_SIZE LOCALS_SIZE))
-		(intr-LP-set! intr (intr-LP_EMPTY intr))
-
-		(intr-HEAP_NEXTFREE-set! intr (+ STACK_SIZE LOCALS_SIZE))
+		(intr-HEAP_NEXTFREE-set! intr STACK_SIZE)
 
 		;(intr-WORDS-set! intr (make-hash-table #:test string=?))
 		(intr-WORDS-set! intr (make-hash-table))
@@ -89,7 +80,6 @@
 		(callstack-depth-set! intr 0)
 		(max-callstack-set! intr 0)
 		(min-run-SP-set! intr (intr-SP intr))
-		(min-run-LP-set! intr (intr-LP intr))
 		(nr-tail-calls-set! intr 0)
 
 		intr))
@@ -103,7 +93,6 @@
 	(print "  Builtin words: " (length (hash-table-keys BUILTINS)))
 	(print "  User-defined words: " (length (hash-table-keys (_WORDS intr))))
 	(print "  Max stack depth: " (- (intr-SP_EMPTY intr) (min-run-SP intr)))
-	(print "  Max locals depth: " (- (intr-LP_EMPTY intr) (min-run-LP intr)))
 	(print "  Max callstack depth: " (max-callstack intr))
 	(print "  Tail calls: " (nr-tail-calls intr))
 
@@ -116,10 +105,8 @@
 
 	(print "* Notices:")
 	(if (not (= (intr-SP intr) (intr-SP_EMPTY intr)))
-		(print "  Stack is not empty! (" (- (intr-SP_EMPTY intr) (intr-SP intr)) " items)"))
-	(if (not (= (intr-LP intr) (intr-LP_EMPTY intr)))
-		(print "  Locals are not empty! (" (- (intr-LP_EMPTY intr) (intr-LP intr)) " items)")))
-
+		(print "  Stack is not empty! (" (- (intr-SP_EMPTY intr) (intr-SP intr)) " items)")))
+	
 (define (allocate intr nr)
 	(let ((addr (intr-HEAP_NEXTFREE intr)))
 		(intr-HEAP_NEXTFREE-set! intr (+ (intr-HEAP_NEXTFREE intr) nr))

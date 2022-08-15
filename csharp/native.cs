@@ -264,35 +264,6 @@ class Builtins {
 		intr.min_run_SP = Math.Min(intr.min_run_SP,intr.SP);
 	}
 
-	// set locals pointer from addr on stack
-	// (LP values must be integers)
-	public static void setlp(Interpreter intr) {
-		long addr = popInt(intr,"LP!");
-		if(addr < intr.LP_MIN || addr > intr.LP_EMPTY) {
-			throw new LangError("Bad address in LP!: " + addr.ToString());
-		}
-		// since the above test passed, I know this conversion is ok
-		intr.LP = (int)addr;
-		// stats
-		intr.min_run_LP = Math.Min(intr.min_run_LP,intr.LP);
-	}
-
-	// pop top of stack and push to locals
-	public static void tolocal(Interpreter intr) {
-		if(intr.LP <= intr.LP_MIN) {
-			throw new LangError("Locals overflow");
-		}
-		intr.OBJMEM[--intr.LP] = intr.pop();
-	}
-
-	// pop top locals and push to stack
-	public static void fromlocal(Interpreter intr) {
-		if(intr.LP >= intr.LP_EMPTY) {
-			throw new LangError("Locals underflow");
-		}
-		intr.push(intr.OBJMEM[intr.LP++]);
-	}
-
 	// ( obj addr -- ) - save obj to addr
 	//
 	// two cases:
@@ -303,7 +274,7 @@ class Builtins {
 		var obj = intr.pop();
 		var addr_i = addr as LangInt;
 		if(addr_i != null) {
-			// SP or LP index
+			// SP index
 			if(addr_i.value < 0 || addr_i.value >= intr.OBJMEM.Count) {
 				throw new LangError("Bad address in set!: " + addr_i.value.ToString());
 			}
@@ -827,10 +798,6 @@ class Builtins {
 		{"depth", intr => intr.push(new LangInt(intr.SP_EMPTY - intr.SP))},
 		{"SP", intr => intr.push(new LangInt(intr.SP))},
 		{"SP!", setsp},
-		{"LP", intr => intr.push(new LangInt(intr.LP))},
-		{"LP!", setlp},
-		{">L", tolocal},
-		{"L>", fromlocal},
 		{"set!", set},
 		{"ref", _ref},
 		

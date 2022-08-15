@@ -104,34 +104,6 @@ function builtin_setsp(intr, addr)
 	intr.min_run_SP = math.min(intr.min_run_SP,intr.SP)
 end
 
--- set locals pointer from addr on stack
-function builtin_setlp(intr, addr)
-	if addr < intr.LP_MIN or addr > intr.LP_EMPTY then
-		error(">>>Bad address in LP!: " .. tostring(addr))
-	end
-	intr.LP = addr
-	-- stats
-	intr.min_run_LP = math.min(intr.min_run_LP,intr.LP)
-end
-
--- pop top of stack and push to locals
-function builtin_tolocal(intr)
-	if intr.LP <= intr.LP_MIN then
-		error(">>>Locals overflow")
-	end	
-	intr.LP = intr.LP - 1
-	intr.OBJMEM[intr.LP] = intr:pop()
-end
-
--- pop top locals and push to stack
-function builtin_fromlocal(intr)
-	if intr.LP >= intr.LP_EMPTY then
-		error(">>>Locals underflow")
-	end
-	intr:push(intr.OBJMEM[intr.LP])
-	intr.LP = intr.LP + 1
-end
-
 function builtin_printchar(intr,a) 
 	FILE_STDOUT:write(string.char(a))
 	if a == 10 or a == 13 then
@@ -760,12 +732,8 @@ BUILTINS = {
 	[".c"] = { {"number"}, builtin_printchar },
 	["SP"] = { {}, function(intr) intr:push(intr.SP) end },
 	["SP!"] = { {"number"}, builtin_setsp},
-	["LP"] = { {}, function(intr) intr:push(intr.LP) end },
-	["LP!"] = { {"number"}, builtin_setlp},
 	["set!"] = { {"any","number"}, builtin_set},
 	["ref"] = { {"number"}, builtin_ref },
-	[">L"] = { {}, builtin_tolocal},
-	["L>"] = { {}, builtin_fromlocal},
 	["depth"] = { {}, function(intr) intr:push(intr.SP_EMPTY - intr.SP) end },
 	
 	["make-list"] = { {"number"}, builtin_make_list},

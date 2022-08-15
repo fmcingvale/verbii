@@ -215,7 +215,7 @@ static void builtin_set(Interpreter *intr) {
 	Object addr = intr->pop();
 	Object obj = intr->pop();
 	if(addr.isInt()) {
-		// SP or LP index
+		// SP index
 		int index = (int)addr.asInt();
 		if(index < 0 || index > intr->HEAP_END) {
 			throw LangError("Bad address in set!: " + to_string(index));
@@ -252,34 +252,6 @@ static void builtin_setsp(Interpreter *intr) {
 	intr->SP = addr;
 	// stats
 	intr->min_run_SP = min(intr->min_run_SP, intr->SP);
-}
-
-// set locals pointer from addr on stack
-// (LP values must be integers)
-static void builtin_setlp(Interpreter *intr) {
-	int addr = (int)popInt(intr, "Bad LP! arg");
-	if(addr < intr->LP_MIN || addr > intr->LP_EMPTY) {
-		throw LangError("Bad address in LP!: " + to_string(addr));
-	}
-	intr->LP = addr;
-	// stats
-	intr->min_run_LP = min(intr->min_run_LP, intr->LP);
-}
-
-// pop top of stack and push to locals
-static void builtin_tolocal(Interpreter *intr) {
-	if(intr->LP <= intr->LP_MIN) {
-		throw LangError("Locals overflow");
-	}
-	intr->OBJMEM[--intr->LP] = intr->pop();
-}
-
-// pop top locals and push to stack
-static void builtin_fromlocal(Interpreter *intr) {
-	if(intr->LP >= intr->LP_EMPTY) {
-		throw LangError("Locals underflow");
-	}
-	intr->push(intr->OBJMEM[intr->LP++]);
 }
 
 static void builtin_error(Interpreter *intr) {
@@ -838,10 +810,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 		{ "length", [](Interpreter* intr) {intr->push(intr->pop().opLength()); } },
 		{ "SP", [](Interpreter* intr) {intr->push(newInt(intr->SP)); } },
 		{ "SP!", builtin_setsp },
-		{ "LP", [](Interpreter* intr) {intr->push(newInt(intr->LP)); } },
-		{ "LP!", builtin_setlp },
-		{ ">L", builtin_tolocal },
-		{ "L>", builtin_fromlocal },
 		{ "ref", builtin_ref },
 		{ "set!", builtin_set },
 		{ ".wordlist", [](Interpreter* intr) {intr->push(intr->getWordlist()); } },

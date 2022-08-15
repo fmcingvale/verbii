@@ -28,17 +28,12 @@ Interpreter::Interpreter() {
 	SP_EMPTY = SP_MIN + STACK_SIZE;
 	SP = SP_EMPTY;
 
-	// locals are next, grows downward from LP_EMPTY
-	LP_MIN = SP_EMPTY;
-	LP_EMPTY = LP_MIN + LOCALS_SIZE;
-	LP = LP_EMPTY;
-
 	// heap is next
-	HEAP_START = LP_EMPTY;
+	HEAP_START = SP_EMPTY;
 	HEAP_END = HEAP_START + HEAP_STARTSIZE - 1;
 	HEAP_NEXTFREE = HEAP_START;
 	
-	// allocate stack+locals+heap
+	// allocate stack+heap
 	OBJMEM = (Object*)x_malloc((HEAP_END+1) * sizeof(Object));
 
 	// not running
@@ -51,7 +46,6 @@ Interpreter::Interpreter() {
 	// init stats
 	max_callstack = 0;
 	min_run_SP = SP;
-	min_run_LP = LP;
 	nr_tailcalls = 0;
 	PROFILE_CALLS = false;
 }
@@ -82,7 +76,6 @@ void Interpreter::print_stats() {
 	cout << "  Builtin words: " << BUILTINS.size() << endl;
 	cout << "  User-defined words: " << WORDS.size() << endl;
 	cout << "  Max stack depth: " << (SP_EMPTY - min_run_SP) << endl;
-	cout << "  Max locals depth: " << (LP_EMPTY - min_run_LP) << endl;
 	cout << "  Max callstack depth: " << max_callstack << endl;
 	cout << "  Tail calls: " << nr_tailcalls << endl;
 	if(PROFILE_CALLS) {
@@ -108,8 +101,6 @@ void Interpreter::print_stats() {
 		cout << "  Stack is not empty! (" << (SP_EMPTY-SP) << " items)\n";
 		cout << " => " << reprStack() << endl;
 	}
-	if(LP != LP_EMPTY)
-		cout << "  Locals are not empty! (" << (LP_EMPTY-LP) << " items)\n";
 }
 
 void Interpreter::push(Object obj) {
@@ -254,7 +245,7 @@ void Interpreter::code_call(ObjList *new_code, BoundLambda *bound_lambda) {
 	codepos = 0;
 	// 'version 2' closures -- this is used for framedata references
 	// FOR NOW at least, a new frame is created for each call -- eventually the
-	// compiler could optimize this if the function doesn't use any locals or take args etc.
+	// compiler could optimize this if the function doesn't use any @locals or take args etc.
 	// (these are pooled since the common case is where a frame is not linked to an inner
 	// frame so they are recycled ... trying this with a 'new' every time made a looping
 	// benchmark run 20x slower ... with pooling there was no slowdown versus 

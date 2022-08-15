@@ -27,7 +27,6 @@ function Interpreter:print_stats()
 	print("  Builtin words: " .. tostring(tableSize(BUILTINS)))
 	print("  User-defined words: " .. tostring(tableSize(self._WORDS)))
 	print("  Max stack depth: " .. tostring(self.SP_EMPTY - self.min_run_SP))
-	print("  Max locals depth: " .. tostring(self.LP_EMPTY - self.min_run_LP))
 	print("  Max callstack depth: " .. tostring(self.max_callstack))
 	print("  Tail calls: " .. tostring(self.nr_tail_calls))
 
@@ -37,9 +36,6 @@ function Interpreter:print_stats()
 	print("* Notices:")
 	if self.SP ~= self.SP_EMPTY then
 		print("  Stack is not empty! (" .. tostring(self.SP_EMPTY-self.SP) .. " items)")
-	end
-	if self.LP ~= self.LP_EMPTY then
-		print("  Locals are not empty! (" .. tostring(self.LP_EMPTY-self.LP) .. " items)")
 	end
 end
 
@@ -399,14 +395,13 @@ function Interpreter:new(obj)
 	self.__index = self
 	obj.__class__ = "Interpreter"
 	
-	-- 3 memory areas: stack, locals, heap (program-allocated memory)
+	-- 2 memory areas: stack & heap (program-allocated memory)
 	obj.STACK_SIZE = (1<<16)
-	obj.LOCALS_SIZE = (1<<10)
 	obj.HEAP_STARTSIZE = (1<<16)
 	
 	obj.OBJMEM = {}
 	-- prefill to create as correct size
-	for i=1,(obj.STACK_SIZE+obj.LOCALS_SIZE+obj.HEAP_STARTSIZE) do
+	for i=1,(obj.STACK_SIZE+obj.HEAP_STARTSIZE) do
 		obj.OBJMEM[i] = 0
 	end
 
@@ -415,13 +410,8 @@ function Interpreter:new(obj)
 	obj.SP_EMPTY = obj.SP_MIN + obj.STACK_SIZE
 	obj.SP = obj.SP_EMPTY
 	
-	-- locals next:
-	obj.LP_MIN = obj.SP_EMPTY
-	obj.LP_EMPTY = obj.LP_MIN + obj.LOCALS_SIZE
-	obj.LP = obj.LP_EMPTY
-	
 	-- next free heap index to allocate
-	obj.HEAP_NEXTFREE = obj.LP_EMPTY
+	obj.HEAP_NEXTFREE = obj.SP_EMPTY
 
 	-- code currently being run or nil for not running
 	obj.code = nil
@@ -437,7 +427,6 @@ function Interpreter:new(obj)
 	-- stats
 	obj.max_callstack = 0
 	obj.min_run_SP = obj.SP
-	obj.min_run_LP = obj.LP
 	obj.nr_tail_calls = 0
 
 	return obj

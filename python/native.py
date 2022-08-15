@@ -73,31 +73,6 @@ def builtin_setsp(I: Interpreter, addr):
 	# stats
 	I.min_run_SP = min(I.min_run_SP,I.SP)
 
-# set locals pointer from addr on stack
-def builtin_setlp(I: Interpreter, addr):
-	if addr < I.LP_MIN or addr > I.LP_EMPTY:
-		raise LangError("Bad address in LP!: " + str(addr))
-	
-	I.LP = addr
-	# stats
-	I.min_run_LP = min(I.min_run_LP,I.LP)
-
-# pop top of stack and push to locals
-def builtin_tolocal(I: Interpreter):
-	if I.LP <= I.LP_MIN:
-		raise LangError("Locals overflow")
-	
-	I.LP -= 1
-	I.OBJMEM[I.LP] = I.pop()
-
-# pop top locals and push to stack
-def builtin_fromlocal(I: Interpreter):
-	if I.LP >= I.LP_EMPTY:
-		raise LangError("Locals underflow")
-	
-	I.push(I.OBJMEM[I.LP])
-	I.LP += 1
-
 def popInt(I):
 	obj = I.pop()
 	if isInt(obj):
@@ -596,10 +571,6 @@ BUILTINS = {
 	'set!': ([object,int], builtin_set),
 	'SP': ([], lambda I: I.push(I.SP)),
 	'SP!': ([int], builtin_setsp),
-	'LP': ([], lambda I: I.push(I.LP)),
-	'LP!': ([int], builtin_setlp),
-	'>L': ([], builtin_tolocal),
-	'L>': ([], builtin_fromlocal),
 	'.wordlist': ([], builtin_wordlist),
 	'error': ([], builtin_error),
 
