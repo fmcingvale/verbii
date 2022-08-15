@@ -2,10 +2,10 @@
 
 PRODUCTION=1
 # define which verbii port is considered the production compiler (all should produce identical output,
-# so it's really just a matter of which one is easiest to run)
+# so it's really just a matter of which one is easiest to run on your system)
 #
 # i usually implement new things in the c++ compiler first, so that is a primary reason why
-# the c++ port is the default
+# the c++ port is the default. also it is the fastest implementation.
 VERBII='../cpp/verbii'
 
 # a sanity check in case this was run inadvertently ...
