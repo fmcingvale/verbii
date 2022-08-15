@@ -1054,12 +1054,13 @@
 	\  compiling this file
 	\
 	\ instead, store as a list of [name,wordlist] to COMPILED-NAMELISTS
-
+	@locals [ SP-START ]
+	
 	0 make-list COMPILED-NAMELISTS!
 
 	\ i need to count the number of parsed words that DID NOT go into COMPILED-NAMELISTS, so
 	\ save starting SP so I can count at the end
-	SP >L ( L0=SP at start )
+	SP SP-START!
 	@loop
 	( read all parsed objects then make into a list )
 	syntax-next
@@ -1072,7 +1073,7 @@
 	@done
 	drop
 	( count # items added to stack and make list )
-	L> SP - 1 - make-list
+	SP-START SP - 1 - make-list
 	( save this code under __main__ )
 	'__main__ save-defined-word
 	( perform finalization of all words )

@@ -1777,7 +1777,7 @@ i 0
 y make-list
 y COMPILED-NAMELISTS!
 y SP
-y >L
+o 131073
 y @loop
 y syntax-next
 y dup
@@ -1794,7 +1794,7 @@ y flatten-if-inline
 y <<loop
 y @done
 y drop
-y L>
+o 131072
 y SP
 y -
 i 1

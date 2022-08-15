@@ -43,21 +43,20 @@
 : 2drop ( a b -- ) ; 
 
 \ ( a b c d -- a b c d a b ) 
-: 2over 4 pick 4 pick ; 
+: 2over SP 3 + ref SP 3 + ref ;
 
-: 2swap ( a b c d -- C D A B ) c d a b ;
+: 2swap ( a b c d -- c d a b ) c d a b ;
 
 \ ( xn .. x1 N -- ) - drop N items
 : ndrop SP + 1 + SP! ;
 
-\ ( a b -- b ) 
-: nip >L drop L> ;
+: nip ( a b -- b ) b ;
 
-: tuck ( a b -- B A _B ) b a b ;
+: tuck ( a b -- b a b ) b a b ;
 
-: rot ( a b c -- B C A ) b c a ;
+: rot ( a b c -- b c a ) b c a ;
 
-: -rot ( b c a -- A B C ) a b c ;
+: -rot ( b c a -- a b c ) a b c ;
 
 \ *LOGICAL* not/and/or -- see bit-* functions for bitwise
 
