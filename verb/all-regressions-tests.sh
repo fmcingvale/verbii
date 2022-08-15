@@ -10,9 +10,13 @@
 #		across platforms.
 #
 # HOWEVER, the test suite has been design to be self-checking so that textual
-# comparison is not required to ensure a correct result. The real check is to 
+# comparison is not required to ensure a correct result. The real check is to
 # look at the # of tests passed/failed and make sure they match across platforms.
 
+# force all files to be recompiled at least once
+rm -f *.verb.b
+
+# remove old outputs
 rm TEST-RESULTS/output-*.txt
 
 echo "C++ ..."
