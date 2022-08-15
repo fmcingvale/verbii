@@ -29,6 +29,10 @@ public class Deserializer {
 			if(line == null) {
 				return new LangVoid();
 			}
+			// remove any \n or \r left on line
+			while(line.Length > 0 && (line[line.Length-1] == '\n' || line[line.Length-1] == '\r'))
+				line.Remove(line.Length-1);
+			
 			switch(line[0]) {
 				case 'i': return new LangInt(long.Parse(line.Substring(2)));
 				case 'f': return new LangFloat(double.Parse(line.Substring(2)));
