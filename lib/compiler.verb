@@ -295,20 +295,6 @@
 	@false-literal drop false return
 	@null-literal drop null return
 	;
-	
-\ if list is [ ,,inline obj1 .. objN ] then push obj1 .. objN to the stack
-\ and remove of list. else leave list alone.
-\
-\ ( list -- list or items )
-: flatten-if-inline
-	dup length 0 == if >>done \ empty list, leave on stack
-	dup 0 get ',,inline == if >>flatten
-	return \ not ,,inline, leave on stack
-	@flatten ( list )
-		\ drop ,,inline and push rest of list to stack
-		1 -1 slice unmake drop return
-	@done ( list )
-	;
 
 \ assumes @( was just read, parses until ) as an object list, prepended with ,,declargs
 : syntax-parse-decl-arglist

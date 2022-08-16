@@ -1,4 +1,4 @@
-L 56
+L 55
 W reader-open-string
 L 8
 o 1
@@ -501,30 +501,6 @@ y @null-literal
 y drop
 n 
 y return
-W flatten-if-inline
-L 22
-y dup
-y length
-i 0
-y ==
-y if
-y >>done
-y dup
-i 0
-y get
-y ',,inline
-y ==
-y if
-y >>flatten
-y return
-y @flatten
-i 1
-i -1
-y slice
-y unmake
-y drop
-y return
-y @done
 W syntax-parse-decl-arglist
 L 27
 y ',,declargs
