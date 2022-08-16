@@ -1079,28 +1079,30 @@
 	\  compiling this file
 	\
 	\ instead, store as a list of [name,wordlist] to COMPILED-NAMELISTS
-	@locals [ SP-START ]
-	
 	0 make-list COMPILED-NAMELISTS!
+	
+	\ objects that do NOT go into a word definition are put into MAINLIST and become __main__
+	@locals [ MAINLIST ]
+	[ ] MAINLIST!
 
-	\ i need to count the number of parsed words that DID NOT go into COMPILED-NAMELISTS, so
-	\ save starting SP so I can count at the end
-	SP SP-START!
 	@loop
-	( read all parsed objects then make into a list )
+	\ parse all of input stream -- this will either put new words into COMPILED-NAMELISTS
+	\ OR will leave objects on stack
 	syntax-next
 	dup void? if >>done 
-	dup list? if >>list
+	dup is-inline-list? if >>inline-list
+	\ any other objects go into MAINLIST
+	MAINLIST swap append MAINLIST!
 	<<loop
-	@list
-	\ check for [ ,,inline ... ] and flatten
-	flatten-if-inline <<loop
-	@done
+	@inline-list ( inline-list )
+		\ got [ ,,inline elem .. ] -- elements should be inlined instead of appended as a list
+		\ remove ,,inline and splice in elements
+		1 -1 slice MAINLIST swap extend drop 
+		<<loop
+	@done ( void )
 	drop
-	( count # items added to stack and make list )
-	SP-START SP - 1 - make-list
-	( save this code under __main__ )
-	'__main__ save-defined-word
+	( save MAINLIST as __main__ )
+	MAINLIST '__main__ save-defined-word
 	( perform finalization of all words )
 	compiler-finalize-all-words
 	( leave list of [ name list ] on stack )
