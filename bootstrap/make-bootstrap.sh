@@ -8,6 +8,12 @@ PRODUCTION=1
 # the c++ port is the default. also it is the fastest implementation.
 VERBII='../cpp/verbii'
 
+# set VERBII_BOOT since this should always run from this location.
+# this is convenient since it doesn't require it to be preset as well
+# as allowing the C# tests to run under WSL which for some reason
+# cannot handle absolute paths from /mnt ...
+export VERBII_BOOT=../lib/
+
 # a sanity check in case this was run inadvertently ...
 if [ $PRODUCTION -eq 1 ]; then
 	echo "                     *** CAUTION ***"

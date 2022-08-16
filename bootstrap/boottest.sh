@@ -12,6 +12,12 @@ rm -f test-output/*
 # path to verbii compiler script
 COMPILER="../verb/compile.verb"
 
+# set VERBII_BOOT since this should always run from this location.
+# this is convenient since it doesn't require it to be preset as well
+# as allowing the C# tests to run under WSL which for some reason
+# cannot handle absolute paths from /mnt ...
+export VERBII_BOOT=../lib/
+
 # treat the c++ port as the reference
 echo "C++ ..."
 ../cpp/verbii $COMPILER -- ../lib/boot.verb > test-output/boot-c-CPP.txt
