@@ -256,7 +256,7 @@
 	( now single quoted string )
 	dup 0 get '" == if >>string ( "... )
 	\ test for correct format before passing to parse-int or parse-float since those functions
-	\ will happily parse something like "123abc" as 123 
+	\ may (depending on platform) happily parse something like "123abc" as 123 
 	dup int-symbol? if >>integer
 	dup float-symbol? if >>float
 	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
