@@ -19,6 +19,12 @@ rm -f *.verb.b
 # remove old outputs
 rm TEST-RESULTS/output-*.txt
 
+# set VERBII_BOOT since this should always run from this location.
+# this is convenient since it doesn't require it to be preset as well
+# as allowing the C# tests to run under WSL which for some reason
+# cannot handle absolute paths from /mnt ...
+export VERBII_BOOT=../lib/
+
 echo "C++ ..."
 ../cpp/verbii run-all-tests.verb > TEST-RESULTS/output-cpp.txt
 echo "C# ..."
@@ -31,6 +37,7 @@ echo "Lua ..."
 ../lua/verbii run-all-tests.verb > TEST-RESULTS/output-lua.txt
 
 echo "** Make sure ALL pass/fail numbers match below ..."
+echo "** (Should be 1 pass and 1 fail line for each port listed above)"
 echo " "
 grep -h "Tests passed:" TEST-RESULTS/output-*.txt
 echo " "
