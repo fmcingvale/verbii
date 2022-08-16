@@ -58,23 +58,14 @@ Global TODO
 	* {1 2 3 4}
 	* @{1 2 3 4}
 	
+	-- * -- cons of this approach would be, for example, word breaking allows making variations
+	of matched tokens easily ... for example when I was making v1/v2 closures i added syntax
+	like @{ that wouldn't have been possible if '{' was ALWAYS treated specially, for example.
+	
+	-- * -- BUT ... character-based is more what is expected in modern languages i think so
+	may be worth it overall.
+	
 * add mergesort
-
-* add (something like) boxed values so that non-object types can be shared across scopes.
-	so e.g.:
-		"" s!
-		@{
-			.. do something with s ..
-		}
-		.. changes to s not seen by outer scope
-		
-	add something like:
-		"" boxed s! \ now s is a container holding a string
-		@{
-			s get \ get boxed value
-			s "hello" put \ change value in box
-		}
-		now 's get' will see changes from inner scope
 
 * i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
   NAME can be defined to get value and NAME! to set value. if arrays are needed then
@@ -88,13 +79,6 @@ Global TODO
 	* in other words, word after 'if' no longer has to be a jump, but if it is
 	  a jump, code will continue to work as it always has
 
-* the L0,L1, etc should become:
-	: L3 LP 3 + ref ;
-	: L3! LP 3 + set! ;
-
-* pick should be 0-based for consistency with other 0-indexed functions
-	* I think I should just add names S0, S0! S1 S1! etc to initlib instead
-
 * need to extend ,,del (or maybe just get rid of 'del NAME' and always make del stack-based??)
   to delete entries from more objects:
 	dict STRING ,,del ( delete a key from dictionary )
@@ -105,8 +89,6 @@ Global TODO
 
 ---[    Tests     ]------------------------------------------------------
 
-* reorganize tests by category?
- 
 ---[   Clean-up   ]------------------------------------------------------
 
 * maybe? rename bitops for readability:
@@ -118,17 +100,19 @@ Global TODO
 
 	* then, words should be lambdas instead of objlists so they can be bound as well
 
-* now that v1 closures have been removed from compiler, can remove associated internals from c++ then bring
-  other ports up to date
-  
 * this is broken (del in v2 funcs) ...
-	>> :V2 foo 'ZZZ 1 make-var del ZZZ ;
+	>> : foo 'ZZZ 1 make-var del ZZZ ;
 	=>
 	>> 'foo .dumpword
 	=> [ ''ZZZ 1 'make-var [ ',,inline ''ZZZ ',,del ] ]
 	>> foo
 	=> [ ''ZZZ 1 'make-var [ ',,inline ''ZZZ ',,del ] ] [ ',,inline ''ZZZ ',,del ]
 	
+	** lots of other examples fail like:
+		[ [ { del YYY } ] ]
+		
+		[ [ "a" { del FF } ] [ "b" { del GG } ] ]
+		
 * + on lists is kind of unsafe -- extend is better since it maintains object identity (important across
   closure boundaries). a list+ could be defined as:
 	: list+ @( list1 list2 ) [ ] list1 extend list2 extend ;
@@ -150,8 +134,6 @@ Global TODO
 * c++ reports (sometimes vastly) different # of tail calls with -stats than other ports
 
 * in native.* the pop* functions should take a 'where' argument like chicken
-
-* chicken: cleanout old comments
 
 ---[ Optimization ]------------------------------------------------------
 
@@ -175,15 +157,11 @@ Global TODO
 			should 9dup be expanded to the 3dups, then the 3dups expanded to dups,
 			then the dups expanded to their lowest level form?
 
-* improve exp by reducing x like dividing by 100,1000,1e6,etc. and adjusting
-  at end since values for powers of 10 can be in a table (exp algorithm seems
-  to have trouble with larger values)
-
-	* i think i should add more math functions (sin,cos,log,exp,etc.) -- these
+* i think i should add more math functions (sin,cos,log,exp,etc.) -- these
   are all basically 1-liners so isn't saving significant code space now to
   omit them.
 
-	* math: gcd, sqrt
+* math: gcd, sqrt
 	
 * the chicken argument dispatch to builtins is really slow ... rework
 
