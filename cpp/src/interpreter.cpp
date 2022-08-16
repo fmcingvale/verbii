@@ -474,6 +474,8 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 					continue;
 				}
 			}
+
+			throw LangError("Unknown word " + obj.fmtDisplay());
 		}
 		
 		else if(obj.isVoid()) {

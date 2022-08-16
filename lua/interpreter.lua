@@ -355,6 +355,8 @@ function Interpreter:run(objlist, stephook)
 				--print("CALL USERWORD:" .. fmtStackPrint(obj))
 				goto MAINLOOP
 			end
+
+			error(">>>Unknown word " .. fmtDisplay(obj))
 		end
 
 		if isOpcode(obj) then

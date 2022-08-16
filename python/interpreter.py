@@ -1,7 +1,8 @@
 from __future__ import annotations
 from langtypes import fmtStackPrint, MAX_VINT, MIN_VINT, \
 			isLambda, isSymbol, \
-			isList, isVoid, LangVoid, CallFrameData, isBoundLambda, isOpcode
+			isList, isVoid, LangVoid, CallFrameData, isBoundLambda, isOpcode, \
+			fmtDisplay
 """
 	Interpreter - runs code deserialized from bytecode.
 
@@ -315,6 +316,8 @@ class Interpreter(object):
 					# execute word by pushing its wordlist and continuing
 					self.code_call(self._WORDS[word])
 					continue
+				else:
+					raise LangError("Unknown word " + fmtDisplay(word))
 
 			elif isOpcode(word):
 				from opcodes import OPCODE_FUNCTIONS
