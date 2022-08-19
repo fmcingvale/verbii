@@ -3,22 +3,22 @@
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 : test-digit?
-	"0" digit? expectTrue
-	"5" digit? expectTrue
-	"0" ord 1 - chr digit? expectFalse
-	"9" ord 1 + chr digit? expectFalse
+	"0" digit? expect-true
+	"5" digit? expect-true
+	"0" ord 1 - chr digit? expect-false
+	"9" ord 1 + chr digit? expect-false
 	;
 	
 : test-any-digits?
-	"abc3de" any-digits? expectTrue
-	"3abc" any-digits? expectTrue
-	"abc6" any-digits? expectTrue
-	"7" any-digits? expectTrue
+	"abc3de" any-digits? expect-true
+	"3abc" any-digits? expect-true
+	"abc6" any-digits? expect-true
+	"7" any-digits? expect-true
 	
-	"abcde" any-digits? expectFalse
-	"abc" any-digits? expectFalse
-	"a" any-digits? expectFalse
-	"" any-digits? expectFalse
+	"abcde" any-digits? expect-false
+	"abc" any-digits? expect-false
+	"a" any-digits? expect-false
+	"" any-digits? expect-false
 	;
 	
 : test-ltrim-char
@@ -48,57 +48,57 @@
 	;
 	
 : test-int-string?
-	"123" int-string? expectTrue
-	"+123" int-string? expectTrue
-	"-123" int-string? expectTrue
-	"3" int-string? expectTrue
-	"+3" int-string? expectTrue
-	"-3" int-string? expectTrue
+	"123" int-string? expect-true
+	"+123" int-string? expect-true
+	"-123" int-string? expect-true
+	"3" int-string? expect-true
+	"+3" int-string? expect-true
+	"-3" int-string? expect-true
 	
-	"123a" int-string? expectFalse
-	"-123a" int-string? expectFalse
-	"+123a" int-string? expectFalse
-	"+123.4" int-string? expectFalse
-	"-123.4" int-string? expectFalse
-	"123.4" int-string? expectFalse
+	"123a" int-string? expect-false
+	"-123a" int-string? expect-false
+	"+123a" int-string? expect-false
+	"+123.4" int-string? expect-false
+	"-123.4" int-string? expect-false
+	"123.4" int-string? expect-false
 	;
 	
 : test-float-string?
-	"123" float-string? expectTrue
-	"123." float-string? expectTrue
-	"123.5" float-string? expectTrue
-	"123.567" float-string? expectTrue
-	"123.567" float-string? expectTrue
-	"123e6" float-string? expectTrue
-	"123e-5" float-string? expectTrue
-	"123.456e-5" float-string? expectTrue
+	"123" float-string? expect-true
+	"123." float-string? expect-true
+	"123.5" float-string? expect-true
+	"123.567" float-string? expect-true
+	"123.567" float-string? expect-true
+	"123e6" float-string? expect-true
+	"123e-5" float-string? expect-true
+	"123.456e-5" float-string? expect-true
 	
-	"+123" float-string? expectTrue
-	"+123." float-string? expectTrue
-	"+123.5" float-string? expectTrue
-	"+123.567" float-string? expectTrue
-	"+123.567" float-string? expectTrue
-	"+123e6" float-string? expectTrue
-	"+123e-5" float-string? expectTrue
-	"+123.456e-5" float-string? expectTrue
+	"+123" float-string? expect-true
+	"+123." float-string? expect-true
+	"+123.5" float-string? expect-true
+	"+123.567" float-string? expect-true
+	"+123.567" float-string? expect-true
+	"+123e6" float-string? expect-true
+	"+123e-5" float-string? expect-true
+	"+123.456e-5" float-string? expect-true
 	
-	"-123" float-string? expectTrue
-	"-123." float-string? expectTrue
-	"-123.5" float-string? expectTrue
-	"-123.567" float-string? expectTrue
-	"-123.567" float-string? expectTrue
-	"-123e6" float-string? expectTrue
-	"-123e-5" float-string? expectTrue
-	"-123.456e-5" float-string? expectTrue
+	"-123" float-string? expect-true
+	"-123." float-string? expect-true
+	"-123.5" float-string? expect-true
+	"-123.567" float-string? expect-true
+	"-123.567" float-string? expect-true
+	"-123e6" float-string? expect-true
+	"-123e-5" float-string? expect-true
+	"-123.456e-5" float-string? expect-true
 	
-	"+123z" float-string? expectFalse
-	"+123.z" float-string? expectFalse
-	"+123.5z" float-string? expectFalse
-	"+123.56z7" float-string? expectFalse
-	"+12z3.567" float-string? expectFalse
-	"+123ez6" float-string? expectFalse
-	"+123ze-5" float-string? expectFalse
-	"+123.45z6e-5" float-string? expectFalse
+	"+123z" float-string? expect-false
+	"+123.z" float-string? expect-false
+	"+123.5z" float-string? expect-false
+	"+123.56z7" float-string? expect-false
+	"+12z3.567" float-string? expect-false
+	"+123ez6" float-string? expect-false
+	"+123ze-5" float-string? expect-false
+	"+123.45z6e-5" float-string? expect-false
 	;
 	
 : test-opcodes

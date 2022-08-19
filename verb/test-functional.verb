@@ -143,17 +143,17 @@
 	
 : test-any-all
 	\ tests of any? and all? )
-	"abcde" { "e" == } any? expectTrue
-	"01234" { "9" == } any? expectFalse
+	"abcde" { "e" == } any? expect-true
+	"01234" { "9" == } any? expect-false
 	
-	[ 10 20 30 40 ] { 30 > } any? expectTrue
-	[ 10 20 30 40 ] { 0 <  } any? expectFalse
+	[ 10 20 30 40 ] { 30 > } any? expect-true
+	[ 10 20 30 40 ] { 0 <  } any? expect-false
 
-	"mnopqr" { "m" >= } all? expectTrue
-	"mnopqr" { "r" <= } all? expectTrue
+	"mnopqr" { "m" >= } all? expect-true
+	"mnopqr" { "r" <= } all? expect-true
 
-	"mnolpqr" { "m" >= } all? expectFalse
-	"mnotpqr" { "r" <= } all? expectFalse
+	"mnolpqr" { "m" >= } all? expect-false
+	"mnotpqr" { "r" <= } all? expect-false
 	;
 
 : test-repeat

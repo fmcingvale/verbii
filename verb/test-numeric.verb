@@ -191,23 +191,23 @@
 	-9007199254740991 -9007199254740971 20 - expect==
 
 	( relational operators )
-	10 20 >= expectFalse
-	30 20 >= expectTrue
-	40 40 >= expectTrue
+	10 20 >= expect-false
+	30 20 >= expect-true
+	40 40 >= expect-true
 
-	-12 8 > expectFalse
-	100 2 > expectTrue
-	212 -84 > expectTrue
-	123 123 > expectFalse
-	-456 -456 > expectFalse
+	-12 8 > expect-false
+	100 2 > expect-true
+	212 -84 > expect-true
+	123 123 > expect-false
+	-456 -456 > expect-false
 
-	10 20 < expectTrue
-	30 10 < expectFalse
-	40 40 < expectFalse
+	10 20 < expect-true
+	30 10 < expect-false
+	40 40 < expect-false
 
-	15 20 <= expectTrue
-	35 21 <= expectFalse
-	40 40 <= expectTrue
+	15 20 <= expect-true
+	35 21 <= expect-false
+	40 40 <= expect-true
 
 	( combinations of rich math operations )
 	30 10 20 + expect==

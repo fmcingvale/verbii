@@ -101,17 +101,17 @@
 	;
 
 : test-logical-ops 
-	true true and expectTrue
-	true false and expectFalse
-	false true and expectFalse
-	false false and expectFalse
+	true true and expect-true
+	true false and expect-false
+	false true and expect-false
+	false false and expect-false
 	
-	true true or expectTrue
-	true false or expectTrue
-	false true or expectTrue
-	false false or expectFalse
+	true true or expect-true
+	true false or expect-true
+	false true or expect-true
+	false false or expect-false
 	
-	true not expectFalse
-	false not expectTrue
+	true not expect-false
+	false not expect-true
 	;
 	

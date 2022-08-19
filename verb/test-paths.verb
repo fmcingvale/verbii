@@ -5,16 +5,16 @@
 "unittest" import
 
 : test-is-alphabetic?
-	"A" is-alphabetic? expectTrue
-	"M" is-alphabetic? expectTrue
-	"Z" is-alphabetic? expectTrue
-	"a" is-alphabetic? expectTrue
-	"p" is-alphabetic? expectTrue
-	"z" is-alphabetic? expectTrue
+	"A" is-alphabetic? expect-true
+	"M" is-alphabetic? expect-true
+	"Z" is-alphabetic? expect-true
+	"a" is-alphabetic? expect-true
+	"p" is-alphabetic? expect-true
+	"z" is-alphabetic? expect-true
 	
-	"4" is-alphabetic? expectFalse
-	"." is-alphabetic? expectFalse
-	"!" is-alphabetic? expectFalse
+	"4" is-alphabetic? expect-false
+	"." is-alphabetic? expect-false
+	"!" is-alphabetic? expect-false
 	;
 	
 : test-seq-head-tail

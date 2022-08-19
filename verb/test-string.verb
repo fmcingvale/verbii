@@ -64,12 +64,12 @@
 	"" "  	 	  " string-ltrim expect==
 	"" "" string-ltrim expect==
 	
-	"abcde" string-empty? expectFalse
-	"e" string-empty? expectFalse
-	"  	e  		" string-empty? expectFalse
-	"" string-empty? expectTrue
-	" " string-empty? expectTrue
-	" 	 			   " string-empty? expectTrue
+	"abcde" string-empty? expect-false
+	"e" string-empty? expect-false
+	"  	e  		" string-empty? expect-false
+	"" string-empty? expect-true
+	" " string-empty? expect-true
+	" 	 			   " string-empty? expect-true
 	
 	"abc::def::ghi" [ "abc" "def" "ghi" ] "::" string-join expect==
 	"abc" [ "abc" ] "::" string-join expect==
@@ -95,23 +95,23 @@
 	"y" 121 chr expect==
 	"~" 126 chr expect==
 	
-	"A" upper? expectTrue
-	"M" upper? expectTrue
-	"Z" upper? expectTrue
-	"a" upper? expectFalse
-	"h" upper? expectFalse
-	"z" upper? expectFalse
-	"4" upper? expectFalse
-	">" upper? expectFalse
+	"A" upper? expect-true
+	"M" upper? expect-true
+	"Z" upper? expect-true
+	"a" upper? expect-false
+	"h" upper? expect-false
+	"z" upper? expect-false
+	"4" upper? expect-false
+	">" upper? expect-false
 	
-	"a" lower? expectTrue
-	"t" lower? expectTrue
-	"z" lower? expectTrue
-	"A" lower? expectFalse
-	"R" lower? expectFalse
-	"Z" lower? expectFalse
-	"6" lower? expectFalse
-	"?" lower? expectFalse
+	"a" lower? expect-true
+	"t" lower? expect-true
+	"z" lower? expect-true
+	"A" lower? expect-false
+	"R" lower? expect-false
+	"Z" lower? expect-false
+	"6" lower? expect-false
+	"?" lower? expect-false
 	
 	"A" "a" toupper expect==
 	"K" "k" toupper expect==

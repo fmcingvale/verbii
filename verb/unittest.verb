@@ -82,11 +82,11 @@
 	{ <= } "<=" A B true expect-generic-compare
 	;
 
-: expectTrue ( actual )
+: expect-true ( actual )
 	{ == } "true?" true actual expect-generic
 	;
 
-: expectFalse ( actual )
+: expect-false ( actual )
 	{ == } "false?" false actual expect-generic
 	;
 	

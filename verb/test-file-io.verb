@@ -4,20 +4,20 @@
 
 : test-file-io
 	"temp-out.txt" file-delete
-	"temp-out.txt" file-exists? expectFalse
+	"temp-out.txt" file-exists? expect-false
 	\ make sure deleting non-existant file doesn't raise an error
 	"temp-out.txt" file-delete
 
 	"temp-out.txt" "hello-file-write" file-write
 	"hello-file-write" "temp-out.txt" file-read expect==
 
-	"temp-out.txt" file-exists? expectTrue
+	"temp-out.txt" file-exists? expect-true
 	"temp-out.txt" file-delete
-	"temp-out.txt" file-exists? expectFalse
+	"temp-out.txt" file-exists? expect-false
 
 	\ make sure append creates file
 	"temp-out.txt" "*hello" file-append
-	"temp-out.txt" file-exists? expectTrue
+	"temp-out.txt" file-exists? expect-true
 	"temp-out.txt" "*file" file-append
 	"temp-out.txt" "*append" file-append
 
@@ -25,7 +25,7 @@
 
 	\ finally, use write to create (without deleting first!), then append more
 
-	"temp-out.txt" file-exists? expectTrue
+	"temp-out.txt" file-exists? expect-true
 	"temp-out.txt" "//hello" file-write
 	"temp-out.txt" "//file" file-append
 	"temp-out.txt" "//write+append" file-append

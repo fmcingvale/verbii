@@ -15,8 +15,8 @@ unittest-init
 10 20 expect>=
 20 10 expect<
 20 10 expect<=
-false expectTrue
-true expectFalse
+false expect-true
+true expect-false
 10 20 expect==f 
 10 10 expect!=f 
 10 20 40 "[ 10 20 30 ]" expect-stack drop drop drop
