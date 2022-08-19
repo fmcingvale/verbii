@@ -1,0 +1,185 @@
+
+\ Unittests based on rosettacode tasks.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+( https://rosettacode.org/wiki/Fibonacci_sequence )
+
+( get first nr fibonacci numbers as a list )
+: fibonacci ( nr -- list )
+	[ 0 1 ] list!
+	@loop
+		list length nr >= if >>done
+		\ add last 2 numbers and append
+		list
+			list -1 get list -2 get + 
+			append drop
+		
+		<<loop
+	@done
+		list
+	;
+
+: test-rosetta-fibonacci
+	[ 0 1 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 ]
+		20 fibonacci expect==
+	;
+	
+( https://rosettacode.org/wiki/Sum_digits_of_an_integer )
+
+\ calc sum of digits of nr (integer)
+: sumDigits ( nr -- sum )
+	0 sum!
+	@loop
+		nr 0 == if >>done
+		nr 10 /mod ( r q ) nr! ( new nr = quotient ) sum + sum! ( add remainder [i.e. lowest digit] to sum )
+		<<loop
+	@done
+		sum
+	;
+
+: test-rosetta-sumdigits
+	25 6982 sumDigits expect==
+	39 48395019 sumDigits expect==
+	36 1073741823 sumDigits expect==
+	;
+	
+( https://rosettacode.org/wiki/Proper_divisors )
+
+\ return proper divisors of nr as a list
+: proper-divisors ( nr -- list )
+	@locals [ i ]
+	[ ] list!
+	1 i!
+	@loop
+		i nr 2 / > if >>done ( can stop at nr/2 )
+		\ if (nr/i) has 0 remainder, then add i to list
+		nr i mod 0 ==
+			{ list i append drop }
+			ifthen
+		i 1 + i! <<loop
+	@done
+		list
+	;
+	
+: test-rosetta-proper-divisors
+	[ 1 2 4 5 10 20 25 50 ] 100 proper-divisors expect==
+	[ 1 2 4 5 8 10 20 25 40 50 100 125 200 250 500 ] 1000 proper-divisors expect==
+	[ 1 2 4 8 16 32 64 128 ] 256 proper-divisors expect==
+	;
+			
+( - https://rosettacode.org/wiki/Primality_by_trial_division - )
+
+: prime? ( nr )
+	@locals [ i ]
+	nr 1 <= if >>notprime
+	nr 2 == if >>prime
+	
+	2 i!
+	@loop
+		i nr 2 / > if >>prime ( can stop after i=n/2 )
+		nr i mod 0 == if >>notprime ( found a divisor )
+		i 1 + i! <<loop
+	@prime true return
+	@notprime false return
+	;
+	
+\ assumes end > start
+: find-primes-on-range ( start end )
+	@locals [ list ]
+	[ ] list!
+	{ ( n )
+		n prime?
+			{ list n append drop }
+			ifthen
+	} start 1 end start - for-range
+	list
+	;
+	
+: test-rosetta-primes-by-trial-division
+	[ 2 3 5 ]
+	-8 6 find-primes-on-range expect==
+	[ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]
+	-100 108 find-primes-on-range expect==
+	;
+	
+( https://rosettacode.org/wiki/Rot-13 )
+
+\ take a char (string) and return rot-13 encoding of char as string
+: rot13-char ( c -- c )
+	c "A" >= 
+	c "Z" <= and if >>upper
+	
+	c "a" >= 
+	c "z" <= and if >>lower
+	
+	( not alphabetic, return as is )
+	c return
+
+	@upper
+		c ord 13 + dup 90 <= if >>done
+		26 - >>done ( wrap around )
+	@lower
+		c ord 13 + dup 122 <= if >>done
+		26 - >>done ( wrap )
+	@done chr return
+	;
+	
+: rot13-string ( text ) text { rot13-char } map ;
+
+: test-rosetta-rot13
+	"Uryyb Jbeyq! 123 456 789 .=Gur Raq=."
+	"Hello World! 123 456 789 .=The End=." rot13-string expect==
+	
+	"Hello World! 123 456 789 .=The End=."
+	"Uryyb Jbeyq! 123 456 789 .=Gur Raq=." rot13-string expect==
+	
+	"789 Gur dhvpx oebja sbk whzcf bire gur ynml qbt *#&"
+	"789 The quick brown fox jumps over the lazy dog *#&" rot13-string expect==
+	
+	"789 The quick brown fox jumps over the lazy dog *#&"
+	"789 Gur dhvpx oebja sbk whzcf bire gur ynml qbt *#&" rot13-string expect==
+	;
+	
+( https://rosettacode.org/wiki/100_doors )
+	
+'DOORS [ ] make-var
+\ create 100 doors, all set to closed (0) [101 doors, so I can index them from 1..100 for clarity]
+{ DOORS 0 append drop } 101 repeat
+
+\ toggle state of DOOR[i]
+: toggle-door ( i )
+	DOORS i get 0 ==
+		{ DOORS i 1 put }
+		{ DOORS i 0 put }
+		ifelse
+		drop
+		;
+	
+: test-rosetta-100-doors
+	\ outer loop, use an increment value from 1..100
+	{ ( increment )
+		\ inner loop, iterate over i=iterate..100, i += iterate
+		@locals [ i ]
+		increment i!
+		{ i 100 <= }
+			{ 
+				i toggle-door
+				i increment + i!
+			}
+			while
+	} 1 1 100 for-range
+
+	\ make a list of the opened doors
+	'OPENED [ ] make-var
+	{ ( i )
+		DOORS i get 0 == if >>skip
+		OPENED i append drop
+		@skip
+	} 1 1 100 for-range
+
+	[ 1 4 9 16 25 36 49 64 81 100 ] OPENED expect==
+	
+	'OPENED ,,del
+	;
+	

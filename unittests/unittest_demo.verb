@@ -90,55 +90,6 @@ CR
 \
 \ ===============================================================================================
 
-( https://rosettacode.org/wiki/Fibonacci_sequence )
-
-: fibonacci ( nr -- ; print first nr numbers of fibonacci sequence )
-	0 . 1 . 1 - ( print 0 1 first )
-	0 1 ( N 0 1 )
-	@loop ( N a b )
-		2dup + rot drop dup . ( N b a+b )
-		rot 1 - dup 0 == if >>end ( b a+b N-1 )
-		-rot <<loop 
-	@end drop drop drop 
-	;
-
-"First 20 fibonacci numbers:" .
-20 fibonacci CR
-
-( https://rosettacode.org/wiki/Sum_digits_of_an_integer )
-
-: sumDigits ( nr -- sum of digits )
-	0 swap
-	@loop ( sum nr )
-		dup 10 /mod >L rot + swap drop L> ( rem+sum quot )
-		dup? 0 == if >>end <<loop
-	@end 
-	;
-
-"Sum digits: 6982 (25) --" . 6982 sumDigits . CR
-"Sum digits: 48395019 (39) --" . 48395019 sumDigits . CR
-"Sum digits: 1073741823 (36) --" . 1073741823 sumDigits . CR
-
-( https://rosettacode.org/wiki/Proper_divisors )
-
-: printProperDivisors ( n -- ; prints proper divisors of n )
-	( special case ) dup 1 == if >>eq1
-	( start divisor at 1 )
-	1 ( n d )
-	@loop
-		2dup mod 0 == if >>proper >>recur ( n d )
-	@proper ( n d ) 
-		dup .
-	@recur
-		1 + 2dup swap 2 / > ( n d+1 d+1>n/2 ) ( can stop at n/2 )
-		if >>done <<loop
-	@done drop drop
-	@eq1 
-	;
-
-"Proper divisors of 100:" . 100 printProperDivisors CR
-"Proper divisors of 256:" . 256 printProperDivisors CR
-
 ( https://rosettacode.org/wiki/Anonymous_recursion )
 
 \ this is true anonymous recursion, no names are defined ... 
@@ -213,7 +164,7 @@ CR
 "Expect 50:" .
 5 10 50 30 -20 8 19 41 0 12 10 nmax . CR
 
-\ there are no builtin control structures in verbii, other than >> and <<,
+\ there are no builtin control structures in verbii, other than 'if', '>>' and '<<',
 \ so you can invent whichever ones you like.
 \
 \ this is like a combination of a (for ..) and a (while ..)
@@ -273,38 +224,6 @@ CR
 		@skip drop drop 5 spaces @done
 		} for-while CR
 } for-while
-
-( https://rosettacode.org/wiki/100_doors )
-
-"* 100 Doors *" . CR
-
-var DOORS 101 ( numbering these 1..100 since 0 as increment would infinite loop )
-( -- set all to zero (closed) -- )
-1 1 { 100  <= } { 0 swap DOORS + set! } for-while
-
-: toggle ( n=1,0 -- 0,1 )
-	1 == if >>zero 1 return @zero 0 ;
-
-( -- for i={1..100} visit in loop with increment=i, toggling doors )
-1 1 { 100 <= } {
-	( outer-count )
-	dup { 100 <= } ( outer outer .. -- start at outer with increment of outer )
-	{
-		( inner )
-		dup DOORS + ref ( inner DOORS[inner] )
-		toggle swap DOORS + set! ( DOORS[inner] = toggled )
-	} for-while
-} for-while
-
-"Opened doors ..." .
-1 1 { 100 <= } { 
-	( outer )
-	dup DOORS + ref ( outer DOORS[outer] )
-	0 == if >>skip
-	. @skip } for-while CR
-	
-del DOORS 
-clear
 
 ( -- test fold -- )
 
@@ -407,19 +326,6 @@ del fs del f1 del f2 del fsf1 del fsf2
 
 ( --- some more non-rosetta tasks --- )
 
-"* check for list literal bug" . CR
-( ** unintended behavior -- the list grows on each call ** )
-: oops ( make a list of 1 2 3 4 ?? )
-	[ ] 1 append 2 append 3 append 4 append
-	\ the [ ] is created ONCE and is being reused on each call, growing infinitely
-	;
-
-"Expect [ 1 2 3 4 ]:" .
-oops . CR 
-"Expect [ 1 2 3 4 ]:" .
-oops . CR 
-"Expect [ 1 2 3 4 ]:" .
-oops . CR 
 
 ( -- test that dup'd lists correctly show changes -- )
 """Expect [ 10 20 30 hello 50 ] x 4:""" . CR
@@ -512,212 +418,10 @@ swap . . CR
 "Expect [ -10 .. 10, evens ]:" . -10 10 int-range { even? } filter . CR
 "Expect [ -10 .. 10, odds ]:" . -10 10 int-range { odd? } filter . CR
 
-( - https://rosettacode.org/wiki/Primality_by_trial_division - )
-
-: prime? ( n -- true|false )
-	dup 1 <= if >>below2
-	dup 2 == if >>is2
-
-	dup 2 / 2 swap ( n i=2 stop=n/2 )
-	@loop ( n i stop )
-			\ "LOOP:" . .S CR
-		-rot 2dup mod 0 == if >>notprime
-		1 + rot ( n i+1 stop )
-		2dup >= if >>isprime
-		<<loop
-	@notprime ( stop n i )
-		drop drop drop false return
-	@isprime ( n i stop )
-		drop drop drop true return
-	@below2 
-		drop false return
-	@is2
-		drop true return
-	;
-
-"* primes *" . CR
-"Expect [ 2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97 101 103 107 ]:" . CR
-"      " .
--100 108 int-range { prime? } filter . CR
-
-( https://rosettacode.org/wiki/Rot-13 )
-
-: rot13-char ( string -- rot13 of first char of string )
-	ord
-	dup 65 >=
-	over 90 <=
-	and if >>upper 
-
-	dup 97 >=
-	over 122 <=
-	and if >>lower
-
-	( not alphabetic, return as is )
-	chr return
-
-	@upper ( ord )
-		13 + dup 90 <= if >>done
-		26 - >>done ( wrap around )
-	@lower ( ord )
-		13 + dup 122 <= if >>done
-		26 - >>done ( wrap )
-	@done chr return
-	;
-
-"Expect: 789 Gur dhvpx oebja sbk whzcf bire gur ynml qbt *#%" . CR
-"       " .
-"789 The quick brown fox jumps over the lazy dog *#&" { rot13-char } map dup . CR
-
-"Expect: 789 The quick brown fox jumps over the lazy dog *#&" . CR
-"       " .
-{ rot13-char } map . CR
-
-"Expect: 789 Gur DHVPX oebja SBK whzcf bire gur YNML qbt *#%" . CR
-"       " .
-"789 The QUICK brown FOX jumps over the LAZY dog *#&" { rot13-char } map dup . CR
-
-"Expect: 789 The QUICK brown FOX jumps over the LAZY dog *#&" . CR
-"       " .
-{ rot13-char } map . CR
-
-\ for some earlier compiler bugs in the serializer
-\ note: i do NOT have "Expect ..." strings here since if there is an error in
-\ serialization, it would likely affect those strings too so that could give
-\ a false positive if both get messed up in the same way.
-"abcde" serialize-escape-string . CR
-"ab" 9 chr + "de" + 9 chr + "fe" + serialize-escape-string . CR
-"ab" 10 chr + "cd" + 13 chr + "ef" + serialize-escape-string . CR
-"ab%de%%fg" serialize-escape-string . CR
-"ab cd ef" serialize-escape-string . CR
 
 "END STACK:" . .S CR
 
-\ ---- file I/O testing ------
 
-"temp-out.txt" file-delete
-"Expect false:" . "temp-out.txt" file-exists? . CR
-\ make sure deleting non-existant file doesn't raise an error
-"temp-out.txt" file-delete
 
-"temp-out.txt" "hello-file-write" file-write
-"Expect hello-file-write:" . "temp-out.txt" file-read . CR
 
-"Expect true:" . "temp-out.txt" file-exists? . CR
-"temp-out.txt" file-delete
-"Expect false:" . "temp-out.txt" file-exists? . CR
 
-\ make sure append creates file
-"temp-out.txt" "*hello" file-append
-"Expect true:" . "temp-out.txt" file-exists? . CR
-"temp-out.txt" "*file" file-append
-"temp-out.txt" "*append" file-append
-
-"Expect *hello*file*append:" . "temp-out.txt" file-read . CR
-
-\ finally, use write to create (without deleting first!), then append more
-
-"Expect true:" . "temp-out.txt" file-exists? . CR
-"temp-out.txt" "//hello" file-write
-"temp-out.txt" "//file" file-append
-"temp-out.txt" "//write+append" file-append
-
-"Expect //hello//file//write+append:" . "temp-out.txt" file-read . CR
-
-\ without deleting, make sure open-as-stdout creates as new
-"temp-out.txt" open-as-stdout
-"hello" puts
-"-----" puts
-"stdout" puts
-void open-as-stdout
-
-"Expect hello-----stdout:" . "temp-out.txt" file-read . CR
-
-( test variations of @( .. ), @args, @locals )
-
-: test-1 ( a b c -- z ) * + ;
-
-: test-2 ( a b c -- z ) @args [ a b c ] a b c * + ;
-
-: test-3 ( a b c -- z ) @args [ a b c ] @locals [ z ] a b c * + z! z ;
-
-: test-4 @( a b c ) a b c * + ;
-
-: test-5 @( a b c -- x y ) a b c * + x! a b c + * y! x y ;
-
-"Expect 610:" . 10 20 30 test-1 . CR
-"Expect 1220:" . 20 30 40 test-2 . CR
-"Expect 205:" . 5 10 20 test-3 . CR
-"Expect 155:" . 15 7 20 test-4 . CR
-
-"Expect [ 891 6375 ]:" . 85 62 13 test-5 2 make-list . CR
-
-\ trying some new stuff with a more formal unittest structure ...
-
-: unittest-expect @( expect actual )
-	expect actual == if >>ok
-	"*** ERROR *** expecting " . expect . "but got" . actual . CR return
-	@ok "    " . expect . "==" . actual . ": ok" . CR
-	;
-	
-\ make sure unittest-expect is working
-"* unittest-expect ..." . CR
-18 18 unittest-expect
-"hello" "hello" unittest-expect
-true true unittest-expect
-'world 'world unittest-expect
-4.125 4.125 unittest-expect
-"---THE FOLLOWING LINES SHOULD ALL BE ERRORS---" . CR
-18 19 unittest-expect
-"hello" "hellop" unittest-expect
-"hello" 'hello unittest-expect
-false true unittest-expect
-'world 'worl unittest-expect
-4.125 5.75 unittest-expect
-"---END OF EXPECTED ERRORS ------------------" . CR
-
-\ string upper/lower test cases as:
-\	[ test-string as-upper as-lower ]
-"* string upper/lower ..." . CR
-[
-	[ "AbCDef" "ABCDEF" "abcdef" ]
-	[ "AbcDE 12345 xyZ #@" "ABCDE 12345 XYZ #@" "abcde 12345 xyz #@" ]
-] 
-@{ unmake drop 
-	@{ @args [ s-test s-upper s-lower ]
-		s-upper s-test string-upper unittest-expect
-		s-lower s-test string-lower unittest-expect
-	} call
-} for-each
-
-"* find / strings ..." . CR
-[
-	\ string char expect-index
-	[ "giant flying balloonz" "a" 2 ]
-	[ "giant flying balloonz" "g" 0 ]
-	[ "giant flying balloonz" "f" 6 ]
-	[ "giant flying balloonz" "z" 20 ]
-	\ void isn't a literal so put null in list and catch it below
-	[ "giant flying balloonz" "G" null ]
-]
-@{ unmake drop
-	@{ @args [ string char index ]
-		index null? if >>expect-void 
-		index string @{ char == } find unittest-expect return
-		@expect-void
-		void string @{ char == } find unittest-expect
-	} call
-} for-each
-
-"* string-split ..." . CR
-[
-	\ string delims expect-list
-	[ "abc;def:ghi/jkl" ":/;" [ "abc" "def" "ghi" "jkl" ] ]
-	[ ";/:://:opq;;//;rst;:::uvw:;;/xyz//////:://;" ":/;" [ "opq" "rst" "uvw" "xyz" ] ]
-	[ ":://;;;;//;/;;/:" ":/;" [ ] ]
-	[ "//;;/;w:::;/x///:::;y::///::z///:::;" ":/;" [ "w" "x" "y" "z" ] ]
-]
-@{ unmake drop
-	@{ @args [ string delims expect ]
-		expect string delims string-split unittest-expect
-	} call
-} for-each
