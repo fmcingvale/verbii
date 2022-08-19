@@ -138,7 +138,7 @@
 	\ this was a bug in the interpreters -- bad assumption that dicts didn't need to be
 	\ pushed as literals ...
 	11 22 [ ] make-dict 33 44 5 make-list make-lambda
-	call "[ 11 22 { } 33 44 ]" expect-stack
+	call "[ 11 22 { } 33 44 ]" expect-stack 5 ndrop
 	;
 	
 : test-any-all
@@ -230,7 +230,7 @@
 	"zebfxt" { "z" == } find expect==
 	
 	5
-	"zebfxt" { "z" == } find expect==
+	"zebfxt" { "t" == } find expect==
 	
 	void
 	"zebfxt" { "r" == } find expect==
