@@ -1,0 +1,44 @@
+\ File I/O testing
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: test-file-io
+	"temp-out.txt" file-delete
+	"temp-out.txt" file-exists? expectFalse
+	\ make sure deleting non-existant file doesn't raise an error
+	"temp-out.txt" file-delete
+
+	"temp-out.txt" "hello-file-write" file-write
+	"hello-file-write" "temp-out.txt" file-read expect==
+
+	"temp-out.txt" file-exists? expectTrue
+	"temp-out.txt" file-delete
+	"temp-out.txt" file-exists? expectFalse
+
+	\ make sure append creates file
+	"temp-out.txt" "*hello" file-append
+	"temp-out.txt" file-exists? expectTrue
+	"temp-out.txt" "*file" file-append
+	"temp-out.txt" "*append" file-append
+
+	"*hello*file*append" "temp-out.txt" file-read expect==
+
+	\ finally, use write to create (without deleting first!), then append more
+
+	"temp-out.txt" file-exists? expectTrue
+	"temp-out.txt" "//hello" file-write
+	"temp-out.txt" "//file" file-append
+	"temp-out.txt" "//write+append" file-append
+
+	"//hello//file//write+append" "temp-out.txt" file-read expect==
+
+	\ without deleting, make sure open-as-stdout creates as new
+	"temp-out.txt" open-as-stdout
+	"hello" puts
+	"-----" puts
+	"stdout" puts
+	void open-as-stdout
+
+	"hello-----stdout" "temp-out.txt" file-read expect==
+	;
+	

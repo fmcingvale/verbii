@@ -429,7 +429,44 @@
 	R "b+5" get call 27 expect==
 	R "c*c" get call 33 33 * expect==
 	;
-	
+
+\ test variations of @( .. ), @args, @locals ... duplicates some of above but is
+\ compact and nice to have in one place
+
+\ ( a b c -- z )
+: args-test-1 * + ;
+
+\ ( a b c -- z )
+: args-test-2 @args [ a b c ] a b c * + ;
+
+\ ( a b c -- z )
+: args-test-3 @args [ a b c ] @locals [ z ] a b c * + z! z ;
+
+\ ( a b c -- z )
+\	a weird form, but meant to work like this ...
+: args-test-4 ( a ) @args [ b c ] @locals [ z ] a b c * + z! z ;
+
+\ ( a b c -- z )
+: args-test-5 ( a b c ) a b c * + ;
+
+\ ( a b c -- x y )
+: args-test-6 ( a b c -- x y ) a b c * + x! a b c + * y! x y ;
+
+\ ( a b c -- x y z )
+\	@locals are allowed to be scattered throughout a function, to allow keeping declarations near the code that uses them
+: args-test-7 ( a b c -- x y ) a b c * + @locals [ x ] x! @locals [ y ] a b c + * y! @locals [ z ] a b c * * z! x y z ;
+
+: test-all-arg-styles
+
+	610 10 20 30 args-test-1 expect==
+	1220 20 30 40 args-test-2 expect==
+	205 5 10 20 args-test-3 expect==
+	100 4 8 12 args-test-4 expect==
+	155 15 7 20 args-test-5 expect==
+
+	[ 891 6375 ] 85 62 13 args-test-6 2 make-list expect==
+	[ 402 440 4301 ] 11 17 23 args-test-7 3 make-list expect==
+	;
 
 
 	

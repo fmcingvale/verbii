@@ -119,3 +119,14 @@
 	3 [ 11 [ 22 [ 33 [ 44 ] 55 ] 66 ] 77 ] length expect==
 	;
 
+: list-returner
+	\ tests that a fresh copy is made of this on each call
+	[ ] 1 append 2 append 3 append 4 append
+	;
+	
+: test-list-deepcopies-ok
+	[ 1 2 3 4 ] list-returner expect==
+	[ 1 2 3 4 ] list-returner expect==
+	[ 1 2 3 4 ] list-returner expect==
+	;
+	

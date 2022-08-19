@@ -3,63 +3,6 @@
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 \
 
-10 20 30 
-depth
-. . . . CR
-depth
-
-10 20 30 40 50 60
-SP 3 + SP!
-
-"Hello world!" . CR
-clear
-
-( line comments )
-"Expect 1 2 3 4: 1 2" . ( make sure \ inside a comment is ignored ) "3 4" . CR
-"Expect 5 6 7 8: 5 6 7 8" . CR \ ( this comment should be ignored ) "9 10 11 12" . CR
-clear
-11
-\ a line comment
-22
-\ another line comment
-33 \ yet another line comment
-44
-"Stack should be: 11 22 33 44" . CR
-clear
-
-"Expect A B C D: A B" . ( make sure these are ignored \n \r \t \b ) "C D" . CR
-( make sure saving lambdas to vars works )
-clear
-'t33 void make-var
-{ 133 244 355 } t33!
-t33 call 
-t33 call
-
-clear
-123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
-
-( string parsing )
-clear
-"hello world here"
-. CR
-" hello with leading trailing space "
-. CR
-"oneword"
-. CR
-"""and some embedded"quote"chars << here"""
-. CR
-"|.......|.......|....|.........|....." . CR
-"here    with    some embedded  spaces" . CR
-( assume tabs are printed as 8 spaces )
-"|.......|.......|.......|.......|.......|.......|.......|......." . CR
-"and		now		with			tabs" . CR
-"..." puts "...|......|......|.......|......|..........|.........." puts "..." puts CR
-">>>" puts "   now    with   leading and    trailing   space      " puts "<<<" puts CR
-clear
 
 
-\ this was a bug in the interpreters -- bad assumption that dicts didn't need to be
-\ pushed as literals ...
-11 22 [ ] make-dict 33 44 5 make-list make-lambda
-call
-clear
+

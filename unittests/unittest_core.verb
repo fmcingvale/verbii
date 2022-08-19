@@ -1,7 +1,17 @@
-( -- unittest_core - test basic language features, roughly in the order that they will usually be implemented -- )
-( -- Copyright (c) 2022 Frank McIngvale, see LICENSE -- )
 
-clear
+\ Tests a few things that cannot really be tested in the unittest framework.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ for some earlier compiler bugs in the serializer
+\ note: i do NOT have "Expect ..." strings here since if there is an error in
+\ serialization, it would likely affect those strings too so that could give
+\ a false positive if both get messed up in the same way.
+"abcde" serialize-escape-string . CR
+"ab" 9 chr + "de" + 9 chr + "fe" + serialize-escape-string . CR
+"ab" 10 chr + "cd" + 13 chr + "ef" + serialize-escape-string . CR
+"ab%de%%fg" serialize-escape-string . CR
+"ab cd ef" serialize-escape-string . CR
 
 ( check that 'return' at the top level works correctly )
 clear

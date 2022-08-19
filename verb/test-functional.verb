@@ -134,6 +134,11 @@
 	"The ocean is blue" { ( cmd ) cmd 1 == if >>one "blue" return @one "ocean" } saything call expect==
 	"The grass is green" { ( cmd ) cmd 1 == if >>one "green" return @one "grass" } saything call expect==
 	"The rose is red" { ( cmd ) cmd 1 == if >>one "red" return @one "rose" } saything call expect==
+	
+	\ this was a bug in the interpreters -- bad assumption that dicts didn't need to be
+	\ pushed as literals ...
+	11 22 [ ] make-dict 33 44 5 make-list make-lambda
+	call "[ 11 22 { } 33 44 ]" expect-stack
 	;
 	
 : test-any-all
@@ -220,6 +225,12 @@
 : test-find
 	3
 	"zebfxt" { "f" == } find expect==
+	
+	0
+	"zebfxt" { "z" == } find expect==
+	
+	5
+	"zebfxt" { "z" == } find expect==
 	
 	void
 	"zebfxt" { "r" == } find expect==

@@ -37,4 +37,25 @@
 	
 	;
 	
+: test-parsing-comments
+	1 2 ( make sure \ inside a comment is ignored ) 3 4 "[ 1 2 3 4 ]" expect-stack 4 ndrop
+	
+	5 6 7 8 \ ( this comment should be ignored ) "9 10 11 12" . CR
+	"""[ 5 6 7 8 ]""" expect-stack 4 ndrop
+	
+	11
+	\ a line comment
+	22
+	\ another line comment
+	33 \ yet another line comment
+	44
+	
+	"""[ 11 22 33 44 ]""" expect-stack 4 ndrop
+	
+	"A" "B" ( make sure these are ignored \n \r \t \b ) "C" "D"
+	"""[ "A" "B" "C" "D" ]""" expect-stack 4 ndrop
+	
+	123 ( make sure that ( nested ( comments ) are ) handled ok ) 456
+	"[ 123 456 ]" expect-stack 2 ndrop
+	;
 	
