@@ -18,7 +18,9 @@
 'ALL-TEST-MODULES [
 	"test-compiler"
 	"test-demo-closures"
+	"test-demo-rosetta"
 	"test-dictionaries"
+	"test-file-io"
 	"test-functional"
 	"test-hashing"
 	"test-io"
