@@ -505,6 +505,20 @@ static void builtin_del(Interpreter *intr) {
 	intr->deleteWord(name);
 }
 
+// ( y x -- atan2[y,x] )
+static void builtin_atan2(Interpreter *intr) {
+	auto x = popFloatOrInt(intr,"atan2");
+	auto y = popFloatOrInt(intr,"atan2");
+	intr->push(newFloat(atan2(y,x)));
+}
+
+// ( x y -- x^y )
+static void builtin_pow(Interpreter *intr) {
+	auto y = popFloatOrInt(intr,"atan");
+	auto x = popFloatOrInt(intr,"atan");
+	intr->push(newFloat(pow(x,y)));
+}
+
 const VINT MASK32 = 0x00000000ffffffff;
 
 static void builtin_bit_and(Interpreter *intr) {
@@ -668,26 +682,6 @@ static void builtin_keys(Interpreter *intr) {
 		keys.asList()->push_back(newString(pair.first));
 
 	intr->push(keys);
-}
-
-static void builtin_sqrt(Interpreter *intr) {
-	auto val = popFloatOrInt(intr, "sqrt");
-	if(val < 0)
-		throw LangError("Negative value in sqrt: " + to_string(val));
-	
-	intr->push(newFloat(sqrt(val)));
-}
-
-static void builtin_cos(Interpreter *intr) {
-	intr->push(newFloat(cos(popFloatOrInt(intr, "cos"))));
-}
-
-static void builtin_sin(Interpreter *intr) {
-	intr->push(newFloat(sin(popFloatOrInt(intr, "sin"))));
-}
-
-static void builtin_log(Interpreter *intr) {
-	intr->push(newFloat(log(popFloatOrInt(intr, "log"))));
 }
 
 #include "opcodes.hpp"
@@ -886,11 +880,18 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	{"keys", builtin_keys},
 
 	// more math functions
-	{"sqrt", builtin_sqrt},
-	{"cos", builtin_cos},
-	{"sin", builtin_sin},
-	{"log", builtin_log}, // natural log
-
+	{"sqrt", [](Interpreter *intr){intr->push(newFloat(sqrt(popFloatOrInt(intr, "sqrt"))));}},
+	{"cos", [](Interpreter *intr){intr->push(newFloat(cos(popFloatOrInt(intr, "cos"))));}},
+	{"sin", [](Interpreter *intr){intr->push(newFloat(sin(popFloatOrInt(intr, "sin"))));}},
+	{"tan", [](Interpreter *intr){intr->push(newFloat(tan(popFloatOrInt(intr, "tan"))));}},
+	{"acos", [](Interpreter *intr){intr->push(newFloat(acos(popFloatOrInt(intr, "cos"))));}},
+	{"asin", [](Interpreter *intr){intr->push(newFloat(asin(popFloatOrInt(intr, "sin"))));}},
+	{"atan2", builtin_atan2},
+	// natural log
+	{"log", [](Interpreter *intr){intr->push(newFloat(log(popFloatOrInt(intr, "log"))));}},
+	{"exp", [](Interpreter *intr){intr->push(newFloat(exp(popFloatOrInt(intr, "exp"))));}},
+	{"pow", builtin_pow},
+	
 	// 'version 2' closures
 	{"make-opcode", builtin_make_opcode},
 	{"opcode-packed", builtin_opcode_packed},

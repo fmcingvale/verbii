@@ -306,6 +306,36 @@
 	0.7771459614569711 321 180 / PI * cos expect==f 
 	;
 	
+: test-acos 
+	2.67033938499429793 -0.891 acos expect==f
+	1.78851221820100594 -0.216 acos expect==f
+	1.13404277084559488 0.423 acos expect==f
+	0.61113026917198360 0.819 acos expect==f 
+	;
+
+: test-asin
+	-0.7923423866392785 -0.712 asin expect==f
+	-0.3267851765314954 -0.321 asin expect==f
+	0.28900642817350133 0.285 asin expect==f
+	1.05927332310081910 0.872 asin expect==f
+	;
+	
+: test-tan 
+	\ each quadrant
+	3.00956967386283128 1.25 tan expect==f 
+	-1.6157594239734600 2.125 tan expect==f 
+	0.69655085111146013 3.75 tan expect==f 
+	-1.6773264066243891 5.25 tan expect==f 
+	;
+	
+: test-atan
+	\ one per quadrant
+	0.24781151673870185 0.21 0.83 atan2 expect==f
+	2.02186598278342009 0.64 -0.31 atan2 expect==f
+	-1.0471116657986533 -0.71 0.41 atan2 expect==f
+	-2.7460215028469865 -0.38 -0.91 atan2 expect==f
+	;
+	
 : test-sqrt
 	\ integers
 	47453132.81212578 2251799813685248 sqrt expect==f 
@@ -325,4 +355,15 @@
 	-1.6460323971461603 0.1928134 log expect==f
 	;
 	
+: test-exp 
+	E-VAL 1 exp expect==f 
+	4.34923514106274090 1.47 exp expect==f 
+	2.61186521103813154e+58 134.51 exp expect==f
+	0.04321391826377224 PI neg exp expect==f
+	;
 
+: test-pow
+	1529.20940336129787 3.129 6.428 pow expect==f 
+	6350.707917786241 -8.927 4 pow expect==f 
+	1.127506316997835e-11 88.72 -5.62 pow expect==f 
+	;
