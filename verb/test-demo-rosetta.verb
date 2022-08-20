@@ -5,6 +5,9 @@
 
 ( https://rosettacode.org/wiki/Fibonacci_sequence )
 
+"unittest" import
+"numeric" import
+
 ( get first nr fibonacci numbers as a list )
 : fibonacci ( nr -- list )
 	[ 0 1 ] list!
@@ -181,5 +184,274 @@
 	[ 1 4 9 16 25 36 49 64 81 100 ] OPENED expect==
 	
 	'OPENED ,,del
+	;
+	
+( https://rosettacode.org/wiki/Runge-Kutta_method )
+
+\ fn = function to integrate, called with ( t y ) on stack
+\ y0, t0 = initial values for y and t
+\ dt = step size for t
+\ tstop = stop when t>tstop
+: rk4-integrate ( fn y0 t0 dt tstop )
+	\ like: https://en.wikipedia.org/wiki/Runge%E2%80%93Kutta_methods
+	\ instead of the pseudocode in the example
+	@locals [ k1 k2 k3 k4 ]
+	
+	@loop
+		t0 tstop > if >>done
+		\ k1 = f(t0,y0)
+		t0 y0 
+		fn call k1!
+		\ k2 = f(t0 + dt/2, y0 + dt*k1/2)
+		t0 dt 2 / + 
+		y0 dt k1 * 2 / + 
+		fn call k2!
+		\ k3 = f(t0 + dt/2, y0 + dt*k2/2)
+		t0 dt 2 / +
+		y0 dt k2 * 2 / +
+		fn call k3!
+		\ k4 = f(t0 + dt, y0 + dt * k3)
+		t0 dt +
+		y0 dt k3 * + 
+		fn call k4!
+		\ y1 = y0 + 1/6 * (k1 + 2*k2 + 2*k3 + k4) * dt
+		\ t1 = t0 + dt
+		y0 1 6 / k1 2 k2 * + 2 k3 * + k4 + * dt * + y0!
+		t0 dt + t0!
+		<<loop
+	@done
+		y0
+	;
+	
+	
+\ { ( t y ) t y sqrt * } 1 0 0.1 20 rk4-integrate . CR
+\ 20 rk4-example-exact . CR
+
+
+\  0 0 0.1 20 rk4-integrate . CR
+\ 20  call . CR
+
+\ call fn with list of args -- like apply in scheme or fn(*args) in python
+: apply ( fn args ) 
+	\ check for common mistake to give better error message
+	fn lambda? if >>ok
+	fn bound-lambda? if >>ok
+	"apply expects lambda but got: " fn repr + error
+	@ok
+		args unmake drop fn call ;
+	
+: rk4-tester ( y y' y0 t0 step tstop )
+	@locals [ calc exact ]
+	\ get rk4 estimate
+	y' y0 t0 step tstop rk4-integrate calc!
+	\ get exact answer from y(tstop)
+	tstop y call exact!
+	"     RK4:" . calc .. ", Exact:" . exact .. ", %diff:" . calc exact %diff . CR
+	\ use custom tolerance here instead of expect==f so these don't have to run too
+	\ long to reach high accuracy
+	calc exact %diff 1e-6 expect< 
+	;
+	
+: test-rosetta-rk4-integration
+	\ list of: [ y y' y0 t0 step tstop ] where y(tstop) is the exact solution and y'(t,yi) is the derivative
+	[
+		\ task from rosettacode
+		[ 
+			\ y(t) = (1/16) * (t^2 + 4)^2
+			{ ( t ) t t * 4 + dup * 16 / }
+			\ y'(t,y) = t * sqrt(y(t))
+			{ ( t y ) t y sqrt * }
+			\ y0 t0 step tstop
+			1 0 0.1 20
+		]
+		\ plain integral with no y dependency in y'
+		[
+			\ y(x) = 4x^3 - 2x^2 + x
+			{ ( x ) 4 x x x * * * 2 x x * * - x + }
+			\ y'(x,y) = 12x^2 - 4x + 1
+			{ ( x y ) 12 x x * * 4 x * - 1 + }
+			\ y0 x0 dx xstop
+			0 0 0.1 20
+		]
+		\ another plain integral
+		[
+			\ y(x) = cos(x)^2
+			{ ( x ) x cos dup * }
+			\ y'(x) = -2 * sin(x) * cos(x)
+			{ ( x y ) -2 x sin * x cos * }
+			\ y0 x0 dx xstop
+			1 0 0.001 3.14159
+		]
+	]
+	{ ( list ) { rk4-tester } list apply }
+	for-each
+	;
+	
+( https://rosettacode.org/wiki/Currying )
+
+
+\ define the classic form of currying, where a function of 2 args is transformed
+\ into a function of 1 arg, where the 2nd arg is remembered.
+\ once this is defined, a function of N args can be reduced to a function of 1 arg
+\ by N-1 repeated applications of currying, as shown below.
+
+\ fn[a,b] -> fn[b]
+: curry ( fn a ) { ( b ) a b fn call } ;
+
+\ for convenience/readability, define higher order currying
+
+\ fn[a,b,c] -> fn[c]
+: curry3 ( fn a b ) fn b curry a curry ;
+
+\ fn[a,b,c,d] -> fn[d]
+: curry4 ( fn a b c ) fn c curry b curry a curry ;
+
+\ some sample functions to curry
+: thing2 ( a b ) a b + ;
+: thing3 ( a b c ) a b c * + ;
+: thing4 ( a b c d ) a b c d * + / ;
+
+: test-rosetta-currying
+	@locals [ F ]
+	
+	\ first, show how this works step-by-step ...
+	
+	\ in the comments below, the ?? shows the arg that will be passed in later
+
+	\ curry thing2(a,b) -> F(b)
+	{ thing2 } 10 curry F!
+	\ call F(20) == thing2(10, 20)
+	20 F call 
+	30 expect==
+
+	\ now with a 3-arg function - reduce to 1 arg in stages
+
+	\ curry thing3(a,b,c) -> F(200,??)
+	{ thing3 } 200 curry
+	\ curry -> F(100,200,??)
+	100 curry F!
+	\ call -> F(100,200,300)
+	300 F call
+	60100 expect==
+
+	\ once more with 4 args to show this can be extended indefinitely
+	\ thing4 -> F(60,??)
+	{ thing4 } 60 curry
+	\ curry -> F(50,60,??)
+	50 curry
+	\ curry -> F(1234,50,60,??)
+	1234 curry F!
+	\ call F(1234,50,60,70)
+	70 F call
+	0.29035294117647058 expect==
+	
+	\ now use the higher-order functions to make the above read more naturally
+	
+	\ curry thing3(a,b,c) -> F(100,200,??)
+	{ thing3 } 100 200 curry3 F!
+	\ test as above
+	300 F call
+	60100 expect==
+	
+	\ curry thing4(a,b,c,d) -> F(1234,50,60,??)
+	{ thing4 } 1234 50 60 curry4 F!
+	\ test as above
+	70 F call
+	0.29035294117647058 expect==
+	;
+	
+( https://rosettacode.org/wiki/Partial_function_application )
+
+: test-rosetta-partial-function-application
+	\ i create & store the required functions in vars here instead of polluting the
+	\ global namespace
+	\ NOTE: I renamed the vars here to make it more readable, but otherwise this is exactly
+	\ the same as the rosetta task
+	@locals [ mymap mul2 square mymap-mul2 mymap-square ]
+	\ Part 1:
+	\ 	"Create a function mymap( f, s ) that takes a function, f( n ), of one value and a sequence of values s.
+	\ 	Function mymap should return an ordered sequence of the result of applying function f to every value of s in turn."
+	{ ( fn sequence ) sequence fn map } mymap!
+	\ Part 2:
+	\	"Create function mul2 that takes a value and returns it multiplied by 2."
+	{ ( x ) x 2 * } mul2!
+	\ Part 3:
+	\	"Create function square that takes a value and returns it squared."
+	{ ( x ) x x * } square!
+	\ Part 4:
+	\	"Partially apply mul2 to mymap to form function mymap-mul2( s )"
+	mymap mul2 curry mymap-mul2!
+	\ Part 5:
+	\	"Partially apply square to mymap to form function mymap-square( s )"
+	mymap square curry mymap-square!
+	\ Part 6:
+	\	"Test mymap-mul2 and mymap-square by evaluating them with s being the sequence of integers from 0 to 3 inclusive 
+	\	and then the sequence of even integers from 2 to 8 inclusive."
+	[ 0 2 4 6 ]
+	[ 0 1 2 3 ] mymap-mul2 call 
+	expect==
+	
+	[ 0 1 4 9 ]
+	[ 0 1 2 3 ] mymap-square call
+	expect==
+	
+	[ 4 8 12 16 ]
+	[ 2 4 6 8 ] mymap-mul2 call
+	expect==
+	
+	[ 4 16 36 64 ]
+	[ 2 4 6 8 ] mymap-square call
+	expect==
+	;
+	
+( https://rosettacode.org/wiki/Anonymous_recursion )
+
+: test-rosetta-anonymous-recursion
+	\ print fibonacci sequence using anonymous recursion.
+	\ even the top level function isn't named.
+	{ ( NR ) \ print first NR fibonacci numbers
+		\ the other examples at rosetta calculate the entire sequence for
+		\ each value they want to output, so I do the same here to fit the
+		\ intent of the task
+			
+		\ generate i'th value in fibonacci sequence
+		{ ( self i )
+			[
+				[ { i 0 < } { null } ]
+				[ { i 0 == } { 0 } ]
+				[ { i 1 == } { 1 } ]
+				\ else call self recursively to calc next lower 2 values
+				[ null { self i 1 - self call self i 2 - self call + } ]
+			]
+			cond 
+		}
+		
+		\ ** note ** it is bad verbii style for a lambda to assume anything about the state of
+		\ the stack, other than the args it is given. so the RIGHT way to do this would be to
+		\ store the above lambda in a variable, then use that variable in the function below.
+		\ HOWEVER, for purposes of this demo, to show that EVERYTHING can be anonymously used,
+		\ i'm breaking the style rule and assuming the generator is on the top of the stack when
+		\ the below function is called.
+		@locals [ numbers ]
+		[ ] numbers! \ save generated values to list for checking at end
+		
+		{ ( n )
+			\ call generator, passing it to itself as the 'self' arg
+			dup dup n swap call dup . CR numbers swap append drop
+			\ if, instead, I had named the generator above, then the above
+			\ call would be the more readable: 'generator n generator call'
+		} 
+		\ run with n=[-2 .. NR] to show all code paths are working
+		-2 1 NR 3 + for-range
+		\ note that the generator is still on the top of the stack, so ...
+		drop
+		\ return to caller
+		numbers
+	}
+	\ like above, i avoid naming this function and just use it off the stack
+	20 swap call
+	\ test that it is correct
+	[ null null 0 1 1 2 3 5 8 13 21 34 55 89 144 233 377 610 987 1597 2584 4181 6765 ]
+	expect==
 	;
 	

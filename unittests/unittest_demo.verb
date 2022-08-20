@@ -83,29 +83,6 @@ CR
 20 repeat
 CR
 
-\ ==============================================================================================
-\ 	
-\	demos based on rosetta code tasks -- not necessarily the complete solutions for each, just
-\	the parts I found interesting 
-\
-\ ===============================================================================================
-
-( https://rosettacode.org/wiki/Anonymous_recursion )
-
-\ this is true anonymous recursion, no names are defined ... 
-\ done in Y-combinator-ish fashion where the lambda passes itself as 
-\ an argument to itself
-\
-\ the rosetta code task prints the fibonacci sequence, but since i already
-\ did that, i'm doing a countdown instead
-		
-"* Anonymous Recursion *" . CR
-"Print 20 .. 1:" .
-{ ( lambda N -- ) dup? 0 == if >>done dup . 1 - over call @done }
-20 over call CR
-
-( ===== some random demos, not for specific rosetta tasks ==== )
-
 ( calculate all factors of an integer )
 	
 : factors ( N -- ; print factors )
@@ -290,39 +267,6 @@ CR
 
 "Expect abc 432 xyz &%# def:" . CR
 "      " . "AbC 432 xYZ &%# DEf" { to-lower } map . CR
-
-( https://rosettacode.org/wiki/Partial_function_application )
-
-"* Partial function application *" . CR
-\ for function fs, use map (since map is written in verbii, above, that
-\ seems to OK per the rules of this task)
-: fs map ;
-\ f1 = value*2
-: f1 2 * ;
-\ f2 = value squared
-: f2 dup * ;
-\ partially apply f1 to fs to make fsf1
-\ (doing it as a variable seems more in the spirit of the task than
-\ making it a word)
-var fsf1 1
-{ { f1 } map } fsf1 set!
-\ partially apply f2 to fs to make fsf2
-var fsf2 1
-{ { f2 } map } fsf2 set!
-
-\ test cases
-"Expect [ 0 2 4 6 ]:" . CR 
-"      " . [ 0 1 2 3 ] fsf1 ref call . CR
-"Expect [ 0 1 4 9 ]:" . CR 
-"      " . [ 0 1 2 3 ] fsf2 ref call . CR
-
-"Expect [ 4 8 12 16 ]:" . CR
-"      " . [ 2 4 6 8 ] fsf1 ref call . CR
-"Expect [ 4 16 36 64 ]:" . CR
-"      " . [ 2 4 6 8 ] fsf2 ref call . CR
-
-\ cleanup namespace
-del fs del f1 del f2 del fsf1 del fsf2
 
 ( --- some more non-rosetta tasks --- )
 
