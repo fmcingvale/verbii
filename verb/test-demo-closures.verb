@@ -373,7 +373,18 @@
 		}
 	]
 	;
-	
+
+\ this was a bug where symbols inside lists containing captured vars would
+\ be interpreted instead of quoted and pushed -- this broke, for example, 
+\ the ability to define 'cond' with an 'else' keyword since the else would
+\ be interpreted if there were any captured vars
+: cD7-test ( i )
+	[
+		[ a b ]
+		[ a b i ]
+	]
+	;
+
 : test-closures-all-forms
 	@locals [ f1 f2 f3 f4 R ]
 	[ 11 22 ] 11 22 cA0-test expect==
@@ -428,6 +439,8 @@
 	R "a*2" get call 22 expect==
 	R "b+5" get call 27 expect==
 	R "c*c" get call 33 33 * expect==
+	
+	[ [ a b ] [ a b 123 ] ] 123 cD7-test expect==
 	;
 
 \ test variations of @( .. ), @args, @locals ... duplicates some of above but is

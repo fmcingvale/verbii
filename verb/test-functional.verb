@@ -297,5 +297,36 @@
 		[ 55 10 -14 8 17 1 -6 ] { ( n ) n 10 > } filter
 	expect==
 	;
+
+: cond-form-1 ( i )
+	[
+		[ { i 0 == } { "1-ZERO" } ]
+		[ { i 1 == } { "1-ONE" } ]
+		\ ugh .. here the else is NOT quoted since this will be deepcopied and not built at runtime
+		[ else { "1-NEITHER" } ]
+	]
+	cond
+	;
+
+\ this was a bug -- the form-1 would work fine, since it contained no captured vars in the 'else',
+\ so was stored as a literal, however form-2 would break since the list would be flattened and the 'else' would be run
+\ since symbols were not being quoted on expansion
+: cond-form-2 ( i )
+	[
+		[ { i 0 == } { "2-ZERO" } ]
+		[ { i 1 == } { "2-ONE" } ]
+		[ else { "i: " i str + } ]
+	]
+	cond
+	;
 	
+: test-cond
+	0 cond-form-1 "1-ZERO" expect==
+	1 cond-form-1 "1-ONE" expect==
+	2 cond-form-1 "1-NEITHER" expect==
+	
+	0 cond-form-2 "2-ZERO" expect==
+	1 cond-form-2 "2-ONE" expect==
+	2 cond-form-2 "i: 2" expect==
+	;
 	

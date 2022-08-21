@@ -59,15 +59,15 @@
 \ similar to 'cond' in Scheme
 \
 \ condexprs is a list of [ { .. test .. } { .. call if true .. } ]
-\ with optional element: [ null { .. call if no match .. } ] that ALWAYS matches
+\ with optional element: [ else { .. call if no match .. } ] that ALWAYS matches
 : cond ( condexprs -- )
 	@locals [ i ]
 	0 i!
 	@loop
 		\ end of condexprs?
 		condexprs i get void? if >>nomatch
-		\ [ null { ... } ]? 
-		condexprs i get 0 get null == if >>match 
+		\ [ else { ... } ]? 
+		condexprs i get 0 get 'else == if >>match 
 		\ else run test and check result
 		condexprs i get 0 get call if >>match
 		i 1 + i! <<loop

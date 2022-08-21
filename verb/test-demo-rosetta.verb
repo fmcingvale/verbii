@@ -421,7 +421,7 @@
 				[ { i 0 == } { 0 } ]
 				[ { i 1 == } { 1 } ]
 				\ else call self recursively to calc next lower 2 values
-				[ null { self i 1 - self call self i 2 - self call + } ]
+				[ else { self i 1 - self call self i 2 - self call + } ]
 			]
 			cond 
 		}
