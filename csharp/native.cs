@@ -769,6 +769,18 @@ class Builtins {
 		intr.push(intr.getWordlist());
 	}
 
+	public static void atan2(Interpreter intr) {
+		var x = popFloatOrInt(intr, "atan2");
+		var y = popFloatOrInt(intr, "atan2");
+		intr.push(new LangFloat(Math.Atan2(y, x)));
+	}
+
+	public static void pow(Interpreter intr) {
+		var y = popFloatOrInt(intr, "atan2");
+		var x = popFloatOrInt(intr, "atan2");
+		intr.push(new LangFloat(Math.Pow(x, y)));
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -856,9 +868,15 @@ class Builtins {
 
 		{"sin", intr => intr.push(new LangFloat(Math.Sin(popFloatOrInt(intr,"sin"))))},
 		{"cos", intr => intr.push(new LangFloat(Math.Cos(popFloatOrInt(intr,"cos"))))},
+		{"tan", intr => intr.push(new LangFloat(Math.Tan(popFloatOrInt(intr,"tan"))))},
+		{"asin", intr => intr.push(new LangFloat(Math.Asin(popFloatOrInt(intr,"sin"))))},
+		{"acos", intr => intr.push(new LangFloat(Math.Acos(popFloatOrInt(intr,"cos"))))},
+		{"atan2", atan2},
 		{"sqrt", intr => intr.push(new LangFloat(Math.Sqrt(popFloatOrInt(intr,"sqrt"))))},
 		{"log", intr => intr.push(new LangFloat(Math.Log(popFloatOrInt(intr,"log"))))},
-
+		{"exp", intr => intr.push(new LangFloat(Math.Exp(popFloatOrInt(intr,"exp"))))},
+		{"pow", pow},
+		
 		{"make-opcode", make_opcode},
 		{"opcode-packed", opcode_packed},
 		{"bind-lambda", bind_lambda},

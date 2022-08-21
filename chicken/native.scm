@@ -309,7 +309,7 @@
 			(loop (- nr 1) (cons (pop intr) lst))
 			lst)))
 
-(define (pop-float-or-int intr wheresym)
+(define (popFloatOrInt intr wheresym)
 	(let ((obj (pop intr)))
 		(cond
 			((integer? obj) obj)
@@ -507,6 +507,17 @@
 	(let ((_lambda (popLambda intr 'bind-lambda)))
 		(push intr (make-BoundLambda (Lambda-llist _lambda) (intr-framedata intr)))))
 
+(define (builtin-pow intr)
+	(let* ((y (popFloatOrInt intr 'pow))
+			(x (popFloatOrInt intr 'pow)))
+		(push intr (make-Float (expt x y)))))
+
+(define (builtin-atan2 intr)
+	(let* ((x (popFloatOrInt intr 'atan2))
+			(y (popFloatOrInt intr 'atan2)))
+		(print "ATAN" y x)
+		(push intr (make-Float (atan y x)))))
+
 (import (chicken bitwise))
 (import (chicken time))
 (import (chicken time posix))
@@ -652,10 +663,16 @@
 
 		(list "keys" '() builtin-keys)
 
-		(list "sin" '() (lambda (intr) (push intr (make-Float (sin (pop-float-or-int intr 'sin))))))
-		(list "cos" '() (lambda (intr) (push intr (make-Float (cos (pop-float-or-int intr 'cos))))))
-		(list "sqrt" '() (lambda (intr) (push intr (make-Float (sqrt (pop-float-or-int intr 'sqrt))))))
-		(list "log" '() (lambda (intr) (push intr (make-Float (log (pop-float-or-int intr 'log))))))
+		(list "sin" '() (lambda (intr) (push intr (make-Float (sin (popFloatOrInt intr 'sin))))))
+		(list "cos" '() (lambda (intr) (push intr (make-Float (cos (popFloatOrInt intr 'cos))))))
+		(list "tan" '() (lambda (intr) (push intr (make-Float (tan (popFloatOrInt intr 'cos))))))
+		(list "asin" '() (lambda (intr) (push intr (make-Float (asin (popFloatOrInt intr 'sin))))))
+		(list "acos" '() (lambda (intr) (push intr (make-Float (acos (popFloatOrInt intr 'cos))))))
+		(list "atan2" '() builtin-atan2)
+		(list "sqrt" '() (lambda (intr) (push intr (make-Float (sqrt (popFloatOrInt intr 'sqrt))))))
+		(list "log" '() (lambda (intr) (push intr (make-Float (log (popFloatOrInt intr 'log))))))
+		(list "exp" '() (lambda (intr) (push intr (make-Float (exp (popFloatOrInt intr 'log))))))
+		(list "pow" '() builtin-pow)
 
 		(list "make-opcode" '() builtin-make-opcode)
 		(list "opcode-packed" '() builtin-opcode-packed)

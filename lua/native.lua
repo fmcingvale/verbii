@@ -705,6 +705,19 @@ function builtin_getcwd(intr)
 	intr:push(new_String(POSIX.getcwd()))
 end
 
+function builtin_atan2(intr)
+	local x = popFloatOrInt(intr)
+	local y = popFloatOrInt(intr)
+	intr:push(new_Float(math.atan2(y, x)))
+end
+
+function builtin_pow(intr)
+	local y = popFloatOrInt(intr)
+	local x = popFloatOrInt(intr)
+	-- apparently math.pow is deprecated? or was?
+	intr:push(new_Float(x ^ y))
+end
+
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -793,8 +806,14 @@ BUILTINS = {
 
 	["sin"] = { {}, function(intr) intr:push(new_Float(math.sin(popFloatOrInt(intr)))) end},
 	["cos"] = { {}, function(intr) intr:push(new_Float(math.cos(popFloatOrInt(intr)))) end},
+	["tan"] = { {}, function(intr) intr:push(new_Float(math.tan(popFloatOrInt(intr)))) end},
+	["asin"] = { {}, function(intr) intr:push(new_Float(math.asin(popFloatOrInt(intr)))) end},
+	["acos"] = { {}, function(intr) intr:push(new_Float(math.acos(popFloatOrInt(intr)))) end},
+	["atan2"] = { {}, builtin_atan2},
 	["sqrt"] = { {}, function(intr) intr:push(new_Float(math.sqrt(popFloatOrInt(intr)))) end},
 	["log"] = { {}, function(intr) intr:push(new_Float(math.log(popFloatOrInt(intr)))) end},
+	["exp"] = { {}, function(intr) intr:push(new_Float(math.exp(popFloatOrInt(intr)))) end},
+	["pow"] = { {}, builtin_pow},
 
 	["make-opcode"] = { {}, builtin_make_opcode },
 	["opcode-packed"] = { {}, builtin_opcode_packed },

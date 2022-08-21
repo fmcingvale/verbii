@@ -536,6 +536,16 @@ def builtin_file_sep(I):
 def builtin_os_getcwd(I):
 	I.push(LangString(os.getcwd()))
 	
+def builtin_atan2(I):
+	x = popIntOrFloat(I)
+	y = popIntOrFloat(I)
+	I.push((math.atan2(y,x)))
+
+def builtin_pow(I):
+	y = popIntOrFloat(I)
+	x = popIntOrFloat(I)
+	I.push((math.pow(x,y)))
+
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
 	'+': ([], builtin_add),
@@ -630,8 +640,14 @@ BUILTINS = {
 
 	'sin': ([], lambda I: I.push(math.sin(popIntOrFloat(I)))),
 	'cos': ([], lambda I: I.push(math.cos(popIntOrFloat(I)))),
+	'tan': ([], lambda I: I.push(math.tan(popIntOrFloat(I)))),
+	'asin': ([], lambda I: I.push(math.asin(popIntOrFloat(I)))),
+	'acos': ([], lambda I: I.push(math.acos(popIntOrFloat(I)))),
+	'atan2': ([], builtin_atan2),
 	'sqrt': ([], lambda I: I.push(math.sqrt(popIntOrFloat(I)))),
 	'log': ([], lambda I: I.push(math.log(popIntOrFloat(I)))),
+	'pow': ([], builtin_pow),
+	'exp': ([], lambda I: I.push(math.exp(popIntOrFloat(I)))),
 
 	# 'version 2' closures
 	'make-opcode': ([], builtin_make_opcode),
