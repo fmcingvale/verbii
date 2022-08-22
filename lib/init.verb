@@ -12,6 +12,9 @@
 \ print top of stack + space
 : . str puts 32 .c ;
 
+\ like . but without trailing space
+: .. str puts ;
+
 \ actually prints LF but originally named CR so I left it
 : CR 10 .c ;
 
@@ -331,6 +334,27 @@
 		if-true call
 	;
 
+\ similar to 'cond' in Scheme
+\
+\ condexprs is a list of [ { .. test .. } { .. call if true .. } ]
+\ with optional element: [ else { .. call if no match .. } ] that ALWAYS matches
+: cond ( condexprs -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		\ end of condexprs?
+		condexprs i get void? if >>nomatch
+		\ [ else { ... } ]? 
+		condexprs i get 0 get 'else == if >>match 
+		\ else run test and check result
+		condexprs i get 0 get call if >>match
+		i 1 + i! <<loop
+	@nomatch
+		return \ or should it be an error to match no clauses?
+	@match 
+		condexprs i get 1 get call return \ call matching clause
+	;
+	
 \ ========================================================================
 \ Iteration/looping/functional programming
 \

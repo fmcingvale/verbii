@@ -946,9 +946,24 @@
 		objlist i get symbol? if >>symbol
 		objlist i get list? if >>rewrite-inner-plain-list
 		objlist i get lambda? if >>rewrite-inner-lambda
-		\ everything else, copy as-is
+		\ fall through for everyting else, copy as-is
 	@copy-element
-		new-objlist objlist i get append new-objlist! >>next
+		\ subtlety here: if i'm working on a plain-list, then, if it contains ANY captures (or any in
+		\ ANY nested list/lambda) then it will be flattened and then remade at runtime. this means that every element
+		\ in the list will be evaluated -- what i WANT to happen is for everything to be pushed to the stack,
+		\ and the only things that should really be evaluated are opcodes that pull values from my frame.
+		\ however, i need to quote any symbols so they will be pushed as symbols instead of run. when they are
+		\ seen, the outer quoting will be removed, so when make-list runs, they will end up back in the list as
+		\ intended. even though I don't know HERE whether a list will be flattened or not,
+		\ i can replace them unconditionally since if the list contains no captures, this list will never
+		\ be used (see below as well e.g. @plain-list-no-rewrites)
+		plain-list not if >>normal-copy-element
+		objlist i get symbol? not if >>normal-copy-element
+			\ it is a symbol in a plain list, so add a level of quoting
+			new-objlist '' objlist i get + append new-objlist! >>next
+		@normal-copy-element
+			\ not a symbol or not in a plain-list, so just copy as is
+			new-objlist objlist i get append new-objlist! >>next
 		
 	@symbol
 		@locals [ level index sym ]
@@ -1023,7 +1038,7 @@
 	@done
 		new-objlist nr-rewritten return	
 		;
-	
+		
 \ take a parsed objlist, presumably from byte-compile, and perform finalization:
 \	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
 \
