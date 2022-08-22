@@ -707,8 +707,23 @@
 	(let ((obj (pop intr)))
 		(CallFrameData-setFrameObj framedata levels index obj)))
 
+(define (do-opcode-JUMP intr offset)
+	(if (null? (intr-code intr))
+		(lang-error "JUMP called with no code running?"))
+
+	(let ((pos (+ (intr-codepos intr) offset)))
+		(if (or (< pos 0) (>= pos (intr-code-length intr)))
+			(lang-error "JUMP out of bounds")
+			(intr-codepos-set! intr pos))))
+
+(define (opcode-JUMP-FORW intr framedata A B offset)
+	(do-opcode-JUMP intr offset))
+
+(define (opcode-JUMP-BACK intr framedata A B offset)
+	(do-opcode-JUMP intr (- 0 offset)))
+
 ; defined in interpreter.scm
 ; order must be same as numeric order of opcodes
 (set! OPCODE-FUNCTIONS
 	(list->vector
-		(list opcode-FRAME-GET opcode-FRAME-SET)))
+		(list opcode-FRAME-GET opcode-FRAME-SET opcode-JUMP-FORW opcode-JUMP-BACK)))

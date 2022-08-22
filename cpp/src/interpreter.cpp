@@ -387,20 +387,16 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			}
 
 			if(obj.isSymbol("if")) {
-				// true jump is next
-				auto true_jump = nextSymbolOrFail("expecting jump after 'if'");
-				//cout << "TRUE_JUMP: " << true_jump << endl;
 				Object cond = pop();
 				//cout << "POPPED COND: " << cond.repr() << endl;
 				if(!cond.isBool()) {
 					throw LangError("'if' requires true|false but got: " + cond.fmtStackPrint());
 				}
-				// this doesn't run the jump, it just repositions the stream
-				if(cond.asBool()) {
-					// no need to actually skip false jump since i'll be looking for '@'
-					do_jump(true_jump.asSymbol());
+				// if TRUE, continue with the next instruction (so do nothing here)
+				// if FALSE, skip the next instruction
+				if(!cond.asBool()) {
+					codepos += 1;
 				}
-				// if false, just continue with next instruction
 				continue;
 			}
 

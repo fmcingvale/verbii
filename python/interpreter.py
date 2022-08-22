@@ -243,18 +243,16 @@ class Interpreter(object):
 					continue
 			
 				elif word == "if":
-					# true jump is required
-					true_jump = self.nextCodeObj()
-					
 					cond = self.pop()
 					if cond != True and cond != False:
 						raise LangError("'if' expects true or false but got: " + str(cond))
 				
-					# this just repositions the reader
-					if cond:
-						self.do_jump(true_jump)
-					
-					# else, continue with next instruction
+					# this just repositions the reader:
+					#	if TRUE, do nothing (run next instruction)
+					#	if FALSE, skip next instruction
+					if not cond:
+						self.codepos += 1
+						
 					continue
 
 				elif word[:2] == ">>" or word[:2] == "<<":

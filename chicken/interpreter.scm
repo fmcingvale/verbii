@@ -86,6 +86,7 @@
 
 ; shorthand since usually i want the vector
 (define (intr-code-list intr) (List-objlist (intr-code intr)))
+(define (intr-code-length intr) (dynvector-length (intr-code-list intr)))
 
 (define (print-stats intr)
 	(print "\n==== Runtime Stats ====")
@@ -183,7 +184,7 @@
 		(lang-error 'code-return "Return without call!")))
 
 (define (nextObj intr)
-	(if (>= (intr-codepos intr) (dynvector-length (intr-code-list intr)))
+	(if (>= (intr-codepos intr) (intr-code-length intr))
 		(make-Void)
 		(begin
 			(intr-codepos-set! intr (+ (intr-codepos intr) 1))
@@ -196,7 +197,7 @@
 			obj)))
 
 (define (peekObj intr)
-	(if (>= (intr-codepos intr) (dynvector-length (intr-code-list intr)))
+	(if (>= (intr-codepos intr) (intr-code-length intr))
 		(make-Void)
 		(dynvector-ref (intr-code-list intr) (intr-codepos intr))))
 
@@ -333,11 +334,11 @@
 										(set! exit-loop #t))))
 							; if
 							((string=? obj "if")
-								(let ((target (nextSymbolOrFail intr "if"))
-										(bval (popTypeOrFail intr boolean? "true|false" 'if)))
-									; this only repositions the reader
-									(if bval (do-jump intr target))))
-									; else - keep running with next object
+								(let ((bval (popTypeOrFail intr boolean? "true|false" 'if)))
+									; if:
+									;	TRUE - run next instruction (i.e. do nothing)
+									;	FALSE - skip next instruction
+									(if (not bval) (intr-codepos-set! intr (+ (intr-codepos intr) 1)))))
 									
 							; call
 							((string=? obj "call")

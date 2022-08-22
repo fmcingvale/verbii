@@ -1,5 +1,5 @@
 /*
-	Interpreter opcodes **EXPERIMENTAL**
+	Interpreter opcodes
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
@@ -28,11 +28,15 @@ void opcode_unpack(int64_t packed, uint8_t &code, uint8_t &A, uint16_t &B, uint3
 static map<string,uint8_t> NAME_TO_CODE { 
 	{"FRAME-GET", OPCODE_FRAME_GET },
 	{"FRAME-SET", OPCODE_FRAME_SET },
+	{"JUMP-FORW", OPCODE_JUMP_FORW},
+	{"JUMP-BACK", OPCODE_JUMP_BACK},
 };
 
 static map<uint8_t,string> CODE_TO_NAME {
 	{OPCODE_FRAME_GET, "FRAME-GET"},
 	{OPCODE_FRAME_SET, "FRAME-SET"},
+	{OPCODE_JUMP_FORW, "JUMP-FORW"},
+	{OPCODE_JUMP_BACK, "JUMP-BACK"},
 };
 
 uint8_t opcode_name_to_code(const char *name) {
@@ -68,6 +72,25 @@ void opcode_FRAME_SET(Interpreter *intr, uint8_t levels, uint16_t index, uint32_
 	intr->cur_framedata->setFrameObj(levels, index, obj);
 }
 
+void do_opcode_JUMP(Interpreter *intr, int32_t offset) {
+	if(!intr->code)
+		throw LangError("opcode JUMP called but no code loaded??");
+
+	auto newpos = intr->codepos + offset;
+	if(newpos < 0 || newpos >= intr->code->size())
+		throw LangError("JUMP out of bounds");
+
+	intr->codepos = newpos;
+}
+
+void opcode_JUMP_FORW(Interpreter *intr, uint8_t _A, uint16_t _B, uint32_t offset) {
+	do_opcode_JUMP(intr, offset);
+}
+
+void opcode_JUMP_BACK(Interpreter *intr, uint8_t _A, uint16_t _B, uint32_t offset) {
+	do_opcode_JUMP(intr, -((int32_t)offset));
+}
+
 // make sure order matches ordering of values!
 std::vector<opcode_func> OPCODE_FUNCTIONS {
-	opcode_FRAME_GET, opcode_FRAME_SET };
+	opcode_FRAME_GET, opcode_FRAME_SET, opcode_JUMP_FORW, opcode_JUMP_BACK };

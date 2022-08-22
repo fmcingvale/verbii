@@ -16,6 +16,8 @@ public class Opcodes {
 	// make sure these match c++ reference
 	const byte OPCODE_FRAME_GET = 0; 
 	const byte OPCODE_FRAME_SET = 1; 
+	const byte OPCODE_JUMP_FORW = 2;
+	const byte OPCODE_JUMP_BACK = 3;
 
 	// see c++ notes for why this is a signed long return
 	public static long opcode_pack(byte code, byte A, ushort B, uint C) {
@@ -36,12 +38,16 @@ public class Opcodes {
 		new Dictionary<string,byte> { 
 			{"FRAME-GET", OPCODE_FRAME_GET},
 			{"FRAME-SET", OPCODE_FRAME_SET},
+			{"JUMP-FORW", OPCODE_JUMP_FORW},
+			{"JUMP-BACK", OPCODE_JUMP_BACK},
 		};
 
 	public static Dictionary<byte,string> CODE_TO_NAME = 
 		new Dictionary<byte,string> { 
 			{OPCODE_FRAME_GET, "FRAME-GET"},
 			{OPCODE_FRAME_SET, "FRAME-SET"},
+			{OPCODE_JUMP_FORW, "JUMP-FORW"},
+			{OPCODE_JUMP_BACK, "JUMP-BACK"},
 		};
 
 	public static byte opcode_name_to_code(string name) {
@@ -74,6 +80,17 @@ public class Opcodes {
 		intr.framedata.setFrameObj(levels, index, obj);
 	}
 	
+	public static void do_op_JUMP(Interpreter intr, int offset) {
+		if(intr.code == null)
+			throw new LangError("JUMP called without code?");
+
+		var pos = intr.codepos + offset;
+		if(pos < 0 || pos >= intr.code.Count)
+			throw new LangError("JUMP out of bounds");
+
+		intr.codepos = pos;
+	}
+
 	public static void runOpcode(Interpreter intr, LangOpcode opcode) {
 	
 		switch(opcode.code) {
@@ -83,6 +100,14 @@ public class Opcodes {
 
 			case OPCODE_FRAME_SET:
 				op_FRAME_SET(intr, opcode.A, opcode.B, opcode.C);
+				break;
+				
+			case OPCODE_JUMP_FORW:
+				do_op_JUMP(intr, (int)opcode.C);
+				break;
+
+			case OPCODE_JUMP_BACK:
+				do_op_JUMP(intr, -((int)opcode.C));
 				break;
 				
 			default:

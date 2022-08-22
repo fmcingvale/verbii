@@ -340,18 +340,17 @@ public class Interpreter {
 				}
 
 				if(sym!.match("if")) {
-					// true jump is required
-					var true_jump = nextSymbolOrFail("if");
 					var cond = pop();
 					var b_cond = cond as LangBool;
-					if(b_cond == null) {
+					if(b_cond == null)
 						throw new LangError("'if' requires true|false but got: " + cond.fmtStackPrint());
-					}
-					// these don't run the jump, they just reposition the reader
-					if(b_cond.value) {
-						do_jump(true_jump);
-					}
-					// else, keep running with next statement
+					
+					// cases:
+					//	TRUE - run next instruction (i.e. do nothing)
+					//	FALSE - skip next instruction
+					if(!b_cond.value)
+						codepos += 1;
+			
 					continue;
 				}
 

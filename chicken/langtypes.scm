@@ -134,16 +134,22 @@
 ; keep these synced with c++
 (define OPCODE-FRAME-GET 0)
 (define OPCODE-FRAME-SET 1)
+(define OPCODE-JUMP-FORW 2)
+(define OPCODE-JUMP-BACK 3)
 
 (define OPCODE-NAME-TO-CODE
 	(alist->hash-table
 		`(	("FRAME-GET" . ,OPCODE-FRAME-GET)
-			("FRAME-SET" . ,OPCODE-FRAME-SET))))
+			("FRAME-SET" . ,OPCODE-FRAME-SET)
+			("JUMP-FORW" . ,OPCODE-JUMP-FORW)
+			("JUMP-BACK" . ,OPCODE-JUMP-BACK))))
 
 (define OPCODE-CODE-TO-NAME
 	(alist->hash-table
 		`(	(,OPCODE-FRAME-GET . "FRAME-GET")
-			(,OPCODE-FRAME-SET . "FRAME-SET"))))
+			(,OPCODE-FRAME-SET . "FRAME-SET")
+			(,OPCODE-JUMP-FORW . "JUMP-FORW")
+			(,OPCODE-JUMP-BACK . "JUMP-BACK"))))
 
 (define (opcode-pack code A B C)
 	(if (> C #x000fffff)

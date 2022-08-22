@@ -276,18 +276,17 @@ function Interpreter:run(objlist, stephook)
 			end
 
 			if obj == "if" then
-				-- true jump is required
-				local true_jump = self:nextObj()
-
 				-- get true|false condition
 				local cond = self:pop()
 				if cond ~= true and cond ~= false then
 					error(">>>'if' expects true or false but got: " .. fmtStackPrint(cond))
 				end
-				-- this doesn't run the jump, it just repositions self.codepos
-				if cond == true then
-					self:do_jump(true_jump)
-				end -- else, continue with next instruction after true_jump
+				-- if:
+				--	TRUE - run next instruction (i.e. do nothing)
+				-- 	FALSE - skip next instruction
+				if cond ~= true then
+					self.codepos = self.codepos + 1
+				end
 				goto MAINLOOP
 			end
 

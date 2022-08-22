@@ -1,5 +1,5 @@
 /*
-	Interpreter opcodes **EXPERIMENTAL**
+	Interpreter opcodes
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
@@ -36,6 +36,18 @@
 const int OPCODE_FRAME_GET = 0; 
 // A = number of frames up (0 means my frame); B = index of var in outer frame
 const int OPCODE_FRAME_SET = 1; 
+
+// to simplify encoding/printing, make two opcodes for jumps -- one forward, one backward.
+// using a bias value to encode +/- to a positive int would cause a bias value to have
+// to be propogated to the print functions and into the verbii compiler. better to make
+// opcodes generic and avoid special handling I think.
+
+// C = jump offset
+//	- implementation note -- when JUMP is called, codepos will be pointing to the
+//	  position AFTER the jump opcode.
+const int OPCODE_JUMP_FORW = 2;
+// C = negative of offset
+const int OPCODE_JUMP_BACK = 3;
 
 // since the packed opcode is limited to 52 bits, a *signed* 64-bit value is
 // used so that it is compatible with the native verbii integer type

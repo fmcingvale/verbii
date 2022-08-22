@@ -86,7 +86,7 @@ class Interpreter {
 	void code_return();
 	
 	// current running code & callstack of previous frames
-	ObjList *code; // NULL if not code loaded
+	ObjList *code; // NULL if code not loaded
 	size_t codepos;
 	// 'version 2' closures (frame data)
 	CallFrameData *cur_framedata; // current call frame data or NULL
