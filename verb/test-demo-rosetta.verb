@@ -343,7 +343,7 @@
 	1234 curry F!
 	\ call F(1234,50,60,70)
 	70 F call
-	0.29035294117647058 expect==
+	0.29035294117647058 expect==f
 	
 	\ now use the higher-order functions to make the above read more naturally
 	
@@ -357,7 +357,7 @@
 	{ thing4 } 1234 50 60 curry4 F!
 	\ test as above
 	70 F call
-	0.29035294117647058 expect==
+	0.29035294117647058 expect==f
 	;
 	
 ( https://rosettacode.org/wiki/Partial_function_application )
