@@ -91,6 +91,8 @@ Global TODO
 
 ---[   Clean-up   ]------------------------------------------------------
 
+* chicken: split opcodes into opcodes.scm, to mirror other ports
+
 * maybe? rename bitops for readability:
 	bit-shr -> bit>>
 	bit-shl -> bit<<
