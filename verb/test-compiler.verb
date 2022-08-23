@@ -143,4 +143,55 @@
 	71922 expect==
 	;
 	
+\ stress tests for jump optimizer
+: jumptest-1 ( x )
+	x 1 == if >>one
+	x 2 == if >>two
+	x 3 == if >>three
+	"Unknown" return
+	@one "ONE" return
+	@two "TWO" return
+	@three "THREE" return
+	;
+	
+: jumptest-2
+	[ ]
+	>>one
+	@two "2" append >>three
+	@four "4" append >>five
+	@one "1" append <<two
+	@three "3" append <<four
+	@five "5" append
+	;
+	
+: jumptest-3
+	[ ]
+	>>one
+	@two "2" append >>three
+	@four "4" append >>five
+	@six "6" append return
+	@one "1" append <<two
+	@three "3" append
+	[
+		{
+			[ ]
+			>>one
+			@two "L2" append >>three
+			@four "L4" append return
+			@one "L1" append <<two
+			@three "L3" append <<four
+		}
+	]
+	0 get call extend <<four
+	@five "5" append <<six
+	;
+	
+: test-jump-optimization
+	@locals [ res ]
+	[ ] res!
+	res 1 jumptest-1 append 2 jumptest-1 append 3 jumptest-1 append 4 jumptest-1 append drop
+	[ "ONE" "TWO" "THREE" "Unknown" ] res expect==
+	[ "1" "2" "3" "4" "5" ] jumptest-2 expect==
+	[ "1" "2" "3" "L1" "L2" "L3" "L4" "4" "5" "6" ] jumptest-3 expect==
+	;
 	
