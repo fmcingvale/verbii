@@ -210,7 +210,10 @@ def builtin_wordlist(I):
 
 def builtin_file_read(I):
 	filename = popString(I, "file-read")
-	I.push(LangString(open(filename, 'r').read()))
+	f = open(filename,'r')
+	buf = f.read()
+	I.push(LangString(buf))
+	f.close()
 
 def builtin_make_list(I):
 	nr = popInt(I)
@@ -497,7 +500,7 @@ def builtin_file_delete(I):
 	filename = popString(I,'file-delete')
 	if os.path.isfile(filename):
 		os.remove(filename)
-	
+
 # name A B C make-opcode -> opcode
 def builtin_make_opcode(I):
 	C = popInt(I)
