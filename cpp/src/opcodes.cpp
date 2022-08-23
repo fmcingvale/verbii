@@ -77,7 +77,9 @@ void do_opcode_JUMP(Interpreter *intr, int32_t offset) {
 		throw LangError("opcode JUMP called but no code loaded??");
 
 	auto newpos = intr->codepos + offset;
-	if(newpos < 0 || newpos >= intr->code->size())
+	// NOTE: jump is allowed to go 1 past end of code -- this is a normal eof,
+	// so the second test is > instead of >=
+	if(newpos < 0 || newpos > intr->code->size())
 		throw LangError("JUMP out of bounds");
 
 	intr->codepos = newpos;

@@ -38,7 +38,8 @@ function do_opcode_JUMP(intr, offset)
 	end
 
 	local pos = intr.codepos + offset
-	if pos < 1 or pos > #intr.code then
+	-- see c++ for why this allows +1 overflow
+	if pos < 1 or pos > (#intr.code+1) then
 		error(">>>JUMP out of bounds")
 	end
 

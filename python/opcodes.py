@@ -51,7 +51,8 @@ def _do_opcode_JUMP(intr, offset):
 		raise LangError("JUMP with no running code?")
 
 	pos = intr.codepos + offset
-	if pos < 0 or pos >= len(intr.code):
+	# see c++ for why this is > instead of >=
+	if pos < 0 or pos > len(intr.code):
 		raise LangError("JUMP out of bounds")
 
 	intr.codepos = pos

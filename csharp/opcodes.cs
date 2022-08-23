@@ -85,7 +85,8 @@ public class Opcodes {
 			throw new LangError("JUMP called without code?");
 
 		var pos = intr.codepos + offset;
-		if(pos < 0 || pos >= intr.code.Count)
+		// see c++ for why this is > instead of >=
+		if(pos < 0 || pos > intr.code.Count)
 			throw new LangError("JUMP out of bounds");
 
 		intr.codepos = pos;

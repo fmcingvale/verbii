@@ -712,7 +712,8 @@
 		(lang-error "JUMP called with no code running?"))
 
 	(let ((pos (+ (intr-codepos intr) offset)))
-		(if (or (< pos 0) (>= pos (intr-code-length intr)))
+		; see c++ for why this is > instead of >=
+		(if (or (< pos 0) (> pos (intr-code-length intr)))
 			(lang-error "JUMP out of bounds")
 			(intr-codepos-set! intr pos))))
 
