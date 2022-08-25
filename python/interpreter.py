@@ -57,6 +57,7 @@ class Interpreter(object):
 		print("  Max stack depth: {0}".format(self.SP_EMPTY - self.min_run_SP))
 		print("  Max callstack depth: {0}".format(self.max_callstack))
 		print("  Tail calls: {0}".format(self.nr_tailcalls))
+		print("  Run time: {0:0.1f}".format(time()-STARTUP_TIME))
 
 	def heap_alloc(self, nr):
 		"alloc space for nr objects, returning starting index"
