@@ -187,7 +187,7 @@ class CallFrameData {
 	public:
 	CallFrameData();
 	~CallFrameData() 
-		{ outer = NULL; /* printf("CALLFRAME DATA DTOR\n"); */ }
+		{ outer = NULL; linked = false; clear_data(); /* printf("CALLFRAME DATA DTOR\n"); */ }
 
 	// frames begin disconnected from any other context. this
 	// can be used to tie this frame to an outer context so that
@@ -202,6 +202,8 @@ class CallFrameData {
 	bool isLinked() const;
 	void setLinked(bool l) { linked = l; }
 
+	void clear_data();
+	
 	private:
 	Object data[MAX_CALLFRAME_SLOTS]; // args+locals for function
 	CallFrameData *outer;

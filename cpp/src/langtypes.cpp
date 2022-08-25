@@ -201,6 +201,13 @@ void CallFrameData::setFrameObj(int levels, int index, Object obj) {
 	frame->data[index] = obj;
 }
 
+void CallFrameData::clear_data() {
+	//Object n = newNull();
+	//for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i) 
+	//	data[i] = n;
+	memset((void*)data, 0, MAX_CALLFRAME_SLOTS*sizeof(Object));
+}
+
 #define COLLECT_CALLFRAME_ALLOC_STATS
 
 std::vector<CallFrameData*> callframe_pool;
@@ -219,14 +226,17 @@ CallFrameData *callframe_alloc() {
 		auto data = callframe_pool.back();
 		callframe_pool.pop_back();
 		// reset its data
-		data->setLinked(false);
-		data->setOuterFrame(NULL);
+		//data->setLinked(false);
+		//data->setOuterFrame(NULL);
 
 		return data;
 	}
 }
 
 void callframe_free(CallFrameData* data) {
+	data->setOuterFrame(NULL);
+	data->setLinked(false);
+	data->clear_data();
 	callframe_pool.push_back(data);
 #ifdef COLLECT_CALLFRAME_ALLOC_STATS
 	++CALLFRAME_NR_FREE;
