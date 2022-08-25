@@ -176,7 +176,7 @@
 		(langtype-error 'opcode-code-to-name "No such opcode number: " code)))
 
 ; *** SYNC THIS WITH C++ ***
-(define MAX-CALLFRAME-SLOTS 255)
+(define MAX-CALLFRAME-SLOTS 32)
 
 ; DON'T USE THIS DIRECTLY -- use new-CallFrameData
 (define-record CallFrameData outer data)

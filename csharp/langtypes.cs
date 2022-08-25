@@ -322,7 +322,7 @@ public class LangList : LangObject {
 // at each function call
 public class CallFrameData {
 	// *** SYNC THIS WITH C++ IMPLEMENTATION ***
-	const int MAX_CALLFRAME_SLOTS = 255; 
+	const int MAX_CALLFRAME_SLOTS = 32;
 
 	public CallFrameData() { 
 		outer = null;

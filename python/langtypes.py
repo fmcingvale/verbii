@@ -86,7 +86,7 @@ class CallFrameData(object):
 	# this is the maximum number args + locals a function can have
 	#
 	# ** KEEP THIS SYNCED WITH THE C++ VALUE **
-	MAX_CALLFRAME_SLOTS = 255
+	MAX_CALLFRAME_SLOTS = 32
 
 	def __init__(self):
 		self.slots = [0] * self.MAX_CALLFRAME_SLOTS

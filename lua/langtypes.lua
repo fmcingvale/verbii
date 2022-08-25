@@ -232,7 +232,7 @@ end
 -- callframe data
 local CallFrameData = {}
 -- ** KEEP THIS SYNCED WITH THE C++ VALUE **
-MAX_CALLFRAME_SLOTS = 255
+MAX_CALLFRAME_SLOTS = 32
 
 function CallFrameData:new(obj)
 	setmetatable(obj, self)
@@ -243,6 +243,7 @@ function CallFrameData:new(obj)
 	obj.slots = {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		--[[
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
@@ -260,7 +261,7 @@ function CallFrameData:new(obj)
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-
+		]]--
 		0 -- 1 more to ensure i don't have an off-by-1 overflow since i do index+1 below
 	}
 	return obj
