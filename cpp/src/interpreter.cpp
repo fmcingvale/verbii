@@ -47,6 +47,7 @@ Interpreter::Interpreter() {
 	max_callstack = 0;
 	min_run_SP = SP;
 	nr_tailcalls = 0;
+	max_frame_slot_used = 0;
 	PROFILE_CALLS = false;
 }
 
@@ -77,6 +78,7 @@ void Interpreter::print_stats() {
 	cout << "  User-defined words: " << WORDS.size() << endl;
 	cout << "  Max stack depth: " << (SP_EMPTY - min_run_SP) << endl;
 	cout << "  Max callstack depth: " << max_callstack << endl;
+	cout << "  Max callframe data slot: " << max_frame_slot_used << endl;
 	cout << "  Tail calls: " << nr_tailcalls << endl;
 	if(PROFILE_CALLS) {
 		print_word_calls();

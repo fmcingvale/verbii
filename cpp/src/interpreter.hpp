@@ -102,6 +102,7 @@ class Interpreter {
 	int max_callstack;
 	int min_run_SP;
 	unsigned long nr_tailcalls;
+	int max_frame_slot_used;
 
 	protected:
 	// use functions above so error handling can be in one place
