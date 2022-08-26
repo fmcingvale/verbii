@@ -48,8 +48,8 @@ class Interpreter(object):
 		self.nr_tailcalls = 0
 
 	def print_stats(self):
-		from native import BUILTINS
-
+		from native import BUILTINS, STARTUP_TIME
+		from time import time
 		print("\n==== Runtime Stats ====")
 		print("* General:")
 		print("  Builtin words: {0}".format(len(BUILTINS)))
