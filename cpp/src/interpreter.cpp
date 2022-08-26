@@ -48,6 +48,7 @@ Interpreter::Interpreter() {
 	min_run_SP = SP;
 	nr_tailcalls = 0;
 	max_frame_slot_used = 0;
+	nr_total_calls = 0;
 	PROFILE_CALLS = false;
 }
 
@@ -79,6 +80,7 @@ void Interpreter::print_stats() {
 	cout << "  Max stack depth: " << (SP_EMPTY - min_run_SP) << endl;
 	cout << "  Max callstack depth: " << max_callstack << endl;
 	cout << "  Max callframe data slot: " << max_frame_slot_used << endl;
+	cout << "  Total calls: " << nr_total_calls << endl;
 	cout << "  Tail calls: " << nr_tailcalls << endl;
 	if(PROFILE_CALLS) {
 		print_word_calls();
@@ -239,6 +241,8 @@ void Interpreter::code_call(ObjList *new_code, BoundLambda *bound_lambda) {
 	if(!code) {
 		throw LangError("code_call but no code is running");
 	}
+	++nr_total_calls;
+
 	callstack_code.push_back(code);
 	callstack_pos.push_back(codepos);
 	callstack_frame_data.push_back(cur_framedata);
