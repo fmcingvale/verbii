@@ -512,6 +512,7 @@ n128-add n128-to-hex . CR
 
 	@got-negative "Negative value in n128-get-msw not allowed" error
 	@not-found "Zero not allowed in n128-get-msw" error
+	@out-of-bounds "Out of bounds" error
 	;
 
 "** n128-get-msw:" . CR
