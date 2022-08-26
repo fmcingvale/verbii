@@ -529,8 +529,9 @@ def builtin_opcode_packed(I):
 
 def builtin_bind_lambda(I):
 	_lambda = popLambda(I)
-	# remember currently active frame -- when bound-lambda is called
-	# later, this frame will be set as its outer frame
+	# remember currently active frame and mark it as bound so that the
+	# interpreter knows not to free/reuse it
+	I.framedata.bound = True
 	I.push(LangBoundLambda(_lambda, I.framedata))
 	
 def builtin_file_sep(I):

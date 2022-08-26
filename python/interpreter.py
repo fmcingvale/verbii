@@ -13,9 +13,18 @@ from langtypes import fmtStackPrint, MAX_VINT, MIN_VINT, \
 import re
 from errors import LangError
 
+class CallStackEntry(object):
+	def __init__(self):
+		self.code = None
+		self.codepos = 0
+		# statically allocate, then replace as needed when bound
+		self.framedata = CallFrameData()
+
 class Interpreter(object):
 	STACK_SIZE = (1<<16)
 	HEAP_STARTSIZE = (1<<16) # grows as needed
+	# max nesting depth of non-tail-eliminated function calls
+	MAX_CALLSTACK_DEPTH = 1024
 
 	def __init__(self):
 		# 2 memory areas here: stack and heap (program allocatable memory)
@@ -37,26 +46,41 @@ class Interpreter(object):
 		# user-defined words (access through methods only)
 		self._WORDS = {}
 
+		# stack of running & previous frames; top is currently running frame (even for top level) -
+		# this avoids a special case of having to allocate separate framedata for the
+		# top frame
+		self.callstack = []
+		for i in range(self.MAX_CALLSTACK_DEPTH):
+			self.callstack.append(CallStackEntry())
+
+		# the current running frame or -1 if not running
+		self.callstack_cur = -1
+
+		# these are shortcuts that point to the current callframe
 		self.code = None
 		self.codepos = 0
 		self.framedata = None # current CallFrameData
-		self.callstack = []
-
+		
 		# stats
 		self.max_callstack = 0
 		self.min_run_SP = self.SP
 		self.nr_tailcalls = 0
+		self.nr_saved_frames = 0
+		self.nr_calls = 0
 
 	def print_stats(self):
 		from native import BUILTINS, STARTUP_TIME
 		from time import time
+
 		print("\n==== Runtime Stats ====")
 		print("* General:")
 		print("  Builtin words: {0}".format(len(BUILTINS)))
 		print("  User-defined words: {0}".format(len(self._WORDS)))
 		print("  Max stack depth: {0}".format(self.SP_EMPTY - self.min_run_SP))
 		print("  Max callstack depth: {0}".format(self.max_callstack))
+		print("  Total calls: {0}".format(self.nr_calls))
 		print("  Tail calls: {0}".format(self.nr_tailcalls))
+		print("  Saved frames: {0}".format(self.nr_saved_frames))
 		print("  Run time: {0:0.1f}".format(time()-STARTUP_TIME))
 
 	def heap_alloc(self, nr):
@@ -70,22 +94,53 @@ class Interpreter(object):
 		return addr
 
 	def code_call(self, code, bound_lambda=None):
+		self.nr_calls += 1
+
 		#print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
-		self.callstack.append((self.code,self.codepos,self.framedata))
+		if self.callstack_cur >= (self.MAX_CALLSTACK_DEPTH-1):
+			raise LangError("Max callstack depth exceeded")
+
+		# save current context -- note that only codepos needs to be updated since
+		# top of callstack is the running frame
+		self.callstack[self.callstack_cur].codepos = self.codepos
+		
+		self.callstack_cur += 1
+		# set new context
+		self.callstack[self.callstack_cur].code = code
+		self.callstack[self.callstack_cur].codepos = 0
+		# framedata is not currently cleared on new frames, so nothing to do here.
+		# current framedata is safely stored on callstack-1
+
+		# set shortcuts into new frame
 		self.code = code
 		self.codepos = 0
-		self.framedata = CallFrameData()
+		self.framedata = self.callstack[self.callstack_cur].framedata
+
 		if bound_lambda:
 			self.framedata.setOuterFrame(bound_lambda.outer)
 		# stats
-		self.max_callstack = max(self.max_callstack,len(self.callstack))
+		self.max_callstack = max(self.max_callstack,self.callstack_cur+1)
 
 	def havePushedFrames(self):
-		return len(self.callstack) > 0
+		return self.callstack_cur >= 0
 
 	def code_return(self):
-		self.code,self.codepos,self.framedata = self.callstack.pop()
-		#print("CODE RETURN (POS={0}): {1}".format(self.codepos, fmtStackPrint(self.code)))
+		if self.callstack_cur < 0:
+			raise LangError("Return from empty callstack")
+
+		# see if framedata became bound during this call
+		if self.callstack[self.callstack_cur].framedata.bound:
+			# a lambda has been bound to this frame, therefore it cannot
+			# be freed AND the lambda (one or more) holds a reference to it.
+			# so i need to replace it in the callstack with a fresh frame.
+			self.callstack[self.callstack_cur].framedata = CallFrameData()
+			self.nr_saved_frames += 1
+
+		self.callstack_cur -= 1
+		# set shortcuts to popped frame
+		self.code = self.callstack[self.callstack_cur].code
+		self.codepos = self.callstack[self.callstack_cur].codepos
+		self.framedata = self.callstack[self.callstack_cur].framedata
 
 	def push(self, obj):
 		# unlike in the C++ implementation, I can just push regular python objects
@@ -207,14 +262,19 @@ class Interpreter(object):
 		
 	def run(self, objlist, stephook=None) -> None:
 		from langtypes import deepcopy
-		#if len(self.callstack):
-		if self.code is not None:
+		if self.callstack_cur != -1:
 			raise LangError("Attempting to call Interpreter.run() recursively")
 
-		#self.code_call(objlist)
+		# almost but not quite code_call() so have to do it here
+		self.callstack_cur += 1
+		self.callstack[self.callstack_cur].code = objlist
+		self.callstack[self.callstack_cur].codepos = 0
+		# framedata not currently zeroed/initialized on calls
+
+		# set shortcuts that are used everywhere else
 		self.code = objlist
 		self.codepos = 0
-		self.framedata = None
+		self.framedata = self.callstack[self.callstack_cur].framedata
 
 		from native import BUILTINS
 		# run one object at a time in a loop	
@@ -234,13 +294,12 @@ class Interpreter(object):
 
 				# string are symbols
 				elif word == "return":
-					# return from word by popping back to previous wordlist (if not at toplevel)
-					if self.havePushedFrames():
-						self.code_return()
-					else:
-						self.code = None # mark self as not running
+					# pop back to previous frame
+					self.code_return()
+					# see if I exited from the top frame
+					if self.callstack_cur < 0:
 						return # top level return exits program
-				
+					# else continue running popped frame
 					continue
 			
 				elif word == "if":
@@ -327,13 +386,13 @@ class Interpreter(object):
 				continue
 
 			elif isVoid(word):
-				# i could be returning from a word that had no 'return',
-				# so do return, if possible
-				if self.havePushedFrames():
-					self.code_return()
-					continue
-				else:
-					self.code = None # mark self as not running
+				# end of currently running objlist - treat like a return
+				if self.callstack_cur < 0: # as above, SHOULD never happen
+					raise LangError("Implicit return while not running??")
+
+				self.code_return()
+				if self.callstack_cur < 0:
+					# popped last frame, so end run()
 					return
 
 			# list literals are deepcopied (see DESIGN-NOTES.txt)

@@ -91,6 +91,8 @@ class CallFrameData(object):
 	def __init__(self):
 		self.slots = [0] * self.MAX_CALLFRAME_SLOTS
 		self.outer = None
+		# this is set to True if bind-lambda is called while this frame is active
+		self.bound = False
 
 	def setOuterFrame(self, outer): 
 		self.outer = outer
