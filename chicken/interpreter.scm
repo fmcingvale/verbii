@@ -48,6 +48,11 @@
 	; WORDS[name: string] = List
 	(_WORDS intr-WORDS intr-WORDS-set!)
 
+	; ** NOTE ** unlike the other ports, this uses a dynamic callstack where a callframedata is
+	; allocated on every call -- given the small amount of improvement seen on other ports (5-10%)
+	; i'm not changing chicken yet because it is a pain .... maybe once other inefficiencies have
+	; been optimized this might be more of a win)
+
 	(code intr-code intr-code-set!) ; currently running code (List)
 	(codepos intr-codepos intr-codepos-set!) ; next obj to run as index into code
 	(framedata intr-framedata intr-framedata-set!) ; current CallFrameData or '()
