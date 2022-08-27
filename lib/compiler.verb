@@ -359,6 +359,8 @@
 		outlist swap append outlist! <<loop
 	@eof
 		drop "End of input inside : ... ;" error
+	@badname
+		"Expecting symbol after ':' but got: " swap repr + error
 	@inline-list ( inline-list )
 		\ got [ ,,inline elem .. ] where elements should be inlined instead of appended as a list
 		\ remove ,,inline and extend list
