@@ -12,7 +12,7 @@ require("opcodes")
 
 local Interpreter = {}
 
--- '#' doesn't work on tables with non-contiguous entries, like when used as a hash table
+-- '#' doesn't work on tables with non-contiguous entries, like when a table is used as a hash table
 function tableSize(t) 
 	local nr = 0
 	for p in pairs(t) do
@@ -29,9 +29,11 @@ function Interpreter:print_stats()
 	print("  Max stack depth: " .. tostring(self.SP_EMPTY - self.min_run_SP))
 	print("  Max callstack depth: " .. tostring(self.max_callstack))
 	print("  Tail calls: " .. tostring(self.nr_tail_calls))
-
+	print("  Saved frames: " .. tostring(self.nr_saved_frames))
+	print("  Run time: " .. tostring(get_usec_time()-STARTUP_TIME))
 	print("* Lua:")
 	print("  Memory in use: " .. tostring(math.ceil(1024*collectgarbage("count"))))
+	
 
 	print("* Notices:")
 	if self.SP ~= self.SP_EMPTY then
@@ -171,15 +173,29 @@ function Interpreter:prevObjOrFail(why)
 end
 
 function Interpreter:havePrevFrames()
-	return #self.callstack > 0
+	return self.callstack_cur > 1
 end
 
 function Interpreter:code_call(objlist,bound_lambda)
-	table.insert(self.callstack, {self.code,self.codepos,self.framedata})
-	--print("CALL - DEPTH NOW: " .. tostring(#self.callstack))
+	-- callstack[callstack_cur] is the currently running frame, so just save current pos,
+	-- other data remains the same
+	self.callstack[self.callstack_cur].pos = self.codepos
+
+	-- setup new frame
+	self.callstack_cur = self.callstack_cur + 1
+	if self.callstack_cur >= self.MAX_CALLSTACK_DEPTH then
+		error(">>>Callstack depth exceeded")
+	end
+
+	self.callstack[self.callstack_cur].code = objlist
+	self.callstack[self.callstack_cur].pos = 1
+	-- currently i don't clear the framedata on calls
+
+	-- update shortcuts used elsewhere
 	self.code = objlist
 	self.codepos = 1
-	self.framedata = new_CallFrameData()
+	self.framedata = self.callstack[self.callstack_cur].frame
+	
 	if bound_lambda ~= nil then
 		self.framedata:setOuterFrame(bound_lambda.outer)
 	end
@@ -188,14 +204,27 @@ function Interpreter:code_call(objlist,bound_lambda)
 end
 
 function Interpreter:code_return()
-	if self:havePrevFrames() then
-		local entry = table.remove(self.callstack)
-		--print("RETURN - DEPTH NOW: " .. tostring(#self.callstack))
-		self.code = entry[1]
-		self.codepos = entry[2]
-		self.framedata = entry[3]
-	else
-		error(">>>Trying to return without call")
+	if self.callstack_cur < 1 then
+		error(">>>Return without call")
+	end
+
+	-- did this frame get bound to a lambda?
+	if self.callstack[self.callstack_cur].frame.bound then
+		-- frame has been bound to a lambda, so it cannot be freed now.
+		-- so just replace with a new frame in the callstack.
+		self.callstack[self.callstack_cur].frame = new_CallFrameData()
+		self.nr_saved_frames = self.nr_saved_frames + 1
+	end
+
+	-- pop frame
+	self.callstack_cur = self.callstack_cur - 1
+	--print("POP FRAME CUR NOW:" .. tostring(self.callstack_cur))
+	-- if that WASN'T the top frame, set shortcuts to popped frame
+	if self.callstack_cur >= 1 then
+		-- set shortcuts to popped frame
+		self.code = self.callstack[self.callstack_cur].code
+		self.codepos = self.callstack[self.callstack_cur].pos
+		self.framedata = self.callstack[self.callstack_cur].frame 
 	end
 end
 
@@ -234,13 +263,20 @@ end
 function Interpreter:run(objlist, stephook)
 	--print("** RUN: " .. fmtStackPrint(objlist))
 	
-	if self.code ~= nil or #self.callstack > 0 then
+	if self.callstack_cur > 0 then
 		error(">>>Interpreter called recursively")
 	end
 
+	-- not quite code_call() -- setup initial frame here
+	self.callstack_cur = 1
+	self.callstack[self.callstack_cur].code = objlist
+	self.callstack[self.callstack_cur].pos = 1
+	-- framedata not cleared currrently on call
+	
+	-- set shortcuts used elsewhere
 	self.code = objlist
 	self.codepos = 1
-	self.framedata = new_CallFrameData()
+	self.framedata = self.callstack[self.callstack_cur].frame
 	
 	-- run one word at a time in a loop, with the reader position as the continuation		
 	while true do
@@ -248,10 +284,6 @@ function Interpreter:run(objlist, stephook)
 		-- see C++ notes
 
 		local obj = self:nextObj()
-		
-		--if #self.callstack < 2 then
-		--print("RUN OBJ:" .. fmtStackPrint(obj)) -- .. " " .. type(obj))
-		--end
 
 		if stephook ~= nil then
 			stephook(self,word)
@@ -265,12 +297,13 @@ function Interpreter:run(objlist, stephook)
 			end
 
 			if obj == "return" then
-				-- return from word by popping back to previous wordlist (if not at toplevel)
-				if self:havePrevFrames() then
-					self:code_return()
-				else
-					self.code = nil -- mark self as stopped
-					return -- return from top level exits program
+				-- return from word by popping back to previous wordlist
+				self:code_return()
+				-- did i return from the top frame?
+				if self.callstack_cur < 1 then
+					-- yes - exit run
+					self.callstack_cur = -1
+					return
 				end
 				goto MAINLOOP
 			end
@@ -343,8 +376,10 @@ function Interpreter:run(objlist, stephook)
 					-- last statement in list, will never need to return here,
 					-- so go ahead and pop my frame so callstack won't grow on
 					-- tail-recursive calls
-					if self:havePrevFrames() then
-						--print("*** TAIL CALL RETURN")
+					--print("*** TAIL CALL RETURN")
+					-- FIXME -- currently do not optimize for top level since that would mess up the
+					-- stack (code_call() expects a non-empty stack)
+					if self.callstack_cur > 1 then
 						self:code_return()
 						self.nr_tail_calls = self.nr_tail_calls + 1
 					end
@@ -368,14 +403,14 @@ function Interpreter:run(objlist, stephook)
 		if isVoid(obj) then
 			--print("RETURNING FROM WORD")
 			-- i could be returning from a word that had no 'return',
-			-- so pop words like i would if it were a return
-			if self:havePrevFrames() then
-				self:code_return()
-				goto MAINLOOP
-			else
-				self.code = nil -- mark self as no longer running
+			-- so do it like i would if it were a return
+			self:code_return()
+			-- return from top frame?
+			if self.callstack_cur < 1 then
+				self.callstack_cur = -1
 				return
 			end
+			goto MAINLOOP			
 		end
 
 		-- list literals are deepcopied (see DESIGN-NOTES.md)
@@ -400,6 +435,8 @@ function Interpreter:new(obj)
 	obj.STACK_SIZE = (1<<16)
 	obj.HEAP_STARTSIZE = (1<<16)
 	
+	obj.MAX_CALLSTACK_DEPTH = 1024
+
 	obj.OBJMEM = {}
 	-- prefill to create as correct size
 	for i=1,(obj.STACK_SIZE+obj.HEAP_STARTSIZE) do
@@ -414,13 +451,25 @@ function Interpreter:new(obj)
 	-- next free heap index to allocate
 	obj.HEAP_NEXTFREE = obj.SP_EMPTY
 
-	-- code currently being run or nil for not running
+	-- stack of current & previous running frames
+	obj.callstack = {}
+
+	-- prefill to MAX_CALLSTACK_DEPTH
+	for i=1,obj.MAX_CALLSTACK_DEPTH do
+		local e = {}
+		e.code = 0 -- running objlist
+		e.pos = 0  -- index into code
+		e.frame = new_CallFrameData()
+		obj.callstack[i] = e 
+	end
+
+	-- current running frame, or -1 for none
+	obj.callstack_cur = -1
+
+	-- these are shortcuts to callstack[callstack_cur]
 	obj.code = nil
 	obj.codepos = 1 -- index into code list
 	obj.framedata = nil
-	
-	-- stack of previous frames to return to
-	obj.callstack = {}
 
 	-- user-defined words - should access via methods only (outside of interpreter.lua)
 	obj._WORDS = {}
@@ -429,6 +478,7 @@ function Interpreter:new(obj)
 	obj.max_callstack = 0
 	obj.min_run_SP = obj.SP
 	obj.nr_tail_calls = 0
+	obj.nr_saved_frames = 0
 
 	return obj
 end

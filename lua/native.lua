@@ -24,7 +24,7 @@ function get_usec_time()
 	return t["sec"] + t["usec"]/1000000.0
 end
 
-local STARTUP_TIME = get_usec_time()
+STARTUP_TIME = get_usec_time()
 
 function int_divmod(a, b)
 	-- see notes in C++ implementation of this function.
@@ -694,6 +694,9 @@ end
 
 function builtin_bind_lambda(intr)
 	local lambda = popLambda(intr)
+	-- bind lambda to current frame -- mark frame as bound so interpreter
+	-- knows it cannot be freed on return
+	intr.framedata.bound = true
 	intr:push(new_BoundLambda(lambda.objlist, intr.framedata))
 end
 

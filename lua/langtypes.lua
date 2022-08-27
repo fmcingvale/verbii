@@ -239,6 +239,7 @@ function CallFrameData:new(obj)
 	self.__index = self
 	obj.__class__ = "CallFrameData"	
 	obj.outer = nil
+	obj.bound = false -- has this been bound to a lambda with bind?
 	-- ugh ... but at least avoids looping to create it
 	obj.slots = {
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
