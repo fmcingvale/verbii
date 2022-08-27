@@ -1,8 +1,8 @@
 #!/bin/bash
 
-REPL=`dirname $0`/../cpp/repl
+VERBII=`dirname $0`/../cpp/verbii
 COMPILER=`dirname $0`/../verb/compile.verb
 
-$REPL $COMPILER -- $@
+$VERBII $COMPILER -- $@
 
 
