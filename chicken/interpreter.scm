@@ -21,6 +21,7 @@
 (import miscmacros) ; inc! dec! while
 (import srfi-69) ; hash-tables
 (import (chicken gc)) ; memory-statistics
+(import (chicken time)) ; current-process-milliseconds
 
 (declare (uses langtypes))
 (declare (uses errors))
@@ -96,6 +97,7 @@
 	(print "  Max stack depth: " (- (intr-SP_EMPTY intr) (min-run-SP intr)))
 	(print "  Max callstack depth: " (max-callstack intr))
 	(print "  Tail calls: " (nr-tail-calls intr))
+	(print "  Total time: " (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0))
 
 	(let ((mstats (memory-statistics)))
 		(print "* Chicken:")
