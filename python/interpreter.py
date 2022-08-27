@@ -97,6 +97,9 @@ class Interpreter(object):
 		self.nr_calls += 1
 
 		#print("CODE CALL (POS={0}): {1}".format(self.codepos, fmtStackPrint(code)))
+		if self.callstack_cur < 0:
+			raise LangError("call while not running")
+
 		if self.callstack_cur >= (self.MAX_CALLSTACK_DEPTH-1):
 			raise LangError("Max callstack depth exceeded")
 
@@ -367,7 +370,8 @@ class Interpreter(object):
 
 				elif word in self._WORDS:
 					# tail call elimination
-					if isVoid(self.peekNextCodeObj()) or self.peekNextCodeObj() == "return":
+					# FIXME - curerntly not done at top level since code_call expects a non-empty stack
+					if (self.callstack_cur >= 1) and (isVoid(self.peekNextCodeObj()) or self.peekNextCodeObj() == "return"):
 						# no need to come back here, so go ahead and pop my call frame before
 						# calling word -- callstack will never grow on recursive tail-calls now
 						self.code_return()
