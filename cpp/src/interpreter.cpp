@@ -82,6 +82,11 @@ void Interpreter::print_stats() {
 	cout << "  Max callframe data slot: " << max_frame_slot_used << endl;
 	cout << "  Total calls: " << nr_total_calls << endl;
 	cout << "  Tail calls: " << nr_tailcalls << endl;
+	
+	auto current = chrono::steady_clock::now();
+	chrono::duration<double> diff = current - STARTUP_TIME;
+	cout << "  Total time: " << diff.count() << endl;
+
 	if(PROFILE_CALLS) {
 		print_word_calls();
 	}
