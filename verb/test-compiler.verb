@@ -141,6 +141,25 @@
 	\ python test code:
 	\ $ 12 - (34 * (56 - (78 + (91 * 23))))) = 71922
 	71922 expect==
+	
+	\ NOTE! when calling compile-and-load-string, it is the caller's responsibility to
+	\ run __main__ (or not) and delete __main__ when finished
+	'__main__ ,,del 
+	
+	\ example with jumps to make sure jumps in dynamically compiled strings are translated to opcodes
+	"""
+	: foo-9957 ( a b c d -- out )
+		[ ]
+		>>one
+		@two b append >>three
+		@four d append >>end
+		@one a append <<two
+		@end return
+		@three c append <<four
+		;
+	"""
+	compile-and-load-string
+	[ 11 22 33 44 ] 11 22 33 44 foo-9957 expect==
 	;
 	
 \ stress tests for jump optimizer

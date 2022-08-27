@@ -19,6 +19,9 @@ const int HEAP_STARTSIZE = (1<<16);
 
 const int MAX_CALLSTACK_DEPTH = 1024;
 
+// define to turn OFF support for >> and << (must be compiled into opcodes)
+#define JUMP_OPCODES_ONLY 1
+
 struct CallStackEntry {
 	ObjList *code;
 	int pos;
@@ -68,7 +71,9 @@ class Interpreter {
 	// lookup user-defined word or NULL if not found
 	ObjList* lookup_word(const char *name);
 
+	#ifndef JUMP_OPCODES_ONLY
 	void do_jump(const char *jumpword);
+	#endif
 
 	bool hasBuiltin(const char *name);
 

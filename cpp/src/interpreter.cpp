@@ -199,6 +199,7 @@ Object Interpreter::prevCodeObjOrFail(const char *failmsg) {
 	return o;
 }
 
+#ifndef JUMP_OPCODES_ONLY
 // take symbol like '>>NAME' or '<<NAME' and jump to '@NAME'
 void Interpreter::do_jump(const char *jumpword) {
 	//cout << "DO_JUMP TO: " << jumpword << endl;
@@ -232,6 +233,7 @@ void Interpreter::do_jump(const char *jumpword) {
 		throw LangError("Bad jumpword " + string(jumpword));
 	}
 }
+#endif // JUMP_OPCODES_ONLY
 
 ObjList* Interpreter::lookup_word(const char *name) {
 	auto userword = WORDS.find(name);
@@ -416,10 +418,12 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 				continue;
 			}
 
+			#ifndef JUMP_OPCODES_ONLY
 			if(obj.isSymbol(">>",2) || obj.isSymbol("<<",2)) {
 				do_jump(obj.asSymbol());
 				continue;
 			}
+			#endif
 
 			if(obj.isSymbol("@",1)) {
 				// jump target -- ignore
