@@ -31,7 +31,7 @@ def print_backtrace(intr: Interpreter):
 		sys.stdout.write("FRAME " + str(i) + ": ")
 		i += 1
 		backtrace_curframe(intr)
-		if intr.havePushedFrames():
+		if intr.can_pop_callframe():
 			intr.code_return() # pop frame and print next
 		else:
 			return # end of callstack

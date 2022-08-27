@@ -121,7 +121,7 @@ class Interpreter(object):
 		# stats
 		self.max_callstack = max(self.max_callstack,self.callstack_cur+1)
 
-	def havePushedFrames(self):
+	def can_pop_callframe(self):
 		return self.callstack_cur >= 0
 
 	def code_return(self):
@@ -138,6 +138,9 @@ class Interpreter(object):
 
 		self.callstack_cur -= 1
 		# set shortcuts to popped frame
+		# (subtlety -- when callstack is empty, _cur will be -1 which in Python still works
+		# ok for an index, just indexes the end of the lists below -- will never actually
+		# be used since the -1 will stop code from running further anyways)
 		self.code = self.callstack[self.callstack_cur].code
 		self.codepos = self.callstack[self.callstack_cur].codepos
 		self.framedata = self.callstack[self.callstack_cur].framedata
@@ -367,8 +370,8 @@ class Interpreter(object):
 					if isVoid(self.peekNextCodeObj()) or self.peekNextCodeObj() == "return":
 						# no need to come back here, so go ahead and pop my call frame before
 						# calling word -- callstack will never grow on recursive tail-calls now
-							self.code_return()
-							self.nr_tailcalls += 1 # stats
+						self.code_return()
+						self.nr_tailcalls += 1 # stats
 
 					# execute word by pushing its wordlist and continuing
 					self.code_call(self._WORDS[word])
