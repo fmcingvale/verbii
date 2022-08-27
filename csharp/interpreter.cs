@@ -83,7 +83,7 @@ public class Interpreter {
 		Console.WriteLine("  Max stack depth: " + (SP_EMPTY - min_run_SP));
 		Console.WriteLine("  Max callstack depth: " + max_callstack);
 		Console.WriteLine("  Tail calls: " + nr_tailcalls);
-
+		Console.WriteLine("  Total time: " + (((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0));
 		Console.WriteLine("* Notices:");
 		if(SP != SP_EMPTY)
 			Console.WriteLine("  Stack is not empty! (" + (SP_EMPTY-SP) + " items)");		
