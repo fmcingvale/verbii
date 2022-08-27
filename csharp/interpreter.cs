@@ -1,11 +1,6 @@
 /*
 	Interpreter - runs code.
 
-	There is no compilation step, not really even a parsing step -- the interpreter
-	runs directly from the wordlists from the Reader. This makes the code smaller and
-	makes e.g. forward declarations really easy since nothing is evaluated until it
-	runs.
-
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 	Ported from the C++ version.
