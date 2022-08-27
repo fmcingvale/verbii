@@ -327,10 +327,13 @@ public class CallFrameData {
 	public CallFrameData() { 
 		outer = null;
 		data = new LangObject[MAX_CALLFRAME_SLOTS];
+		bound = false;
 	}
 	
 	public void setOuterFrame(CallFrameData? _outer) { outer = _outer; }
 	public CallFrameData? getOuterFrame() { return outer; }
+	public bool isBound() { return bound; }
+	public void setBound(bool b) { bound = b; }
 
 	// get/set object in frame up #levels (0 == this frame)
 	public LangObject getFrameObj(int levels, int index) {
@@ -363,4 +366,5 @@ public class CallFrameData {
 
 	private LangObject[] data;
 	private CallFrameData? outer;
+	private bool bound;
 }

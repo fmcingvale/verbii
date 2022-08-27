@@ -755,9 +755,8 @@ class Builtins {
 		// remember currently active frame -- when bound-lambda is called
 		// later, this frame will be set as its outer frame
 		intr.push(new LangBoundLambda(lambda, intr.framedata));
-		// mark current frame as being linked now so it isn't freed
-		// TODO
-		// intr->cur_framedata->setLinked(true);
+		// mark current frame as being bound so interpreter knows to keep it
+		intr.framedata.setBound(true);
 	}
 
 	public static void getcwd(Interpreter intr) {

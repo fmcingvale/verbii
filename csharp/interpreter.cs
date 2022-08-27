@@ -10,6 +10,19 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 #nullable enable
 
+// callstack is of fixed size with these entries
+public class CallstackEntry {
+	public List<LangObject>? code;
+	public int pos;
+	public CallFrameData framedata;
+
+	public CallstackEntry() {
+		code = null;
+		pos = 0;
+		framedata = new CallFrameData();
+	}
+}
+
 public class Interpreter {
 	// definition of following are similar to C++ version, so see comments there for more detail.
 	// as in C++ version, everything is public here so builtins can change anything.
@@ -27,17 +40,23 @@ public class Interpreter {
 	// next free index to allocate in heap
 	public int HEAP_NEXTFREE;
 
-	// code currently running
+	// sync with C++ to ensure code runs the same on all ports
+	public const int MAX_CALLSTACK_DEPTH = 1024;
+
+	// current & previous frames
+	public CallstackEntry[] callstack;
+	public int callstack_cur; // -1 if no code running
+
+	// shortcuts into callstack for current frame
 	public List<LangObject>? code;
 	public int codepos;
-	public CallFrameData? framedata;
-	// stack of previous frames (code,codepos for each)
-	public List<Tuple<List<LangObject>,int,CallFrameData?>> callstack;
-
+	public CallFrameData framedata;
+	
 	// stats
 	public int max_callstack;
 	public int min_run_SP;
 	public ulong nr_tailcalls;
+	public int nr_saved_frames;
 
 	// user defined words - access with methods only
 	private Dictionary<string,List<LangObject>> WORDS;
@@ -56,17 +75,25 @@ public class Interpreter {
 		
 		HEAP_NEXTFREE = SP_EMPTY;
 
+		callstack = new CallstackEntry[MAX_CALLSTACK_DEPTH];
+		for(int i=0; i<MAX_CALLSTACK_DEPTH; ++i) {
+			callstack[i] = new CallstackEntry();
+		}
+
+		callstack_cur = -1;
+
 		WORDS = new Dictionary<string,List<LangObject>>();
 
 		code = null;
 		codepos = -1;
-		framedata = null;
-		callstack = new List<Tuple<List<LangObject>,int,CallFrameData?>>();
-
+		// will be set correctly later, for now just need to set to something non-null
+		framedata = callstack[0].framedata;
+		
 		// stats
 		max_callstack = 0;
 		min_run_SP = SP;
 		nr_tailcalls = 0;
+		nr_saved_frames = 0;
 	}
 
 	public void printStats() {
@@ -77,6 +104,7 @@ public class Interpreter {
 		Console.WriteLine("  User-defined words: " + WORDS.Count);
 		Console.WriteLine("  Max stack depth: " + (SP_EMPTY - min_run_SP));
 		Console.WriteLine("  Max callstack depth: " + max_callstack);
+		Console.WriteLine("  Saved frames: " + nr_saved_frames);
 		Console.WriteLine("  Tail calls: " + nr_tailcalls);
 		Console.WriteLine("  Total time: " + (((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0));
 		Console.WriteLine("* Notices:");
@@ -217,34 +245,59 @@ public class Interpreter {
 
 	public void code_call(List<LangObject> objlist, LangBoundLambda? boundlambda=null) {
 		//Console.WriteLine("CALLING");
-		if(code == null) {
+		if(callstack_cur < 0)
 			throw new LangError("call while not running");
-		}
-		callstack.Add(Tuple.Create(code,codepos,framedata));
+		
+		else if(callstack_cur >= (MAX_CALLSTACK_DEPTH-1))
+			throw new LangError("Max callstack depth exceeded");
+
+		// save current context by updating .pos - no other fields need to be updated
+		callstack[callstack_cur].pos = codepos;
+
+		// setup new frame
+		++callstack_cur;
+
+		callstack[callstack_cur].code = objlist;
+		callstack[callstack_cur].pos = 0;
+		// currently framedata not cleared
+
+		// set shortcuts used elsewhere
 		code = objlist;
 		codepos = 0;
-		framedata = new CallFrameData();
+		framedata = callstack[callstack_cur].framedata;
+
 		if(boundlambda != null)
 			framedata.setOuterFrame(boundlambda.outer);
 
 		// stats
-		max_callstack = Math.Max(max_callstack,callstack.Count);
+		max_callstack = Math.Max(max_callstack,callstack_cur+1);
 	}
 
 	public bool havePushedFrames() {
-		return callstack.Count > 0;
+		return callstack_cur >= 0;
 	}
 
 	public void code_return() {
 		//Console.WriteLine("RETURNING");
-		if(!havePushedFrames()) {
+		if(callstack_cur < 0)
 			throw new LangError("return without call");
+		
+		// is framedata now bound?
+		if(framedata.isBound()) {
+			// replace with fresh frame
+			callstack[callstack_cur].framedata = new CallFrameData();
+			++nr_saved_frames;
 		}
-		var tup = callstack[callstack.Count-1];
-		code = tup.Item1;
-		codepos = tup.Item2;
-		framedata = tup.Item3;
-		callstack.RemoveAt(callstack.Count-1);
+
+		// pop frame
+		--callstack_cur;
+		// set shortcuts, unless i just popped the last frame (in which case these
+		// won't be used again)
+		if(callstack_cur >= 0) {
+			code = callstack[callstack_cur].code;
+			codepos = callstack[callstack_cur].pos;
+			framedata = callstack[callstack_cur].framedata;
+		}
 	}
 
 	public bool hasWord(string name) {
@@ -292,13 +345,20 @@ public class Interpreter {
 	}
 
 	public void run(List<LangObject> objlist, Func<Interpreter,LangObject,int>? debug_hook) {
-		if(callstack.Count > 0) {
+		if(callstack_cur >= 0) {
 			throw new LangError("Interpreter::run called recursively");
 		}
 
+		// almost but not quite code_call() so have to do it here
+		callstack_cur = 0;
+		callstack[callstack_cur].code = objlist;
+		callstack[callstack_cur].pos = 0;
+		// framedata not currently zeroed/initialized on calls
+
+		// set shortcuts that are used everywhere else
 		code = objlist;
 		codepos = 0;
-		framedata = null;
+		framedata = callstack[callstack_cur].framedata;
 		
 		//Console.WriteLine("RUNNING LIST:");
 		//foreach(var obj in objlist) {
@@ -323,14 +383,12 @@ public class Interpreter {
 				}
 
 				if(sym!.match("return")) {
-					// return from word by popping back to previous wordlist (don't call at toplevel)
-					if(havePushedFrames()) {	
-						code_return();
-					}
-					else {
-						code = null; // mark self as not running
+					// pop frame
+					code_return();
+					// did i pop the last frame?
+					if(callstack_cur < 0)
 						return; // top level return exits program
-					}
+					
 					continue;
 				}
 
@@ -393,11 +451,10 @@ public class Interpreter {
 					var next = peekNextObj();
 					var nextSym = next as LangSymbol;
 
-					if((next is LangVoid) || (nextSym != null && nextSym.match("return"))) {
-						if(havePushedFrames()) { // in case i'm at the toplevel
-							++nr_tailcalls;
-							code_return();
-						}
+					// FIXME - currently not done at top level since code_call expects a non-empty stack
+					if(callstack_cur >= 1 && ((next is LangVoid) || (nextSym != null && nextSym.match("return")))) {
+						++nr_tailcalls;
+						code_return();
 					}
 
 					// execute word by pushing its wordlist and continuing
@@ -414,15 +471,12 @@ public class Interpreter {
 			else if(obj is LangVoid) {
 				//Console.WriteLine("GOT VOID");
 				// i could be returning from a word that had no 'return',
-				// so pop words like i would if it were a return
-				if(havePushedFrames()) {
-					code_return();
-					continue;
-				}
-				else {
-					code = null; // mark self as not running
-					return;
-				}
+				// so handle like return above
+				code_return();
+				if(callstack_cur < 0)
+					return; // returning from top frame
+
+				continue;
 			}
 
 			//Console.WriteLine("STACK NOW: " + reprStack());
