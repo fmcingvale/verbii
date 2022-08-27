@@ -36,12 +36,11 @@ Interpreter::Interpreter() {
 	// allocate stack+heap
 	OBJMEM = (Object*)x_malloc((HEAP_END+1) * sizeof(Object));
 
-	// not running
-	code = NULL;
+	// init callstack
+	for(int i=0; i<MAX_CALLSTACK_DEPTH; ++i)
+		callstack[i].framedata = new CallFrameData();
 
-	// 'version 2' closures
-	// initially no call frame, so this is NULL
-	cur_framedata = NULL;
+	callstack_cur = -1;
 
 	// init stats
 	max_callstack = 0;
@@ -80,6 +79,7 @@ void Interpreter::print_stats() {
 	cout << "  Max stack depth: " << (SP_EMPTY - min_run_SP) << endl;
 	cout << "  Max callstack depth: " << max_callstack << endl;
 	cout << "  Max callframe data slot: " << max_frame_slot_used << endl;
+	cout << "  Saved frames: " << nr_saved_frames << endl;
 	cout << "  Total calls: " << nr_total_calls << endl;
 	cout << "  Tail calls: " << nr_tailcalls << endl;
 	
@@ -102,7 +102,6 @@ void Interpreter::print_stats() {
 #else
 	cout << "  xmalloc bytes: " << X_BYTES_ALLOCATED << endl;
 #endif
-	print_callframe_alloc_stats();
 	cout << "  size of Object: " << sizeof(Object) << endl;
 
 	cout << "* Notices:\n";
@@ -243,61 +242,64 @@ ObjList* Interpreter::lookup_word(const char *name) {
 }
 
 void Interpreter::code_call(ObjList *new_code, BoundLambda *bound_lambda) {
-	if(!code) {
+	if(callstack_cur < 0)
 		throw LangError("code_call but no code is running");
-	}
+	else if(callstack_cur >= (MAX_CALLSTACK_DEPTH-1))
+		throw LangError("Max callstack depth exceeded");
+
 	++nr_total_calls;
 
-	callstack_code.push_back(code);
-	callstack_pos.push_back(codepos);
-	callstack_frame_data.push_back(cur_framedata);
+	// save current context -- only .pos needs to be updated
+	callstack[callstack_cur].pos = codepos;
 
+	// setup new frame
+	++callstack_cur;
+	callstack[callstack_cur].code = new_code;
+	callstack[callstack_cur].pos = 0;
+	// clear framedata to help GC
+	callstack[callstack_cur].framedata->clear_data();
+	
+	// set shortcuts to new frame
 	code = new_code;
 	codepos = 0;
-	// 'version 2' closures -- this is used for framedata references
-	// FOR NOW at least, a new frame is created for each call -- eventually the
-	// compiler could optimize this if the function doesn't use any @locals or take args etc.
-	// (these are pooled since the common case is where a frame is not linked to an inner
-	// frame so they are recycled ... trying this with a 'new' every time made a looping
-	// benchmark run 20x slower ... with pooling there was no slowdown versus 
-	// just setting this to NULL)
-	cur_framedata = callframe_alloc();
+	framedata = callstack[callstack_cur].framedata;
+
 	// when the bound lambda was created, the current frame (at the time) was saved
 	// as its .outer frame. when the bound lambda runs here in a new frame, it needs
 	// to have its .outer frame connected to the same .outer as when it was created,
 	// so it has access to the saved data (closure)
 	if(bound_lambda)
-		cur_framedata->setOuterFrame(bound_lambda->outer);
+		framedata->setOuterFrame(bound_lambda->outer);
 
 	// stats
-	max_callstack = max(max_callstack,(int)callstack_code.size());
+	max_callstack = max(max_callstack,(int)(callstack_cur+1));
 }
 
 bool Interpreter::havePushedFrames() {
-	return callstack_code.size() > 0;
+	return callstack_cur >= 0;
 }
 
 void Interpreter::code_return() {
-	if(!code) {
+	if(!callstack_cur < 0)
 		throw LangError("code_return but no code is running");
+
+	// did framedata become bound?
+	if(callstack[callstack_cur].framedata->isBound()) {
+		// framedata has been bound to one or more lambdas, so it cannot be 
+		// freed. replace it in the stack with a new frame.
+		callstack[callstack_cur].framedata = new CallFrameData();
+		// stats
+		++nr_saved_frames;
 	}
 
-	// don't allow return from toplevel -- interpreter main loop needs to handle that case
-	if(callstack_code.size() == 0) {
-		throw LangError("code_return with empty callstack");
+	// pop frame
+	--callstack_cur;
+	// set shortcuts, IF that wasn't the last frame (if it was, then these won't be used again)
+	if(callstack_cur >= 0) {
+		code = callstack[callstack_cur].code;
+		codepos = callstack[callstack_cur].pos;
+		framedata = callstack[callstack_cur].framedata;
 	}
-	code = callstack_code.back();
-	callstack_code.pop_back();
-	codepos = callstack_pos.back();
-	callstack_pos.pop_back();
-	
-	// if frame was not linked as an outer frame anywhere, then return it
-	// to the pool
-	if(cur_framedata != NULL && !cur_framedata->isLinked())
-		callframe_free(cur_framedata);
-
-	cur_framedata = callstack_frame_data.back();
-	callstack_frame_data.pop_back();
 }
 
 bool Interpreter::hasWord(const char *name) {
@@ -336,15 +338,23 @@ Object Interpreter::getWordlist() {
 }
 
 void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object)) {
-	if(code)
+	if(callstack_cur >= 0)
 		throw LangError("Interpreter run() called recursively");
 
 	if(!to_run)
 		throw LangError("Got NULL* as code in run()");
 
+	// almost but not quite code_call() so have to do it here
+	callstack_cur = 0;
+	callstack[callstack_cur].code = to_run;
+	callstack[callstack_cur].pos = 0;
+	// clear data to help GC
+	callstack[callstack_cur].framedata->clear_data();
+
+	// set shortcuts that are used everywhere else
 	code = to_run;
 	codepos = 0;
-	cur_framedata = NULL; // not set
+	framedata = callstack[callstack_cur].framedata;
 
 	// run one word at a time in a loop, with the reader position as the continuation
 	while(true) {
@@ -383,17 +393,12 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			}
 			
 			if(obj.isSymbol("return")) {
-				// return from word by popping back to previous wordlist (if not at toplevel)
-				//if(syntax->hasPushedObjLists()) {	
-				//	syntax->popObjList();
-				//}
-				if(havePushedFrames()) {
-					code_return();
-				}
-				else {
-					code = NULL;
-					return; // return from top level exits program
-				}
+				// return from word by popping back to previous wordlist
+				code_return();
+				// if exited top level, exit program
+				if(callstack_cur < 0)
+					return;
+				
 				continue;
 			}
 
@@ -461,11 +466,10 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 					// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 					// i don't need to come back here, so pop my wordlist first to stop stack from growing
 					#if 1 // can turn off to test without tail call elimination, if desired
-					if(peekNextCodeObj().isVoid() || peekNextCodeObj().isSymbol("return")) {
-						if(havePushedFrames()) { // in case i'm at the toplevel
-							code_return();
-							++nr_tailcalls;
-						}
+					// FIXME - don't eliminate at toplevel since code_call expects a non-empty stack
+					if((callstack_cur >= 1) && (peekNextCodeObj().isVoid() || peekNextCodeObj().isSymbol("return"))) {
+						code_return();
+						++nr_tailcalls;
 					}
 					#endif
 					// execute word by pushing its objlist and continuing
@@ -492,24 +496,17 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			// note a subtle (unintended) side effect here:
 			//		10 20 void 30 40 5 make-list call
 			// execution will stop after 20 since void makes the interpreter think it has reached
-			// the end of the list. avoiding this by making 'return' mandator runs into trouble for
+			// the end of the list. avoiding this by making 'return' mandatory runs into trouble for
 			// dynamically created lists that are called -- doesn't seem worth it to have to check every
 			// list before calling that it ends with 'return' and modifying it if not.
 			// bottom line -- storing void (in ANY container) is a bad idea and this is just an d
 			// example of one consequence
 
-			//if(syntax->hasPushedObjLists()) {
-			//	syntax->popObjList();
-			//	continue;
-			//}
-			if(havePushedFrames()) {
-				code_return();
-				continue;
-			}
-			else {
-				code = NULL; // mark self as not running
-				return;
-			}
+			code_return();
+			if(callstack_cur < 0)
+				return; // popped top frame, return
+			
+			continue;
 		}
 		
 		// if object was created from a list literal ( [ ... ] ), then it must be deepcopied

@@ -57,21 +57,21 @@ const string& opcode_code_to_name(uint8_t code) {
 
 // A = number of frames up (0 means my frame); B = index of var in outer frame
 void opcode_FRAME_GET(Interpreter *intr, uint8_t levels, uint16_t index, uint32_t _unused) {
-	if(!intr->cur_framedata)
+	if(!intr->framedata)
 		throw LangError("opcode FRAME-GET called on null frame");
 
-	intr->push(intr->cur_framedata->getFrameObj(levels, index));
+	intr->push(intr->framedata->getFrameObj(levels, index));
 	// stats
 	intr->max_frame_slot_used = max(intr->max_frame_slot_used,(int)index);
 }
 
 // A = number of frames up (0 means my frame); B = index of var in outer frame
 void opcode_FRAME_SET(Interpreter *intr, uint8_t levels, uint16_t index, uint32_t _unused) {
-	if(!intr->cur_framedata)
+	if(!intr->framedata)
 		throw LangError("opcode FRAME-SET called on null frame");
 
 	auto obj = intr->pop(); // get obj to be stored
-	intr->cur_framedata->setFrameObj(levels, index, obj);
+	intr->framedata->setFrameObj(levels, index, obj);
 	// stats
 	intr->max_frame_slot_used = max(intr->max_frame_slot_used,(int)index);
 }

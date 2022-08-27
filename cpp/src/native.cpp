@@ -721,9 +721,9 @@ static void builtin_bind_lambda(Interpreter *intr) {
 	auto lambda = popLambda(intr, "bind-lambda");
 	// remember currently active frame -- when bound-lambda is called
 	// later, this frame will be set as its outer frame
-	intr->push(newBoundLambda(lambda, intr->cur_framedata));
-	// mark current frame as being linked now so it isn't freed
-	intr->cur_framedata->setLinked(true);
+	intr->push(newBoundLambda(lambda, intr->framedata));
+	// mark current frame as being bound now so it isn't freed
+	intr->framedata->setBound(true);
 }
 
 static void builtin_file_pathsep(Interpreter *intr) {

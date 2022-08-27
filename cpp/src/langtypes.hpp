@@ -187,7 +187,7 @@ class CallFrameData {
 	public:
 	CallFrameData();
 	~CallFrameData() 
-		{ outer = NULL; linked = false; clear_data(); /* printf("CALLFRAME DATA DTOR\n"); */ }
+		{ outer = NULL; bound = false; }
 
 	// frames begin disconnected from any other context. this
 	// can be used to tie this frame to an outer context so that
@@ -199,23 +199,18 @@ class CallFrameData {
 	Object getFrameObj(int levels, int index);
 	void setFrameObj(int levels, int index, Object obj);
 
-	bool isLinked() const;
-	void setLinked(bool l) { linked = l; }
+	bool isBound() const { return bound; }
+	void setBound(bool b) { bound = b; }
 
 	void clear_data();
 	
 	private:
 	Object data[MAX_CALLFRAME_SLOTS]; // args+locals for function
 	CallFrameData *outer;
-	bool linked; // has this been linked as an outer frame to any other frame?
+	bool bound; // has this been bound to a lambda as its outer frame
 
 	CallFrameData *findFrameUp(int levels);
 };
-
-extern std::vector<CallFrameData*> callframe_pool;
-CallFrameData *callframe_alloc();
-void callframe_free(CallFrameData*);
-void print_callframe_alloc_stats();
 
 // single NULL object
 extern Object NULLOBJ;

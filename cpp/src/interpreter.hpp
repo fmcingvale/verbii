@@ -17,6 +17,14 @@
 const int STACK_SIZE = (1<<16);
 const int HEAP_STARTSIZE = (1<<16);
 
+const int MAX_CALLSTACK_DEPTH = 1024;
+
+struct CallStackEntry {
+	ObjList *code;
+	int pos;
+	CallFrameData *framedata;
+};
+
 class Interpreter {
 	public:
 	Interpreter();
@@ -84,17 +92,15 @@ class Interpreter {
 	void code_call(ObjList *new_code, BoundLambda *bound_lambda=NULL);
 	bool havePushedFrames();
 	void code_return();
-	
-	// current running code & callstack of previous frames
-	ObjList *code; // NULL if code not loaded
-	size_t codepos;
-	// 'version 2' closures (frame data)
-	CallFrameData *cur_framedata; // current call frame data or NULL
 
-	std::vector<ObjList*> callstack_code;
-	std::vector<size_t> callstack_pos;
-	// 'version 2' closures
-	std::vector<CallFrameData*> callstack_frame_data;
+	// stack of current and previous frames
+	CallStackEntry callstack[MAX_CALLSTACK_DEPTH];
+	int callstack_cur; // index of currently running frame or -1
+
+	// shortcuts for current frame
+	ObjList *code;
+	size_t codepos;
+	CallFrameData *framedata;
 
 	// stats
 	bool PROFILE_CALLS;
@@ -104,6 +110,7 @@ class Interpreter {
 	unsigned long nr_tailcalls;
 	int max_frame_slot_used;
 	int nr_total_calls;
+	int nr_saved_frames;
 
 	protected:
 	// use functions above so error handling can be in one place

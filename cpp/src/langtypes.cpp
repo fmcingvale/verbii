@@ -152,11 +152,7 @@ Object newSymbol(const string& s) {
 
 CallFrameData::CallFrameData() {
 	outer = NULL;
-	linked = false;
-}
-
-bool CallFrameData::isLinked() const {
-	return linked;
+	bound = false;
 }
 
 void CallFrameData::setOuterFrame(CallFrameData *outer) {
@@ -206,52 +202,6 @@ void CallFrameData::clear_data() {
 	//for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i) 
 	//	data[i] = n;
 	memset((void*)data, 0, MAX_CALLFRAME_SLOTS*sizeof(Object));
-}
-
-#define COLLECT_CALLFRAME_ALLOC_STATS
-
-std::vector<CallFrameData*> callframe_pool;
-
-static int CALLFRAME_NR_ALLOCS = 0;
-static int CALLFRAME_NR_FREE = 0;
-static size_t CALLFRAME_POOL_MAX = 0;
-
-CallFrameData *callframe_alloc() {
-#ifdef COLLECT_CALLFRAME_ALLOC_STATS
-	++CALLFRAME_NR_ALLOCS;
-#endif
-	if(callframe_pool.size() == 0)
-		return new CallFrameData();
-	else {
-		auto data = callframe_pool.back();
-		callframe_pool.pop_back();
-		// reset its data
-		//data->setLinked(false);
-		//data->setOuterFrame(NULL);
-
-		return data;
-	}
-}
-
-void callframe_free(CallFrameData* data) {
-	data->setOuterFrame(NULL);
-	data->setLinked(false);
-	data->clear_data();
-	callframe_pool.push_back(data);
-#ifdef COLLECT_CALLFRAME_ALLOC_STATS
-	++CALLFRAME_NR_FREE;
-	CALLFRAME_POOL_MAX = max(CALLFRAME_POOL_MAX,callframe_pool.size());
-#endif
-}
-
-void print_callframe_alloc_stats() {
-#ifdef COLLECT_CALLFRAME_ALLOC_STATS
-	cout << "    CALLFRAME_NR_ALLOCS: " << CALLFRAME_NR_ALLOCS << endl;
-	cout << "    CALLFRAME_NR_FREE: " << CALLFRAME_NR_FREE << endl;
-	cout << "    CALLFRAME_POOL_MAX: " << CALLFRAME_POOL_MAX << endl;
-#else
-	cout << "    CALLFRAME - stats not enabled" << endl;
-#endif
 }
 
 Object newBoundLambda(Object lambda, CallFrameData *outer) {
