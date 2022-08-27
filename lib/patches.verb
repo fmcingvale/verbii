@@ -45,102 +45,15 @@
 	D
 	;
 
-\ run lambda as long as test is true (test is run BEFORE lambda)
-: while ( test lambda )
-	@loop
-		test call not if >>done
-		lambda call <<loop
-	@done
-	;
 	
 ( ------ compiler ------- )
 
-\ starting at objlist[index], look for @label, with index += increment at each step.
-\ returns offsets if found, null if not. note that label must be a symbol.
-: compiler-find-label ( objlist label index increment -- offset )
-	\ "FIND LABEL:" . label repr . CR
-	@locals [ i ]
-	index i!
-	@loop
-		objlist i get void? if >>notfound \ went past start/end of objlist 
-		\ objlist[i] == @label?
-		objlist i get '@ label + == if >>found 
-		i increment + i! <<loop
-	@found
-		\ return offset
-		i index - return
-	@notfound
-		null return
-	;
+
 	
-\ recursively rewrite objlist to change "<<" and ">>" jumps into opcodes
-: compiler-optimize-jumps ( objlist -- objlist )
-	@locals [ i newlist obj offset ]
-	0 i!
-	[ ] newlist!
-	@loop
-		objlist i get obj! \ get next obj
-		obj void? if >>done
-		obj symbol? if >>symbol
-		obj list? if >>list
-		obj lambda? if >>lambda
-		\ fall through - copy anything else to newlist
-	@copy-element
-		newlist obj append drop 
-	@next
-		i 1 + i! <<loop
-	@symbol
-		\ see if symbol starts with << or >>
-		obj 0 2 slice '<< == if >>backward-jump 
-		obj 0 2 slice '>> == if >>forward-jump 
-		\ not a jump, so just copy
-		<<copy-element
-	@backward-jump
-		\ find offset to label for jump
-		objlist obj 2 -1 slice i -1 compiler-find-label offset!
-		offset null? if >>missing-label 
-		\ add jump opcode
-		\
-		\ at runtime, the codepos will point to AFTER the jump, so the real offset
-		\ to the label is (offset-1), however, i don't want to jump to the label, since
-		\ that would waste time to interpret the label, so jump 1 after it, so that will
-		\ be (offset-1+1), so using just the offset is correct. note i pass -offset since it is JUMP-BACK
-		newlist 'JUMP-BACK 0 0 offset neg make-opcode append drop <<next
-	@forward-jump
-		\ like above, but find forward jump
-		objlist obj 2 -1 slice i 1 compiler-find-label offset!
-		offset null? if >>missing-label 
-		\ add jump opcode
-		\
-		\ similar to above, codepos will point to AFTER the jump, so instead of
-		\ offset, i really want (offset-1). but i don't want to jump to the label, i want
-		\ to jump to the instruction after the label, so (offset-1+1) which again is just offset
-		newlist 'JUMP-FORW 0 0 offset make-opcode append drop <<next
-	@list
-		\ recursively process list and append result
-		newlist obj compiler-optimize-jumps append drop <<next
-	@lambda
-		\ like above but do via lambda->list->lambda
-		newlist obj unmake compiler-optimize-jumps make-lambda append drop <<next
-	@missing-label
-		"Cannot find label for jump: " obj str + error
-	@done
-		newlist \ return rewritten list
-	;
+
 	
 	
-\ take a parsed objlist, presumably from byte-compile, and perform finalization:
-\	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
-\
-\ returns a new list, does NOT modify objlist
-: compile-finalize-word ( objlist -- newlist )
-	\ always a toplevel function - no outer environment
-	objlist void false v2-compile-rewrite-args-locals
-	drop \ don't need nr-rewritten here; top level is never bound anyways
-	\ now that all the rewriting above is done, can replace << and >> with jump opcodes
-	compiler-optimize-jumps
-	return \ return new objlist
-	;
+
 	
 		 
 
