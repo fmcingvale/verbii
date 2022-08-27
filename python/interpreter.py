@@ -367,7 +367,6 @@ class Interpreter(object):
 					if isVoid(self.peekNextCodeObj()) or self.peekNextCodeObj() == "return":
 						# no need to come back here, so go ahead and pop my call frame before
 						# calling word -- callstack will never grow on recursive tail-calls now
-						if self.havePushedFrames():
 							self.code_return()
 							self.nr_tailcalls += 1 # stats
 
