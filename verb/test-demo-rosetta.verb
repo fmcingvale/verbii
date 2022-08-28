@@ -7,6 +7,8 @@
 
 "unittest" import
 "numeric" import
+"hashing" import
+"demo-common" import
 
 ( get first nr fibonacci numbers as a list )
 : fibonacci ( nr -- list )
@@ -511,4 +513,24 @@
 	4000846301 4000846153 gcd-iter 1 expect==
 	4000846301 4000846153 gcd-recur 1 expect==
 	;
+
+( https://rosettacode.org/wiki/Sieve_of_Eratosthenes )	
+: test-rosetta-prime-sieve
+
+	@locals [ PRIMES sval ]
 	
+	\ note this is a low value so it can run faster in the unittests
+	\ - see benchmarks for longer test 
+	
+	\ note: prime-sieve is in demo-common
+	1234 prime-sieve PRIMES!
+
+	\ reference/prime-sieve.py used to generate expected values
+	PRIMES length 202 expect==
+	\ convert to space-separated string and calculate hash/checksum
+	PRIMES { str } map " " string-join sval!
+	sval length 812 expect==
+	
+	sval hash-fnv-32 int32-to-hex "42203c29" expect==
+	sval crc32-calc int32-to-hex "c7c4e751" expect==
+	;
