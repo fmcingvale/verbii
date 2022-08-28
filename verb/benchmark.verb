@@ -1,0 +1,183 @@
+\ Benchmarking suite
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ small, medium or large
+\
+\ test cases are sized by these criteria:
+\	small: runs under Python port in ~30 seconds
+\	medium: runs under Lua port in ~30 seconds
+\	large: runs under C++ port in ~30 seconds
+\
+\ these times are obvious relative and based on my machine at the time
+\ the tests were written, but i wanted consistent tests that could be
+\ tracked over time.
+	
+'BENCH-SIZE "small" make-var
+
+"demo-common" import 
+"hashing" import 
+"unittest" import
+"quicksort" import
+
+\ time & display how long func runs
+: timeit ( func -- )
+	@locals [ t0 t1 ]
+	run-time t0!
+	func call
+	run-time t1!
+	"     * Ran in" . t1 t0 - . "seconds" . CR
+	;
+	
+\ nrops = number of operations represented by func
+\ what = text description of what is being calculated / second
+: timeit-ops ( func nrops what -- )
+	@locals [ t0 t1 ]
+	run-time t0!
+	func call
+	run-time t1!
+	"     * Ran in" . t1 t0 - . "seconds (" .. nrops t1 t0 - / . what .. "/second)" . CR
+	;
+	
+: benchmark-prime-sieve
+	@locals [ PRIMES sval ]	
+
+	BENCH-SIZE
+	[
+		\ Python = 30 seconds
+		[ [ "small" ] { { 60000 prime-sieve drop } 60000 "checked" timeit-ops } ]
+		\ Lua = 31 seconds
+		[ [ "medium" ] { { 120000 prime-sieve drop } 120000 "checked" timeit-ops } ] 
+		\ C++ = 30.4 seconds
+		[ [ "large" ] { { 2400000 prime-sieve drop } 2400000 "checked" timeit-ops } ]
+		[ else { "Bad value for BENCH-SIZE: " BENCH-SIZE str + error } ]
+	] case
+	
+	\ test a smaller set for correctness
+	\ reference/prime-sieve.py used to generate expected values
+	10000 prime-sieve PRIMES!
+	PRIMES length 1229 expect== \ check # of primes found
+	PRIMES -1 get 9973 expect== \ check final value 
+	\ convert to space-separated string and calculate hash/checksum
+	PRIMES { str } map " " string-join sval!
+	
+	sval crc32-calc int32-to-hex "d105460e"	expect==
+	sval hash-fnv-32 int32-to-hex "d4d75463" expect==
+	;
+
+: benchmark-fibonacci-cond 
+	"    " .
+	BENCH-SIZE
+	[
+		\ Python = 25 seconds
+		[ [ "small" ] { { { ( i ) i gen-ith-fibonacci-cond . } 0 1 22 for-count CR } 22 "numbers" timeit-ops } ]
+		\ Lua = 22 seconds
+		[ [ "medium" ] { { { ( i ) i gen-ith-fibonacci-cond . } 0 1 23 for-count CR } 23 "numbers" timeit-ops } ]
+		\ C++ = 23 seconds
+		[ [ "large" ] { { { ( i ) i gen-ith-fibonacci-cond . } 0 1 29 for-count CR } 29 "numbers" timeit } ]
+		[ else { "Bad BENCH-SIZE: " BENCH-SIZE + error } ]
+	] case
+	
+	\ test correctness (use smaller value that runs quickly)
+	7 gen-ith-fibonacci-cond 13 expect==
+	;
+
+: benchmark-fibonacci-float-list
+	BENCH-SIZE
+	[
+		\ 1476 reaches the limit of max double value (~1.3e308)
+
+		\ Python = 30 seconds
+		[ [ "small" ] { { { 1476 gen-fibonacci-float-list drop } 300 repeat } 1476 300 * "numbers" timeit-ops } ]
+		\ Lua = 30 seconds
+		[ [ "medium" ] { { { 1476 gen-fibonacci-float-list drop } 600 repeat } 1476 600 * "numbers" timeit-ops } ]
+		\ C++ = 33 seconds
+		[ [ "large" ] { { { 1476 gen-fibonacci-float-list drop } 18000 repeat } 1476 18000 * "numbers" timeit-ops } ]
+		[ else { "Bad BENCH-SIZE: " BENCH-SIZE + error } ]
+	] case
+	
+	\ test correctness (expected value from: https://zeptomath.com/tools/fibonaccinumbers.php?number=100)
+	100 gen-fibonacci-float-list -1 get 3.54224848179261915075e20 expect==f
+	;
+	
+: benchmark-fibonacci-if 
+	"    " .
+	BENCH-SIZE
+	[
+		\ Python = 30 seconds
+		[ [ "small" ] { { { ( i ) i gen-ith-fibonacci-if . } 0 1 26 for-count CR } 26 "numbers" timeit-ops } ]
+		\ Lua = 24 seconds
+		[ [ "medium" ] { { { ( i ) i gen-ith-fibonacci-if . } 0 1 27 for-count CR } 27 "numbers" timeit-ops } ]
+		\ C++ = 30 seconds
+		[ [ "large" ] { { { ( i ) i gen-ith-fibonacci-if . } 0 1 34 for-count CR } 34 "numbers" timeit-ops } ]
+		[ else { "Bad BENCH-SIZE: " BENCH-SIZE + error } ]
+	] case
+	
+	\ test correctness
+	8 gen-ith-fibonacci-if 21 expect==
+	;
+	
+: benchmark-fibonacci-direct
+	BENCH-SIZE
+	[
+		\ 604 = max that be generated before overflow happens
+
+		\ Python = 30 seconds
+		[ [ "small" ] { { { 604 gen-fibonacci-direct-list drop } 450 repeat } 604 450 * "numbers" timeit-ops } ]
+		\ Lua = 32 seconds
+		[ [ "medium" ] { { { 604 gen-fibonacci-direct-list drop } 800 repeat } 604 800 * "numbers" timeit-ops } ]
+		\ C++ = 32 seconds
+		[ [ "large" ] { { { 604 gen-fibonacci-direct-list drop } 20000 repeat } 604 20000 * "numbers" timeit-ops } ]
+		[ else { "Bad BENCH-SIZE: " BENCH-SIZE + error } ]
+	] case
+	
+	\ test correctness (expected value from: https://zeptomath.com/tools/fibonaccinumbers.php?number=500)
+	500 gen-fibonacci-direct-list -1 get 1.39423224561697880e104 expect==f
+	;
+	
+\ get all user functions starting with 'benchmark-'
+\ ** duplication (with changed prefix) from run-all-tests.verb:get-all-tests **
+: get-all-benchmarks
+	@locals [ words ]
+	.wordlist
+	{ 0 10 slice 'benchmark- == } filter
+	\ sort so tests run in same order on all platforms
+	quicksort
+	;
+
+\ run test by name (symbol)
+\ ** duplicated (with changes) from run-all-tests.verb:run-test-by-name **
+: run-benchmark-by-name ( namesym )
+	\ not as detailed on the pass/fail handling as run-all-tests is here
+	
+	"* " namesym symbol->string 10 -1 slice + " ..." + . CR
+	namesym 1 make-list make-lambda call
+	;
+
+: run-all-benchmarks
+	@locals [ t0 t1 ]
+	unittest-init
+
+	get-all-benchmarks
+	\ total time should not include any script startup time, etc.,
+	\ so measure it here ...
+	run-time t0!
+	{ run-benchmark-by-name } for-each
+	run-time t1!
+	unittest-summary
+	"    Total time:" . t1 t0 - . "seconds" . CR
+	;
+	
+: show-usage
+	"Usage: verbii benchmark.verb -- [small|medium|large]" . CR 
+	;
+	
+SCRIPT-ARGS length 
+[
+	[ [ 0 ] { show-usage } ]
+	[ [ 1 ] {
+			SCRIPT-ARGS 0 get BENCH-SIZE!
+			run-all-benchmarks
+			} ]
+	[ else { show-usage } ]
+] case
