@@ -65,6 +65,80 @@
 	@done
 	;
 
+\ split text into parts separated by one or more chars from delims (a string or list of chars).
+\ any leading/trailing delims are trimmed. this function does NOT make empty parts.
+: string-split ( text delims -- parts )
+	@locals [ i c piece ]
+	[ ] parts!
+	0 i!
+	"" piece!
+	@loop
+		text i get c!
+		c void? if >>got-end \ end of string
+		delims c find-equal void? not if >>got-delim \ found delimiter
+		\ not a delim, add to piece
+		piece c + piece! >>next
+	@got-delim
+		\ if i've been building a piece, add to parts and reset piece
+		piece length 0 > if >>push-piece
+		\ else this in the middle of other delimiters, so just keep going
+		>>next
+	@push-piece
+		parts piece append parts!
+		"" piece!
+		>>next
+	@next
+		i 1 + i! <<loop
+	@got-end
+		\ if i have a piece, add it to parts
+		piece length 0 == if >>done 
+		parts piece append parts!
+	@done
+		parts
+	;
+
+\ more efficient find for the common case of looking for an exact value
+\	rationale: normal uses of 'find' in this case would create a bound lambda in the caller which
+\		  	   is avoided by using this hardcoded test instead
+\
+\ find index of first item in sequence that satisfies test or void if none
+: find-equal ( seq value -- index )
+	0 index!
+	@loop
+		index seq length >= if >>not-found
+		seq index get value == if >>found 
+		index 1 + index! <<loop
+	@found index return
+	@not-found void
+	;
+	
+\ similar to 'case' in Scheme
+\	* more efficient that the more general 'cond' when matching against exact values
+\
+\ cases is a list of [ { key ... } { .. call if matched .. } ]
+\ with optional element: [ else { .. call if no match .. } ] that ALWAYS matches
+\
+\ if value matches ANY of the keys in a list, then the corresponding lambda is called
+\
+\ it is NOT an error to not match any values
+: case ( value cases -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		\ end of cases?
+		cases i get void? if >>nomatch
+		\ [ else { ... } ]? 
+		cases i get 0 get 'else == if >>match 
+		\ else see if value is in list
+		cases i get 0 get value find-equal void? not if >>match
+		\ doesn't match, go onto next case
+		i 1 + i! <<loop
+	@nomatch
+		return \ or should it be an error to match no clauses?
+	@match 
+		cases i get 1 get call return \ call matching clause
+	;
+
 ( ------ compiler ------- )
 
 \ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
