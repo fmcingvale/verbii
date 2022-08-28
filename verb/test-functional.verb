@@ -330,3 +330,42 @@
 	2 cond-form-2 "i: 2" expect==
 	;
 	
+: test-case
+	@locals [ list ]
+	[ ] list!
+	{ ( x )
+		x
+		[
+			[ [ 1 2 3 ] { list "A" append list! } ]
+			[ [ 4 5 6 ] { list "B" append list! } ]
+			[ [ 7 8 9 ] { list "C" append list! } ]
+			[ else { list "D" append list! } ]
+		] case 
+	} 0 1 11 for-count
+	list [ "D" "A" "A" "A" "B" "B" "B" "C" "C" "C" "D" ] expect==
+	
+	\ test with non matching values (not an error)
+	[ ] list!
+	{ ( x )
+		x
+		[
+			[ [ 1 2 3 ] { list "A" append list! } ]
+			[ [ 4 5 6 ] { list "B" append list! } ]
+		] case 
+	} 0 1 11 for-count
+	list [ "A" "A" "A" "B" "B" "B" ] expect==
+	
+	\ now test with captured vars in the funcs
+	[ ] list!
+	{ ( x )
+		x
+		[
+			[ [ 1 2 3 ] { list x 10 * append list! } ]
+			[ [ 4 5 6 ] { list x 20 * append list! } ]
+			[ [ 7 8 9 ] { list x 30 * append list! } ]
+			[ else { list x 40 * append list! } ]
+		] case 
+	} 0 1 11 for-count
+	list [ 0 10 20 30 80 100 120 210 240 270 400 ] expect==
+	;
+	
