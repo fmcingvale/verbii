@@ -88,7 +88,8 @@ function isFloat(obj)
 end
 
 function new_Float(value)
-	return Float:new({}, value)
+	-- the *1.0 is to ensure it is really a float to lua
+	return Float:new({}, value*1.0)
 end
 
 function isNumeric(obj)
