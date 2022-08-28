@@ -1,0 +1,90 @@
+
+\ Common code shared between unittests & benchmarks.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+( https://rosettacode.org/wiki/Sieve_of_Eratosthenes )
+
+\ find all primes from 2..nr
+: prime-sieve ( nr -- primes )
+	@locals [ i list ]
+	[ ] list!
+	\ fill with nr true values
+	{ ( i ) list true append list! } 0 1 nr 1 + for-count
+	\ for i=2..sqrt(nr)
+	2 i!
+	\ while i <= sqrt(nr)
+	{ i nr sqrt <= } 
+	{
+		\ for j=2..(nr-1), set list[i*j] = false, where i*j <= nr
+		\ for-count would be inefficient here since it cannot conditionally stop,
+		\ so use while instead
+		@locals [ j ]
+		2 j! \ j is prime, every multiple is not
+		\ while i*j <= nr
+		{ i j * nr <= }
+		{ 
+				list i j * false put list!
+				j 1 + j!
+		}
+		while 
+		i 1 + i!
+	} while
+	
+	\ indexes of true entries (i>=2) are prime 
+	[ ] primes!
+	{ ( i )
+		list i get { primes i append primes! } ifthen
+	} 2 1 nr 1 - for-count
+	primes
+	;
+	
+\ various fibonacci sequence generators
+
+\ slow way but good for benchmarking
+: gen-ith-fibonacci-cond ( i )
+	[
+		[ { i 0 < } { null } ]
+		[ { i 0 == } { 0 } ]
+		[ { i 1 == } { 1 } ]
+		\ else call self recursively to calc next lower 2 values and add them
+		[ else { i 1 - gen-ith-fibonacci-cond i 2 - gen-ith-fibonacci-cond + } ]
+	]
+	cond 
+	;
+
+\ same as above with ifs instead of cond
+\ (note the hardcoded ifs are MUCH faster than the cond, something like 6-7x)
+: gen-ith-fibonacci-if ( i )
+	i 0 < if >>null 
+	i 0 == if >>zero 
+	i 1 == if >>one 
+	i 1 - gen-ith-fibonacci-if i 2 - gen-ith-fibonacci-if + return
+	@null null return
+	@zero 0 return 
+	@one 1 return
+	;
+	
+\ fast way to generate first NR numbers in fibonacci sequence.
+\ do as floats so NR can get large (lots of rounding error, but this
+\ is a benchmark so its ok)
+: gen-fibonacci-float-list ( NR -- list )
+	[ 1.0 1.0 ] list!
+	\ while len(list) < NR
+	{ list length NR < }
+	{
+		list list -1 get list -2 get + append list!
+	} while
+	list
+	;
+	
+\ Binet's formula
+: gen-ith-fibonacci-direct ( n )
+	1 5 sqrt + n pow 1 5 sqrt - n pow - 2 n pow 5 sqrt * / ;
+
+: gen-fibonacci-direct-list ( n -- list )
+	[ ] list!
+	{ ( i ) list i gen-ith-fibonacci-direct append list! } 1 1 n for-count
+	list
+	;
+	
