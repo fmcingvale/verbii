@@ -455,3 +455,60 @@
 	expect==
 	;
 	
+
+( https://rosettacode.org/wiki/Greatest_common_divisor )
+
+\ Translation from Python:
+\
+\ def gcd_iter(u, v):
+\    while v:
+\        u, v = v, u % v
+\    return abs(u)
+: gcd-iter ( u v -- gcd )
+	{ v 0 != }
+	{
+		v
+		u v mod
+		v! u!
+		\ "U V" . u . v . CR
+	}
+	while
+	
+	u abs
+	;
+	
+\ Translation from Python:
+\ def gcd(u, v):
+\    return gcd(v, u % v) if v else abs(u)
+: gcd-recur ( u v )
+	v 0 != if >>recurse
+	u abs return
+	@recurse
+	v u v mod gcd-recur \ ensure in tail position
+	;
+
+: test-rosetta-gcd	
+	40902 24140 gcd-iter 34 expect==
+	24140 40902 gcd-iter 34 expect==
+	-40902 24140 gcd-iter 34 expect==
+	-24140 40902 gcd-iter 34 expect==
+	-40902 -24140 gcd-iter 34 expect==
+	-24140 -40902 gcd-iter 34 expect==
+	40902 -24140 gcd-iter 34 expect==
+	24140 -40902 gcd-iter 34 expect==
+
+	\ these are both (8 * prime * prime) with 4 different primes
+	141774376 147886792 gcd-iter 8 expect==
+	141774376 147886792 gcd-recur 8 expect==
+
+	\ large primes
+	982451653 961748941 gcd-iter 1 expect==
+	961748941 982451653 gcd-iter 1 expect==
+	
+	982451653 961748941 gcd-recur 1 expect==
+	961748941 982451653 gcd-recur 1 expect==
+	
+	4000846301 4000846153 gcd-iter 1 expect==
+	4000846301 4000846153 gcd-recur 1 expect==
+	;
+	
