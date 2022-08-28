@@ -16,7 +16,7 @@
 	
 	{ ( i ) 
 		vals i get xorshift32 expect==
-	} 0 1 vals length for-range
+	} 0 1 vals length for-count
 	;
 
 : test-xorshift32

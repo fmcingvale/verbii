@@ -22,7 +22,7 @@
 	\ start by adding all single characters to the map as chr(i) -> i
 	{ ( i )
 			cmap i chr i put cmap!
-	} 0 1 256 for-range
+	} 0 1 256 for-count
 
 	[ ] output! \ append codes here as generated
 
@@ -62,7 +62,7 @@
 	{  ( i )
 		\ general note: dict keys have to be strings, so 'i str' will be the pattern here and below
 		dmap i str i chr put dmap!
-	} 0 1 256 for-range
+	} 0 1 256 for-count
 	
 	\ note: there is no stringio-like object in verbii (yet, at least) so this is inefficient since it
 	\ creates a new string for each char added
@@ -95,12 +95,12 @@
 	\ final accumulator left on stack is output text, so just leave it there
 	;
 	
-: test-for-range
-	"Count 0 .. 100 by 10:" . { . } 0 10 11 for-range CR
-	"Count -100 .. 100 by 25:" . { . } -100 25 9 for-range CR
+: test-for-count
+	"Count 0 .. 100 by 10:" . { . } 0 10 11 for-count CR
+	"Count -100 .. 100 by 25:" . { . } -100 25 9 for-count CR
 	;
 	
-test-for-range
+test-for-count
 
 : test-compress-decompress ( text )
 	"Input text:  " . text . "length =" . text length . CR

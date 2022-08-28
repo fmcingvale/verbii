@@ -21,7 +21,7 @@
 	
 	{ ( i ) 
 		vals i get xoshiro128pp-next expect==
-	} 0 1 vals length for-range
+	} 0 1 vals length for-count
 	;
 
 : test-xoshiro128pp

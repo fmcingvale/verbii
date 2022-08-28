@@ -95,7 +95,7 @@
 		n prime?
 			{ list n append drop }
 			ifthen
-	} start 1 end start - for-range
+	} start 1 end start - for-count
 	list
 	;
 	
@@ -171,7 +171,7 @@
 				i increment + i!
 			}
 			while
-	} 1 1 100 for-range
+	} 1 1 100 for-count
 
 	\ make a list of the opened doors
 	'OPENED [ ] make-var
@@ -179,7 +179,7 @@
 		DOORS i get 0 == if >>skip
 		OPENED i append drop
 		@skip
-	} 1 1 100 for-range
+	} 1 1 100 for-count
 
 	[ 1 4 9 16 25 36 49 64 81 100 ] OPENED expect==
 	
@@ -442,7 +442,7 @@
 			\ call would be the more readable: 'generator n generator call'
 		} 
 		\ run with n=[-2 .. NR] to show all code paths are working
-		-2 1 NR 3 + for-range
+		-2 1 NR 3 + for-count
 		\ note that the generator is still on the top of the stack, so ...
 		drop
 		\ return to caller

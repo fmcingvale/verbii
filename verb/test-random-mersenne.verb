@@ -38,7 +38,7 @@
 		{ ( i )
 			vals i get 
 			mersenne-random-extract expect==
-			} 0 1 vals length for-range
+			} 0 1 vals length for-count
 		} for-each
 	;
 	

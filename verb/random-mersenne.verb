@@ -37,7 +37,7 @@
 			MERSENNE-STATE i 1 - get bit-xor 
 			1812433253 * i + bit-low32
 			append MERSENNE-STATE!		
-	} 1 1 623 for-range
+	} 1 1 623 for-count
 	
 	\ "MERSENNE-STATE:" . MERSENNE-STATE . CR
 	\ "MERSENNE-STATE LEN:" . MERSENNE-STATE length . CR
@@ -91,7 +91,7 @@
 		MERSENNE-STATE i 
 			MERSENNE-STATE i 397 + 624 mod get xA bit-xor 
 			put MERSENNE-STATE!
-	} 0 1 624 for-range
+	} 0 1 624 for-count
 		
 	0 MERSENNE-INDEX!
 	;

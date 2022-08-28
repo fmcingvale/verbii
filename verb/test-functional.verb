@@ -205,20 +205,20 @@
 	sum expect==
 	;
 	
-: test-for-range
+: test-for-count
 	@locals [ L ]
 	[ ] L!
 	{ ( i )
 		L i append L!
 	}
-	10 4 8 for-range
+	10 4 8 for-count
 	[ 10 14 18 22 26 30 34 38 ] L expect==
 	
 	[ ] L!
 	{ ( i )
 		L i append L!
 	}
-	2.5 -0.5 10 for-range
+	2.5 -0.5 10 for-count
 	[ 2.5 2.0 1.5 1.0 0.5 0 -0.5 -1.0 -1.5 -2.0 ] L expect==
 	;
 

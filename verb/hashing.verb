@@ -67,9 +67,9 @@
 				\ c = c >> 1
 				{ c 1 bit-shr c! }
 				ifelse
-		} 0 1 8 for-range
+		} 0 1 8 for-count
 		CRC32-TABLE c append drop
-	} 0 1 256 for-range
+	} 0 1 256 for-count
 	;
 	
 : crc32-update ( crc text -- crc )
@@ -83,7 +83,7 @@
 				crc text n get ord bit-xor 255 bit-and get
 			crc 8 bit-shr bit-xor
 			crc!
-		} 0 1 text length for-range
+		} 0 1 text length for-count
 	crc
 	;
 		
