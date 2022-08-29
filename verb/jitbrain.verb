@@ -1,0 +1,137 @@
+
+\ "JIT" brainf* interpreter
+\
+\ * "JIT" meaning that brainf* code is translated into verbii before running.
+\
+\ The verbii code is not optimized at all, just translated directly.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: make-code-header ( -- )
+	"""
+'NRCELLS 30000 make-var
+'CELLS void make-var
+'DP 0 make-var
+	
+\ create CELLS list and fill all 0
+[ ] CELLS!
+{ CELLS 0 append CELLS! } NRCELLS repeat
+	"""
+	;
+	
+: make-code-footer ( -- )
+	"""
+'NRCELLS ,,del
+'CELLS ,,del
+'DP ,,del
+'NRCELLS! ,,del
+'CELLS! ,,del
+'DP! ,,del
+	"""
+	;
+	
+( 
+	quick ref:
+		DP = data pointer, index into CELLS
+		IP = instruction pointer, index into CODE
+		>  ++DP
+		<  --DP
+		+  ++(*DP)
+		-  --(*DP)
+		.  print(chr(*DP))
+		,  *DP = input-byte
+		[  if contents of current cell are 0, jump to next instruction after matching ]
+		]  if contents of current cell are != 0, jump to next instruction after matching [
+)
+
+'NEXT-LOOP-NR 0 make-var
+: gen-loop-nr ( -- nr )
+	NEXT-LOOP-NR nr!
+	NEXT-LOOP-NR 1 + NEXT-LOOP-NR!
+	nr
+	;
+	
+: translate-body ( text -- code )
+	@locals [ ip c loopstack nr ]
+	0 ip!
+	\ generate as list of code chunks then join at end
+	[ ] code!
+	\ track open loops 
+	[ ] loopstack!
+	@loop
+		text ip get c!
+		c void? if >>done
+		c ">" == if >>++DP
+		c "<" == if >>--DP
+		c "+" == if >>++*DP 
+		c "-" == if >>--*DP 
+		c "." == if >>print 
+		\ c "," == if >>input 
+		c "[" == if >>begin-while
+		c "]" == if >>end-while
+		\ ignore anything else
+		>>next
+		
+	@++DP code "DP 1 + DP!" append code! >>next
+	@--DP code "DP 1 - DP!" append code! >>next
+	@++*DP code "CELLS DP CELLS DP get 1 + put CELLS!" append code! >>next
+	@--*DP code "CELLS DP CELLS DP get 1 - put CELLS!" append code! >>next
+	@print code "CELLS DP get .c" append code! >>next
+	@begin-while 
+		\ generate a new unique loop#
+		gen-loop-nr nr!
+		\ structure:
+		\	@while-###
+		\		CELLS DP get 0 == if >>exit-while-###
+		\		.. code ..
+		\		<<while-###
+		\	@exit-while-###
+		code "@while-" nr str + append code!
+		code "CELLS DP get 0 == if >>exit-while-" nr str + append code!
+		\ push nr to loopstack so i know which to close later
+		loopstack nr append loopstack!
+		>>next
+	@end-while
+		\ pop loop#
+		loopstack -1 get nr!
+		loopstack 1 tail-drop loopstack!
+		code "<<while-" nr str + append code!
+		code "@exit-while-" nr str + append code!
+		>>next
+		
+	@next ip 1 + ip! <<loop
+		
+	@done
+		code 10 chr string-join
+	;
+
+: brainf-to-verbii ( text -- verbii )
+	make-code-header
+	text translate-body +
+	make-code-footer +
+	;
+	
+: jit-run-brain ( text )
+	text brainf-to-verbii
+	compile-and-load-string
+	__main__
+	'__main__ ,,del
+	CR
+	;
+	
+\ "++++++++[>+++++++++>+++++++++++++>++++<<<-]>.>---.+++++++..+++.>.<++++++++.--------.+++.------.--------.>+." jit-run-brain
+\ "++++++++[>+>++++<<-]>++>>+<[-[>>+<<-]+>>]>+[-<<<[->[+[-]+>++>>>-<<]<[<]>>++++++[<<+++++>>-]+<<++.[-]<<]>.>+[>>]>+]" jit-run-brain
+
+
+">>>>++++++++>>>---" jit-run-brain
+"[]" jit-run-brain
+"+++++[>+<-]" jit-run-brain
+"++++[>+++[>+<-]<-]" jit-run-brain
+"++++++++[>++++++++[>+<-]<-]>>." jit-run-brain
+
+
+">++++++++[<+++++++++>-]<.>++++[<+++++++>-]<+.+++++++..+++.>>++++++[<+++++++>-]<++.------------.>++++++[<+++++++++>-]<+.<.+++.------.--------.>>>++++[<++++++++>-]<+."  jit-run-brain
+"++++++++[>+>++++<<-]>++>>+<[-[>>+<<-]+>>]>+[-<<<[->[+[-]+>++>>>-<<]<[<]>>++++++[<<+++++>>-]+<<++.[-]<<]>.>+[>>]>+]" jit-run-brain
+
+	
+	
