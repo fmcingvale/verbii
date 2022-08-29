@@ -11,28 +11,6 @@
 	false return
 	@yes true return
 	;
-	
-\ some more sequence functions
-
-\ return NR elements from head of sequence (i.e. NR elements starting at left)
-: head ( seq nr -- list' )
-	seq 0 nr slice
-	;
-	
-\ get NR elements from tail of sequence (ie. NR elements starting at right)
-: tail ( seq nr -- list' )
-	seq 0 nr - nr slice
-	;
-	
-\ get all EXCEPT the first NR elements from the left
-: head-drop ( seq nr -- list' )
-	seq nr -1 slice
-	;
-
-\ get all EXCEPT the last NR elements from the left	
-: tail-drop ( seq nr -- list' )
-	seq 0 seq length nr - slice 
-	;
 
 \ split a path into parts by either \ or / separators
 : file-path-split ( path -- parts )

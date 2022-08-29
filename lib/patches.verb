@@ -139,6 +139,28 @@
 		cases i get 1 get call return \ call matching clause
 	;
 
+\ some more sequence functions
+
+\ return NR elements from head of sequence (i.e. NR elements starting at left)
+: head ( seq nr -- list' )
+	seq 0 nr slice
+	;
+	
+\ get NR elements from tail of sequence (ie. NR elements starting at right)
+: tail ( seq nr -- list' )
+	seq 0 nr - nr slice
+	;
+	
+\ get all EXCEPT the first NR elements from the left
+: head-drop ( seq nr -- list' )
+	seq nr -1 slice
+	;
+
+\ get all EXCEPT the last NR elements from the left	
+: tail-drop ( seq nr -- list' )
+	seq 0 seq length nr - slice 
+	;
+	
 ( ------ compiler ------- )
 
 \ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
