@@ -29,12 +29,12 @@
 	"test-parsing"
 	"test-paths"
 	"test-random-mersenne"
+	"test-random-xorshift32"
+	"test-random-xoshiro128++"
 	"test-stackops"
 	"test-string"
 	"test-symbol"
 	"test-types"
-	"test-xorshift32"
-	"test-xoshiro128++"
 	] make-var
 
 'FAIL-BY-NAME [ ] make-dict make-var

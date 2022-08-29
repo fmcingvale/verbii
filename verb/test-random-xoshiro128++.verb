@@ -1,9 +1,9 @@
-\ Unittests for xoshiro128++
+\ Unittests for random-xoshiro128++
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 "unittest" import
-"xoshiro128++" import
+"random-xoshiro128++" import
 
 : test-xoshiro128pp-seeding
 	11 22 33 44 xoshiro128pp-seed
