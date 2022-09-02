@@ -7,15 +7,47 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
+"brainf-common" import 
+
 : make-code-header ( -- )
 	"""
 'NRCELLS 30000 make-var
 'CELLS void make-var
 'DP 0 make-var
+'INPUT void make-var \ popped from stack at start of run
+'C void make-var \ temp for char input
+\ set size of cell ...
+\ 8-bit
+\ 'VALUE-MAX 255 make-var
+\ 16-bit
+'VALUE-MAX 65535 make-var
+\ for 32-bits
+\ 'VALUE-MAX 4294967295 make-var
 	
+\ pop INPUT from stack
+INPUT!
+
 \ create CELLS list and fill all 0
 [ ] CELLS!
 { CELLS 0 append CELLS! } NRCELLS repeat
+
+: jitbrain-print-debug ( -- )
+	CR "DP:" . DP . CR
+	\ print a 10x10 grid of first 100 values
+	"MEMORY:" . CR
+	\ column headers
+	"   " .. { ( i ) i 8 str.w . } 0 1 10 for-count CR
+	{ "-" .. } 93 repeat CR
+	\ i = 0..9
+	{ ( i )
+		i .. ":" .
+		\ j = 0..9
+		{ ( j )
+			CELLS i 10 * j + get 8 str.w .
+		} 0 1 10 for-count
+		CR
+	} 0 1 10 for-count
+	;
 	"""
 	;
 	
@@ -27,6 +59,7 @@
 'NRCELLS! ,,del
 'CELLS! ,,del
 'DP! ,,del
+'jitbrain-print-debug ,,del
 	"""
 	;
 	
@@ -66,17 +99,47 @@
 		c "+" == if >>++*DP 
 		c "-" == if >>--*DP 
 		c "." == if >>print 
-		\ c "," == if >>input 
+		c "," == if >>input 
 		c "[" == if >>begin-while
 		c "]" == if >>end-while
+		\ extension: '#' is comment to EOL
+		c "#" == if >>comment
+		\ extension: '?' prints debugging dump
+		c "?" == if >>debug
 		\ ignore anything else
 		>>next
 		
 	@++DP code "DP 1 + DP!" append code! >>next
 	@--DP code "DP 1 - DP!" append code! >>next
-	@++*DP code "CELLS DP CELLS DP get 1 + put CELLS!" append code! >>next
-	@--*DP code "CELLS DP CELLS DP get 1 - put CELLS!" append code! >>next
+	@++*DP 
+		code 
+		"""
+		CELLS DP CELLS DP get 1 + put CELLS!
+		 CELLS DP get VALUE-MAX > not if >>nowrap
+			CELLS DP CELLS DP get VALUE-MAX - 1 - put CELLS!
+			@nowrap
+		""" append code! >>next
+	@--*DP 	
+		code 
+		"""
+		CELLS DP CELLS DP get 1 - put CELLS!
+		 CELLS DP get 0 >= if >>nowrap
+			CELLS DP CELLS DP get VALUE-MAX + 1 + put CELLS!
+			@nowrap
+		""" append code! >>next
 	@print code "CELLS DP get .c" append code! >>next
+	@input
+		code
+		"""
+		INPUT 0 get C!
+		C void? if >>input-void
+		INPUT 1 -1 slice INPUT! >>input-ord
+		@input-void 0 C! >>input-store
+		@input-ord C ord C!
+		@input-store
+			CELLS DP C put CELLS!
+		"""
+		append code! >>next
 	@begin-while 
 		\ generate a new unique loop#
 		gen-loop-nr nr!
@@ -98,11 +161,22 @@
 		code "<<while-" nr str + append code!
 		code "@exit-while-" nr str + append code!
 		>>next
+	@comment
+			\ read until \r or \n
+			ip 1 + ip!
+			text ip get c!
+			c void? if >>done 
+			c ord 10 == if >>next
+			c ord 13 == if >>next
+			<<comment
+	@debug
+		code "jitbrain-print-debug" append code!
+		>>next
 		
 	@next ip 1 + ip! <<loop
 		
 	@done
-		code 10 chr string-join
+		code 10 chr string-join		
 	;
 
 : brainf-to-verbii ( text -- verbii )
@@ -111,27 +185,34 @@
 	make-code-footer +
 	;
 	
-: jit-run-brain ( text )
+: jit-run-brain ( text input )
+	@locals [ t0 t1 ]
 	text brainf-to-verbii
 	compile-and-load-string
-	__main__
+	\ calc just runtime so i can measure performance of generated code, not
+	\ how long the compiler takes to run
+	run-time t0!
+	input __main__
+	run-time t1!
+	"* Ran in" . t1 t0 - . "seconds" . CR
 	'__main__ ,,del
 	CR
 	;
 	
-\ "++++++++[>+++++++++>+++++++++++++>++++<<<-]>.>---.+++++++..+++.>.<++++++++.--------.+++.------.--------.>+." jit-run-brain
-\ "++++++++[>+>++++<<-]>++>>+<[-[>>+<<-]+>>]>+[-<<<[->[+[-]+>++>>>-<<]<[<]>>++++++[<<+++++>>-]+<<++.[-]<<]>.>+[>>]>+]" jit-run-brain
+: run 
+	@locals [ comments code input t0 t1 ]
+	SCRIPT-ARGS length 0 == if >>missing-filename 
+	SCRIPT-ARGS 0 get read-brainf-file input! code! comments!
+	"Comment:" . CR comments . CR
+	\ measure run-time only, no parsing time
+	"Run:" . CR
+	run-time t0!
+	code input jit-run-brain
+	run-time t1!
+	"Ran in" . t1 t0 - . "seconds" . CR
+	return
 
-
-">>>>++++++++>>>---" jit-run-brain
-"[]" jit-run-brain
-"+++++[>+<-]" jit-run-brain
-"++++[>+++[>+<-]<-]" jit-run-brain
-"++++++++[>++++++++[>+<-]<-]>>." jit-run-brain
-
-
-">++++++++[<+++++++++>-]<.>++++[<+++++++>-]<+.+++++++..+++.>>++++++[<+++++++>-]<++.------------.>++++++[<+++++++++>-]<+.<.+++.------.--------.>>>++++[<++++++++>-]<+."  jit-run-brain
-"++++++++[>+>++++<<-]>++>>+<[-[>>+<<-]+>>]>+[-<<<[->[+[-]+>++>>>-<<]<[<]>>++++++[<<+++++>>-]+<<++.[-]<<]>.>+[>>]>+]" jit-run-brain
-
+	@missing-filename "Error: A .bf script filename required" . CR return
+	;
 	
-	
+run

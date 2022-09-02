@@ -1,0 +1,40 @@
+\ Common functions across the brainf* programs.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: read-brainf-file ( filename -- comments code input )
+	@locals [ line input-lines comment-lines ]
+	filename stream-reader-open-file ( stream )
+	
+	[ ] comment-lines!
+	"" code!
+	"" input!
+	[ ] input-lines!
+	
+	\ read comments until !
+	\ comments lines are joined with \n -- no \n after final line
+	@loop-comments ( stream )
+		stream-reader-next-line line! ( stream )
+		line void? { "EOF inside comment header"  error } ifthen
+		line 0 get "!" == if >>loop-code 
+		comment-lines line append comment-lines! \ add any other line to comments and continue
+		<<loop-comments
+		
+	@loop-code ( stream )
+		stream-reader-next-line line! ( stream )
+		line void? if >>done \ not an error to omit input section
+		line 0 get "!" == if >>read-input 
+		code line + 10 chr + code! \ append to code and continue
+		<<loop-code 
+	
+	\ input lines are joined with \n (no \n after final line!)
+	@read-input ( stream )
+		stream-reader-next-line line! ( stream )
+		line void? if >>done
+		line 0 get "!" == if >>done
+		input-lines line append input-lines! <<read-input
+		
+	@done
+		drop \ drop stream
+		comment-lines 10 chr string-join code input-lines 10 chr string-join return
+	;
