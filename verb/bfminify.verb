@@ -1,0 +1,50 @@
+
+\ bf-minify -- minify brainf* code
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"brainf-common" import 
+
+\ remove everything EXCEPT ><+-.,[]
+: minify ( text -- mini )
+	@locals [ i c ]
+	0 i!
+	"" mini! \ another place where verbii would benefit from an appendable string object
+	@loop
+		text i get c!
+		c void? if >>done
+		"><+-.,[]" c find-equal void? not if >>keep
+		c "#" == if >>comment
+		\ ignore anything else
+		>>next
+		
+	@keep
+		mini c + mini! >>next
+
+	@comment
+		\ read until \r or \n
+		i 1 + i!
+		text i get c!
+		c void? if >>done 
+		c ord 10 == if >>next
+		c ord 13 == if >>next
+		<<comment
+		
+	@next i 1 + i! <<loop
+		
+	@done
+		mini
+	;
+
+: run 
+	@locals [ comments code input t0 t1 ]
+	SCRIPT-ARGS length 0 == if >>missing-filename 
+	SCRIPT-ARGS 0 get read-brainf-file input! code! comments!
+	"!" . CR
+	code minify . CR
+	return
+
+	@missing-filename "Error: A .bf script filename required" . CR return
+	;
+	
+run
