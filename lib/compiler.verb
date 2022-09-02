@@ -894,7 +894,7 @@
 				append drop
 		} argnames length 1 - 				\ start index = #argnames-1
 			-1 								\ count by -1
-				argnames length for-range	\ for argnames args
+				argnames length for-count	\ for argnames args
 		
 		\ create an environment to resolve names 
 		plain-list if >>make-env-plain-list
@@ -1217,7 +1217,10 @@
 	serialize-compiled-output
 	;
 
-( compiles string and loads words into current interpreter )
+\ compiles string and loads words into current interpreter
+\
+\ *NOTE* caller must delete __main__ before trying to load additional code
+\ 		e.g.: '__main__ ,,del
 : compile-and-load-string ( string -- )
 	string byte-compile-string
 	( now load the [ name wordlist ] pairs into interpreter )

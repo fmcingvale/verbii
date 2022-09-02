@@ -18,6 +18,18 @@
 \ actually prints LF but originally named CR so I left it
 : CR 10 .c ;
 
+\ get str of obj with given field width, left padding with spaces and right-truncating as needed
+: str.w ( obj width -- string )
+	obj str string!
+	@pad 
+		string length width >= if >>trim
+		" " string + string! <<pad
+	@trim
+		string length width == if >>done 
+		string 1 tail-drop string! <<trim
+	@done string
+	;
+	
 \ clear the stack
 : clear SP depth + 1 - SP! ;
 
@@ -178,6 +190,30 @@
 \	;
 	
 \ ========================================================================
+\ Sequence functions (generally: strings, symbols, lists)
+\ ========================================================================
+
+\ return NR elements from head of sequence (i.e. NR elements starting at left)
+: head ( seq nr -- list' )
+	seq 0 nr slice
+	;
+	
+\ get NR elements from tail of sequence (ie. NR elements starting at right)
+: tail ( seq nr -- list' )
+	seq 0 nr - nr slice
+	;
+	
+\ get all EXCEPT the first NR elements from the left
+: head-drop ( seq nr -- list' )
+	seq nr -1 slice
+	;
+
+\ get all EXCEPT the last NR elements from the left	
+: tail-drop ( seq nr -- list' )
+	seq 0 seq length nr - slice 
+	;
+	
+\ ========================================================================
 \ String functions
 \ ========================================================================
 
@@ -292,7 +328,7 @@
 	@loop
 		text i get c!
 		c void? if >>got-end \ end of string
-		delims { c == } find void? not if >>got-delim \ found delimiter
+		delims c find-equal void? not if >>got-delim \ found delimiter
 		\ not a delim, add to piece
 		piece c + piece! >>next
 	@got-delim
@@ -353,6 +389,33 @@
 		return \ or should it be an error to match no clauses?
 	@match 
 		condexprs i get 1 get call return \ call matching clause
+	;
+	
+\ similar to 'case' in Scheme
+\	* more efficient that the more general 'cond' when matching against exact values
+\
+\ cases is a list of [ { key ... } { .. call if matched .. } ]
+\ with optional element: [ else { .. call if no match .. } ] that ALWAYS matches
+\
+\ if value matches ANY of the keys in a list, then the corresponding lambda is called
+\
+\ it is NOT an error to not match any values
+: case ( value cases -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		\ end of cases?
+		cases i get void? if >>nomatch
+		\ [ else { ... } ]? 
+		cases i get 0 get 'else == if >>match 
+		\ else see if value is in list
+		cases i get 0 get value find-equal void? not if >>match
+		\ doesn't match, go onto next case
+		i 1 + i! <<loop
+	@nomatch
+		return \ or should it be an error to match no clauses?
+	@match 
+		cases i get 1 get call return \ call matching clause
 	;
 	
 \ ========================================================================
@@ -449,7 +512,7 @@
 \ for i=start .. start+incr*(count-1), call fn with args ( i )
 \
 \ note: count is used instead of an end value to simplify boundary conditions
-: for-range ( fn start incr count )
+: for-count ( fn start incr count )
 	@locals [ i ]
 	
 	0 i!
@@ -474,6 +537,21 @@
 	@not-found void
 	;
 
+\ more efficient find for the common case of looking for an exact value
+\	rationale: normal uses of 'find' in this case would create a bound lambda in the caller which
+\		  	   is avoided by using this hardcoded test instead
+\
+\ find index of first item in sequence that satisfies test or void if none
+: find-equal ( seq value -- index )
+	0 index!
+	@loop
+		index seq length >= if >>not-found
+		seq index get value == if >>found 
+		index 1 + index! <<loop
+	@found index return
+	@not-found void
+	;
+	
 \ fold - left fold
 \	func: called as: ( accum elem -- new-accum ) where accum is the accumulated value and
 \		  elem is the next element to be added to the accumulator.
@@ -597,6 +675,38 @@
 	{ unmake drop put } ,,new-dict fold
 	;
 
+\ an expanded dictionary constructor:
+\
+\ 	a list of tuples and makes a dictionary:
+\		[ [ "foo" 123 ] [ "bar" 678 ] ] make-dict
+\		=>
+\		{ "bar" => 678 "foo" => 123 }
+\
+\	a list of lambdas that returns ( key val ):
+\		[ { "a" 10 5 + } { "b" 100 200 + } ]
+\		=>
+\		{ "a" => 15 "b" => 300 }
+\
+\	The above forms can be mixed together in the same list
+\
+\ treating this as experimental so not replacing make-dict yet.
+: make-dict* ( pairs -- D )
+	,,new-dict D!
+	pairs
+	{ ( item )
+		item list? if >>list
+		item lambda? if >>lambda
+		item bound-lambda? if >>lambda
+		"Bad item passed to make-dict: " item str + error
+		
+		@list
+			D item 0 get item 1 get put D! return
+		@lambda
+			D item call put D! return
+	} for-each
+	D
+	;
+	
 \ ( message -- ) ;  print a debug message along with the stack
 : debug . .S CR ;
 	

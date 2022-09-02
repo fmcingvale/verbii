@@ -1594,7 +1594,7 @@ y -
 i -1
 o 327680
 y length
-y for-range
+y for-count
 o 131072
 y if
 o 64424509442
