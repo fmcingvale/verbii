@@ -161,6 +161,19 @@
 	seq 0 seq length nr - slice 
 	;
 	
+\ get str of obj with given field width, left padding with spaces and right-truncating as needed
+: str.w ( obj width -- string )
+	obj str string!
+	@pad 
+		string length width >= if >>trim
+		" " string + string! <<pad
+	@trim
+		string length width == if >>done 
+		string 1 tail-drop string! <<trim
+	@done string
+	;
+	
+
 ( ------ compiler ------- )
 
 \ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
