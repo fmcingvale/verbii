@@ -51,9 +51,9 @@
 \ must call this at least once to init board state
 : clear-board ( -- ) 
 	[ ] PIECES!
-	{ PIECES P-NONE append drop } 0 1 64 for-range
+	{ PIECES P-NONE append drop } 0 1 64 for-count
 	[ ] COLORS!
-	{ COLORS WHITE append drop } 0 1 64 for-range
+	{ COLORS WHITE append drop } 0 1 64 for-count
 	WHITE SIDE-TO-MOVE!
 	[ true true true true ] CASTLING!
 	-1 EPSQUARE!
@@ -98,7 +98,7 @@
 \ parse a piece char into its P-* and color	
 : char-to-piece ( char -- piece color )
 	@locals [ ip ]
-	PIECE-CHARS ::{ char toupper == } find ip! \ find index into PIECE_CHARS
+	PIECE-CHARS { char toupper == } find ip! \ find index into PIECE_CHARS
 	ip void? if >>bad-char
 	char upper? if >>white
 	ip BLACK return 
@@ -117,8 +117,8 @@
 : algebraic-to-square ( alg )
 	alg string? not if >>bad-alg
 	alg length 2 != if >>bad-alg
-	"abcdefgh" ::{ alg 0 get == } find void? if >>bad-alg
-	"12345678" ::{ alg 1 get == } find void? if >>bad-alg
+	"abcdefgh" { alg 0 get == } find void? if >>bad-alg
+	"12345678" { alg 1 get == } find void? if >>bad-alg
 	alg 1 get ord "1" ord - 8 * 
 	alg 0 get ord "a" ord - +
 	return
@@ -126,8 +126,6 @@
 	@bad-alg
 		"Bad algebraic coordinate:" alg str + error
 	;
-
-: .. str puts ;
 
 : print-board ( -- )
 	@locals [ row col ]
@@ -220,11 +218,11 @@
 	\ parts[1] is "w" or "b" to move next
 	parts 1 get
 	[
-		[ { "w" == } { WHITE SIDE-TO-MOVE! } ]
-		[ { "b" == } { BLACK SIDE-TO-MOVE! } ]
+		[ [ "w" ] { WHITE SIDE-TO-MOVE! } ]
+		[ [ "b" ] { BLACK SIDE-TO-MOVE! } ]
 		[ else { "Bad side to move in FEN string" error } ]
 	]
-	cond
+	case
 
 	\ parts[2] is castling availability - any of KQkq-
 	\ set initially to none
@@ -249,7 +247,7 @@
 	\ parts[3] is en-passant target square or '-' if none
 	parts 3 get "-" == 
 		{ -1 EPSQUARE! }
-		::{ parts 3 get algebraic-to-square EPSQUARE! }
+		{ parts 3 get algebraic-to-square EPSQUARE! }
 		ifelse
 	
 	\ parts[4] is halfmove number
@@ -297,36 +295,6 @@ print-board
 
 CR
 
-\ similar to 'cond' in Scheme
-\
-\ condexprs is a list of [ { .. test .. } { .. call if true .. } ]
-\ with optional element: [ else { .. call if no match .. } ]
-: cond ( elem condexprs -- )
-	@locals [ i ]
-	0 i!
-	@loop
-		condexprs i get void? if >>nomatch
-		condexprs i get 0 get 'else == if >>match 
-		elem condexprs i get 0 get call if >>match
-		i 1 + i! <<loop
-	@nomatch
-		return \ or should it be an error to match no clauses?
-	@match 
-		condexprs i get 1 get call return \ call matching clause
-	;
-
-'C
-[
-	[ { "c" == } { "it is C" . CR } ]
-	[ { "a" == } { "it is A" . CR } ]
-	[ else { "neither A nor B" . CR } ]
-]
-make-var
-
-"a" C cond
-"c" C cond
-"z" C cond
-
 "to algebraic:" . CR
 "6 (g1):" . 6 square-to-algebraic . CR
 "18 (c3):" . 18 square-to-algebraic . CR
@@ -357,7 +325,7 @@ make-var
 	[ ] attacks!
 	square square-to-rowcol col! row!
 	moves
-	::{ ( move )
+	{ ( move )
 		\ calc row+dRow, col+dCol and see if that is a valid square
 		row move 0 get + row+!
 		col move 1 get + col+!
@@ -373,11 +341,11 @@ make-var
 \ generate a table of all fixed attacks for a piece at each square
 : gen-all-fixed-attacks ( moves -- attack-table ) 
 	[ ] attack-table!
-	::{ ( square )
+	{ ( square )
 		attack-table
 			square moves gen-fixed-attacks
 			append attack-table!
-	} 0 1 64 for-range
+	} 0 1 64 for-count
 	attack-table
 	;
 	
@@ -413,11 +381,11 @@ make-var
 	[ ] attacks!
 	[ ] blockers!
 	movedirs
-	::{ ( dir )
+	{ ( dir )
 		square dir unmake drop gen-sliding-attacks \ ( attacks blocked )
 		\ if blocked is not void, add to blockers list
 		dup void? not
-			::{ blockers swap append blockers! }
+			{ blockers swap append blockers! }
 			{ drop } ifelse
 			
 		\ add attacks to list (use extend so i don't change object identity vs attacks
@@ -513,7 +481,7 @@ gen-all-knight-attacks
 : gen-fixed-moves ( piece square attacks side -- moves )
 	[ ] moves!
 	attacks
-	::{ ( squareTo )
+	{ ( squareTo )
 		\ see what is at squareTo
 		squareTo piece-at P-NONE == if >>empty
 		\ not empty - see if its opposing color
@@ -541,7 +509,7 @@ gen-all-knight-attacks
 	[ ] moves!
 	\ all the squares in attacked are empty, so make those first
 	attacks
-	::{ ( squareTo )
+	{ ( squareTo )
 		\ always non-capturing move
 		moves
 			piece side square squareTo new-move append moves!
@@ -550,7 +518,7 @@ gen-all-knight-attacks
 	\ now i have to check if blockers are opposite side (voids were already
 	\ filtered out in gen-all-sliding-squares)
 	blockers
-	::{ ( squareTo )
+	{ ( squareTo )
 		squareTo color-at side == if >>done \ blocked by my piece, so i'm done
 		\ else its a capture
 		moves
@@ -599,7 +567,7 @@ gen-all-knight-attacks
 	@locals [ piece ]
 	[ ] moves!
 	\ for each square ...
-	::{ ( i )
+	{ ( i )
 		i piece-at piece!
 		piece P-NONE == if >>done \ empty square, skip
 		i color-at side != if >>done \ wrong color piece
@@ -617,7 +585,7 @@ gen-all-knight-attacks
 		@knight moves i side gen-knight-moves extend moves! >>done
 		@king moves i side gen-king-moves extend moves! >>done
 		@done
-	} 0 1 64 for-range
+	} 0 1 64 for-count
 	moves
 	;
 	
