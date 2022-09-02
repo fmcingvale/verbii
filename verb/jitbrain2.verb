@@ -1,0 +1,300 @@
+
+\ "JIT" brainf* interpreter
+\
+\ * "JIT" meaning that brainf* code is translated into verbii before running.
+\
+\ This is an optimizing compiler.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ NOTES ON TIMING:
+\	* After a small amount of optimization, the total time is dominated by the compilation time.
+\	  Although a true end-to-end timing test needs to include compilation time, for purposes of
+\	  of optimization testing, compilation time is omitted. Otherwise all times would be ~= compilation time.
+\	* To make times more measurable, the slowest port (Python) is used.
+\
+\ Basline timing (Python, brain.verb):
+\	sierpinski.bf = 67.5 seconds
+\	fibonacci.bf (minimized) = 127.4 seconds
+\	squares.bf = 340.6 seconds
+\	qsort.bf = 133.6 seconds
+\
+\ Non-optimizing JIT (jitbrain.verb):
+\	sierpinski.bf = 17.2 seconds
+\	fibonacci.bf (minimized) = 22.2 seconds
+\	squares.bf = 75.4 seconds
+\	qsort.bf = 19.45 seconds
+\
+\ Optimizations:
+\ * changed globals (NRCELLS, CELLS, DP) to @locals. 
+\		** NOTE ** debugging does not work since CELLS and DP are not globals anymore
+\
+\	sierpinski.bf = 9.7 seconds
+\	fibonacci.bf (minimized) = 12.3 seconds
+\	squares.bf = 40.4 seconds
+\	qsort.bf = 10.0 seconds
+\
+\ * count runs of +,-,>,< and combine into one operation
+\
+\	sierpinski.bf = 7.3 seconds
+\	fibonacci.bf (minimized) = 11.6 seconds
+\	squares.bf = 29.9 seconds
+\	qsort.bf = 8.6 seconds
+\
+\ * [-] becomes *DP=0
+\
+\	sierpinski.bf = 3.44 seconds (!!)
+\	fibonacci.bf (minimized) = 11.1 seconds
+\	squares.bf = 28.2 seconds
+\	qsort.bf = 8.6 seconds
+
+"brainf-common" import 
+
+: make-code-header ( -- )
+	"""
+	: the-brainf-program ( INPUT -- )
+		@locals [ NRCELLS CELLS DP C VALUE-MAX ]
+		30000 NRCELLS!
+
+		\ set size of cell ...
+		\ 8-bit
+		\ 255 VALUE-MAX!
+		\ 16-bit
+		65535 VALUE-MAX!
+		\ for 32-bits
+		\ 4294967295 VALUE-MAX!
+
+		\ create CELLS list and fill all 0
+		[ ] CELLS!
+		{ CELLS 0 append CELLS! } NRCELLS repeat
+
+		0 DP!	
+	"""
+	;
+	
+: make-code-footer ( -- )
+	"""
+			;
+		
+	: jitbrain-print-debug ( -- )
+		"NO DEBUGGING" . CR return
+		CR \ "DP:" . DP . CR
+		\ print a 10x10 grid of first 100 values
+		"MEMORY:" . CR
+		\ column headers
+		"   " .. { ( i ) i 8 str.w . } 0 1 10 for-count CR
+		{ "-" .. } 93 repeat CR
+		\ i = 0..9
+		{ ( i )
+			i .. ":" .
+			\ j = 0..9
+			{ ( j )
+				CELLS i 10 * j + get 8 str.w .
+			} 0 1 10 for-count
+			CR
+		} 0 1 10 for-count
+		;
+	"""
+	;
+	
+( 
+	quick ref:
+		DP = data pointer, index into CELLS
+		IP = instruction pointer, index into CODE
+		>  ++DP
+		<  --DP
+		+  ++(*DP)
+		-  --(*DP)
+		.  print(chr(*DP))
+		,  *DP = input-byte
+		[  if contents of current cell are 0, jump to next instruction after matching ]
+		]  if contents of current cell are != 0, jump to next instruction after matching [
+)
+
+'NEXT-LOOP-NR 0 make-var
+: gen-loop-nr ( -- nr )
+	NEXT-LOOP-NR nr!
+	NEXT-LOOP-NR 1 + NEXT-LOOP-NR!
+	nr
+	;
+	
+\ starting at text[i], count how many times that char repeats
+\ (will be at least 1, since text[i] counts as 1 match)
+: count-char-reps ( text i -- nr )
+	@locals [ c icur ]
+	text i get c!
+	i icur!
+	@loop
+		text icur get c != if >>done
+		icur 1 + icur!
+		<<loop
+	@done
+		icur i -
+	;
+	
+: translate-body ( text -- code )
+	@locals [ ip c loopstack nr ]
+	0 ip!
+	\ generate as list of code chunks then join at end
+	[ ] code!
+	\ track open loops 
+	[ ] loopstack!
+	@loop
+		text ip get c!
+		c void? if >>done
+		c ">" == if >>++DP
+		c "<" == if >>--DP
+		c "+" == if >>++*DP 
+		c "-" == if >>--*DP 
+		c "." == if >>print 
+		c "," == if >>input 
+		c "[" == if >>begin-while
+		c "]" == if >>end-while
+		\ extension: '#' is comment to EOL
+		c "#" == if >>comment
+		\ extension: '?' prints debugging dump
+		c "?" == if >>debug
+		\ ignore anything else
+		>>next
+		
+	@++DP 
+		\ count run of + chars
+		text ip count-char-reps nr!
+		\ now emit optimized code for +nr instead of +1
+		code "DP " nr str + " + DP!" + append code! 
+		ip nr + ip! <<loop
+		
+	@--DP 
+		\ optimize like above
+		text ip count-char-reps nr!
+		code "DP " nr str + " - DP!" + append code! 
+		ip nr + ip! <<loop
+	
+	@++*DP 
+		\ optimize like above
+		text ip count-char-reps nr!
+		code "CELLS DP CELLS DP get " nr str + " + put CELLS!" + append code!
+		code """
+			CELLS DP get VALUE-MAX > not if >>nowrap
+			CELLS DP CELLS DP get VALUE-MAX - 1 - put CELLS!
+			@nowrap""" append code!
+		
+		ip nr + ip! <<loop
+		
+	@--*DP 
+		\ optimize like above
+		text ip count-char-reps nr!
+		code "CELLS DP CELLS DP get " nr str + " - put CELLS!" + append code!
+		code """
+			CELLS DP get 0 >= if >>nowrap
+			CELLS DP CELLS DP get VALUE-MAX + 1 + put CELLS!
+			@nowrap""" append code!
+			
+		ip nr + ip! <<loop
+	
+	@print code "CELLS DP get .c" append code! >>next
+	
+	@input
+		code
+		"""
+		INPUT 0 get C!
+		C void? if >>input-void
+		INPUT 1 -1 slice INPUT! >>input-ord
+		@input-void 0 C! >>input-store
+		@input-ord C ord C!
+		@input-store
+			CELLS DP C put CELLS!
+		"""
+		append code! >>next
+		
+	@begin-while 
+		\ see if it is a special form I can reduce
+		text ip 3 slice "[-]" == if >>set-dp-to-zero
+		
+		\ generate a new unique loop#
+		gen-loop-nr nr!
+		\ structure:
+		\	@while-###
+		\		CELLS DP get 0 == if >>exit-while-###
+		\		.. code ..
+		\		<<while-###
+		\	@exit-while-###
+		code "@while-" nr str + append code!
+		code "CELLS DP get 0 == if >>exit-while-" nr str + append code!
+		\ push nr to loopstack so i know which to close later
+		loopstack nr append loopstack!
+		>>next
+		
+	@set-dp-to-zero \ i'm looking at [-]
+		code "CELLS DP 0 put CELLS!" append code!
+		ip 3 + ip! <<loop
+		
+	@end-while
+		\ pop loop#
+		loopstack -1 get nr!
+		loopstack 1 tail-drop loopstack!
+		code "<<while-" nr str + append code!
+		code "@exit-while-" nr str + append code!
+		>>next
+		
+	@comment
+		\ read until \r or \n
+		ip 1 + ip!
+		text ip get c!
+		c void? if >>done 
+		c ord 10 == if >>next
+		c ord 13 == if >>next
+		<<comment
+		
+	@debug
+		code "jitbrain-print-debug" append code!
+		>>next
+		
+	@next ip 1 + ip! <<loop
+		
+	@done
+		code 10 chr string-join
+	;
+
+: brainf-to-verbii ( text -- verbii )
+	make-code-header
+	text translate-body +
+	make-code-footer +
+	;
+	
+: jit-run-brain ( text input )
+	@locals [ t0 t1 ]
+	"Translate ..." . CR
+	text brainf-to-verbii
+	"Compile ..." . CR
+	compile-and-load-string
+	"Run ..." . CR
+	\ calc just runtime so i can measure performance of generated code, not
+	\ how long the compiler takes to run
+	run-time t0!
+	input the-brainf-program
+	run-time t1!
+	"* Ran in" . t1 t0 - . "seconds" . CR
+	
+	'the-brainf-program ,,del
+	'__main__ ,,del
+	CR
+	;
+	
+: run 
+	@locals [ comments code input t0 t1 ]
+	SCRIPT-ARGS length 0 == if >>missing-filename 
+	SCRIPT-ARGS 0 get read-brainf-file input! code! comments!
+	"Comment:" . CR comments . CR
+	\ measure run-time only, no parsing time
+	"Run:" . CR
+	run-time t0!
+	code input jit-run-brain CR
+	run-time t1!
+	"Ran in" . t1 t0 - . "seconds" . CR
+	return
+
+	@missing-filename "Error: A .bf script filename required" . CR return
+	;
+	
+run
