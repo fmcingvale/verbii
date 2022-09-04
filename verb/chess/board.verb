@@ -36,8 +36,11 @@
 \ side to move next - WHITE or BLACK
 'SIDE-TO-MOVE WHITE make-var
 
-\ castling availability as [ W-OO W-OOO B-OO B-OOO ] (bools)
-'CASTLING null make-var
+\ castling availability as bools
+'CASTLING_W_OO false make-var
+'CASTLING_W_OOO false make-var
+'CASTLING_B_OO false make-var
+'CASTLING_B_OOO false make-var
 
 \ en-passant target square [0-63] or -1
 \ this is the square directly BEHIND (relative to its kindside) 
@@ -50,6 +53,10 @@
 \ fullmove number
 'FULLMOVE 0 make-var
 
+\ epsquare, halfmove and castling status are difficult or not possible
+\ to reconstruct from just the previous move, so save them on an undo stack
+'UNDO-STACK [ ] make-var
+
 \ track king squares
 'KING-SQUARE-W -1 make-var
 'KING-SQUARE-B -1 make-var 
@@ -61,7 +68,10 @@
 	[ ] COLORS!
 	{ ( i ) COLORS WHITE append! } 0 1 64 for-count
 	WHITE SIDE-TO-MOVE!
-	[ true true true true ] CASTLING!
+	true CASTLING_W_OO!
+	true CASTLING_W_OOO!
+	true CASTLING_B_OO!
+	true CASTLING_B_OOO!
 	-1 EPSQUARE!
 	\ set these to invalid
 	-1 KING-SQUARE-W!
@@ -158,12 +168,16 @@
 
 	\ castling status
 	"Castling:" .
-	CASTLING 0 get { "K" puts } ifthen
-	CASTLING 1 get { "Q" puts } ifthen
-	CASTLING 2 get { "k" puts } ifthen
-	CASTLING 3 get { "q" puts } ifthen
+	CASTLING_W_OO { "K" puts } ifthen
+	CASTLING_W_OOO { "Q" puts } ifthen
+	CASTLING_B_OO { "k" puts } ifthen
+	CASTLING_B_OOO { "q" puts } ifthen
 	\ if no castling available, print - 
-	CASTLING { } any? not { "-" . } ifthen
+	CASTLING_W_OO 
+	CASTLING_W_OOO
+	CASTLING_B_OO 
+	CASTLING_B_OOO
+		or or or not { "-" . } ifthen
 	CR
 	
 	"Ep-Target:" . 
@@ -246,22 +260,25 @@
 
 	\ parts[2] is castling availability - any of KQkq-
 	\ set initially to none
-	[ false false false false ] CASTLING!
+	false CASTLING_W_OO!
+	false CASTLING_W_OOO!
+	false CASTLING_B_OO!
+	false CASTLING_B_OOO!
 		\ K?
 		parts 2 get { "K" == } find void? if >>check-W-OOO
-		CASTLING 0 true put!
+		true CASTLING_W_OO!
 	@check-W-OOO
 		\ Q?
 		parts 2 get { "Q" == } find void? if >>check-B-OO
-		CASTLING 1 true put!
+		true CASTLING_W_OOO!
 	@check-B-OO
 		\ k?
 		parts 2 get { "k" == } find void? if >>check-B-OOO
-		CASTLING 2 true put!
+		true CASTLING_B_OO!
 	@check-B-OOO
 		\ q?
 		parts 2 get { "q" == } find void? if >>castling-done
-		CASTLING 3 true put!
+		true CASTLING_B_OOO!
 	@castling-done
 
 	\ parts[3] is en-passant target square or '-' if none
@@ -804,15 +821,33 @@ gen-all-knight-attacks
 
 \ make move -- assumes move is valid
 : make-move ( move -- )
+	\ save extra state to undo stack first
+	\ **TODO** this is a reason that globals should be treated more like args/locals,
+	\ the globals here would be saved as symbols not as values if i used literal list
+	\ notations, but with args/locals it would have the expected behavior
+	\ ... so just make the list manually
+	UNDO-STACK
+		EPSQUARE HALFMOVE CASTLING_W_OO CASTLING_W_OOO CASTLING_B_OO CASTLING_B_OOO
+		6 make-list append!
+		
 	\ remove from squareFrom
 	move move-squareFrom P-NONE WHITE put-piece 
 	\ if capture, remove
-	move move-isCapture? not if >>skip
+	move move-isCapture? not if >>skip-cap
 	move move-squareCaptured P-NONE WHITE put-piece 
-	@skip
+	@skip-cap
 	\ place on squareTo
 	move move-squareTo move move-piece move move-side put-piece
 	
+	\ see if it was a double pawn jump and set epsquare to square behind pawn
+	-1 EPSQUARE!
+	move move-piece P-PAWN != if >>skip-ep
+	move move-squareTo move move-squareFrom - 16 == if >>set-w-ep
+	move move-squareTo move move-squareFrom - -16 == if >>set-b-ep
+	>>skip-ep
+	@set-w-ep move move-squareTo 8 - EPSQUARE! >>skip-ep
+	@set-b-ep move move-squareTo 8 + EPSQUARE!
+	@skip-ep
 	\ **TODO** move rook on castling
 	;
 
@@ -827,16 +862,17 @@ gen-all-knight-attacks
 	move move-squareCaptured move move-pieceCaptured move move-side other put-piece
 	@skip
 	\ **TODO** move rook on castling
+	
+	\ restore other state from stack
+	UNDO-STACK -1 get unmake drop
+	CASTLING_B_OOO! CASTLING_B_OO! CASTLING_W_OOO! CASTLING_W_OO! HALFMOVE! EPSQUARE!
+	UNDO-STACK 1 tail-drop UNDO-STACK!
 	;
 	
 \ generate fully legal moves for side	
 : gen-full-moves ( side -- moves )
 	@locals [ pmoves attacks kingsq ]
 	[ ] moves!
-	\ determine king square for side
-	KING-SQUARE-W kingsq!
-	side WHITE == if >>skip
-	KING-SQUARE-B kingsq!
 	@skip
 	side gen-pseudo-moves
 	\ loop over all pmoves, removing those that leave the king in check
@@ -846,11 +882,18 @@ gen-all-knight-attacks
 		move make-move
 		\ get attacks of opposite side now
 		side other gen-attacks
-		\ see if king square is attacked
-		kingsq find-equal void? not if >>skip
+		\ see if king square is attacked (king might have moved so can't
+		\ cache king square here)
+		side BLACK == if >>check-black-king
+		KING-SQUARE-W find-equal void? if >>keep-move
+		>>done \ discard move 
+		@check-black-king
+		KING-SQUARE-B find-equal void? if >>keep-move
+		>>done \ discard move 
+		@keep-move
 		\ king is not attacked, so keep this move
 		moves move append!
-		@skip
+		@done
 		move unmake-move
 	} for-each
 		
