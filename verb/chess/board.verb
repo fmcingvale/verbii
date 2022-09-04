@@ -551,6 +551,7 @@ gen-all-knight-attacks
 			moves
 				piece side square squareTo new-move
 				squareTo piece-at move-pieceCaptured!
+				squareTo move-squareCaptured!
 				append moves!
 			return
 	} for-each
@@ -577,6 +578,7 @@ gen-all-knight-attacks
 		moves
 			piece side square squareTo new-move
 			squareTo piece-at move-pieceCaptured!
+			squareTo move-squareCaptured!
 			append moves!
 		@done
 	} for-each
@@ -759,7 +761,7 @@ gen-all-knight-attacks
 \	* castling moves, since those are not attacks
 : gen-attacks ( side -- attacks )
 	@locals [ piece blockers sub-attacks ]
-	[ ] moves!
+	[ ] attacks!
 	\ for each square ...
 	{ ( i )
 		i piece-at piece!
@@ -775,36 +777,84 @@ gen-all-knight-attacks
 		piece P-KING == if >>king 
 		"Unknown piece:" piece str + error
 		
-		@pawn attacks i side gen-pawn-attacks extend moves! >>done 
+		@pawn attacks i side gen-pawn-attacks extend attacks! >>done 
 		@rook 
 			\ gen attacks & blocked squares
-			square ROOK-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			i ROOK-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
 			attacks sub-attacks extend blockers extend attacks! >>done
 		@bishop
 			\ gen attacks & blocked squares
-			square BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			i BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
 			attacks sub-attacks extend blockers extend attacks! >>done
 		@queen 
 			\ gen attacks & blocked squares
-			square ROOK-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			i ROOK-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
 			attacks sub-attacks extend blockers extend attacks! >>done
 			\ gen attacks & blocked squares
-			square BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			i BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
 			attacks sub-attacks extend blockers extend attacks! >>done
 		@knight
-			attacks square KNIGHT-ATTACKS-BY-SQUARE get extend attacks! >>done
+			attacks KNIGHT-ATTACKS-BY-SQUARE i get extend attacks! >>done
 		@king
-			attacks square KING-ATTACKS-BY-SQUARE get extend attacks! >>done
+			attacks KING-ATTACKS-BY-SQUARE i get extend attacks! >>done
 		@done
 	} 0 1 64 for-count
 	attacks
 	;		
 
+\ make move -- assumes move is valid
+: make-move ( move -- )
+	\ remove from squareFrom
+	move move-squareFrom P-NONE WHITE put-piece 
+	\ if capture, remove
+	move move-isCapture? not if >>skip
+	move move-squareCaptured P-NONE WHITE put-piece 
+	@skip
+	\ place on squareTo
+	move move-squareTo move move-piece move move-side put-piece
+	
+	\ **TODO** move rook on castling
+	;
+
+\ unmake move -- assumes move is valid AND that move was just made	
+: unmake-move ( move -- )
+	\ remove from squareTo
+	move move-squareTo P-NONE WHITE put-piece
+	\ place on squareFrom
+	move move-squareFrom move move-piece move move-side put-piece
+	\ if capture, replace captured piece
+	move move-isCapture? not if >>skip
+	move move-squareCaptured move move-pieceCaptured move move-side other put-piece
+	@skip
+	\ **TODO** move rook on castling
+	;
+	
 \ generate fully legal moves for side	
 : gen-full-moves ( side -- moves )
-	@locals [ pmoves ]
-	side gen-pseudo-moves pmoves!
-	
+	@locals [ pmoves attacks kingsq ]
+	[ ] moves!
+	\ determine king square for side
+	KING-SQUARE-W kingsq!
+	side WHITE == if >>skip
+	KING-SQUARE-B kingsq!
+	@skip
+	side gen-pseudo-moves
+	\ loop over all pmoves, removing those that leave the king in check
+	{ ( move )
+		\ "CHECK PMOVE:" . move print-move-long move . CR
+		
+		move make-move
+		\ get attacks of opposite side now
+		side other gen-attacks
+		\ see if king square is attacked
+		kingsq find-equal void? not if >>skip
+		\ king is not attacked, so keep this move
+		moves move append!
+		@skip
+		move unmake-move
+	} for-each
+		
+	moves \ return legal moves
 	;
 
 \ moves are generated pseudo-moves
@@ -975,3 +1025,57 @@ test-queen-pmoves
 \ 37 WHITE gen-pawn-attacks . CR
 
 \ 9 WHITE gen-pawn-moves dup . { print-move-long } for-each CR
+
+: test-make-move
+	@locals [ move ]
+	"3k4/8/8/3n4/4P3/8/8/4K3 w - - 0 1" set-from-fen
+	print-board
+	P-PAWN WHITE "e4" algebraic-to-square "d5" algebraic-to-square new-move 
+	P-KNIGHT move-pieceCaptured!
+	"d5" algebraic-to-square move-squareCaptured! move!
+	
+	move move-to-str-long . CR
+	move make-move
+	print-board
+	move unmake-move
+	print-board
+	;
+	
+test-make-move
+
+: test-gen-full-moves
+	\ P can't capture due to exposed check
+	"1k2r3/8/8/3n4/4P3/8/8/4K3 w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" "K-e1d2" "P-e4e5" ]
+	"MATCH?:" . check-p-movelist . CR
+	
+	\ only 1 move to save king (bishop capture)
+	"k7/8/8/2N2B1Q/8/8/PPn5/KN5R w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "B-f5xc2" ]
+	"MATCH?:" . check-p-movelist . CR
+	
+	\ like above but with rook
+	"k7/8/8/2R2N1N/8/8/PPn5/KN5R w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-c5xc2" ]
+	"MATCH?:" . check-p-movelist . CR
+	
+	\ like above but with knight
+	"k7/8/8/2N2N1N/8/4N3/PPn5/KN5R w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "N-e3xc2" ]
+	"MATCH?:" . check-p-movelist . CR
+	;
+	
+test-gen-full-moves
+
