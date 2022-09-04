@@ -1120,5 +1120,54 @@ test-make-move
 	"MATCH?:" . check-p-movelist . CR
 	;
 	
-test-gen-full-moves
+: perft-worker ( side depth -- nrmoves )
+	depth 0 > if >>skip
+	1 return \ leaf node, return 1
+	@skip
+	0 nrmoves!
+	side gen-full-moves
+	\ run perft-worker for each move, at depth-1
+	{ ( move )
+		move make-move 
+		side other depth 1 - perft-worker nrmoves + nrmoves!
+		move unmake-move
+	} for-each
+	nrmoves
+	;
+	
+\ run at root
+: perft ( side depth -- )
+	@locals [ nrmoves nr ]
+	0 nrmoves!
+	side gen-full-moves 
+	{ ( move )
+		move print-move-long ":" .
+		move make-move
+		side other depth 1 - perft-worker nr!
+		nr . CR
+		nr nrmoves + nrmoves!
+		move unmake-move
+	} for-each
+	
+	nrmoves . "nodes searched" . CR
+	;
+			
+\ test-gen-full-moves
 
+\ "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
+\ WHITE 1 perft
+
+\ "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
+\ WHITE 2 perft
+
+"2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
+WHITE 3 perft
+
+"2k5/8/7b/8/2p5/4N3/1P6/2K5 b - - 0 1" set-from-fen
+BLACK 2 perft
+
+"2k5/8/8/8/2p5/4b3/1P6/2K5 w - - 0 1" set-from-fen
+WHITE 1 perft
+
+"2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
+WHITE 4 perft
