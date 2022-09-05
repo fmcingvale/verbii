@@ -37,6 +37,12 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* add @globals to replace make-var. both faster AND could then be interpolated into lists like args/locals (and unlike make-var names)
+
+* benchmark hash functions - see if any usable to replace mtime for checking if file needs to be recompiled.
+
+* benchmark random functions and set a default in random module
+
 * SCRIPT-ARGS (repl/boot?) should be a read only var instead of returning an address
 
 * add an 'append' for strings, like lists, to allow dynamically growing strings without breaking
