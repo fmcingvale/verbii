@@ -415,49 +415,41 @@ clear-board
 		KNIGHT-ATTACKS-BY-SQUARE!
 	;
 
-\ make list of squares a pawn at square of given side can attack
-\ (a piece must be at the destination square)
+\ **TODO** this should be a table since it does not depend on what is on the destination square
+\
+\ make list of squares a pawn at square of given side CAN attack, assuming a 
+\ piece were there (the move generator must check if there is actually a piece there
+\ before making the attack in a move)
+\
 \ en-passant is NOT checked here -- it is not an attack that can attack
-\ the king which is a primary use of the attacks lists.
+\ the king which is a primary use of the attacks lists
 : gen-pawn-attacks ( square side -- attacks )
 	@locals [ row col ]
 	[ ] attacks!
 	
+	square square-to-rowcol col! row!
+	
 	side BLACK == if >>black
 	\ gen for white pawn
-	square square-to-rowcol col! row!
 	row 7 >= if >>no-attacks \ pawn on last row?? anyways, cannot attack
 	\ attack left?
-	col 1 >=
-	square 7 + piece-at P-NONE !=
-	square 7 + color-at BLACK ==
-		and and not if >>check-w-cap-right
+	col 0 == if >>check-w-cap-right
 		attacks square 7 + append attacks!
 		
 	@check-w-cap-right
-	col 7 <
-	square 9 + piece-at P-NONE !=
-	square 9 + color-at BLACK ==
-		and and not if >>done
+	col 7 == if >>done
 		attacks square 9 + append attacks!
 		>>done
 	
 	@black
 	\ gen for black pawn
-	square square-to-rowcol col! row!
 	row 0 <= if >>no-attacks \ pawn on last row?? anyways, cannot attack
 	\ attack left?
-	col 1 >=
-	square 9 - piece-at P-NONE !=
-	square 9 - color-at WHITE ==
-		and and not if >>check-b-cap-right
+	col 0 == if >>check-b-cap-right
 		attacks square 9 - append attacks!
 		
 	@check-b-cap-right
-	col 7 <
-	square 7 - piece-at P-NONE !=
-	square 7 - color-at WHITE ==
-		and and not if >>done
+	col 7 == if >>done
 		attacks square 7 - append attacks!
 	
 	@done
@@ -652,14 +644,33 @@ gen-all-knight-attacks
 	[ ] moves!
 	\ find squares i can attack
 	square side gen-pawn-attacks
-	\ make these into moves
+	\ make these into moves IF there is a piece there
 	{ ( squareTo )
-		moves
+		squareTo piece-at P-NONE == if >>done
+		squareTo color-at side == if >>done \ my own piece is on squareTo
 		P-PAWN side square squareTo new-move
 			squareTo piece-at move-pieceCaptured!
 			squareTo move-squareCaptured!
-			append moves!
+			move!
+			
+		moves move append moves!
+			
+		\ promotion after capture?
+		squareTo 56 <
+		squareTo 7 > and if >>done
+		
+		\ add all possible promotions
+		\ overwrite move already in list for first one
+		move P-KNIGHT move-piecePromotion! move!
+		\ now deepcopy & adjust promotion for others	
+		moves
+			move deepcopy P-BISHOP move-piecePromotion! append
+			move deepcopy P-ROOK move-piecePromotion! append
+			move deepcopy P-QUEEN move-piecePromotion! append!
+		@done
 	} for-each
+	
+	\ now generate the forward 1/2 and en-passant captures
 	
 	square square-to-rowcol col! row!
 	
@@ -845,6 +856,8 @@ gen-all-knight-attacks
 
 \ make move -- assumes move is valid
 : make-move ( move -- )
+	\ sanity check that move matches SIDE-TO-MOVE
+	SIDE-TO-MOVE move move-side != if >>bad-side
 	\ save extra state to undo stack first
 	\ **TODO** this is a reason that globals should be treated more like args/locals,
 	\ the globals here would be saved as symbols not as values if i used literal list
@@ -941,7 +954,14 @@ gen-all-knight-attacks
 	CASTLING_B_OOO
 		60 piece-at P-KING ==
 		56 piece-at P-ROOK == and and
-			CASTLING_B_OOO!			
+			CASTLING_B_OOO!	
+
+	\ flip side to move & return
+	SIDE-TO-MOVE other SIDE-TO-MOVE!
+	return
+	
+	@bad-side 
+		"SIDE-TO-MOVE out of sync in make-move" error
 	;
 
 \ unmake move -- assumes move is valid AND that move was just made	
@@ -992,6 +1012,9 @@ gen-all-knight-attacks
 	UNDO-STACK -1 get unmake drop
 	CASTLING_B_OOO! CASTLING_B_OO! CASTLING_W_OOO! CASTLING_W_OO! HALFMOVE! EPSQUARE!
 	UNDO-STACK 1 tail-drop UNDO-STACK!
+	
+	\ flip side to move
+	SIDE-TO-MOVE other SIDE-TO-MOVE!
 	;
 	
 \ generate fully legal moves for side	
@@ -1490,30 +1513,30 @@ test-make-move
 	
 	;
 	
-: perft-worker ( side depth -- nrmoves )
+: perft-worker ( depth -- nrmoves )
 	depth 0 > if >>skip
 	1 return \ leaf node, return 1
 	@skip
 	0 nrmoves!
-	side gen-full-moves
+	SIDE-TO-MOVE gen-full-moves
 	\ run perft-worker for each move, at depth-1
 	{ ( move )
 		move make-move 
-		side other depth 1 - perft-worker nrmoves + nrmoves!
+		depth 1 - perft-worker nrmoves + nrmoves!
 		move unmake-move
 	} for-each
 	nrmoves
 	;
 	
-\ run at root
-: perft ( side depth -- )
+\ run at root from current board state
+: perft ( depth -- )
 	@locals [ nrmoves nr ]
 	0 nrmoves!
-	side gen-full-moves 
+	SIDE-TO-MOVE gen-full-moves 
 	{ ( move )
 		move print-move-long ":" .
 		move make-move
-		side other depth 1 - perft-worker nr!
+		depth 1 - perft-worker nr!
 		nr . CR
 		nr nrmoves + nrmoves!
 		move unmake-move
@@ -1522,94 +1545,131 @@ test-make-move
 	nrmoves . "nodes searched" . CR
 	;
 			
+\ run for depth 1..maxdepth with given FEN string 
+: run-perft ( fen maxdepth -- )
+	@locals [ i ]
+	1 i!
+	@loop
+		i maxdepth > if >>done
+		fen set-from-fen
+		print-board
+		i perft 
+		i 1 + i! <<loop
+	@done
+	;
+	
 \ test-gen-full-moves
 
+\ ===== VERIFIED WORKING =================================================
 \ the expected node counts are generated with stockfish like:
 \	position fen FENSTRING
 \		* where FENSTRING is the UNQUOTED FEN string
 \	go perft DEPTH
 \		* where DEPTH matches the depth passed to perft here
+\ ========================================================================
 
-\ "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
-\ WHITE 1 perft
+\ due to the limited depth that can be searched, i've created more tailored 
+\ positions to check specific things that are easy to get wrong -- castling,
+\ en-passant, self-capture, pawn pushes, promotion, etc. versus being able
+\ to search very deeply on the standard perft positions. however, several 
+\ standard positions are shown at the end to prove they work at least to shallow depth
 
-\ "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
-\ WHITE 2 perft
-(
-"2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
-WHITE 3 perft
+\ with black moving first, this tests the en-passant captures for white on move 2
+\ "4k3/pppppppp/8/P1P1P1P1/8/8/8/4K3 b - - 0 1"
+\ 14 136 1937 20777
+\ 4 run-perft
 
-"2k5/8/7b/8/2p5/4N3/1P6/2K5 b - - 0 1" set-from-fen
-BLACK 2 perft
+\ like above, with reversed setup and white first
+\ "4k3/8/8/8/1p1p1p1p/8/PPPPPPPP/4K3 w - - 0 1"
+\ 14 136 1927 20654
+\ 4 run-perft
 
-"2k5/8/8/8/2p5/4b3/1P6/2K5 w - - 0 1" set-from-fen
-WHITE 1 perft
-)
+\ stress-test white promotions
+\ "8/PPPPPPPP/8/7k/8/8/8/7K w - - 0 1"
+\ 35 162 6157 34710
+\ 4 run-perft
 
-\ "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
-\ WHITE 4 perft
-
-\ "4k3/8/8/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
-\ WHITE 4 perft
-
-\ 366834 - working
-\ "r3k2r/2b2b2/8/8/8/8/P6P/R3K2R b KQ - 0 1" set-from-fen
-\ BLACK 4 perft
-
-\ "r3k2r/2b5/6b1/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
-\ WHITE 1 perft
+\ stress-test black promotions
+\ "3k4/8/8/3K4/8/8/pppppppp/8 b - - 0 1"
+\ 37 273 10622 65557
+\ 4 run-perft
 
 \ on the first move, white can disrupt black castling in every
 \ way with rook, bishop and knight
-\ "r3k2r/8/8/N6N/N6N/8/R7/2B2K1B w kq - 0 1" set-from-fen
-\ WHITE 1 perft \ 44
-\ WHITE 2 perft \ 704
-\ WHITE 3 perft \ 28571
+\ "r3k2r/8/8/N6N/N6N/8/R7/2B2K1B w kq - 0 1"
+\ 44 704 28571
+\ 3 run-perft
 
-\ "2b1kb2/7r/8/n6n/n6n/8/8/R3K2R b KQ - 0 1" set-from-fen
-\ BLACK 1 perft \ 43
-\ BLACK 2 perft \ 690
-\ BLACK 3 perft \ 29027
+\ now same with black moving first
+\ "2b1kb2/7r/8/n6n/n6n/8/8/R3K2R b KQ - 0 1"
+\ 43 690 29027
+\ 3 run-perft
 
-\ with black moving first, this tests the en-passant captures for white on move 2
-\ "4k3/pppppppp/8/P1P1P1P1/8/8/8/4K3 b - - 0 1" set-from-fen
-\ BLACK 1 perft \ 14
-\ BLACK 2 perft \ 136
-\ BLACK 3 perft \ 1937
-\ BLACK 4 perft \ 20777
+\ white pawns 1 move away from wrecking black castling
+\ also covers promotion & capture with promotion
+\ "r3k2r/8/PPPPPPPP/8/8/8/8/4K3 w kq - 0 1" 
+\ 13, 135, 2026, 19385
+\ 4 run-perft
 
-\ like above, with reversed setup and white first
-\ "4k3/8/8/8/1p1p1p1p/8/PPPPPPPP/4K3 w - - 0 1" set-from-fen
-\ WHITE 1 perft \ 14
-\ WHITE 2 perft \ 136
-\ WHITE 3 perft \ 1927
-\ WHITE 4 perft \ 20654
+\ same for black moving first
+\ "4k3/8/8/8/8/pppppppp/8/R3K2R b KQ - 0 1" 
+\ 13 135 2026 19385
+\ 4 run-perft
 
-\ "7k/P7/8/8/8/8/8/7K w - - 0 1" set-from-fen
-\ print-board
-\ WHITE gen-full-moves dup { print-move-long } for-each CR
+\ just an open position with one of each piece (+ bishop pair)
+\ "k5r1/pp1b4/4qn1b/8/3Q4/B3NB2/6PP/1R5K w - - 0 1"
+\ 60 2762 150840
+\ 3 run-perft
 
-\ stress-test white promotions
-\ "8/PPPPPPPP/8/7k/8/8/8/7K w - - 0 1" set-from-fen
-\ WHITE 1 perft \ 35
-\ WHITE 2 perft \ 162
-\ WHITE 3 perft \ 6157
-\ WHITE 4 perft \ 34710
+\ same position but with black moving first
+\ "k5r1/pp1b4/4qn1b/8/3Q4/B3NB2/6PP/1R5K b - - 0 1"
+\ 48 2833 129500
+\ 3 run-perft 
 
-\ "3k4/8/8/3K4/8/8/pppppppp/8 b - - 0 1" set-from-fen
-\ BLACK 1 perft \ 37
-\ BLACK 2 perft \ 273
-\ BLACK 3 perft \ 10622
-\ BLACK 4 perft \ 65557
+\ a weird position, checking that pieces aren't trying to capture their own color
+\ "1rqb2rk/3bn1pp/ppn5/ppp5/ppp2PPP/3BNPPP/2NB1PPP/R3Q1RK w - - 0 1"
+\ 33 814 27235
+\ 3 run-perft 
+
+\ same position with black moving first
+\ "1rqb2rk/3bn1pp/ppn5/ppp5/ppp2PPP/3BNPPP/2NB1PPP/R3Q1RK b - - 0 1"
+\ 25 816 22732
+\ 3 run-perft
+
+\ mix of 1 & 2 space jumps for white pawns and en-passant
+\ "4k3/8/8/3p4/p3p1pp/2p2p2/PPPPPPPP/4K3 w - - 0 1"
+\ 14 187 2259 30838
+\ 4 run-perft
+
+\ same but on black side
+\ "4k3/pppppppp/2P3P1/1P1P1P1P/P3P3/8/8/4K3 b - - 0 1"
+\ 14 206 2581 39403
+\ 4 run-perft 
 
 \ kiwipete
-\ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1" set-from-fen
-\ WHITE 1 perft \ 48
-\ WHITE 2 perft \ 2039
-\ WHITE 3 perft \ 97862
+\ https://www.chessprogramming.org/Perft_Results
+\ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+\ 48, 2039, 97862
+\ 3 run-perft
 
-"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1" set-from-fen
-BLACK 2 perft
+\ "position 3"
+\ https://www.chessprogramming.org/Perft_Results
+\ "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
+\ 14 191 2812 43238
+\ 4 run-perft
 
-"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q2/1PPBBPpP/R3K2R w KQkq - 0 1" set-from-fen
-WHITE 1 perft
+\ "position 4"
+\ "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
+\ 6 264 9467
+\ 3 run-perft 
+
+\ "position 5"
+\ "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
+\ 44 1486 62379
+\ 3 run-perft 
+
+\ "position 6"
+"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
+\ 46 2079 89890
+3 run-perft 
+
