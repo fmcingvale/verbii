@@ -476,8 +476,9 @@ clear-board
 	\	squareTo
 	\	pieceCaptured
 	\	squareCaptured
-	'move piece side squareFrom squareTo P-NONE null
-	7 make-list
+	\	piecePromotion
+	'move piece side squareFrom squareTo P-NONE null P-NONE
+	8 make-list
 	;
 	
 \ is obj a move object?
@@ -498,10 +499,12 @@ clear-board
 		@skip
 		move move-squareTo square-to-algebraic +
 		\ append -ep-target for en-passant
-		move move-isEnPassant? not if >>done
+		move move-isEnPassant? not if >>promotion
 		"-ep-" +
 		move move-squareCaptured square-to-algebraic +
-		
+		@promotion
+		move move-piecePromotion P-NONE == if >>done
+		"=" + move move-piecePromotion move move-side piece-char +
 		@done
 	;
 	
@@ -531,6 +534,9 @@ clear-board
 
 : move-squareCaptured ( move -- square ) move 6 get ;
 : move-squareCaptured! ( move square -- move' ) move 6 square put ;
+
+: move-piecePromotion ( move -- piece ) move 7 get ;
+: move-piecePromotion! ( move piece -- move' ) move 7 piece put ;
 	
 : move-isCapture? ( move -- result ) move move-pieceCaptured P-NONE != ;
 
@@ -658,12 +664,21 @@ gen-all-knight-attacks
 	square square-to-rowcol col! row!
 	
 	side BLACK == if >>b-forw-1
-	\ forward 1
+	\ white forward 1
 	row 7 >= if >>w-forw-2
 	square 8 + piece-at P-NONE != if >>w-forw-2 \ occupied?
-		moves
-		P-PAWN side square square 8 + new-move
-		append moves!
+		P-PAWN side square square 8 + new-move move!
+		moves move append moves!
+	\ promotions?
+	square 8 + 56 < if >>w-forw-2
+	\ add all possible promotions
+	\ overwrite move already in list for first one
+	move P-KNIGHT move-piecePromotion! move!
+	\ now deepcopy & adjust promotion for others	
+	moves
+	 	move deepcopy P-BISHOP move-piecePromotion! append
+		move deepcopy P-ROOK move-piecePromotion! append
+		move deepcopy P-QUEEN move-piecePromotion! append!
 		
 	@w-forw-2 
 	row 1 != if >>w-ep
@@ -676,9 +691,18 @@ gen-all-knight-attacks
 	@b-forw-1
 	row 1 < if >>b-forw-2
 	square 8 - piece-at P-NONE != if >>b-forw-2 \ occupied?
-		moves
-		P-PAWN side square square 8 - new-move
-		append moves!
+		P-PAWN side square square 8 - new-move move!
+		moves move append moves!
+	\ promotions?
+	square 8 - 7 > if >>b-forw-2
+	\ add all possible promotions
+	\ overwrite move already in list for first one
+	move P-KNIGHT move-piecePromotion! move!
+	\ now deepcopy & adjust promotion for others	
+	moves
+	 	move deepcopy P-BISHOP move-piecePromotion! append
+		move deepcopy P-ROOK move-piecePromotion! append
+		move deepcopy P-QUEEN move-piecePromotion! append!
 	
 	@b-forw-2 
 	row 6 != if >>b-ep
@@ -806,7 +830,7 @@ gen-all-knight-attacks
 		@queen 
 			\ gen attacks & blocked squares
 			i ROOK-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
-			attacks sub-attacks extend blockers extend attacks! >>done
+			attacks sub-attacks extend blockers extend attacks!
 			\ gen attacks & blocked squares
 			i BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
 			attacks sub-attacks extend blockers extend attacks! >>done
@@ -838,7 +862,12 @@ gen-all-knight-attacks
 	@skip-cap
 	\ place on squareTo
 	move move-squareTo move move-piece move move-side put-piece
+	\ promotion?
+	move move-piecePromotion P-NONE == if >>epsquare
+	\ put promoted piece at squareTo instead
+	move move-squareTo move move-piecePromotion move move-side put-piece
 	
+	@epsquare
 	\ see if it was a double pawn jump and set epsquare to square behind pawn
 	-1 EPSQUARE!
 	move move-piece P-PAWN != if >>skip-ep
@@ -912,7 +941,7 @@ gen-all-knight-attacks
 	CASTLING_B_OOO
 		60 piece-at P-KING ==
 		56 piece-at P-ROOK == and and
-			CASTLING_B_OOO!
+			CASTLING_B_OOO!			
 	;
 
 \ unmake move -- assumes move is valid AND that move was just made	
@@ -1550,8 +1579,37 @@ WHITE 1 perft
 \ BLACK 4 perft \ 20777
 
 \ like above, with reversed setup and white first
-"4k3/8/8/8/1p1p1p1p/8/PPPPPPPP/4K3 w - - 0 1" set-from-fen
-WHITE 1 perft \ 14
-WHITE 2 perft \ 136
-WHITE 3 perft \ 1927
-WHITE 4 perft \ 20654
+\ "4k3/8/8/8/1p1p1p1p/8/PPPPPPPP/4K3 w - - 0 1" set-from-fen
+\ WHITE 1 perft \ 14
+\ WHITE 2 perft \ 136
+\ WHITE 3 perft \ 1927
+\ WHITE 4 perft \ 20654
+
+\ "7k/P7/8/8/8/8/8/7K w - - 0 1" set-from-fen
+\ print-board
+\ WHITE gen-full-moves dup { print-move-long } for-each CR
+
+\ stress-test white promotions
+\ "8/PPPPPPPP/8/7k/8/8/8/7K w - - 0 1" set-from-fen
+\ WHITE 1 perft \ 35
+\ WHITE 2 perft \ 162
+\ WHITE 3 perft \ 6157
+\ WHITE 4 perft \ 34710
+
+\ "3k4/8/8/3K4/8/8/pppppppp/8 b - - 0 1" set-from-fen
+\ BLACK 1 perft \ 37
+\ BLACK 2 perft \ 273
+\ BLACK 3 perft \ 10622
+\ BLACK 4 perft \ 65557
+
+\ kiwipete
+\ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1" set-from-fen
+\ WHITE 1 perft \ 48
+\ WHITE 2 perft \ 2039
+\ WHITE 3 perft \ 97862
+
+"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1" set-from-fen
+BLACK 2 perft
+
+"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q2/1PPBBPpP/R3K2R w KQkq - 0 1" set-from-fen
+WHITE 1 perft
