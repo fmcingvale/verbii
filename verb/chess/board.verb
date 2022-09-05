@@ -896,7 +896,91 @@ gen-all-knight-attacks
 		@done
 		move unmake-move
 	} for-each
+	
+	\ get all attacks in current position to determine if castling is legal
+	\ but check if castling is possible first to skip expensive attack generation
+	side WHITE ==
+		CASTLING_W_OO CASTLING_W_OOO or and if >>gen-w-castling
+	side BLACK ==
+		CASTLING_B_OO CASTLING_B_OOO or and if >>gen-b-castling
+	>>done-castling
+	
+	@gen-w-castling
+		side other gen-attacks attacks!
+		CASTLING_W_OO not if >>check-w-ooo \ O-O not available
+		\ O-O legality check:
+		\	* f1 & g1 empty
+		5 piece-at P-NONE != if >>check-w-ooo 
+		6 piece-at P-NONE != if >>check-w-ooo 
+		\	* f1 & g1 not attacked
+		attacks 5 find-equal void? not if >>check-w-ooo
+		attacks 6 find-equal void? not if >>check-w-ooo
+		\	* king not attacked
+		attacks 4 find-equal void? not if >>check-w-ooo 
+		\ O-O is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 4 6 new-move append!
 		
+	@check-w-ooo
+		\ similar to above, except reuse attacks
+		CASTLING_W_OOO not if >>done-castling \ O-O-O not available
+		\ O-O-O legality check:
+		\	* b1, c1, & d1 empty
+		1 piece-at P-NONE != if >>done-castling
+		2 piece-at P-NONE != if >>done-castling
+		3 piece-at P-NONE != if >>done-castling
+		\	* b1, c1 & d1 not attacked
+		attacks 1 find-equal void? not if >>done-castling
+		attacks 2 find-equal void? not if >>done-castling
+		attacks 3 find-equal void? not if >>done-castling
+		\	* king not attacked
+		attacks 4 find-equal void? not if >>done-castling 
+		\ O-O-O is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 4 2 new-move append!
+		>>done-castling
+		
+	@gen-b-castling
+		side other gen-attacks attacks!
+		CASTLING_B_OO not if >>check-b-ooo \ o-o not available
+		\ o-o legality check:
+		\	* f8 & g8 empty
+		61 piece-at P-NONE != if >>check-b-ooo 
+		62 piece-at P-NONE != if >>check-b-ooo 
+		\	* f8 & g8 not attacked
+		attacks 61 find-equal void? not if >>check-b-ooo
+		attacks 62 find-equal void? not if >>check-b-ooo
+		\	* king not attacked
+		attacks 60 find-equal void? not if >>check-b-ooo 
+		\ o-o is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 60 62 new-move append!
+	
+	@check-b-ooo
+		\ similar to above, except reuse attacks
+		CASTLING_B_OOO not if >>done-castling \ o-o-o not available
+		\ o-o-o legality check:
+		\	* b8, c8, & d8 empty
+		57 piece-at P-NONE != if >>done-castling
+		58 piece-at P-NONE != if >>done-castling
+		59 piece-at P-NONE != if >>done-castling
+		\	* b8, c8 & d8 not attacked
+		attacks 57 find-equal void? not if >>done-castling
+		attacks 58 find-equal void? not if >>done-castling
+		attacks 59 find-equal void? not if >>done-castling
+		\	* king not attacked
+		attacks 60 find-equal void? not if >>done-castling 
+		\ o-o-o is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 60 58 new-move append!
+		>>done-castling \ just to be explicit		
+		
+	@done-castling
+	
 	moves \ return legal moves
 	;
 
@@ -1118,6 +1202,169 @@ test-make-move
 	print-board
 	[ "N-e3xc2" ]
 	"MATCH?:" . check-p-movelist . CR
+	
+	\ white castling
+	"4k3/8/8/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1" "K-e1c1"
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ now several cases with attacks on empty squares & king
+	
+	\ attack f1
+	"4k3/8/b7/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1d1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1c1"
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack g1
+	"4k3/8/1b6/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1"  
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1c1"
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack king
+	"4k3/8/8/b7/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack d1
+	"4k3/8/8/8/6b1/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1f1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1"
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack c1
+	"4k3/8/8/8/5b2/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		"R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1"
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack b1
+	"4k3/8/8/8/4b3/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1"
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack c1 & g1
+	"4k3/8/8/8/8/4b3/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" 
+		"R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4"
+	]
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ black castling
+	"r3k2r/p6p/8/8/8/8/8/4K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8g8" "k-e8c8" ]
+	
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack f8
+	"r3k2r/p6p/8/8/8/8/8/4KR2 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" 
+		"k-e8d8" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8c8" ]
+	
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack g8
+	"r3k2r/p6p/8/8/8/8/8/4K1R1 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8c8" ]
+	
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack king
+	"r3k2r/p6p/8/8/8/8/4R3/4K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[  "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" ]
+	
+	"MATCH?:" . check-p-movelist . CR
+	
+	\ attack d8
+	"r3k2r/p6p/8/8/8/8/8/3RK3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8f7" "r-h8g8" "r-h8f8" "k-e8g8" ]
+	
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack c8
+	"r3k2r/p6p/8/8/8/8/8/2R1K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8g8" ]
+	
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack b8
+	"r3k2r/p6p/8/8/8/8/8/1R2K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8g8" ]
+	
+	"MATCH?:" . check-p-movelist . CR	
+	
+	\ attack g8 & c8
+	"r3k2r/p6p/4B3/8/8/8/8/4K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "r-h8g8" "r-h8f8" ]
+	
+	"MATCH?:" . check-p-movelist . CR	
+	
 	;
 	
 : perft-worker ( side depth -- nrmoves )
@@ -1152,14 +1399,20 @@ test-make-move
 	nrmoves . "nodes searched" . CR
 	;
 			
-\ test-gen-full-moves
+test-gen-full-moves
+
+\ the expected node counts are generated with stockfish like:
+\	position fen FENSTRING
+\		* where FENSTRING is the UNQUOTED FEN string
+\	go perft DEPTH
+\		* where DEPTH matches the depth passed to perft here
 
 \ "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
 \ WHITE 1 perft
 
 \ "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
 \ WHITE 2 perft
-
+(
 "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
 WHITE 3 perft
 
@@ -1171,3 +1424,4 @@ WHITE 1 perft
 
 "2k5/8/7b/8/2p5/4N3/1P6/1K6 w - - 0 1" set-from-fen
 WHITE 4 perft
+)
