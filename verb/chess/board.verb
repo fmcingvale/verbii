@@ -415,15 +415,13 @@ clear-board
 		KNIGHT-ATTACKS-BY-SQUARE!
 	;
 
-\ **TODO** this should be a table since it does not depend on what is on the destination square
-\
 \ make list of squares a pawn at square of given side CAN attack, assuming a 
 \ piece were there (the move generator must check if there is actually a piece there
 \ before making the attack in a move)
 \
 \ en-passant is NOT checked here -- it is not an attack that can attack
 \ the king which is a primary use of the attacks lists
-: gen-pawn-attacks ( square side -- attacks )
+: _gen-pawn-attacks ( square side -- attacks )
 	@locals [ row col ]
 	[ ] attacks!
 	
@@ -456,6 +454,28 @@ clear-board
 		attacks return
 		
 	@no-attacks [ ] return
+	;
+
+\ pawn moves nonsymmetrical so need a white & black table	
+'PAWN-ATTACKS-BY-SQUARE-W [ ] make-var
+'PAWN-ATTACKS-BY-SQUARE-B [ ] make-var
+
+\ pregenerate pawn attack tables
+: gen-all-pawn-attacks ( -- )
+	@locals [ i ]
+	{ ( square )
+		PAWN-ATTACKS-BY-SQUARE-W
+			square WHITE _gen-pawn-attacks append!
+		PAWN-ATTACKS-BY-SQUARE-B
+			square BLACK _gen-pawn-attacks append!
+	} 0 1 64 for-count 
+	;
+
+: gen-pawn-attacks ( square side -- attacks )
+	side WHITE == if >>white
+	PAWN-ATTACKS-BY-SQUARE-B square get return
+	@white
+	PAWN-ATTACKS-BY-SQUARE-W square get
 	;
 	
 \ move object
@@ -544,6 +564,9 @@ gen-all-king-attacks
 
 "Making knight attack table ..." . CR	
 gen-all-knight-attacks
+
+"Making pawn attack table ..." . CR			
+gen-all-pawn-attacks
 
 \ attacks is from gen-fixed-attacks
 : gen-fixed-moves ( piece square attacks side -- moves )
@@ -1509,40 +1532,53 @@ test-make-move
 	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
 		"k-e8d8" "r-h8g8" "r-h8f8" ]
 	
-	"MATCH?:" . check-p-movelist . CR	
-	
+	"MATCH?:" . check-p-movelist . CR		
 	;
 	
-: perft-worker ( depth -- nrmoves )
+: perft-worker ( depth -- nrleaves nrmoves )
+	@locals [ subleaves submoves ]
 	depth 0 > if >>skip
-	1 return \ leaf node, return 1
+	1 0 return \ leaf node, return 1 leaf, 0 make-moves
 	@skip
 	0 nrmoves!
+	0 nrleaves!
 	SIDE-TO-MOVE gen-full-moves
 	\ run perft-worker for each move, at depth-1
 	{ ( move )
 		move make-move 
-		depth 1 - perft-worker nrmoves + nrmoves!
+		nrmoves 1 + nrmoves!
+		depth 1 - perft-worker submoves! subleaves!
+		nrmoves submoves + nrmoves!
+		nrleaves subleaves + nrleaves!
 		move unmake-move
 	} for-each
-	nrmoves
+	nrleaves nrmoves
 	;
 	
 \ run at root from current board state
-: perft ( depth -- )
-	@locals [ nrmoves nr ]
+\ returns:
+\	nrleaves - number of leaf nodes seen ('nodes' in stockfish terminology)
+\	nrmoves - total number of make-move
+: perft ( depth -- nrleaves nrmoves )
+	@locals [ subleaves submoves t0 t1 ]
 	0 nrmoves!
+	0 nrleaves!
+	run-time t0!
 	SIDE-TO-MOVE gen-full-moves 
 	{ ( move )
 		move print-move-long ":" .
 		move make-move
-		depth 1 - perft-worker nr!
-		nr . CR
-		nr nrmoves + nrmoves!
+		nrmoves 1 + nrmoves! 
+		depth 1 - perft-worker submoves! subleaves!
+		subleaves . "(" .. submoves .. ")" . CR
+		subleaves nrleaves + nrleaves!
+		submoves nrmoves + nrmoves!
 		move unmake-move
 	} for-each
 	
-	nrmoves . "nodes searched" . CR
+	run-time t1!
+	nrleaves . "leaf nodes (" .. nrmoves . "moves)" . 
+	nrmoves t1 t0 - / floor . "moves/second" . CR
 	;
 			
 \ run for depth 1..maxdepth with given FEN string 
@@ -1669,7 +1705,7 @@ test-make-move
 \ 3 run-perft 
 
 \ "position 6"
-"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
+\ "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
 \ 46 2079 89890
-3 run-perft 
+\ 3 run-perft 
 
