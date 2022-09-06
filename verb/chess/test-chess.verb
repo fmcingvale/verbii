@@ -3,7 +3,7 @@
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 "unittest" import
-"board" import
+"chess" import
 
 \ moves are generated pseudo-moves
 \ expected is a list of strings from move-str-long

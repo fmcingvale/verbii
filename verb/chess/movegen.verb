@@ -1,0 +1,377 @@
+\ Move generation
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ attacks is from gen-fixed-attacks
+: gen-fixed-moves ( piece square attacks side -- moves )
+	[ ] moves!
+	attacks
+	{ ( squareTo )
+		\ see what is at squareTo
+		squareTo piece-at P-NONE == if >>empty
+		\ not empty - see if its opposing color
+		squareTo color-at side other == if >>capture
+		\ my own piece is on squareTo, so no move generated
+		return
+		@empty
+			\ move to empty square
+			moves
+				piece side square squareTo new-move append moves!
+			return
+		@capture
+			\ gen capture
+			moves
+				piece side square squareTo new-move
+				squareTo piece-at move-pieceCaptured!
+				squareTo move-squareCaptured!
+				append moves!
+			return
+	} for-each
+	moves
+	;
+	
+\ (attacks,blockers) is from gen-all-sliding-attacks
+: gen-sliding-moves ( piece square attacks blockers side -- moves )
+	[ ] moves!
+	\ all the squares in attacked are empty, so make those first
+	attacks
+	{ ( squareTo )
+		\ always non-capturing move
+		moves
+			piece side square squareTo new-move append moves!
+	} for-each
+	
+	\ now i have to check if blockers are opposite side (voids were already
+	\ filtered out in gen-all-sliding-squares)
+	blockers
+	{ ( squareTo )
+		squareTo color-at side == if >>done \ blocked by my piece, so i'm done
+		\ else its a capture
+		moves
+			piece side square squareTo new-move
+			squareTo piece-at move-pieceCaptured!
+			squareTo move-squareCaptured!
+			append moves!
+		@done
+	} for-each
+	moves
+	;
+	
+\ NOTE - all the gen-PIECE-moves functions are pseudo-legal - they are the literal moves
+\ the piece can make, regardless of whether they put/leave their king in check
+
+: gen-king-moves ( square side -- moves )
+	P-KING square KING-ATTACKS-BY-SQUARE square get side gen-fixed-moves
+	;
+	
+: gen-knight-moves ( square side -- moves )
+	P-KNIGHT square KNIGHT-ATTACKS-BY-SQUARE square get side gen-fixed-moves
+	;
+	
+'ROOK-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] ] make-var
+
+\ piece is a parameter since this is used for both queen and rook generation
+: gen-rook-moves ( square side piece -- moves )
+	@locals [ attacks blockers ]
+	\ gen attacks & blocked squares
+	square ROOK-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
+	piece square attacks blockers side gen-sliding-moves
+	\ return moves
+	;
+
+'BISHOP-MOVEDIRS [ [ 1 1 ] [ -1 1 ] [ 1 -1 ] [ -1 -1 ] ] make-var
+
+\ piece is a parameter since this is used for both queen and bishop generation
+: gen-bishop-moves ( square side piece -- moves )
+	@locals [ attacks blockers ]
+	\ gen attacks & blocked squares
+	square BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
+	piece square attacks blockers side gen-sliding-moves
+	\ return moves
+	;
+	
+: gen-queen-moves ( square side -- moves )
+	square side P-QUEEN gen-bishop-moves
+	square side P-QUEEN gen-rook-moves
+	extend
+	;
+	
+: gen-pawn-moves ( square side -- moves )
+	@locals [ attacks move row col ]
+	[ ] moves!
+	\ find squares i can attack
+	square side gen-pawn-attacks
+	\ make these into moves IF there is a piece there
+	{ ( squareTo )
+		squareTo piece-at P-NONE == if >>done
+		squareTo color-at side == if >>done \ my own piece is on squareTo
+		P-PAWN side square squareTo new-move
+			squareTo piece-at move-pieceCaptured!
+			squareTo move-squareCaptured!
+			move!
+			
+		moves move append moves!
+			
+		\ promotion after capture?
+		squareTo 56 <
+		squareTo 7 > and if >>done
+		
+		\ add all possible promotions
+		\ overwrite move already in list for first one
+		move P-KNIGHT move-piecePromotion! move!
+		\ now deepcopy & adjust promotion for others	
+		moves
+			move deepcopy P-BISHOP move-piecePromotion! append
+			move deepcopy P-ROOK move-piecePromotion! append
+			move deepcopy P-QUEEN move-piecePromotion! append!
+		@done
+	} for-each
+	
+	\ now generate the forward 1/2 and en-passant captures
+	
+	square square-to-rowcol col! row!
+	
+	side BLACK == if >>b-forw-1
+	\ white forward 1
+	row 7 >= if >>w-forw-2
+	square 8 + piece-at P-NONE != if >>w-forw-2 \ occupied?
+		P-PAWN side square square 8 + new-move move!
+		moves move append moves!
+	\ promotions?
+	square 8 + 56 < if >>w-forw-2
+	\ add all possible promotions
+	\ overwrite move already in list for first one
+	move P-KNIGHT move-piecePromotion! move!
+	\ now deepcopy & adjust promotion for others	
+	moves
+	 	move deepcopy P-BISHOP move-piecePromotion! append
+		move deepcopy P-ROOK move-piecePromotion! append
+		move deepcopy P-QUEEN move-piecePromotion! append!
+		
+	@w-forw-2 
+	row 1 != if >>w-ep
+	square 8 + piece-at P-NONE != if >>w-ep
+	square 16 + piece-at P-NONE != if >>w-ep
+		moves
+		P-PAWN side square square 16 + new-move 
+		append moves! >>w-ep
+		
+	@b-forw-1
+	row 1 < if >>b-forw-2
+	square 8 - piece-at P-NONE != if >>b-forw-2 \ occupied?
+		P-PAWN side square square 8 - new-move move!
+		moves move append moves!
+	\ promotions?
+	square 8 - 7 > if >>b-forw-2
+	\ add all possible promotions
+	\ overwrite move already in list for first one
+	move P-KNIGHT move-piecePromotion! move!
+	\ now deepcopy & adjust promotion for others	
+	moves
+	 	move deepcopy P-BISHOP move-piecePromotion! append
+		move deepcopy P-ROOK move-piecePromotion! append
+		move deepcopy P-QUEEN move-piecePromotion! append!
+	
+	@b-forw-2 
+	row 6 != if >>b-ep
+	square 8 - piece-at P-NONE != if >>b-ep \ occupied?
+	square 16 - piece-at P-NONE != if >>b-ep \ occupied?
+		moves
+		P-PAWN side square square 16 - new-move 
+		append moves! >>b-ep
+		
+	\ en-passant, white
+	@w-ep 
+	\ check left
+	col 0 >
+	square 7 + EPSQUARE ==
+		and not if >>w-ep-right 
+		moves
+		P-PAWN side square square 7 + new-move
+		square 1 - move-squareCaptured!
+		P-PAWN move-pieceCaptured!
+		append!		
+	
+	@w-ep-right
+	\ check right
+	col 7 <
+	square 9 + EPSQUARE ==
+		and not if >>done
+		moves
+		P-PAWN side square square 9 + new-move
+		square 1 + move-squareCaptured!
+		P-PAWN move-pieceCaptured!
+		append!		
+		>>done 
+	
+	\ en-passant, black
+	@b-ep 
+	\ check left
+	col 0 >
+	square 9 - EPSQUARE ==
+		and not if >>b-ep-right 
+		moves
+		P-PAWN side square square 9 - new-move
+		square 1 - move-squareCaptured!
+		P-PAWN move-pieceCaptured!
+		append!		
+	
+	@b-ep-right
+	\ check right
+	col 7 <
+	square 7 - EPSQUARE ==
+		and not if >>done
+		moves
+		P-PAWN side square square 7 - new-move
+		square 1 + move-squareCaptured!
+		P-PAWN move-pieceCaptured!
+		append!		
+		>>done 
+		
+	@done
+		moves return
+	;
+	
+\ generate pseudolegal moves for side (moves are not checked to see if they
+\ put the king into/leave the king in check)
+: gen-pseudo-moves ( side -- moves )
+	@locals [ piece ]
+	[ ] moves!
+	\ for each square ...
+	{ ( i )
+		i piece-at piece!
+		piece P-NONE == if >>done \ empty square, skip
+		i color-at side != if >>done \ wrong color piece
+
+		\ generate moves for piece
+		piece P-PAWN == if >>pawn
+		piece P-ROOK == if >>rook 
+		piece P-BISHOP == if >>bishop 
+		piece P-KNIGHT == if >>knight 
+		piece P-QUEEN == if >>queen
+		piece P-KING == if >>king 
+		"Unknown piece:" piece str + error
+		
+		@pawn moves i side gen-pawn-moves extend moves! >>done
+		@rook  moves i side P-ROOK gen-rook-moves extend moves! >>done
+		@bishop moves i side P-BISHOP gen-bishop-moves extend moves! >>done
+		@knight moves i side gen-knight-moves extend moves! >>done
+		@queen moves i side gen-queen-moves extend moves! >>done
+		@king moves i side gen-king-moves extend moves! >>done
+		@done
+	} 0 1 64 for-count
+	moves
+	;
+
+\ generate fully legal moves for side	
+: gen-full-moves ( side -- moves )
+	@locals [ pmoves attacks kingsq ]
+	[ ] moves!
+	@skip
+	side gen-pseudo-moves
+	\ loop over all pmoves, removing those that leave the king in check
+	{ ( move )
+		\ "CHECK PMOVE:" . move print-move-long move . CR
+		
+		move make-move
+		\ get attacks of opposite side now
+		side other gen-attacks
+		\ see if king square is attacked (king might have moved so can't
+		\ cache king square here)
+		side BLACK == if >>check-black-king
+		KING-SQUARE-W find-equal void? if >>keep-move
+		>>done \ discard move 
+		@check-black-king
+		KING-SQUARE-B find-equal void? if >>keep-move
+		>>done \ discard move 
+		@keep-move
+		\ king is not attacked, so keep this move
+		moves move append!
+		@done
+		move unmake-move
+	} for-each
+	
+	\ get all attacks in current position to determine if castling is legal
+	\ but check if castling is possible first to skip expensive attack generation
+	side WHITE ==
+		CASTLING_W_OO CASTLING_W_OOO or and if >>gen-w-castling
+	side BLACK ==
+		CASTLING_B_OO CASTLING_B_OOO or and if >>gen-b-castling
+	>>done-castling
+	
+	@gen-w-castling
+		side other gen-attacks attacks!
+		CASTLING_W_OO not if >>check-w-ooo \ O-O not available
+		\ O-O legality check:
+		\	* f1 & g1 empty
+		5 piece-at P-NONE != if >>check-w-ooo 
+		6 piece-at P-NONE != if >>check-w-ooo 
+		\	* f1 & g1 not attacked
+		attacks 5 find-equal void? not if >>check-w-ooo
+		attacks 6 find-equal void? not if >>check-w-ooo
+		\	* king not attacked
+		attacks 4 find-equal void? not if >>check-w-ooo 
+		\ O-O is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 4 6 new-move append!
+		
+	@check-w-ooo
+		\ similar to above, except reuse attacks
+		CASTLING_W_OOO not if >>done-castling \ O-O-O not available
+		\ O-O-O legality check:
+		\	* b1, c1, & d1 empty
+		1 piece-at P-NONE != if >>done-castling
+		2 piece-at P-NONE != if >>done-castling
+		3 piece-at P-NONE != if >>done-castling
+		\	* c1 & d1 not attacked
+		attacks 2 find-equal void? not if >>done-castling
+		attacks 3 find-equal void? not if >>done-castling
+		\	* king not attacked
+		attacks 4 find-equal void? not if >>done-castling 
+		\ O-O-O is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 4 2 new-move append!
+		>>done-castling
+		
+	@gen-b-castling
+		side other gen-attacks attacks!
+		CASTLING_B_OO not if >>check-b-ooo \ o-o not available
+		\ o-o legality check:
+		\	* f8 & g8 empty
+		61 piece-at P-NONE != if >>check-b-ooo 
+		62 piece-at P-NONE != if >>check-b-ooo 
+		\	* f8 & g8 not attacked
+		attacks 61 find-equal void? not if >>check-b-ooo
+		attacks 62 find-equal void? not if >>check-b-ooo
+		\	* king not attacked
+		attacks 60 find-equal void? not if >>check-b-ooo 
+		\ o-o is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 60 62 new-move append!
+	
+	@check-b-ooo
+		\ similar to above, except reuse attacks
+		CASTLING_B_OOO not if >>done-castling \ o-o-o not available
+		\ o-o-o legality check:
+		\	* b8, c8, & d8 empty
+		57 piece-at P-NONE != if >>done-castling
+		58 piece-at P-NONE != if >>done-castling
+		59 piece-at P-NONE != if >>done-castling
+		\	* c8 & d8 not attacked
+		attacks 58 find-equal void? not if >>done-castling
+		attacks 59 find-equal void? not if >>done-castling
+		\	* king not attacked
+		attacks 60 find-equal void? not if >>done-castling 
+		\ o-o-o is legal
+		\ move is generated as a king move of 2 squares
+		moves
+			P-KING side 60 58 new-move append!
+		>>done-castling \ just to be explicit		
+		
+	@done-castling
+	
+	moves \ return legal moves
+	;

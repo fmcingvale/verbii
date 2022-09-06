@@ -3,7 +3,7 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"board" import
+"chess" import
 
 : perft-worker ( depth -- nrleaves nrmoves )
 	@locals [ subleaves submoves ]

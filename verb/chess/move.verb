@@ -1,0 +1,85 @@
+
+\ Move object & support functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ move object
+: new-move ( piece side squareFrom squareTo )
+	\ fields: 
+	\	tag 
+	\	piece
+	\	side
+	\	squareFrom 
+	\	squareTo
+	\	pieceCaptured
+	\	squareCaptured
+	\	piecePromotion
+	'move piece side squareFrom squareTo P-NONE null P-NONE
+	8 make-list
+	;
+	
+\ is obj a move object?
+: move? ( obj )
+	obj list? not if >>no 
+	obj 0 get 'move == if >>yes
+	@no false return
+	@yes true return
+	;
+
+\ get printable move, long version
+: move-to-str-long ( move -- s )
+	""
+		move move-piece move move-side piece-char "-" + +
+		move move-squareFrom square-to-algebraic +
+		move move-isCapture? not if >>skip
+		"x" +
+		@skip
+		move move-squareTo square-to-algebraic +
+		\ append -ep-target for en-passant
+		move move-isEnPassant? not if >>promotion
+		"-ep-" +
+		move move-squareCaptured square-to-algebraic +
+		@promotion
+		move move-piecePromotion P-NONE == if >>done
+		"=" + move move-piecePromotion move move-side piece-char +
+		@done
+	;
+	
+\ print a move verbosely
+: print-move-long ( move )
+	move move-to-str-long .
+	;
+	
+\ setters/getters -- for efficiency these assume move is valid - caller should
+\ check with move? if unsure before calling these
+\
+\ the setters leave the move on the stack so these can be chained together
+: move-piece ( move -- piece ) move 1 get ;
+: move-piece! ( move piece -- move ) move 1 piece put ;
+
+: move-side ( move -- side ) move 2 get ;
+: move-side! ( move side -- move ) move 2 piece put ;
+
+: move-squareFrom ( move -- square ) move 3 get ;
+: move-squareFrom! ( move square -- move' ) move 3 square put ;
+
+: move-squareTo ( move -- square ) move 4 get ;
+: move-squareTo! ( move square -- move' ) move 4 square put ;
+
+: move-pieceCaptured ( move -- piece ) move 5 get ;
+: move-pieceCaptured! ( move piece -- move' ) move 5 piece put ;
+
+: move-squareCaptured ( move -- square ) move 6 get ;
+: move-squareCaptured! ( move square -- move' ) move 6 square put ;
+
+: move-piecePromotion ( move -- piece ) move 7 get ;
+: move-piecePromotion! ( move piece -- move' ) move 7 piece put ;
+	
+: move-isCapture? ( move -- result ) move move-pieceCaptured P-NONE != ;
+
+\ e.p. is the only time that squareTo != squareCaptured, when not null
+: move-isEnPassant? ( move -- result )
+	move move-squareCaptured null? not 
+	move move-squareCaptured move move-squareTo !=
+	and
+	;

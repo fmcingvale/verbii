@@ -1,0 +1,234 @@
+\ Attack tables & generation
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+	
+\ for pieces that have fixed attack spaces relative to their position (kings, knights)
+\
+\ square = square that piece is assumed to be on
+\ moves = list of [ dRow dCol ] (delta row/col) to move from square
+\
+\ this only returns squares that the piece COULD attack; caller must still check if there
+\ is a piece on the square or not
+: gen-fixed-attacks ( square moves -- attacks )
+	@locals [ row col row+ col+ ]
+	[ ] attacks!
+	square square-to-rowcol col! row!
+	moves
+	{ ( move )
+		\ calc row+dRow, col+dCol and see if that is a valid square
+		row move 0 get + row+!
+		col move 1 get + col+!
+		row+ col+ valid-rowcol? not if >>done
+		\ valid, so add square to attacks
+		attacks row+ col+ square-index append attacks!
+		@done
+	} for-each
+	
+	attacks
+	;
+
+\ generate a table of all fixed attacks for a piece at each square
+: gen-all-fixed-attacks ( moves -- attack-table ) 
+	[ ] attack-table!
+	{ ( square )
+		attack-table
+			square moves gen-fixed-attacks
+			append attack-table!
+	} 0 1 64 for-count
+	attack-table
+	;
+	
+\ generate attack squares for sliding pieces - pieces moves from square along (dRow,dCol) direction
+\
+\ squares are returned as a list of empty squares + the final blocked square, or void if all are empty
+: gen-sliding-attacks ( square dRow dCol -- attacks blocked )
+	@locals [ row col ]
+	[ ] attacks!
+	square square-to-rowcol col! row!
+	@loop
+		row dRow + row!
+		col dCol + col!
+		row col valid-rowcol? not if >>off-board 
+		row col square-index square!
+		square piece-at P-NONE != if >>blocked 
+		\ valid & empty -- add to attacks
+		attacks square append! <<loop
+	@off-board
+		\ all were empty and i went off side of board, so
+		\ no square was blocked
+		attacks void return
+	@blocked
+		\ square is blocked (be either side) so stop & return
+		attacks square return
+	;
+
+\ generate sliding attacks for multiple direction vectors
+\	movedirs is list of [ dRow dCol ]		
+\
+\ here, blockers is always a list (can be empty)
+: gen-all-sliding-attacks ( square movedirs -- attacks blockers )
+	[ ] attacks!
+	[ ] blockers!
+	movedirs
+	{ ( dir )
+		square dir unmake drop gen-sliding-attacks \ ( attacks blocked )
+		\ if blocked is not void, add to blockers list
+		dup void? not
+			{ blockers swap append blockers! }
+			{ drop } ifelse
+			
+		\ add attacks to list (use extend so i don't change object identity vs attacks
+		\ defined in outer scope!)
+		attacks swap extend attacks!
+	} for-each
+	
+	attacks blockers
+	;
+	
+\ generate attacks for king of given side at square (king does not have
+\ to actually be there); these will be ALL squares the king can reach,
+\ regardless of whether something is on the destination square
+'KING-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] [ 1 1 ] [ 1 -1 ] [ -1 1 ] [ -1 -1 ] ] make-var
+
+\ pregenerated list of king attacks indexed by square
+'KING-ATTACKS-BY-SQUARE [ ] make-var
+
+\ pregenerate KING-ATTACKS-BY-SQUARE
+: gen-all-king-attacks ( -- ) 
+	KING-MOVEDIRS gen-all-fixed-attacks
+		KING-ATTACKS-BY-SQUARE!
+	;
+	
+\ generate attacks for knight of given side at square (knight does not have
+\ to actually be there); these will be ALL squares the knight can reach,
+\ regardless of whether something is on the destination square
+'KNIGHT-MOVEDIRS [ [ 2 1 ] [ 2 -1 ] [ -2 1 ] [ -2 -1 ] [ 1 2 ] [ 1 -2 ] [ -1 2 ] [ -1 -2 ] ] make-var
+
+\ pregenerated list of knight attacks indexed by square
+'KNIGHT-ATTACKS-BY-SQUARE [ ] make-var
+
+\ pregenerate KNIGHT-ATTACKS-BY-SQUARE
+: gen-all-knight-attacks ( -- ) 
+	KNIGHT-MOVEDIRS gen-all-fixed-attacks
+		KNIGHT-ATTACKS-BY-SQUARE!
+	;
+
+\ make list of squares a pawn at square of given side CAN attack, assuming a 
+\ piece were there (the move generator must check if there is actually a piece there
+\ before making the attack in a move)
+\
+\ en-passant is NOT checked here -- it is not an attack that can attack
+\ the king which is a primary use of the attacks lists
+: _gen-pawn-attacks ( square side -- attacks )
+	@locals [ row col ]
+	[ ] attacks!
+	
+	square square-to-rowcol col! row!
+	
+	side BLACK == if >>black
+	\ gen for white pawn
+	row 7 >= if >>no-attacks \ pawn on last row?? anyways, cannot attack
+	\ attack left?
+	col 0 == if >>check-w-cap-right
+		attacks square 7 + append attacks!
+		
+	@check-w-cap-right
+	col 7 == if >>done
+		attacks square 9 + append attacks!
+		>>done
+	
+	@black
+	\ gen for black pawn
+	row 0 <= if >>no-attacks \ pawn on last row?? anyways, cannot attack
+	\ attack left?
+	col 0 == if >>check-b-cap-right
+		attacks square 9 - append attacks!
+		
+	@check-b-cap-right
+	col 7 == if >>done
+		attacks square 7 - append attacks!
+	
+	@done
+		attacks return
+		
+	@no-attacks [ ] return
+	;
+
+\ pawn moves nonsymmetrical so need a white & black table	
+'PAWN-ATTACKS-BY-SQUARE-W [ ] make-var
+'PAWN-ATTACKS-BY-SQUARE-B [ ] make-var
+
+\ pregenerate pawn attack tables
+: gen-all-pawn-attacks ( -- )
+	@locals [ i ]
+	{ ( square )
+		PAWN-ATTACKS-BY-SQUARE-W
+			square WHITE _gen-pawn-attacks append!
+		PAWN-ATTACKS-BY-SQUARE-B
+			square BLACK _gen-pawn-attacks append!
+	} 0 1 64 for-count 
+	;
+
+: gen-pawn-attacks ( square side -- attacks )
+	side WHITE == if >>white
+	PAWN-ATTACKS-BY-SQUARE-B square get return
+	@white
+	PAWN-ATTACKS-BY-SQUARE-W square get
+	;
+
+\ get a list of all squares attacked by side
+\ does NOT include:
+\	* en-passant moves - those cannot attack king and that is the
+\     primary use for this function
+\	* castling moves, since those are not attacks
+: gen-attacks ( side -- attacks )
+	@locals [ piece blockers sub-attacks ]
+	[ ] attacks!
+	\ for each square ...
+	{ ( i )
+		i piece-at piece!
+		piece P-NONE == if >>done \ empty square, skip
+		i color-at side != if >>done \ wrong color piece
+
+		\ generate moves for piece
+		piece P-PAWN == if >>pawn
+		piece P-ROOK == if >>rook 
+		piece P-BISHOP == if >>bishop 
+		piece P-KNIGHT == if >>knight 
+		piece P-QUEEN == if >>queen
+		piece P-KING == if >>king 
+		"Unknown piece:" piece str + error
+		
+		@pawn attacks i side gen-pawn-attacks extend attacks! >>done 
+		@rook 
+			\ gen attacks & blocked squares
+			i ROOK-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			attacks sub-attacks extend blockers extend attacks! >>done
+		@bishop
+			\ gen attacks & blocked squares
+			i BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			attacks sub-attacks extend blockers extend attacks! >>done
+		@queen 
+			\ gen attacks & blocked squares
+			i ROOK-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			attacks sub-attacks extend blockers extend attacks!
+			\ gen attacks & blocked squares
+			i BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! sub-attacks!
+			attacks sub-attacks extend blockers extend attacks! >>done
+		@knight
+			attacks KNIGHT-ATTACKS-BY-SQUARE i get extend attacks! >>done
+		@king
+			attacks KING-ATTACKS-BY-SQUARE i get extend attacks! >>done
+		@done
+	} 0 1 64 for-count
+	attacks
+	;		
+	
+"Making king attack table ..." . CR	
+gen-all-king-attacks
+
+"Making knight attack table ..." . CR	
+gen-all-knight-attacks
+
+"Making pawn attack table ..." . CR			
+gen-all-pawn-attacks

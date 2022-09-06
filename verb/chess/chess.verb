@@ -1,0 +1,14 @@
+\ Simple chess engine - purely for fun, not practicality :-) Very simple & slow design.
+\ Also this is a semi-real app so makes a better excercise for programming in verbii
+\ versus the shorter demos. Working on this has also inspired many other language features
+\ and changes.
+\
+\ This module just pulls in all the other modules.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"board" import
+"move" import
+"attacks" import
+"movegen" import
+
