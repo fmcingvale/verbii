@@ -10,10 +10,84 @@
 \      else compiler would never run when finding .b files.
 
 ( ------ boot ----------- )
-			
+	
+\ search IMPORT-SEARCH-PATHS for filename or raise exception
+: find-filename-module-path ( filename -- fullname )
+	@locals [ i ]
+	0 i!
+	@loop
+		IMPORT-SEARCH-PATHS i get void? if >>not-found 
+		\ search paths are requrired to have / or \ already appended, so i 
+		\ can just add the filename directly to it
+		IMPORT-SEARCH-PATHS i get filename + fullname!
+		fullname file-exists? if >>found 
+		i 1 + i! <<loop
+		
+	@not-found
+		"Unable to find file '" filename + "' on path " + IMPORT-SEARCH-PATHS str + error
+		
+	@found
+		fullname
+	;
+	
+\ load & import module from either name.verb or name.verb.b
+\ TODO:
+\	* define library paths & add search 
+\	* add way to let modules know they are being imported so they
+\	  shouldn't run their main code (unless it's required to init the module of course)
+\
+: import ( name -- )
+	@locals [ fullname ]
+	\ see if name has been imported already and don't import again
+	*_IMPORTED-MODULES name get void? not if >>already-imported
+	\ not yet imported - go ahead and mark as imported - if the below fails then 
+	\ the program will crash anyways
+	*_IMPORTED-MODULES name true put drop
+	\ find name.verb, searching on import path
+	name ".verb" + find-filename-module-path fullname!
+	\ import module
+	fullname load-file-maybe-cached
+	\ module may need to init its own globals, etc., so run it
+	safe-run-and-delete-main
+	return
+	
+	@already-imported
+		\ "ALREADY IMPORTED:" . dup . CR
+	;
+	
 ( ------ init ----------- )
 
 ( ------ compiler ------- )
 
+\
+\ compile & load the given file. if "filename.b" exists, and is the same age (or newer), 
+\ then it is loaded instead of recompiling filename.
+\
+\ if "filename.b" does not exist, or is older than filename, then filename is
+\ compiled and the result saved to "filename.b"
+\
+\ note this does NOT run the resulting __main__ -- it is the caller's responsibility
+\ to run __main__ (or not) and to delete __main__ when complete
+\
+: cached-compile-and-load ( filename -- )
+		\ "cached-compile-and-load of: " . dup . CR
+	\ see if filename.b exists
+	filename ".b" + file-exists? not if >>do-compile \ does not exist, must compile filename
+		\ ".b file exists" . CR
+	\ see if mtime of filename > filename.b (i.e. filename.b out of date)
+	filename file-mtime filename ".b" + file-mtime ( mtime-filename mtime-bfilename )
+		> if >>do-compile \ .b is out of date, must recompile
+		\ ".b file is current" . CR
+	\ .b file is current, so load it
+	filename ".b" + deserialize return \ load words into interpreter & return
 
+	@do-compile
+		 \ "(re) compiling " . dup . CR
+		\ compile filename -> filename.b
+		filename ".b" + open-as-stdout \ write to filename.b
+		filename compile-and-serialize \ compile filename -> filename.b
+		void open-as-stdout \ restore stdout to write to the screen
+		\ easiest thing to do now is load the serialized file i just created
+		filename ".b" + deserialize return
+	;
 
