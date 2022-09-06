@@ -1,0 +1,120 @@
+
+\ Perft test cases
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"perft" import
+
+\ ===== VERIFIED WORKING =================================================
+\ the expected node counts are generated with stockfish like:
+\	position fen FENSTRING
+\		* where FENSTRING is the UNQUOTED FEN string
+\	go perft DEPTH
+\		* where DEPTH matches the depth passed to perft here
+\ ========================================================================
+
+\ due to the limited depth that can be searched, i've created more tailored 
+\ positions to check specific things that are easy to get wrong -- castling,
+\ en-passant, self-capture, pawn pushes, promotion, etc. versus being able
+\ to search very deeply on the standard perft positions. however, several 
+\ standard positions are shown at the end to prove they work at least to shallow depth
+
+\ with black moving first, this tests the en-passant captures for white on move 2
+\ "4k3/pppppppp/8/P1P1P1P1/8/8/8/4K3 b - - 0 1"
+\ 14 136 1937 20777
+\ 4 run-perft
+
+\ like above, with reversed setup and white first
+\ "4k3/8/8/8/1p1p1p1p/8/PPPPPPPP/4K3 w - - 0 1"
+\ 14 136 1927 20654
+\ 4 run-perft
+
+\ stress-test white promotions
+\ "8/PPPPPPPP/8/7k/8/8/8/7K w - - 0 1"
+\ 35 162 6157 34710
+\ 4 run-perft
+
+\ stress-test black promotions
+\ "3k4/8/8/3K4/8/8/pppppppp/8 b - - 0 1"
+\ 37 273 10622 65557
+\ 4 run-perft
+
+\ on the first move, white can disrupt black castling in every
+\ way with rook, bishop and knight
+\ "r3k2r/8/8/N6N/N6N/8/R7/2B2K1B w kq - 0 1"
+\ 44 704 28571
+\ 3 run-perft
+
+\ now same with black moving first
+\ "2b1kb2/7r/8/n6n/n6n/8/8/R3K2R b KQ - 0 1"
+\ 43 690 29027
+\ 3 run-perft
+
+\ white pawns 1 move away from wrecking black castling
+\ also covers promotion & capture with promotion
+\ "r3k2r/8/PPPPPPPP/8/8/8/8/4K3 w kq - 0 1" 
+\ 13, 135, 2026, 19385
+\ 4 run-perft
+
+\ same for black moving first
+\ "4k3/8/8/8/8/pppppppp/8/R3K2R b KQ - 0 1" 
+\ 13 135 2026 19385
+\ 4 run-perft
+
+\ just an open position with one of each piece (+ bishop pair)
+\ "k5r1/pp1b4/4qn1b/8/3Q4/B3NB2/6PP/1R5K w - - 0 1"
+\ 60 2762 150840
+\ 3 run-perft
+
+\ same position but with black moving first
+\ "k5r1/pp1b4/4qn1b/8/3Q4/B3NB2/6PP/1R5K b - - 0 1"
+\ 48 2833 129500
+\ 3 run-perft 
+
+\ a weird position, checking that pieces aren't trying to capture their own color
+\ "1rqb2rk/3bn1pp/ppn5/ppp5/ppp2PPP/3BNPPP/2NB1PPP/R3Q1RK w - - 0 1"
+\ 33 814 27235
+\ 3 run-perft 
+
+\ same position with black moving first
+\ "1rqb2rk/3bn1pp/ppn5/ppp5/ppp2PPP/3BNPPP/2NB1PPP/R3Q1RK b - - 0 1"
+\ 25 816 22732
+\ 3 run-perft
+
+\ mix of 1 & 2 space jumps for white pawns and en-passant
+\ "4k3/8/8/3p4/p3p1pp/2p2p2/PPPPPPPP/4K3 w - - 0 1"
+\ 14 187 2259 30838
+\ 4 run-perft
+
+\ same but on black side
+\ "4k3/pppppppp/2P3P1/1P1P1P1P/P3P3/8/8/4K3 b - - 0 1"
+\ 14 206 2581 39403
+\ 4 run-perft 
+
+\ kiwipete
+\ https://www.chessprogramming.org/Perft_Results
+\ "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
+\ 48, 2039, 97862
+\ 3 run-perft
+
+\ "position 3"
+\ https://www.chessprogramming.org/Perft_Results
+\ "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"
+\ 14 191 2812 43238
+\ 4 run-perft
+
+\ "position 4"
+\ "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
+\ 6 264 9467
+\ 3 run-perft 
+
+\ "position 5"
+\ "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8"
+\ 44 1486 62379
+\ 3 run-perft 
+
+\ "position 6"
+"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10"
+\ 46 2079 89890
+2 run-perft 
+

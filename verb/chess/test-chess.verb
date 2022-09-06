@@ -1,0 +1,391 @@
+\ Chess unittests
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"unittest" import
+"board" import
+
+\ moves are generated pseudo-moves
+\ expected is a list of strings from move-str-long
+\ returns true|false if they match
+: check-p-movelist ( moves expected -- result )
+		\ "CHECK MOVELIST:" . expected . CR
+	@locals [ i ]
+	moves length expected length != if >>nomatch
+	0 i!
+	@loop \ loop manually so i can bail out immediately on nonmatch
+		moves i get void? if >>goodmatch \ end of list
+		\ make sure i find each expected move in movelist
+		expected moves i get move-to-str-long find-equal void? if >>nomatch
+		i 1 + i! <<loop
+	@goodmatch true return
+	@nomatch false return
+	;
+	
+: test-pawn-pmoves
+	\ white
+	"4k3/2P5/4n1n1/5P2/4n3/3n4/PP1PP2P/4K3 w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+
+	[ 	"K-e1f1" "K-e1d1" "K-e1f2" "P-a2a3" "P-a2a4" "P-b2b3" "P-b2b4" 
+		"P-e2xd3" "P-e2e3" "P-h2h3" "P-h2h4" "P-f5xe6" "P-f5xg6" 
+		"P-f5f6" "P-c7c8=N" "P-c7c8=B" "P-c7c8=R" "P-c7c8=Q" ]
+	check-p-movelist expect-true
+	
+	\ black
+	"1k6/pppp3p/3N4/2N5/4p3/3N1N2/5p2/2K5 b - - 0 1" set-from-fen
+	print-board
+	BLACK gen-pseudo-moves dup { print-move-long } for-each CR
+	
+	[ "p-f2f1=n" "p-f2f1=b" "p-f2f1=r" "p-f2f1=q" "p-e4xd3" "p-e4xf3" "p-e4e3" "p-a7a6" "p-a7a5" "p-b7b6" 
+		"p-b7b5" "p-c7xd6" "p-c7c6" "p-h7h6" "p-h7h5" "k-b8c8" "k-b8a8" ]
+	check-p-movelist expect-true
+	
+	\ en-passant test cases
+	
+	\ white, left
+	"3k4/8/8/2pPp3/8/8/8/3K4 w - c6 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "K-d1d2" "K-d1e1" "K-d1c1" "K-d1e2" "K-d1c2" "P-d5d6" "P-d5xc6-ep-c5" ]
+	check-p-movelist expect-true
+	
+	\ white, right
+	"3k4/8/8/2pPp3/8/8/8/3K4 w - e6 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "K-d1d2" "K-d1e1" "K-d1c1" "K-d1e2" "K-d1c2" "P-d5d6"
+		"P-d5xe6-ep-e5" ]
+	check-p-movelist expect-true
+	
+	\ black, left
+	"7k/8/8/8/2PpP3/8/8/K7 b - c3 0 1" set-from-fen
+	print-board
+	BLACK gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "p-d4d3" "p-d4xc3-ep-c4" "k-h8h7" "k-h8g8" "k-h8g7" ]
+	check-p-movelist expect-true
+	
+	\ black, right
+	"7k/8/8/8/2PpP3/8/8/K7 b - e3 0 1" set-from-fen
+	print-board
+	BLACK gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "p-d4d3" "p-d4xe3-ep-e4" "k-h8h7" "k-h8g8" "k-h8g7" ]
+	check-p-movelist expect-true
+	;
+	
+: test-rook-pmoves
+	\ white
+	"8/7k/4ppp1/2n2R1p/8/8/1rR2b2/2K5 w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+	
+	[ "K-c1d1" "K-c1b1" "K-c1d2" "K-c1xb2" "R-c2c3" "R-c2c4" "R-c2d2"
+		"R-c2e2" "R-c2xc5" "R-c2xf2" "R-c2xb2" "R-f5f4" "R-f5f3" 
+		"R-f5g5" "R-f5e5" "R-f5d5" "R-f5xf6" "R-f5xf2" "R-f5xh5" "R-f5xc5" ]
+	check-p-movelist expect-true
+	
+	\ black
+	"3k4/1Rpr2N1/8/3B2r1/8/6P1/5K2/8 b - - 0 1" set-from-fen
+	print-board
+	BLACK gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "r-g5g6" "r-g5g4" "r-g5h5" "r-g5f5" "r-g5e5" "r-g5xg7" "r-g5xg3"
+		"r-g5xd5" "p-c7c6" "p-c7c5" "r-d7d6" "r-d7e7" "r-d7f7" 
+		"r-d7xd5" "r-d7xg7" "k-d8e8" "k-d8c8" "k-d8e7" ]
+	check-p-movelist expect-true
+	;
+
+: test-bishop-pmoves
+	\ white
+	"1k6/1p3p2/7r/3Br3/2n2B2/3p1n2/3P3P/3K4 w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "K-d1e1" "K-d1c1" "K-d1e2" "K-d1c2" "P-h2h3" "P-h2h4" "B-f4g5" 
+		"B-f4g3" "B-f4e3" "B-f4xh6" "B-f4xe5" "B-d5e6" "B-d5e4" 
+		"B-d5c6" "B-d5xf7" "B-d5xf3" "B-d5xb7" "B-d5xc4" ]
+	check-p-movelist expect-true
+		
+	\ black
+	"5k2/2p2p2/3b1Pp1/3p4/1P2bP2/5P2/4P3/4K3 b - - 0 1" set-from-fen
+	print-board
+	BLACK gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "b-e4f5" "b-e4d3" "b-e4c2" "b-e4b1" "b-e4xf3" "p-d5d4" "b-d6e7" 
+		"b-d6e5" "b-d6c5" "b-d6xf4" "b-d6xb4" "p-g6g5" "p-c7c6" 
+		"p-c7c5" "k-f8g8" "k-f8e8" "k-f8g7" "k-f8e7" ]
+	check-p-movelist expect-true
+	;
+	
+: test-knight-pmoves
+	\ white
+	"1k6/3p1p2/8/4N3/p5p1/8/1N6/4K3 w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" "K-e1d2" "N-b2c4" "N-b2xa4" 
+		"N-b2d3" "N-b2d1" "N-e5xf7" "N-e5xd7" "N-e5f3" "N-e5d3" 
+		"N-e5g6" "N-e5c6" "N-e5xg4" "N-e5c4" ]
+	check-p-movelist expect-true
+	
+	\ black
+	"5k2/1n1P4/8/2P1n1P1/8/5p2/8/2K5 b - - 0 1" set-from-fen
+	print-board
+	BLACK gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "p-f3f2" "n-e5f7" "n-e5xd7" "n-e5d3" "n-e5g6" "n-e5c6" "n-e5g4" 
+		"n-e5c4" "n-b7xc5" "n-b7a5" "n-b7d8" "n-b7d6" "k-f8f7" 
+		"k-f8g8" "k-f8e8" "k-f8g7" "k-f8e7" ]
+	check-p-movelist expect-true
+	;
+
+\ *TODO* test castling once implemented
+: test-king-pmoves
+	\ white
+	"4k3/8/8/8/2n1n3/2nK4/3n4/8 w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "K-d3d4" "K-d3xd2" "K-d3e3" "K-d3xc3" "K-d3xe4" "K-d3xc4" "K-d3e2" "K-d3c2" ]
+	check-p-movelist expect-true
+	
+	"8/4p3/3Nk3/3N1N2/8/8/8/2K5 b - - 0 1" set-from-fen
+	print-board
+	BLACK gen-pseudo-moves dup { print-move-long } for-each CR
+	[ 	"k-e6e5" "k-e6f6" "k-e6xd6" "k-e6f7" "k-e6d7" "k-e6xf5"
+		"k-e6xd5" "p-e7xd6" ]
+	check-p-movelist expect-true
+	;
+
+: test-queen-pmoves
+	\ white
+	"k7/pp6/3p1p2/8/3Q1P2/2p1P3/6PP/7K w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-pseudo-moves dup { print-move-long } for-each CR
+	[ "K-h1g1" "P-g2g3" "P-g2g4" "P-h2h3" "P-h2h4" "P-e3e4" "Q-d4e5" "Q-d4c5" "Q-d4b6"
+		"Q-d4xf6" "Q-d4xa7" "Q-d4xc3" "Q-d4d5" "Q-d4d3" "Q-d4d2" "Q-d4d1" 
+		"Q-d4e4" "Q-d4c4" "Q-d4b4" "Q-d4a4" "Q-d4xd6" "P-f4f5"
+	]
+	check-p-movelist expect-true
+	;
+	
+: test-make-move
+	@locals [ move ]
+	"3k4/8/8/3n4/4P3/8/8/4K3 w - - 0 1" set-from-fen
+	print-board
+	P-PAWN WHITE "e4" algebraic-to-square "d5" algebraic-to-square new-move 
+	P-KNIGHT move-pieceCaptured!
+	"d5" algebraic-to-square move-squareCaptured! move!
+	
+	move move-to-str-long . CR
+	move make-move
+	print-board
+	move unmake-move
+	print-board
+	;
+	
+: test-gen-full-moves
+	\ P can't capture due to exposed check
+	"1k2r3/8/8/3n4/4P3/8/8/4K3 w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" "K-e1d2" "P-e4e5" ]
+	check-p-movelist expect-true
+	
+	\ only 1 move to save king (bishop capture)
+	"k7/8/8/2N2B1Q/8/8/PPn5/KN5R w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "B-f5xc2" ]
+	check-p-movelist expect-true
+	
+	\ like above but with rook
+	"k7/8/8/2R2N1N/8/8/PPn5/KN5R w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-c5xc2" ]
+	check-p-movelist expect-true
+	
+	\ like above but with knight
+	"k7/8/8/2N2N1N/8/4N3/PPn5/KN5R w - - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "N-e3xc2" ]
+	check-p-movelist expect-true
+	
+	\ white castling
+	"4k3/8/8/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1" "K-e1c1"
+	]
+	check-p-movelist expect-true
+	
+	\ now several cases with attacks on empty squares & king
+	
+	\ attack f1
+	"4k3/8/b7/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1d1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1c1"
+	]
+	check-p-movelist expect-true
+	
+	\ attack g1
+	"4k3/8/1b6/8/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1"  
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1c1"
+	]
+	check-p-movelist expect-true
+	
+	\ attack king
+	"4k3/8/8/b7/8/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		
+	]
+	check-p-movelist expect-true
+	
+	\ attack d1
+	"4k3/8/8/8/6b1/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1f1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1"
+	]
+	check-p-movelist expect-true
+	
+	\ attack c1
+	"4k3/8/8/8/5b2/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		"R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1"
+	]
+	check-p-movelist expect-true
+	
+	\ attack b1 (does not stop castling)
+	"4k3/8/8/8/4b3/8/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" "K-e1f2" 
+		"K-e1d2" "R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4" "K-e1g1" "K-e1c1"
+	]
+	check-p-movelist expect-true
+	
+	\ attack c1 & g1
+	"4k3/8/8/8/8/4b3/P6P/R3K2R w KQ - 0 1" set-from-fen
+	print-board
+	WHITE gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "R-a1b1" "R-a1c1" "R-a1d1" "K-e1e2" "K-e1f1" "K-e1d1" 
+		"R-h1g1" "R-h1f1" "P-a2a3" "P-a2a4" "P-h2h3" "P-h2h4"
+	]
+	check-p-movelist expect-true
+	
+	\ black castling
+	"r3k2r/p6p/8/8/8/8/8/4K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8g8" "k-e8c8" ]
+	
+	check-p-movelist expect-true
+	
+	\ attack f8
+	"r3k2r/p6p/8/8/8/8/8/4KR2 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" 
+		"k-e8d8" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8c8" ]
+	
+	check-p-movelist expect-true
+	
+	\ attack g8
+	"r3k2r/p6p/8/8/8/8/8/4K1R1 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8c8" ]
+	
+	check-p-movelist expect-true
+	
+	\ attack king
+	"r3k2r/p6p/8/8/8/8/4R3/4K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[  "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" ]
+	
+	check-p-movelist expect-true
+	
+	\ attack d8
+	"r3k2r/p6p/8/8/8/8/8/3RK3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8f7" "r-h8g8" "r-h8f8" "k-e8g8" ]
+	
+	check-p-movelist expect-true
+	
+	\ attack c8
+	"r3k2r/p6p/8/8/8/8/8/2R1K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8g8" ]
+	
+	check-p-movelist expect-true
+	
+	\ attack b8 (does not stop castling)
+	"r3k2r/p6p/8/8/8/8/8/1R2K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "k-e8f7" "k-e8d7" "r-h8g8" "r-h8f8" "k-e8g8" "k-e8c8" ]
+	
+	check-p-movelist expect-true
+	
+	\ attack g8 & c8
+	"r3k2r/p6p/4B3/8/8/8/8/4K3 b kq - 0 1" set-from-fen
+	print-board
+	BLACK gen-full-moves dup { print-move-long } for-each CR
+	print-board
+	[ "p-a7a6" "p-a7a5" "p-h7h6" "p-h7h5" "r-a8b8" "r-a8c8" "r-a8d8" "k-e8e7" "k-e8f8"
+		"k-e8d8" "r-h8g8" "r-h8f8" ]
+	
+	check-p-movelist expect-true
+	;
+
+(
+test-rook-pmoves
+test-bishop-pmoves
+test-knight-pmoves
+test-king-pmoves 
+test-pawn-pmoves
+test-queen-pmoves
+
+test-make-move
+
+test-gen-full-moves
+)
+
+	

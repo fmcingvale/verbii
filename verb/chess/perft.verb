@@ -1,0 +1,66 @@
+
+\ Perft functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"board" import
+
+: perft-worker ( depth -- nrleaves nrmoves )
+	@locals [ subleaves submoves ]
+	depth 0 > if >>skip
+	1 0 return \ leaf node, return 1 leaf, 0 make-moves
+	@skip
+	0 nrmoves!
+	0 nrleaves!
+	SIDE-TO-MOVE gen-full-moves
+	\ run perft-worker for each move, at depth-1
+	{ ( move )
+		move make-move 
+		nrmoves 1 + nrmoves!
+		depth 1 - perft-worker submoves! subleaves!
+		nrmoves submoves + nrmoves!
+		nrleaves subleaves + nrleaves!
+		move unmake-move
+	} for-each
+	nrleaves nrmoves
+	;
+	
+\ run at root from current board state
+\ returns:
+\	nrleaves - number of leaf nodes seen ('nodes' in stockfish terminology)
+\	nrmoves - total number of make-move
+: perft ( depth -- nrleaves nrmoves )
+	@locals [ subleaves submoves t0 t1 ]
+	0 nrmoves!
+	0 nrleaves!
+	run-time t0!
+	SIDE-TO-MOVE gen-full-moves 
+	{ ( move )
+		move print-move-long ":" .
+		move make-move
+		nrmoves 1 + nrmoves! 
+		depth 1 - perft-worker submoves! subleaves!
+		subleaves . "(" .. submoves .. ")" . CR
+		subleaves nrleaves + nrleaves!
+		submoves nrmoves + nrmoves!
+		move unmake-move
+	} for-each
+	
+	run-time t1!
+	nrleaves . "leaf nodes (" .. nrmoves . "moves)" . 
+	nrmoves t1 t0 - / floor . "moves/second" . CR
+	;
+			
+\ run for depth 1..maxdepth with given FEN string 
+: run-perft ( fen maxdepth -- )
+	@locals [ i ]
+	1 i!
+	@loop
+		i maxdepth > if >>done
+		fen set-from-fen
+		print-board
+		i perft 
+		i 1 + i! <<loop
+	@done
+	;
+	
