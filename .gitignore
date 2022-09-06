@@ -64,3 +64,5 @@ cpp/src/gmon.out
 cpp/src/main
 lib/hashing.verb.b
 lib/unittest.verb.b
+lib/quicksort.verb.b
+lib/paths.verb.b
