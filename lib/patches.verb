@@ -57,6 +57,14 @@
 	
 ( ------ init ----------- )
 
+\ put & drop result, since normally putting into an object that
+\ code has saved a ref to
+: put! put drop ;
+\ same for append
+: append! append drop ;
+\ and for extend
+: extend! extend drop ;
+
 ( ------ compiler ------- )
 
 \
