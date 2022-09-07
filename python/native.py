@@ -210,8 +210,10 @@ def builtin_wordlist(I):
 
 def builtin_file_read(I):
 	filename = popString(I, "file-read")
-	f = open(filename,'r')
-	buf = f.read()
+    # 'rb' so it doesn't translate EOL chars ...
+	f = open(filename,'rb')
+    # ... but still want a string, not bytes
+	buf = str(f.read(),'ascii')
 	I.push(LangString(buf))
 	f.close()
 

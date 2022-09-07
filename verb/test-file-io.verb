@@ -40,5 +40,23 @@
 	void open-as-stdout
 
 	"hello-----stdout" "temp-out.txt" file-read expect==
+	
+	\ test that no auto text conversion is happening
+	@locals [ s d ]
+	"abc" s!
+	s 13 chr + 10 chr + s!
+	s "def" + s!
+	s 10 chr + s!
+	s "ghi" + s!
+	s 13 chr + s!
+	s "jkl" + s!
+	"temp-out.txt" s file-write
+	
+	"temp-out.txt" file-read d!
+	16 d length expect==
+	13 d 3 get ord expect==
+	10 d 4 get ord expect==
+	10 d 8 get ord expect==
+	13 d 12 get ord expect==
 	;
 	
