@@ -37,6 +37,12 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* get rid of rest of lua POSIX functions with workarounds.
+
+* Need to get rid of getcwd() -- one possibility is to just use "." and don't add a 'chdir' command so cwd will always be the same
+
+* get rid of mtime in all ports
+
 * C++ port (at least) is not 8-bit clean on strings -- Object uses a char* to store strings & symbols, so e.g. file-read of a binary
   file would not work as expected since it would be cutoff at the first null.
   
@@ -63,9 +69,7 @@ Global TODO
   parser with no explanation of what happened .. so at least char-by-char for these cases:
 	* \a comment
 	* [1 2 3 4]
-	* @[1 2 3 4]
 	* {1 2 3 4}
-	* @{1 2 3 4}
 	
 	-- * -- cons of this approach would be, for example, word breaking allows making variations
 	of matched tokens easily ... for example when I was making v1/v2 closures i added syntax
@@ -75,18 +79,6 @@ Global TODO
 	may be worth it overall.
 	
 * add mergesort
-
-* i think COUNT in "var NAME COUNT" is not really gaining anything -- just make it 'var NAME' then
-  NAME can be defined to get value and NAME! to set value. if arrays are needed then
-  just store a list to NAME
-
-* slightly change 'if' semantics:
-	1. pop bool from stack
-	2. if true, run next word (i.e. do nothing)
-	3. if false, skip over next word and continue
-
-	* in other words, word after 'if' no longer has to be a jump, but if it is
-	  a jump, code will continue to work as it always has
 
 * need to extend ,,del (or maybe just get rid of 'del NAME' and always make del stack-based??)
   to delete entries from more objects:
@@ -111,10 +103,6 @@ Global TODO
 
 	* then, words should be lambdas instead of objlists so they can be bound as well
 		
-* + on lists is kind of unsafe -- extend is better since it maintains object identity (important across
-  closure boundaries). a list+ could be defined as:
-	: list+ @( list1 list2 ) [ ] list1 extend list2 extend ;
-
 * change all verbii code to use make-var instead of var then get rid of old ,,var/var -- can replace with make-var based function
 
 * chicken - minimize imports across all files
