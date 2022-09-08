@@ -67,12 +67,52 @@
 
 ( ------ compiler ------- )
 
+\ compiles filename and writes serialized form to stdout. does NOT alter interpreter words
+: compile-and-serialize ( filename -- )
+	filename byte-compile-file ( this will be all code other than word definitions )
+
+	( that left list of [ name list ] on stack )
+
+	\ write metadata -- packed on 1 line for ease of parsing later
+	\ version 1: M v1: FNVHASH, where FNVHASH is integer fnv-1a-32 hash of input file
+	\ (careful to pack this so there is NO extra space before/after the number, since that
+	\ breaks int parsing on some host languages)
+	"M v1:" puts filename file-read fnv-1a-32 str puts CR \ fnv hash of input file as integer
+		
+	( this will all be written to a list )
+	"L" . dup length str puts CR
+
+	( serialize )
+	serialize-compiled-output
+	;
+	
+\ test if filename.b needs to be (re)generated
+: check-needs-recompile ( filename )
+	@locals [ text ]
+	\ see if filename.b exists
+	filename ".b" + file-exists? not if >>need-compile 
+	\ read .b file and check metadata
+	filename ".b" + stream-reader-open-file
+	stream-reader-next-line text! drop \ drop stream
+	text 0 5 slice "M v1:" != if >>need-compile \ missing metadata or older version; force recompile
+	\ check fnv hash
+	text 5 -1 slice parse-int 
+		filename file-read fnv-1a-32 != if >>need-compile \ hash doesn't match; force recompile 
+		
+	\ else, .b file is up to date
+		\ filename ".b" + " is up to date" + puts-stderr
+	false return
+	@need-compile 
+		\ filename ".b" + " needs to be (re)compiled" + puts-stderr
+		true
+	;
+
 \
-\ compile & load the given file. if "filename.b" exists, and is the same age (or newer), 
-\ then it is loaded instead of recompiling filename.
+\ compile & load the given file. if "filename.b" exists, and filename hasn't changed (based on
+\ metadata embedded in filename.b), then it is loaded instead of recompiling filename.
 \
-\ if "filename.b" does not exist, or is older than filename, then filename is
-\ compiled and the result saved to "filename.b"
+\ if "filename.b" does not exist, or filename has changed, then filename is compiled and the 
+\ result saved to "filename.b"
 \
 \ note this does NOT run the resulting __main__ -- it is the caller's responsibility
 \ to run __main__ (or not) and to delete __main__ when complete
@@ -80,13 +120,14 @@
 : cached-compile-and-load ( filename -- )
 		\ "cached-compile-and-load of: " . dup . CR
 	\ see if filename.b exists
-	filename ".b" + file-exists? not if >>do-compile \ does not exist, must compile filename
+	\ filename ".b" + file-exists? not if >>do-compile \ does not exist, must compile filename
 		\ ".b file exists" . CR
 	\ see if mtime of filename > filename.b (i.e. filename.b out of date)
-	filename file-mtime filename ".b" + file-mtime ( mtime-filename mtime-bfilename )
-		> if >>do-compile \ .b is out of date, must recompile
+	\ filename file-mtime filename ".b" + file-mtime ( mtime-filename mtime-bfilename )
+	\ 	> if >>do-compile \ .b is out of date, must recompile
 		\ ".b file is current" . CR
-	\ .b file is current, so load it
+	filename check-needs-recompile if >>do-compile
+	\ else, .b file is current, so load it
 	filename ".b" + deserialize return \ load words into interpreter & return
 
 	@do-compile
