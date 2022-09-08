@@ -37,6 +37,9 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* C++ port (at least) is not 8-bit clean on strings -- Object uses a char* to store strings & symbols, so e.g. file-read of a binary
+  file would not work as expected since it would be cutoff at the first null.
+  
 * add @globals to replace make-var. both faster AND could then be interpolated into lists like args/locals (and unlike make-var names)
 
 * benchmark hash functions - see if any usable to replace mtime for checking if file needs to be recompiled.
