@@ -721,6 +721,18 @@ function builtin_pow(intr)
 	intr:push(new_Float(x ^ y))
 end
 
+-- see c++ version for details
+function builtin_fnv_1a_32(intr)
+	local s = popString(intr)
+	local hash = 2166136261
+	for i=1,#s do
+		hash = hash ~ string.byte(s, i)
+		hash = hash * 16777619
+		hash = hash & 0xffffffff
+	end
+	intr:push(hash)
+end
+		
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -824,4 +836,6 @@ BUILTINS = {
 
 	["file-pathsep"] = { {}, builtin_file_pathsep },
 	["os-getcwd"] = { {}, builtin_getcwd },
+
+	["fnv-1a-32"] = { {}, builtin_fnv_1a_32 },
 }

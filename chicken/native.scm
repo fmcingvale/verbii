@@ -322,6 +322,12 @@
 			obj 
 			(lang-error wheresym "Expecting integer but got: " obj))))
 
+(define (popString intr wheresym)
+	(let ((obj (pop intr)))
+		(if (String? obj)
+			obj 
+			(lang-error wheresym "Expecting string but got: " obj))))
+
 (define (popStringOrSymbol intr wheresym)
 	(let ((obj (pop intr)))
 		(cond
@@ -519,6 +525,18 @@
 		(push intr (make-Float (atan y x)))))
 
 (import (chicken bitwise))
+
+(define (builtin-fnv-1a-32 intr)
+	(let ((hash 2166136261) ; offset basis
+		(text (popString intr 'fnv-1a-32)))
+		(string-for-each 
+			(lambda (c)
+				(set! hash (bitwise-xor hash (char->integer c)))
+				(set! hash (* hash 16777619))
+				(set! hash (bitwise-and hash 4294967295)))
+			(value text))
+		(push intr hash)))
+
 (import (chicken time))
 (import (chicken time posix))
 (import (chicken file))
@@ -680,6 +698,8 @@
 
 		(list "file-pathsep" '() (lambda (intr) (push intr (make-String (make-string 1 (filepath:path-separator))))))
 		(list "os-getcwd" '()  (lambda (intr) (push intr (make-String (current-directory)))))
+
+		(list "fnv-1a-32" '() builtin-fnv-1a-32)
 	))
 
 (set! BUILTINS (alist->hash-table N_BUILTINS #:test string=?))

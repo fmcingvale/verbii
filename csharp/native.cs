@@ -780,6 +780,20 @@ class Builtins {
 		intr.push(new LangFloat(Math.Pow(x, y)));
 	}
 
+	// see c++ for notes
+	public static void fnv_1a_32(Interpreter intr) {
+		var s = popString(intr, "fnv-1a-32");
+		long hash = 2166136261;
+
+		for(var i=0; i<s.Length; ++i) {
+			hash ^= (long)s[i];
+			hash *= 16777619;
+			hash = hash & 0xffffffff;
+		}
+
+		intr.push(new LangInt(hash));
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -882,5 +896,7 @@ class Builtins {
 
 		{"file-pathsep", intr => intr.push(new LangString(new string(Path.DirectorySeparatorChar, 1)))},
 		{"os-getcwd", getcwd},
+
+		{"fnv-1a-32", fnv_1a_32},
 	};
 }

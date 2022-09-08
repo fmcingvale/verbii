@@ -759,6 +759,28 @@ static void builtin_os_getcwd(Interpreter *intr) {
 }
 #endif
 
+// FNV-1a 32-bit hash
+// ref: https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+//
+// NOTE: In real-world usage, FNV-1a appears to have been superceded by SipHash in many
+// popular languages due to hash-flooding DOS attacks. However, the primary usage of 
+// FNV-1a in verbii is as a file checksum, so not intended to be used against malicious 
+// attacks. The simplicity of implementing FNV-1a across ports is the primary consideration here.
+static void builtin_fnv_1a_32(Interpreter *intr) {
+	// bug: strings are not 8-bit clean since they are stored as a char* so nulls cannot be
+	// safely stored. for now, live with this ...
+	auto s = popString(intr,"fnv-1a-32");
+	uint32_t hash = 2166136261; // offset basis
+
+	while(*s) {
+		hash ^= (uint32_t)(*s);
+		hash *= 16777619; // FNV prime
+		++s;
+	}
+
+	intr->push(newInt(hash));
+}
+
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
 	{"+", [](Interpreter *intr) { do_binop(intr, &Object::opAdd); }},
 	{"-", [](Interpreter *intr) { do_binop(intr, &Object::opSubtract); }},
@@ -900,4 +922,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 	// more os/fileops
 	{"file-pathsep", builtin_file_pathsep},
 	{"os-getcwd", builtin_os_getcwd},
+
+	// fast hashing
+	{"fnv-1a-32", builtin_fnv_1a_32},
 };

@@ -552,6 +552,19 @@ def builtin_pow(I):
 	x = popIntOrFloat(I)
 	I.push((math.pow(x,y)))
 
+# FNV-1a 32-bit hash
+# See notes in C++ version
+def builtin_fnv_1a_32(I):
+	text = popString(I,"fnv-1a-32")
+	hash = 2166136261 # offset basis
+	for c in text:
+		hash = hash ^ ord(c)
+		hash = hash * 16777619 # FNV prime
+		# I added this
+		hash = hash & 0xffffffff
+
+	I.push(hash)
+
 # the interpreter pops & checks the argument types, making the code shorter here
 BUILTINS = {
 	'+': ([], builtin_add),
@@ -663,5 +676,8 @@ BUILTINS = {
 	# more os/fileops
 	'file-pathsep': ([], builtin_file_sep),
 	'os-getcwd': ([], builtin_os_getcwd),
+
+	# fast hash
+	'fnv-1a-32': ([], builtin_fnv_1a_32),
 }
 
