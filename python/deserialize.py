@@ -16,7 +16,10 @@ def deserialize_stream(intr, fileIn):
 		return LangVoid()
 
 	line = line.rstrip() # remove \n
-	if line[0] == 'i': return int(line[2:])
+	if line[0] == 'M': 
+		# ignore metadata and return next object
+		return deserialize_stream(intr, fileIn)
+	elif line[0] == 'i': return int(line[2:])
 	elif line[0] == 'f': return float(line[2:])
 	elif line[0] == 'b': return parseBool(line[2:])
 	elif line[0] == 'n': return LangNull() 

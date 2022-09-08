@@ -25,7 +25,10 @@ function deserialize_stream(intr, fileIn)
 	-- above :read('l') didn't remove the entire line ending
 	line = trimCRLF(line)
 	--print("LINE: " .. line)
-	if line:sub(1,1) == "i" then
+	if line:sub(1,1) == "M" then
+		-- ignore metadata and return NEXT object 
+		return deserialize_stream(intr, fileIn)
+	elseif line:sub(1,1) == "i" then
 		return tonumber(line:sub(3))
 	elseif line:sub(1,1) == "f" then
 		return new_Float(tonumber(line:sub(3)))

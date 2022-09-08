@@ -45,6 +45,9 @@
 				(set! line (string-trim-both line))
 				;(print "Line: " line)
 				(case (string-ref line 0)
+					((#\M) 
+						; ignore metadata line and return next object
+						(deserialize-stream intr fileIn))
 					((#\i) (string->number (string-drop line 2)))
 					((#\f) (make-lang-float (string->number (string-drop line 2))))
 					((#\b) (parse-bool (string-drop line 2)))

@@ -32,6 +32,9 @@ Object deserialize_stream(Interpreter *intr, ifstream &fileIn) {
 		// remove the entire line ending
 		trimCRLF(line);
 		switch(line[0]) {
+			case 'M': 
+				// metadata line - ignore and return next object
+				return deserialize_stream(intr, fileIn);
 			case 'i': return parseInt(line.substr(2));
 			case 'f': return parseFloat(line.substr(2));
 			case 'b': return parseBool(line.substr(2));

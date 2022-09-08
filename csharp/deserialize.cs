@@ -34,6 +34,9 @@ public class Deserializer {
 				line.Remove(line.Length-1);
 			
 			switch(line[0]) {
+				case 'M':
+					// ignore metadata and return NEXT object
+					return deserialize_stream(intr, stream);
 				case 'i': return new LangInt(long.Parse(line.Substring(2)));
 				case 'f': return new LangFloat(double.Parse(line.Substring(2)));
 				case 'b': return new LangBool(parseBool(line.Substring(2)));
