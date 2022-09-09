@@ -571,6 +571,11 @@ static void builtin_run_time(Interpreter *intr) {
 	intr->push(newFloat(diff.count()));
 }
 
+static void builtin_cpu_time(Interpreter *intr) {
+	intr->push(newFloat(((double)clock())/CLOCKS_PER_SEC));
+
+}
+
 static void builtin_new_dict(Interpreter *intr) {
 	intr->push(newDict());
 }
@@ -862,6 +867,7 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 		{ "bit-shl", builtin_bit_shl },
 
 		{ "run-time", builtin_run_time },
+		{ "cpu-time", builtin_cpu_time },
 		{ ",,new-dict", builtin_new_dict },
 
 			// new words needed for running boot.verb

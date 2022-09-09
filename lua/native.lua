@@ -795,6 +795,7 @@ BUILTINS = {
 	
 	--["run-time"] = { {}, function(intr) intr:push(new_Float(SOCKET:gettime()-STARTUP_TIME)) end},
 	["run-time"] = { {}, function(intr) intr:push(new_Float(get_usec_time()-STARTUP_TIME)) end},
+	["cpu-time"] = { {}, function(intr) intr:push(new_Float(os.clock())) end},
 	[",,new-dict"] = { {}, function(intr) intr:push(new_Dict()) end},
 
 	-- new words needed for running boot.verb

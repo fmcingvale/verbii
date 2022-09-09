@@ -634,6 +634,8 @@
 
 		(list "run-time" '() 
 			(lambda (intr) (push intr (make-lang-float (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0)))))
+		(list "cpu-time" '()
+			(lambda (intr) (push intr (make-lang-float (/ (receive (a b) (cpu-time) (+ a b)) 1000.0)))))
 		(list ",,new-dict" '() (lambda (intr) (push intr (new-Dict))))
 
 		(list "file-exists?" (list 's) (lambda (intr name) (push intr (regular-file? name))))

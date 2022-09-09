@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 #include <chrono>
+#include <ctime>
 #include "interpreter.hpp"
 #include "langtypes.hpp"
 

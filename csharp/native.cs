@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Diagnostics;
 
 class Builtins {
 	public static bool ALLOW_OVERWRITING_WORDS = false;
@@ -855,6 +856,8 @@ class Builtins {
 
 		{"run-time",
 			intr => intr.push(new LangFloat(((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0))},
+		{"cpu-time",
+			intr => intr.push(new LangFloat(Process.GetCurrentProcess().TotalProcessorTime.TotalSeconds))},
 		{",,new-dict", intr => intr.push(new LangDict())},
 
 		{"file-exists?", intr => intr.push(new LangBool(File.Exists(popString(intr,"file-exists?"))))},

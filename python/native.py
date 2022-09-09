@@ -633,6 +633,7 @@ BUILTINS = {
 	'bit-shl': ([], builtin_bit_shl),
 	
 	'run-time': ([], lambda I: I.push(time.time()-STARTUP_TIME)),
+	'cpu-time': ([], lambda I: I.push(time.process_time())),
 	',,new-dict': ([], lambda I: I.push({})),
 
 	# new words needed for running boot.verb
