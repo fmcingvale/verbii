@@ -137,12 +137,6 @@ Global TODO
 			should 9dup be expanded to the 3dups, then the 3dups expanded to dups,
 			then the dups expanded to their lowest level form?
 
-* i think i should add more math functions (sin,cos,log,exp,etc.) -- these
-  are all basically 1-liners so isn't saving significant code space now to
-  omit them.
-
-* math: gcd, sqrt
-	
 * the chicken argument dispatch to builtins is really slow ... rework
 
 ---[   Unsorted   ]------------------------------------------------------
