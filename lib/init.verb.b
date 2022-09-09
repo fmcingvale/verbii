@@ -1,4 +1,5 @@
-L 91
+M v1:363186137
+L 94
 W .
 L 4
 y str
@@ -400,6 +401,18 @@ y length
 o 65536
 y -
 y slice
+W put!
+L 2
+y put
+y drop
+W append!
+L 2
+y append
+y drop
+W extend!
+L 2
+y extend
+y drop
 W whitespace?
 L 5
 i 0

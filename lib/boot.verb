@@ -60,7 +60,7 @@
 	
 'IMPORT-SEARCH-PATHS [ ] make-var
 
-\ search IMPORT-SEARCH-PATHS for filename or fail
+\ search IMPORT-SEARCH-PATHS for filename or raise exception
 : find-filename-module-path ( filename -- fullname )
 	@locals [ i ]
 	0 i!
@@ -73,7 +73,7 @@
 		i 1 + i! <<loop
 		
 	@not-found
-		"Unable to find module '" filename + "' on path " + IMPORT-SEARCH-PATHS str + error
+		"Unable to find file '" filename + "' on path " + IMPORT-SEARCH-PATHS str + error
 		
 	@found
 		fullname
@@ -138,25 +138,23 @@
 \	* add way to let modules know they are being imported so they
 \	  shouldn't run their main code (unless it's required to init the module of course)
 \
-\ ( name -- )
-: import
+: import ( name -- )
+	@locals [ fullname ]
 	\ see if name has been imported already and don't import again
-	*_IMPORTED-MODULES over get void? not if >>already-imported
+	*_IMPORTED-MODULES name get void? not if >>already-imported
 	\ not yet imported - go ahead and mark as imported - if the below fails then 
 	\ the program will crash anyways
-	dup *_IMPORTED-MODULES swap true put drop
+	*_IMPORTED-MODULES name true put drop
+	\ find name.verb, searching on import path
+	name ".verb" + find-filename-module-path fullname!
 	\ import module
-	".verb" +
-	dup file-exists? if >>good
-	"Unable to find file:" swap + error
-	@good
-		load-file-maybe-cached
-		\ module may need to init its own globals, etc., so run it
-		safe-run-and-delete-main
-		return
-	@already-imported ( name )
+	fullname load-file-maybe-cached
+	\ module may need to init its own globals, etc., so run it
+	safe-run-and-delete-main
+	return
+	
+	@already-imported
 		\ "ALREADY IMPORTED:" . dup . CR
-		drop
 	;
 	
 'SCRIPT-ARGS [ ] make-var

@@ -213,6 +213,14 @@
 	seq 0 seq length nr - slice 
 	;
 	
+\ put & drop result, since a normal use case is to put into an object that
+\ the caller already holds a reference to, so its more convenient to drop object
+: put! put drop ;
+\ same for append
+: append! append drop ;
+\ and for extend
+: extend! extend drop ;
+
 \ ========================================================================
 \ String functions
 \ ========================================================================
