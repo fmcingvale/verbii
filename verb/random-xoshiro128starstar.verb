@@ -1,0 +1,61 @@
+
+\ xoshiro128** PRNG
+\
+\ Based on C code: https://prng.di.unimi.it/xoshiro128starstar.c
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"numeric" import
+
+'XOSHIRO128SS-STATE void make-var
+
+\ seed with 4 (32-bit) integer values
+: xoshiro128ss-seed ( a b c d -- )
+	[ a b c d ] XOSHIRO128SS-STATE!
+	;
+	
+: xoshiro128ss-next
+	@locals [ result t STATE ]
+	\ code runs ~33% faster when using local STATE instead of global XOSHIRO128PP-STATE
+	XOSHIRO128SS-STATE STATE!
+	
+	\ const uint32_t result = rotl(s[1] * 5, 7) * 9;
+	STATE 1 get 5 * bit-low32 7 bit-rotl 9 * bit-low32 result!
+	\ const uint32_t t = s[1] << 9;
+	STATE 1 get 9 bit-shl t!
+	\ s[2] ^= s[0];
+	STATE 2
+		STATE 2 get STATE 0 get bit-xor
+		put STATE!
+		
+	\ s[3] ^= s[1];
+	STATE 3
+		STATE 3 get STATE 1 get bit-xor
+		put STATE!
+	
+	\ s[1] ^= s[2];
+	STATE 1
+		STATE 1 get STATE 2 get bit-xor
+		put STATE!
+		
+	\ s[0] ^= s[3];
+	STATE 0
+		STATE 0 get STATE 3 get bit-xor
+		put STATE!
+		
+	\ s[2] ^= t;
+	STATE 2
+		STATE 2 get t bit-xor
+		put STATE!
+		
+	\ s[3] = rotl(s[3], 11);
+	STATE 3
+		STATE 3 get 11 bit-rotl 
+		put STATE!
+	
+	\ update global now
+	STATE XOSHIRO128SS-STATE!
+		
+	result
+	;
+	
