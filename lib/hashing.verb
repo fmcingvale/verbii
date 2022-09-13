@@ -31,16 +31,13 @@
 	4294967295 bit-and ( (hash*prime)&0xffffffff )
 	;
 
-\ max unsigned 32-bit value
-'MAX_INT32 4294967295 make-var
-
 \ ref: https://theartincode.stanis.me/008-djb2/ (djb2 hash)
 \
 \ ( string -- hash )
 : hash-djb2
 	\ for each char in string, hash = hash * 33 + c, with initial value 5381
 	{ ord swap 33 * + } 5381 fold
-	MAX_INT32 bit-and ( keep 32 bits only )
+	MAX-INT32 bit-and ( keep 32 bits only )
 	;
 
 \ CRC32 algorithm
