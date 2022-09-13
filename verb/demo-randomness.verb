@@ -1,0 +1,371 @@
+\ An experimental set of randomness tests to evaluate the quality of random number generators.
+\
+\ These tests are *NOT* based on any established test suite like BigCrush, PractRand, etc., and
+\ they may be even completely bogus from a mathmatical standpoint, but I made tests that seemed
+\ interesting to me. Some are based on ideas in other common tests, but this is in no way meant
+\ to replace those more complete/correct/mature test suites.
+\
+\ And again, NONE of the random number generators nor randomness tests are in any way
+\ meant to be or demonstrate suitability for crypographic applications.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"random" import
+"numeric" import
+
+\ sum values in a list
+: sum-list ( vals -- sum )
+	0 sum!
+	vals { ( x ) sum x + sum! } for-each 
+	sum
+	;
+
+\ get max value of a list	
+: max-list ( vals -- maxval )
+	vals 0 get maxval!
+	vals { ( x ) x maxval max maxval! } for-each
+	maxval
+	;
+	
+\ calculate chi-square statistic, given:
+\	* actuals[i] is the actual (observed) number of samples in each bin
+\	* expected[i] is the expected number of samples in each bin
+\
+\ Ref: https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test
+: chi-square ( actuals expected )
+	@locals [ sum ]
+	0 sum!
+	\ sum of (actuals[i] - expected[i])^2 / expected[i]
+	{ ( i )
+		actuals i get expected i get - dup * expected i get / sum + sum!
+	} 0 1 actuals length for-count
+	sum
+	;
+
+: random-speedtest ( NR )
+	@locals [ i t0 t1 ]
+	
+	"abcdefgh12345678" random-seed
+	0 i!
+	cpu-time t0!
+	@loop
+		i NR >= if >>done
+		random drop
+		i 1 + i! <<loop
+	@done
+	cpu-time t1!
+	NR t1 t0 - / . "randoms generated per second" . CR
+	;
+
+: do-speedtest	
+	"Speedtest ..." . CR
+
+	"* xorshift32 ..." . CR 
+	"xorshift32" RANDOM-MODULE!
+
+	10000 random-speedtest
+		
+	"* mersenne twister ..." . CR 
+	"mersenne" RANDOM-MODULE!
+
+	10000 random-speedtest
+
+	"* xoshiro128++ ..." . CR
+	"xoshiro128++" RANDOM-MODULE!
+
+	10000 random-speedtest
+	
+	"* xoshiro128** ..." . CR
+	"xoshiro128**" RANDOM-MODULE!
+
+	10000 random-speedtest
+	
+	"* worker ..." . CR
+	"worker" RANDOM-MODULE!
+
+	100 random-speedtest
+	
+	"* worker2 ..." . CR
+	"worker2" RANDOM-MODULE!
+
+	1000 random-speedtest	
+	;
+	
+\ claim:
+\	an ideal set of uniform random values over [0,9] should have an equal number of each digit.
+\
+\ this test measures how much the given set of vals deviates from the ideal case,
+\ by using a chi-square test over bins of counts of each digit.
+: test-binned-digits ( vals )
+	@locals [ bins expected ]
+	\ 10 bins, to count digits 0..9
+	[ 0 0 0 0 0 0 0 0 0 0 ] bins!
+	\ there SHOULD be (ideally) len(vals)/10 numbers in each bin
+	[ ] { vals length 10 / append } 10 repeat expected!
+	
+	\ count how many of each digit, putting counts into bins
+	vals
+	{ ( x )
+		bins x
+			bins x get 1 + put!
+	} for-each
+	
+	\ "Vals:" . vals . CR
+	"Bins:" . bins . CR
+	"Sum:" . bins sum-list . CR
+	"Average:" . bins sum-list bins length / . CR
+	"Chi-square:" . bins expected chi-square . CR
+	;
+	
+\ claim:
+\	an ideal set of uniform random values over [0,9] should be equally spread
+\	out over the array, i.e. no clumping up around any particular index value.
+\
+\ this test measures how well EACH digit is spread out over the array.
+: test-spatial-matrix ( vals )
+	@locals [ matrix expected ]
+
+	\ 10 bins, each with 10 columns to count where each digit appears
+	\ within vals (i.e. col 0 = first 10% of vals, col 9 = last 10% of vals)
+	\ this gives a measure of spatial distribution to ensure there isn't
+	\ clumping anywhere
+	[
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		[ 0 0 0 0 0 0 0 0 0 0 ]	
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+		[ 0 0 0 0 0 0 0 0 0 0 ]
+	] matrix!
+
+	{ ( i ) \ i is index, not value
+		@locals [ row col v ]
+		\ row is just the value 0..9
+		vals i get row!
+		\ determine how far along the index is along the total length of vals,
+		\ then convert to a column (0..9) where each col represents 10% of the length
+		i vals length / 10 * floor col!
+		\ increment value at row,col
+		matrix row get col get v!
+		v 1 + v!
+		matrix row get col v put!
+	} 0 1 vals length for-count
+	
+	"Spatial counts:" . CR
+	matrix 
+	{ ( row ) 
+		@locals [ avg ]
+		row . 
+		\ make expected values for EACH row since the counts won't necessarily add up to NR.
+		\ this assumes I want to measure the distribution of the digits that were actually generated,
+		\ instead of the distribution from a perfect set
+		row average avg!
+		[ ] { avg append } 10 repeat expected!
+		row expected chi-square . CR
+	} for-each
+	;
+
+\ claim:
+\	an ideal set of uniform random values over [0,1], when taken as pairs of all {i,i+1} indices,
+\	should have an equal number of these sequences: 00, 01, 10, 11
+\
+\ this test measures how often each of the 2-digit sequences occurs, using a chi-square statistic
+\ to demonstrate amount of deviation from the ideal case
+: test-2sequence ( vals )
+	@locals [ counts n expected ]
+	\ counts for sequences: 00 01 10 11
+	[ 0 0 0 0 ] counts!
+	\ loop for i=0..len(vals)-2 (i.e. all values of i where i & i+1 are valid indices)
+	{ ( i )
+		\ convert vals[i],vals[i+1] to a 2-digit binary value
+		vals i get 2 * vals i 1 + get + n!
+		\ ++counts[n]
+		counts n 
+			counts n get 1 + put!
+	} 0 1 vals length 1 - for-count
+	
+	\ there SHOULD be (ideally) (len(vals)-1)/4 numbers in each bin
+	[ ] { vals length 1 - 4 / append } 4 repeat expected!
+	
+	"* 2-sequence *" . CR
+	"COUNTS:" . counts . CR
+	"EXPECT:" . expected . CR
+	"Chi-square:" . counts expected chi-square . CR
+	;
+
+\ claim:
+\	like above, but taking 3-digits at a time, there should be an equal number of these
+\	sequences: 000, 001, 010, 011, 100, 101, 110, 111
+\
+\ this test determines the occurrences of all 3-sequences and measures deviation from the
+\ ideal case with a chi-square metric
+: test-3sequence ( vals )
+	@locals [ counts n expected ]
+	\ counts for sequences: 000 - 111
+	[ 0 0 0 0 0 0 0 0 ] counts!
+	\ loop for i=0..len(vals)-3 (i.e. all values of i where i, i+1 and i+2 are valid indices)
+	{ ( i )
+		\ convert vals[i],vals[i+1],vals[i+2] to a 3-digit binary value
+		vals i get 4 * vals i 1 + get 2 * + vals i 2 + get + n!
+		\ ++counts[n]
+		counts n 
+			counts n get 1 + put!
+	} 0 1 vals length 2 - for-count
+	
+	\ there SHOULD be (ideally) (len(vals)-2)/8 numbers in each bin
+	[ ] { vals length 2 - 8 / append } 8 repeat expected!
+	
+	"* 3-sequence *" . CR
+	"COUNTS:" . counts . CR
+	"EXPECT:" . expected . CR
+	"Chi-square:" . counts expected chi-square . CR
+	;
+
+\ claim:
+\	the above claim, extended to all 4-digit sequences: 0000, 0001 ... 1111
+\
+\ this test measures the occurances of all 4 digit sequences and evaluates them with a 
+\ chi-square metric
+: test-4sequence ( vals )
+	@locals [ counts n expected ]
+	\ counts for sequences: 0000 - 1111
+	[ 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0  ] counts!
+	\ loop for i=0..len(vals)-4 (i.e. all values of i where i, i+1, i+2 and i+3 are valid indices)
+	{ ( i )
+		\ convert vals[i],vals[i+1],vals[i+2],vals[i+3] to a 4-digit binary value
+		vals i get 8 * vals i 1 + get 4 * + vals i 2 + get 2 * + vals i 3 + get + n!
+		\ ++counts[n]
+		counts n 
+			counts n get 1 + put!
+	} 0 1 vals length 3 - for-count
+	
+	\ there SHOULD be (ideally) (len(vals)-3)/16 numbers in each bin
+	[ ] { vals length 3 - 16 / append } 16 repeat expected!
+	
+	"* 4-sequence *" . CR
+	"COUNTS:" . counts . CR
+	"EXPECT:" . expected . CR
+	"Chi-square:" . counts expected chi-square . CR
+	;
+
+\ given a list of values and a digit [0,9], make a second list which is the distance
+\ between the instances of the given digit. if there are M occurrances of the digit n,
+\ the returned list will be of length M-1
+: make-digit-distances ( vals n -- distances )
+	@locals [ a i ]
+	[ ] distances!
+	null a!	\ a is index of previously found digit 'n'
+	0 i!
+	@loop
+		vals i get void? if >>done
+		vals i get n == if >>got-n 
+	@next
+		i 1 + i! <<loop
+	@got-n 
+		a null? if >>first \ found first 'n'
+		\ calc distance from previous n and add to distances 
+		distances
+			i a - 1 - append!
+		\ .. and set new 'a' 
+		i a!
+		<<next
+	@first
+		\ first 'n', just set a 
+		i a! <<next 
+	@done
+		distances 
+	;
+	
+: do-digit-distance-test ( vals )
+	{ ( n )
+		@locals [ distances ]
+		n .
+		vals n make-digit-distances distances!
+		\ i THINK the distances should be normally distributed??
+		"Average:" . distances average .
+		"Stddev:" . distances stddev.p . CR
+	} 0 1 10 for-count
+	;
+	
+\ generate NR random numbers over [0,1] and do seqeuence testing	
+: do-sequence-tests ( NR )
+	@locals [ vals ]
+	"abcdefgh12345678" random-seed
+	
+	[ ] vals!
+	\ generate NR random values from [0,1]
+	{
+		vals
+			0 2 randint append!		
+	} NR repeat
+
+	vals test-2sequence
+	vals test-3sequence
+	vals test-4sequence
+	;
+	
+\ generate NR random numbers, using the currently selected algorithm, and perform
+\ randomness tests on it
+: do-randomness-tests ( NR )
+	@locals [ vals ]
+	"abcdefgh12345678" random-seed
+	
+	[ ] vals!
+	\ generate NR random values from 0..9
+	{
+		vals
+			0 10 randint append!		
+	} NR repeat
+	
+	vals test-binned-digits
+	vals test-spatial-matrix
+	
+	NR do-sequence-tests
+	
+	vals do-digit-distance-test
+	;
+
+: test-all-random-modules
+	\ dice example from: https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test
+	[ 5 8 9 8 10 20 ] [ 10 10 10 10 10 10 ] chi-square . CR
+	
+	"* xoshiro128++ ..." . CR
+	"xoshiro128++" RANDOM-MODULE!
+	100000 do-randomness-tests
+	
+	"* xoshiro128**" . CR 
+	"xoshiro128**" RANDOM-MODULE!
+	100000 do-randomness-tests
+
+	"* mersenne twister ..." . CR 
+	"mersenne" RANDOM-MODULE!
+	100000 do-randomness-tests
+
+	"* xorshift32 ..." . CR 
+	"xorshift32" RANDOM-MODULE!
+	100000 do-randomness-tests
+
+	"* worker ..." . CR
+	"worker" RANDOM-MODULE!
+	1000 do-randomness-tests
+	
+	"* worker2 ..." . CR
+	"worker2" RANDOM-MODULE!
+	5000 do-randomness-tests
+	
+	;
+	
+\ do-speedtest
+test-all-random-modules
+
+\ 100000 do-sequence-tests
+
+\ [ 1 2 3 0 4 0 0 5 6 7 0 9 10 0 11 12 13 14 ] 0 make-digit-distances . CR
+
+
+
