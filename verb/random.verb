@@ -3,40 +3,140 @@
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
 "numeric" import
+"random-xorshift32" import
+"random-mersenne" import
+"random-xoshiro128++" import
+"random-xoshiro128starstar" import
+"random-worker" import
 
 \ ==================================================================================
 \ this is the public API -- use names without the -xor32 prefix so the algorithm
 \ could be changed later without breaking compatibility
 \ ==================================================================================
 
-\ ** TODO need to bind this dynamically to one of the random* modules 
+\ uncomment one to choose default random module, or set at runtime via code
+\ (if switching modules, remember to re-seed before using)
+\ 'RANDOM-MODULE "xorshift32" make-var
+\ 'RANDOM-MODULE "mersenne" make-var
+'RANDOM-MODULE "xoshiro128++" make-var
+\ 'RANDOM-MODULE "xoshiro128**" make-var
 
-\ returns random number between 0..1 )
+\ seed random number generator -- the seed is generated from the hash value of the
+\ given string. the string should contain at least 128 bits of information
+\ (so i.e. a string of hex chars [= 4 bits each] would need to be length 32.
+: random-seed ( seedtext )
+	@locals [ n vals ]
+		\ "SEEDTEXT:" . seedtext . CR
+	seedtext length 4 < if >>tooshort
+	\ pad to length 4
+	@pad
+		seedtext length 4 mod 0 == if >>divide 
+		seedtext "*" + seedtext! <<pad
+	@divide
+		\ "PADDED:" . seedtext . CR
+	\ divide into 4 chunks of equal length and set vals list from the hashes
+	seedtext length 4 / floor n!
+	[ ] vals!
+	{ seedtext length 0 != }
+		{ vals
+				\ "CHUNK:" . seedtext 0 n slice . CR
+			seedtext 0 n slice fnv-1a-32 append!
+			seedtext n -1 slice seedtext! 
+		} while
+		
+		\ "VALS:" . vals . CR
+	\ decide how to use vals based on active random module
+	RANDOM-MODULE "xorshift32" == if >>xor32
+	RANDOM-MODULE "mersenne" == if >>mersenne
+	RANDOM-MODULE "xoshiro128++" == if >>xos128++
+	RANDOM-MODULE "xoshiro128**" == if >>xos128**
+	RANDOM-MODULE "worker" == if >>worker
+	RANDOM-MODULE "worker2" == if >>worker2
+	"Unknown random module: " RANDOM-MODULE str + error 
+	
+	@xor32
+		\ only need 32 bits of state, so just use first val
+		vals 0 get xorshift32-seed return
+	
+	@mersenne
+		\ 32 bit seed
+		vals 0 get mersenne-random-seed return
+	
+	@xos128++
+		\ uses 128 bits
+		vals unmake drop xoshiro128pp-seed
+			\ "STATE:" . XOSHIRO128PP-STATE . CR 
+		return
+
+	@xos128**
+		\ uses 128 bits
+		vals unmake drop xoshiro128ss-seed return
+	
+	@worker
+		\ not really a seed value - just calculates a calibration constant - but
+		\ fits here in the sense of initializing the generator
+		randworker-calibrate return
+	
+	@worker2
+		\ as with worker above, this is just a calibration
+		init-randworker2 return
+		
+	@tooshort
+		"Seed value too short (must be >= 4), got: " seedtext + error
+	;
+		
+\ returns random number between [0..1)
 \ ( -- n )
-: random xorshift32 MAX_INT32 / ;
+: random 
+	RANDOM-MODULE "xorshift32" == if >>xor32 
+	RANDOM-MODULE "mersenne" == if >>mersenne
+	RANDOM-MODULE "xoshiro128++" == if >>xos128++
+	RANDOM-MODULE "xoshiro128**" == if >>xos128**
+	RANDOM-MODULE "worker" == if >>worker
+	RANDOM-MODULE "worker2" == if >>worker2
+	"Unknown random module: " RANDOM-MODULE str + error 
+	
+	@xor32 
+		xorshift32 MAX-INT32 1 + / return
+		
+	@mersenne
+		mersenne-random-extract MAX-INT32 1 + / return
+		
+	@xos128++
+		xoshiro128pp-next MAX-INT32 1 + / return
+	
+	@xos128**
+		xoshiro128ss-next MAX-INT32 1 + / return
+	
+	@worker
+		randworker-gen32bit MAX-INT32 1 + / return
+		
+	@worker2
+		randworker2-generate-32 MAX-INT32 1 + / return
+	;
 
 \ Returns random integer on the interval [a, b)
 \ ( a b -- n )
-: randint @( a b -- n )
+: randint ( a b -- n )
 	b a - random * a + floor \ floor((b-a)*random + a)
 	;
 
 \ Return random float on the interval [a, b)
-: randfloat @( a b -- n )
+: randfloat ( a b -- n )
 	b a - random * a +
 	;
 	
 \ make nr random integers on interval [a,b) and return as list
-: randint-list @( a b nr -- list )
+: randint-list ( a b nr -- list )
 	[ ] list!
-	@{ list a b randint append list! } nr repeat
+	{ list a b randint append list! } nr repeat
 	list
 	;
 	
 \ make nr random floats on interval [a,b) and return as list
-: randfloat-list @( a b nr -- list )
+: randfloat-list ( a b nr -- list )
 	[ ] list!
-	@{ list a b randfloat append list! } nr repeat
+	{ list a b randfloat append list! } nr repeat
 	list
 	;
 
@@ -61,7 +161,7 @@
 	@return-next BOX-MULLER-NEXT void BOX-MULLER-NEXT!
 	;
 	
-: random-normal-init @( mean sigma )
+: random-normal-init ( mean sigma )
 	mean BOX-MULLER-MEAN!
 	sigma BOX-MULLER-SIGMA!
 	void BOX-MULLER-NEXT!
@@ -70,10 +170,10 @@
 : random-normal box-muller-next ;
 
 \ make nr normal random floats on interval mean+[0,1) with given sigma and return as list
-: random-normal-list @( mean sigma nr -- list )
+: random-normal-list ( mean sigma nr -- list )
 	mean sigma random-normal-init
 	[ ] list!
-	@{ list random-normal append list! } nr repeat
+	{ list random-normal append list! } nr repeat
 	list
 	;
 	

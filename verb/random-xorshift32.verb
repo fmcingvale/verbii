@@ -8,16 +8,10 @@
 \ ported from: https://en.wikipedia.org/wiki/Xorshift
 'XORSHIFT_32_STATE void make-var
 
-\ seed randomizer with seed n
+\ seed randomizer with (32-bit) seed n
 : xorshift32-seed ( n -- )
 	n XORSHIFT_32_STATE!
 	;
-
-\ on startup, set default seed using hash of current date/time as string plus current runtime as string.
-\ there appears to be enough variability in startup time that even running the script multiple times
-\ in the same second will give a unique starting seed (of course, this is all considered non-cryptogrphic
-\ RNG anyways, but at least trying to give better than 1-second resolution on this)
-time-string " " + run-time str + hash-fnv-32 xorshift32-seed
 
 \ returns random n
 : xorshift32 ( -- n )

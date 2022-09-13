@@ -24,7 +24,7 @@
 	} 0 1 vals length for-count
 	;
 
-: test-xoshiro128pp
+: test-xoshiro128++
 	\ list of:
 	\	[ seedlist skip vals ]
 	\
@@ -41,11 +41,3 @@
 	} for-each
 	;
 
-(	
-unittest-init
-
-test-xoshiro128pp-seeding
-test-xoshiro128pp
-
-unittest-summary
-)
