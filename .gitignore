@@ -66,3 +66,4 @@ lib/hashing.verb.b
 lib/unittest.verb.b
 lib/quicksort.verb.b
 lib/paths.verb.b
+reference/xoshiro128starstar
