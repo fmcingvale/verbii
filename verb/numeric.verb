@@ -129,5 +129,55 @@
 	bit-or
 	;
 	
+\ takes any integer and returns lower 32 bits
 : bit-low32 ( val ) val 4294967295 bit-and ;
 
+\ ======================================================================
+\ Statistics
+\ ======================================================================
+
+\ calculate average of a list of numbers
+: average ( numbers -- avg )
+	@locals [ sum i ]
+	0 i!
+	0.0 sum!
+	@loop
+		numbers i get void? if >>done 
+		numbers i get sum + sum!
+		i 1 + i! <<loop
+	@done
+		sum numbers length /
+	;
+
+: *stddev.generic ( numbers NRDIV -- s )
+	@locals [ mean sum i ]
+	numbers average mean!
+	0 sum!
+	0 i!
+	@loop
+		numbers i get void? if >>done-sum
+		numbers i get mean - 2 pow sum + sum!
+		i 1 + i! <<loop
+	@done-sum
+		sum NRDIV / sqrt
+	;
+	
+\ calculate standard deviation (total population) of a list of numbers
+: stddev.p ( numbers -- s )
+	numbers numbers length *stddev.generic
+	;
+	
+\ calculate standard deviation (sample) of a list of numbers
+: stddev.s ( numbers -- s )
+	numbers length 2 < if >>error
+	numbers numbers length 1 - *stddev.generic
+	return
+	@error "Need at least 2 values in stddev.s, got: " numbers repr + error
+	;
+	
+	
+	
+		
+		
+		
+		

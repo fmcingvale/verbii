@@ -271,7 +271,6 @@
 	"#5.9604644775390625e-08" 1 { 2 / } 24 repeat repr expect==
 	;
 	
-
 : test-sin
 	\ 0, 90, 180, 270
 	0 0 sin expect==f 
@@ -367,3 +366,13 @@
 	6350.707917786241 -8.927 4 pow expect==f 
 	1.127506316997835e-11 88.72 -5.62 pow expect==f 
 	;
+	
+: test-avg-stddev
+	@locals [ VALS ]
+	[ 4 -8 -22 12 16 5 -10 1 ] VALS!
+
+	-0.25 VALS average expect==f 
+	11.66994001698380000 VALS stddev.p expect==f 
+	12.47569064793040000 VALS stddev.s expect==f
+	;
+	
