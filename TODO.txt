@@ -123,6 +123,8 @@ Global TODO
 
 ---[ Optimization ]------------------------------------------------------
 
+* stream-reader needs to be redone with named args -- should be significantly faster
+
 * I think the native make-word should be renamed to something like set-word and 
   make-word should be implemented in verbii and perform optimizations at creation time
   examples:
