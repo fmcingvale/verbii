@@ -1,0 +1,158 @@
+\ An experimental module to see if cpu-time variability in running short 
+\ sequences of code can be used as a valid source of randomness.
+\
+\ The idea here is *NOT* to use this as a replacement for one of the
+\ standard random modules. First of all it is 100x slower than the standard
+\ modules. Secondly it likely would fail a number of statistical tests of
+\ randomness (although they perform "OK" under the tests defined in rtest.verb)
+\
+\ Rather, the purpose of this module is to provide seed values for use with
+\ the standard random modules. Therefore, the long-term statistical properties
+\ of these functions don't seem as important since this is meant to only be
+\ run once (or a very few) times.
+\
+\ Typically things like date/time are used as seed values for random generators.
+\ However, high resolution timers are not available cross-platform, and using a 
+\ date/time string with resolution of 1 second seems far too predictable to give good 
+\ seed values.
+\
+\ So, when used as a one-shot seed generator, this seems better to me than a date/time string.
+\
+\ Like other random modules, this is not designed nor intended for use in cryptographic applications.
+\
+\ (NOTE: This CAN be used just like any other random module, but setting RANDOM-MODULE
+\  to "worker" or "worker2", but this is only intended for running the statistical tests.)
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"numeric" import
+
+\ run an empty loop for at least (close to) T seconds, returning number of loops made
+\ as well as the actual runtime taken
+: randworker-empty-loops ( T -- nr time )
+	@locals [ t0 t1 ]
+	cpu-time t0!
+	t0 T + t1!
+	\ run as efficiently as possible -- here is an example of when it is faster to use
+	\ stack values directly than named vars ... named vars are faster once there are
+	\ more values that have to be shuffled on the stack
+	0 ( nr )
+	@loop ( nr )
+		1 + ( ++nr )
+		cpu-time t1 > if >>done 	
+		<<loop
+	@done ( nr )
+		cpu-time t0 - \ return: ( nr time )
+	;
+	
+'RANDOM-WORKER-K null make-var
+
+\ determine calibration constant to pass to digit randomizer
+: randworker-calibrate ( -- )
+	@locals [ nr seconds lps ]
+	"Calibrate:" . CR
+	\ see how many loops can run in 0.1 seconds
+	0.1 randworker-empty-loops seconds! nr!
+	"Nr loops:" . nr . CR
+	"Seconds:" . seconds . CR
+	\ calc loops per second, using actual runtime
+	nr seconds / lps!
+	"Loops/sec:" . lps . CR
+	\ see if that's close to correct over 1024 loops
+	1024 lps / randworker-empty-loops seconds! nr!
+	"Check (~1024 loops) -- Loops:" . nr . "Seconds:" . seconds . CR
+	
+	\ K is calculated loops/sec
+	lps RANDOM-WORKER-K!
+	;
+
+'RANDWORKER-STATE 0 make-var
+
+: randworker-pick-hex-digit ( -- n )
+	@locals [ NRLOOPS ]
+	\ do a timed mod-16 loop, returning the digit that is reached when the time expires.
+	\ i want to wrap around 16 multiple times to better randomize the returned digit.
+	\ use a factor of 16 for now (i.e. 16*16 = 256)
+	768 NRLOOPS!
+	\ 4096 NRLOOPS!
+	@locals [ t0 t1 ]
+	RANDWORKER-STATE n!
+	cpu-time t0!
+	\ calc end time: time it should take to run NRLOOPS of the following loop
+	t0 NRLOOPS RANDOM-WORKER-K / + t1!
+	@loop
+		cpu-time t1 > if >>done
+		n 1 + n! <<loop
+	@done
+		n 16 mod dup RANDWORKER-STATE!
+	;
+	
+\ generate a 32 bit random value
+: randworker-gen32bit ( -- n )
+	0 n!
+	{ n 4 bit-shl randworker-pick-hex-digit bit-or n! } 16 repeat
+	n
+	;
+	
+\ ==============================================
+\ Worker #2
+\ ==============================================
+
+'RANDWORKER2-STATE null make-var
+
+: init-randworker2
+	@locals [ t nr ]
+	\ count # loops that run in 0.1 seconds
+	0.1 randworker-empty-loops t! nr!
+	\ based on that, calc time needed to run 997 loops (largest prime under 1000)
+	\ "INIT NR:" . nr . CR
+	
+	\ ** can try tuning this as well as the string length below to see how it affects the tests
+	t nr / 997 * RANDWORKER2-STATE!
+	;
+
+: randworker2-generate-32 ( -- rand32 )
+	@locals [ t0 t1 nr text s ]
+	
+	\ generate a pseduorandom string of digits 
+	"" text!
+	
+	\ init t0 from STATE
+	RANDWORKER2-STATE t0!
+	
+	\ the loop below generates a string with digits 1..8, so approximately 3 bits per digits.
+	\ i want 32 bits total, so need >= 32/3 = 10.6, so round up to 11
+	\ run while text < 11 chars
+	
+	\ ** ACTUALLY - gives better chi-square performance to scale up **
+	{ text length 88 < }
+	{
+		\ run for t0 time and count loops and actual time
+		t0 randworker-empty-loops t1! nr!
+	
+		\ if t1>t0, reduce t0; if t1<t0, increase t1
+		t0 t1 - t0 + t0!
+		
+		\ first digit of nr is most likely [7,8,9] so remove it to get a better digit distribution
+		nr 100 mod nr!
+		
+		\ generate a float string from nr*t1, but filter out 0's and 9's since they tend to be
+		\ found in runs, and also the '.', to make strings less repetitive and digits only
+		\ nr . nr t1 * str { ( c ) c "0" != c "9" != and c "." != and } filter s! s . CR
+		nr t1 * str { ( c ) c "0" != c "9" != and c "." != and } filter s! 
+		
+		\ also remove first char of s since multiple results can tend to have the same first digit
+		\ .. and append to text
+		text s 1 -1 slice + text!
+	} while
+	
+	\ save state at end
+	t0 RANDWORKER2-STATE!
+	
+	\ "Text:" . text . CR
+	
+	\ instead of using this string directly as an integer, run it through fnv-1a-32 since
+	\ that should distribute the bits better than they are in the string
+	text fnv-1a-32 \ int32-to-hex . CR
+	;
+	
