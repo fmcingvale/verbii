@@ -9,7 +9,7 @@
 \	medium: runs under Lua port in ~30 seconds
 \	large: runs under C++ port in ~30 seconds
 \
-\ these times are obvious relative and based on my machine at the time
+\ these times are obviously relative and based on my machine at the time
 \ the tests were written, but i wanted consistent tests that could be
 \ tracked over time.
 	
