@@ -140,6 +140,51 @@
 \ takes any integer and returns lower 32 bits
 : bit-low32 ( val ) val 4294967295 bit-and ;
 
+\ count number of 1 bits in low 32 bits of x (slow version, meant for generating lookup table)
+: bit-count-ones-slow ( x -- count )
+	@locals [ n ]
+	32 n!
+	0 count!
+	@loop
+		n 0 == if >>done 
+		x 1 bit-and 0 == if >>next 
+		count 1 + count!
+	@next
+		x 1 bit-shr x!
+		n 1 - n! <<loop
+	@done
+		count
+	;
+
+\ generated table for fast counting of 1's
+'BIT-COUNT-ONES-LOOKUP-TABLE null make-var 
+
+\ generate the above table for all 8 bit values
+: generate-bit-count-ones-lookup-table 
+	@locals [ list ]
+	[ ] list!
+	{ ( x )
+		list
+			x bit-count-ones-slow append!
+	} 0 1 256 for-count 
+	
+	list BIT-COUNT-ONES-LOOKUP-TABLE!
+	;
+	
+\ count number of 1 bits in low 32 bits of x (fast version)
+: bit-count-ones ( x -- count )
+	BIT-COUNT-ONES-LOOKUP-TABLE null? not if >>ok
+	generate-bit-count-ones-lookup-table 
+	@ok
+	0 count!
+	\ count each 8-bit segment of x and sum
+	count BIT-COUNT-ONES-LOOKUP-TABLE x 255 bit-and get + count!
+	count BIT-COUNT-ONES-LOOKUP-TABLE x 8 bit-shr 255 bit-and get + count!
+	count BIT-COUNT-ONES-LOOKUP-TABLE x 16 bit-shr 255 bit-and get + count!
+	count BIT-COUNT-ONES-LOOKUP-TABLE x 24 bit-shr 255 bit-and get + count!
+	count
+	;
+	
 \ ======================================================================
 \ Statistics
 \ ======================================================================

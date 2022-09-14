@@ -130,6 +130,20 @@
 	188900976391764 bit-low32 4019746388 expect==
 	;
 	
+: test-bit-count-ones-slow
+	4 "84210000" parse-hex bit-count-ones-slow expect==
+	32 "ffffffff" parse-hex bit-count-ones-slow expect==
+	0 0 bit-count-ones-slow expect==
+	21 "C6F37D9B" parse-hex bit-count-ones-slow expect==
+	;
+	
+: test-zzz-bit-count-ones
+	4 "84210000" parse-hex bit-count-ones expect==
+	32 "ffffffff" parse-hex bit-count-ones expect==
+	0 0 bit-count-ones expect==
+	21 "C6F37D9B" parse-hex bit-count-ones expect==
+	;
+	
 : test-basic-mathops
 	12 12 expect==
 	-34 -34 expect==
