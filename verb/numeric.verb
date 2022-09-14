@@ -129,6 +129,14 @@
 	bit-or
 	;
 	
+\ rotate Y right by K bits
+: bit-rotr ( x k )
+	\ (x >> k) | (x << (32 - k)) 
+	x k bit-shr 
+	x 32 k - bit-shl 
+	bit-or
+	;
+	
 \ takes any integer and returns lower 32 bits
 : bit-low32 ( val ) val 4294967295 bit-and ;
 

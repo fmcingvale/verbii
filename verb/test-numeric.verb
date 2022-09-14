@@ -112,6 +112,17 @@
 	"d9876abc" "9876abcd" parse-hex 28 bit-rotl str.hex expect==
 	"9876abcd" "9876abcd" parse-hex 32 bit-rotl str.hex expect==
 	;
+
+: test-bit-rotr
+	"d9876abc" "9876abcd" parse-hex  4 bit-rotr str.hex expect==
+	"cd9876ab" "9876abcd" parse-hex  8 bit-rotr str.hex expect==
+	"bcd9876a" "9876abcd" parse-hex 12 bit-rotr str.hex expect==
+	"abcd9876" "9876abcd" parse-hex 16 bit-rotr str.hex expect==
+	"6abcd987" "9876abcd" parse-hex 20 bit-rotr str.hex expect==
+	"76abcd98" "9876abcd" parse-hex 24 bit-rotr str.hex expect==
+	"876abcd9" "9876abcd" parse-hex 28 bit-rotr str.hex expect==
+	"9876abcd" "9876abcd" parse-hex 32 bit-rotr str.hex expect==
+	;
 	
 : test-bit-low32
 	\ have to test numerically since e.g. str.hex always truncates to 32 bits
