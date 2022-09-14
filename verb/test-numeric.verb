@@ -137,11 +137,61 @@
 	21 "C6F37D9B" parse-hex bit-count-ones-slow expect==
 	;
 	
-: test-zzz-bit-count-ones
+: test-bit-count-ones
 	4 "84210000" parse-hex bit-count-ones expect==
 	32 "ffffffff" parse-hex bit-count-ones expect==
 	0 0 bit-count-ones expect==
 	21 "C6F37D9B" parse-hex bit-count-ones expect==
+	;
+
+: test-bit-first-one-slow 
+	 0 "80000000" parse-hex bit-first-one-slow expect==
+	 4 "08000000" parse-hex bit-first-one-slow expect==
+	 8 "00800000" parse-hex bit-first-one-slow expect==
+	12 "00080000" parse-hex bit-first-one-slow expect==
+	16 "00008000" parse-hex bit-first-one-slow expect==
+	20 "00000800" parse-hex bit-first-one-slow expect==
+	24 "00000080" parse-hex bit-first-one-slow expect==
+	28 "00000008" parse-hex bit-first-one-slow expect==
+	31 "00000001" parse-hex bit-first-one-slow expect==
+	void "00000000" parse-hex bit-first-one-slow expect==
+	
+	 5 "041ab3fd" parse-hex bit-first-one-slow expect==
+	23 "0000011a" parse-hex bit-first-one-slow expect==
+	27 "0000001a" parse-hex bit-first-one-slow expect==
+	
+	\ test bad value (> 32 bits)
+	\ 8 0000 0000
+	void 34359738368 bit-first-one-slow expect==
+	\ 8 0400 0000
+	9 34363932672 bit-first-one-slow expect==
+	\ 8 0000 0001
+	31 34359738369 bit-first-one-slow expect==
+	;
+
+: test-bit-first-one
+	 0 "80000000" parse-hex bit-first-one expect==
+	 4 "08000000" parse-hex bit-first-one expect==
+	 8 "00800000" parse-hex bit-first-one expect==
+	12 "00080000" parse-hex bit-first-one expect==
+	16 "00008000" parse-hex bit-first-one expect==
+	20 "00000800" parse-hex bit-first-one expect==
+	24 "00000080" parse-hex bit-first-one expect==
+	28 "00000008" parse-hex bit-first-one expect==
+	31 "00000001" parse-hex bit-first-one expect==
+	void "00000000" parse-hex bit-first-one expect==
+	
+	 5 "041ab3fd" parse-hex bit-first-one expect==
+	23 "0000011a" parse-hex bit-first-one expect==
+	27 "0000001a" parse-hex bit-first-one expect==
+	
+	\ test bad value (> 32 bits)
+	\ 8 0000 0000
+	void 34359738368 bit-first-one expect==
+	\ 8 0400 0000
+	9 34363932672 bit-first-one expect==
+	\ 8 0000 0001
+	31 34359738369 bit-first-one expect==
 	;
 	
 : test-basic-mathops

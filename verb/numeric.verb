@@ -185,6 +185,69 @@
 	count
 	;
 	
+\ find first (leftmost) 1 bit in low 32 bits of x (slow version meant for pregenerating table)
+\ returns as index from left side (so high bit == index 0, lowest bit == index 31)
+\
+\ return void if no 1 bits
+: bit-first-one-slow ( x -- index )
+	@locals [ nr ]
+	\ quick test first then don't have to count bits later
+	x bit-low32 0 == if >>zero
+	\ now i know the loop below will end
+	0 index!
+	@loop
+		x 2147483648 bit-and 0 != if >>found 
+		x 1 bit-shl x!
+		index 1 + index!
+		<<loop
+	@found
+		index return
+	@zero 
+		void 
+	;
+		
+\ pregenerated lookup table for all 8 bit values
+'BIT-FIRST-ONE-LOOKUP-TABLE null make-var
+
+\ create lookup table
+: generate-bit-first-one-lookup-table 
+	@locals [ list ]
+	[ ] list!
+	{ ( x ) list
+			x 24 bit-shl bit-first-one-slow append!
+	} 0 1 256 for-count 
+	
+	list BIT-FIRST-ONE-LOOKUP-TABLE!
+	\ "TABLE:" . list . CR
+	;
+	
+\ find first (leftmost) 1 bit in low 32 bits of x (fast version)
+\ returns as index from left side (so high bit == index 0, lowest bit == index 31)
+\
+\ return void if no 1 bits
+: bit-first-one ( x )
+	@locals [ i ]
+	\ generate table if needed
+	BIT-FIRST-ONE-LOOKUP-TABLE null? not if >>ok 
+	generate-bit-first-one-lookup-table
+	@ok
+	\ check from high byte to low byte 
+	BIT-FIRST-ONE-LOOKUP-TABLE x 24 bit-shr 255 bit-and get i!
+	i void != if >>found1
+	BIT-FIRST-ONE-LOOKUP-TABLE x 16 bit-shr 255 bit-and get i!
+	i void != if >>found2
+	BIT-FIRST-ONE-LOOKUP-TABLE x 8 bit-shr 255 bit-and get i!
+	i void != if >>found3
+	BIT-FIRST-ONE-LOOKUP-TABLE x 255 bit-and get i!
+	i void != if >>found4
+	\ no 1 bits
+	void return
+	@found1 i return
+	@found2 i 8 + return
+	@found3 i 16 + return
+	@found4 i 24 + return
+	;	
+	
 \ ======================================================================
 \ Statistics
 \ ======================================================================
