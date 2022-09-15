@@ -247,6 +247,63 @@
 	@found3 i 16 + return
 	@found4 i 24 + return
 	;	
+
+\ count the number of leading ones in the low 32 bits of x	
+: bit-leading-ones-slow ( x -- nr )
+	0 nr!
+	@loop
+		nr 32 == if >>done 
+		\ and with high bit
+		x 2147483648 bit-and 0 == if >>done \ found zero, stop 
+		\ else shift and continue
+		x 1 bit-shl x!
+		nr 1 + nr! <<loop
+	@done
+		nr
+	;
+	
+\ pregenerated lookup table for all 8 bit values
+'BIT-LEADING-ONES-LOOKUP-TABLE null make-var
+
+\ create lookup table
+: generate-bit-leading-ones-lookup-table 
+	@locals [ list ]
+	[ ] list!
+	{ ( x ) list
+			x 24 bit-shl bit-leading-ones-slow append!
+	} 0 1 256 for-count 
+	
+	list BIT-LEADING-ONES-LOOKUP-TABLE!
+	;
+	
+\ count the number of leading ones in the low 32 bits of x (fast version)
+: bit-leading-ones ( x )
+	@locals [ i ]
+	\ generate table if needed
+	BIT-LEADING-ONES-LOOKUP-TABLE null? not if >>ok 
+	generate-bit-leading-ones-lookup-table
+	@ok
+	\ check from high byte to low byte 
+	x 24 bit-shr 255 bit-and dup 255 == if >>2nd \ got all 1's, so continue to 2nd byte
+	\ else, count will stop here
+	BIT-LEADING-ONES-LOOKUP-TABLE swap get return
+	@2nd
+	drop \ from dup above
+	x 16 bit-shr 255 bit-and dup 255 == if >>3rd \ got all 1's, so continue to 3rd byte
+	BIT-LEADING-ONES-LOOKUP-TABLE swap get 8 + return
+	@3rd
+	drop
+	x 8 bit-shr 255 bit-and dup 255 == if >>4th \ got all 1's, so continue to 4th byte
+	BIT-LEADING-ONES-LOOKUP-TABLE swap get 16 + return
+	@4th
+	drop
+	BIT-LEADING-ONES-LOOKUP-TABLE x 255 bit-and get 24 + return
+	;	
+	
+\ count the number of leading zeroes in the low 32 bits of x (fast version)
+: bit-leading-zeros ( x )
+	x bit-not bit-leading-ones
+	;
 	
 \ ======================================================================
 \ Statistics
