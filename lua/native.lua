@@ -732,7 +732,12 @@ function builtin_fnv_1a_32(intr)
 	end
 	intr:push(hash)
 end
-		
+	
+function builtin_time_string(intr)
+	local d = os.date('*t')
+	intr:push(new_String(string.format('%d-%02d-%02d %02d:%02d:%02d', d.year, d.month, d.day, d.hour, d.min, d.sec)))
+end
+
 -- this is global so interpreter can access
 BUILTINS = {
 	["+"] = { {"any","any"}, builtin_add },
@@ -808,7 +813,7 @@ BUILTINS = {
 	["set-allow-overwrite-words"] = { {}, function(intr) ALLOW_OVERWRITING_WORDS = popBool(intr) end},
 	["set-stacktrace-on-exception"] = { {}, function(intr) STACKTRACE_ON_EXCEPTION = popBool(intr) end},
 	
-	["time-string"] = { {}, function(intr) intr:push(new_String(POSIX.strftime("%Y-%m-%d %H:%M:%S",POSIX.localtime()))) end},
+	["time-string"] = { {}, builtin_time_string},
 	["floor"] = { {}, function(intr) intr:pushInt(math.floor(popFloatOrInt(intr))) end},
 
 	["file-write"] = { {}, builtin_file_write},
