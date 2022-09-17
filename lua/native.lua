@@ -593,12 +593,16 @@ end
 
 -- does filename exist AND is a regular file
 function file_exists(filename)
-	local st = POSIX.stat(filename)
-	if st == nil then 
-		return false
-	else 
-		return st["type"] == "regular"
+	-- lua lacks a stat()-type function, so do it like this ...
+	local h = io.open(filename)
+	local r = false
+	if io.type(h) == "file" then
+		r = true
 	end
+	if h ~= nil then
+		io.close(h)
+	end
+	return r
 end
 
 function builtin_file_exists(intr)
