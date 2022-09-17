@@ -20,6 +20,9 @@
 #include <algorithm>
 using namespace std;
 
+// put this here so i don't have to include opcode.hpp in interpreter.hpp
+static int OPCODE_CALLCOUNTS[OPCODE_LAST_PLUS1];
+
 Interpreter::Interpreter() {
 	// stack at bottom, grows downward from SP_EMPTY
 	// (the _EMPTY indexes are not valid storage locations, they indicate that the
@@ -49,6 +52,8 @@ Interpreter::Interpreter() {
 	max_frame_slot_used = 0;
 	nr_total_calls = 0;
 	PROFILE_CALLS = false;
+	for(int i=0; i<OPCODE_LAST_PLUS1; ++i)
+		OPCODE_CALLCOUNTS[i] = 0;
 }
 
 void Interpreter::print_word_calls() {
@@ -88,8 +93,14 @@ void Interpreter::print_stats() {
 	cout << "  Total time: " << diff.count() << endl;
 
 	if(PROFILE_CALLS) {
+		cout << "Opcode calls:" << endl;
+		for(int i=0; i<OPCODE_LAST_PLUS1; ++i) 
+			cout << opcode_code_to_name(i) << ": " << OPCODE_CALLCOUNTS[i] << endl;
+
+		cout << "Top word calls:" << endl;
 		print_word_calls();
 	}
+
 	cout << "* C++:\n";
 #if defined(USE_GCMALLOC)
 	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
@@ -381,10 +392,11 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 			uint16_t B;
 			uint32_t C;
 			opcode_unpack(obj.asOpcode(), code, A, B, C);
-			if(code < 0 || code >= OPCODE_FUNCTIONS.size())
+			if(code < 0 || code >= OPCODE_LAST_PLUS1)
 				throw LangError("Bad opcode: " + to_string(code));
 
 			OPCODE_FUNCTIONS[code](this, A, B, C);
+			++OPCODE_CALLCOUNTS[code];
 			continue;
 		}
 		else if(obj.isSymbol()) {

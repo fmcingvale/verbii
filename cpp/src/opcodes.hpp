@@ -49,6 +49,9 @@ const int OPCODE_JUMP_FORW = 2;
 // C = negative of offset
 const int OPCODE_JUMP_BACK = 3;
 
+// the CURRENT last OPCODE_* number + 1
+const int OPCODE_LAST_PLUS1 = 4;
+
 // since the packed opcode is limited to 52 bits, a *signed* 64-bit value is
 // used so that it is compatible with the native verbii integer type
 int64_t opcode_pack(uint8_t code, uint8_t A, uint16_t B, uint32_t C);
