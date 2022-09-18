@@ -87,3 +87,19 @@
 : crc32-calc ( text -- crc )
 	CRC32-ALL1s text crc32-update CRC32-ALL1s bit-xor
 	;
+	
+\ Adler32 checksum
+\ see e.g. https://en.wikipedia.org/wiki/Adler-32
+: adler32-calc ( text )
+	@locals [ a b i ]
+	1 a!
+	0 b!
+	0 i!
+	@loop
+		text i get void? if >>done 
+		a text i get ord + 65521 mod a!
+		b a + 65521 mod b!
+		i 1 + i! <<loop
+	@done
+		 b 65536 * a +		
+	;
