@@ -1,8 +1,11 @@
-REM Setup build for msvc++
+@echo off
+REM Setup build for Visual Studio
 REM 
-REM To build, open Visual Studio - open this folder (do not have to open a project).
-REM Answer "no" if asked about enabling CMake support.
-REM Run Tools -> Command Line -> Developer Command prompt
-REM Then run this batch file, followed by vcmake.bat
+REM Tested with Visual Studio 2022 Community Edition with CMake installed
+REM 
+REM Start a developer command shell, e.g.:
+REM 	Start -> Visual Studio 2022 -> Developer Command Prompt for VS 2022
+REM 
+REM Run vc-setup.bat followed by vc-make.bat
 cmake -DCMAKE_BUILD_TYPE=Release -S src/ -B bin
 
