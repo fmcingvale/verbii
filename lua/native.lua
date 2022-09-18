@@ -703,7 +703,8 @@ end
 function builtin_atan2(intr)
 	local x = popFloatOrInt(intr)
 	local y = popFloatOrInt(intr)
-	intr:push(new_Float(math.atan2(y, x)))
+	-- called atan in stock lua (5.4.x at least)
+	intr:push(new_Float(math.atan(y, x)))
 end
 
 function builtin_pow(intr)
