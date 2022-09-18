@@ -1287,5 +1287,3 @@
 		filename ".b" + deserialize return
 	;
 	
-( ------ misc ------- )
-\ "System startup time: " . run-time str . CR
