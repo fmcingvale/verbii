@@ -136,12 +136,9 @@
 	
 : run
 	@locals [ T0 T1 C0 C1 ]
-	run-time T0!
 	cpu-time C0!
 	parse-cmdline-and-run
-	run-time T1!
 	cpu-time C1!
-	"    Total run time:" . T1 T0 - . CR
 	"    Total cpu time:" . C1 C0 - . CR
 	;
 

@@ -16,7 +16,7 @@
 
 "numeric" import
 
-'START_TIME run-time make-var
+'START_TIME cpu-time make-var
 
 \ create a 128 bit number, set to zero )
 : n128-new ( -- obj )
@@ -552,7 +552,7 @@ drop
 6 f.setprec
 
 "Script ran in" .
-run-time START_TIME - . "seconds" . CR
+cpu-time START_TIME - . "seconds" . CR
 
 "TOTAL system time" .
-run-time . "seconds" . CR
+cpu-time . "seconds" . CR

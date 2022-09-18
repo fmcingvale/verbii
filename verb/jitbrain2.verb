@@ -271,9 +271,9 @@
 	"Run ..." . CR
 	\ calc just runtime so i can measure performance of generated code, not
 	\ how long the compiler takes to run
-	run-time t0!
+	cpu-time t0!
 	input the-brainf-program
-	run-time t1!
+	cpu-time t1!
 	"* Ran in" . t1 t0 - . "seconds" . CR
 	
 	'the-brainf-program ,,del
@@ -286,11 +286,11 @@
 	SCRIPT-ARGS length 0 == if >>missing-filename 
 	SCRIPT-ARGS 0 get read-brainf-file input! code! comments!
 	"Comment:" . CR comments . CR
-	\ measure run-time only, no parsing time
+	\ measure runtime only, not parsing time
 	"Run:" . CR
-	run-time t0!
+	cpu-time t0!
 	code input jit-run-brain CR
-	run-time t1!
+	cpu-time t1!
 	"Ran in" . t1 t0 - . "seconds" . CR
 	return
 

@@ -235,7 +235,7 @@
 	;
 	
 \ just for fun, show how long script takes to run
-'START_TIME run-time make-var
+'START_TIME cpu-time make-var
 
 "1234" json-parse .S CR
 
@@ -272,5 +272,5 @@ clear
 """ json-parse .S CR
 
 6 f.setprec
-"Script ran in" . run-time START_TIME - . "seconds" . CR
-"TOTAL run time" . run-time . "seconds" . CR
+"Script ran in" . cpu-time START_TIME - . "seconds" . CR
+"TOTAL run time" . cpu-time . "seconds" . CR
