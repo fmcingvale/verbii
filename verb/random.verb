@@ -42,7 +42,7 @@
 				\ "CHUNK:" . seedtext 0 n slice . CR
 			seedtext 0 n slice fnv-1a-32 append!
 			seedtext n -1 slice seedtext! 
-		} while
+		} /while
 		
 		\ "VALS:" . vals . CR
 	\ decide how to use vals based on active random module

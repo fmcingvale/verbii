@@ -144,7 +144,7 @@
 		\ also remove first char of s since multiple results can tend to have the same first digit
 		\ .. and append to text
 		text s 1 -1 slice + text!
-	} while
+	} /while
 	
 	\ save state at end
 	t0 RANDWORKER2-STATE!

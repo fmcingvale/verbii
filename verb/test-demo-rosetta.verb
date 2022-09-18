@@ -172,7 +172,7 @@
 				i toggle-door
 				i increment + i!
 			}
-			while
+			/while
 	} 1 1 100 for-count
 
 	\ make a list of the opened doors
@@ -474,7 +474,7 @@
 		v! u!
 		\ "U V" . u . v . CR
 	}
-	while
+	/while
 	
 	u abs
 	;

@@ -27,9 +27,9 @@
 				list i j * false put list!
 				j 1 + j!
 		}
-		while 
+		/while 
 		i 1 + i!
-	} while
+	} /while
 	
 	\ indexes of true entries (i>=2) are prime 
 	[ ] primes!
@@ -74,7 +74,7 @@
 	{ list length NR < }
 	{
 		list list -1 get list -2 get + append list!
-	} while
+	} /while
 	list
 	;
 	

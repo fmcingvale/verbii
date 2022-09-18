@@ -13,5 +13,16 @@
 	
 ( ------ init ----------- )
 
+\ renaming while to /while to allow while to be syntax later
+'while ,,del
+
+\ run lambda as long as test is true (test is run BEFORE lambda)
+: /while ( test lambda )
+	@loop
+		test call not if >>done
+		lambda call <<loop
+	@done
+	;
+
 ( ------ compiler ------- )
 
