@@ -494,7 +494,7 @@ function builtin_open_as_stdout(intr)
 			FILE_STDOUT = io.stdout
 		end
 	elseif isString(obj) then
-		FILE_STDOUT = io.open(obj.value, "w")
+		FILE_STDOUT = io.open(obj.value, "wb")
 	else
 		error(">>>Unknown arg to open-as-stdout:" .. fmtStackPrint(obj))
 	end
@@ -502,7 +502,7 @@ end
 
 function builtin_file_read(intr)
 	local filename = popString(intr)
-	local f = io.open(filename, "r")
+	local f = io.open(filename, "rb")
 	if f == nil then
 		error(">>>No such file: " .. filename)
 	end
@@ -626,7 +626,7 @@ end
 function builtin_file_write(intr)
 	local text = popString(intr)
 	local filename = popString(intr)
-	local f = io.open(filename, "w")
+	local f = io.open(filename, "wb")
 	f:write(text)
 	f:close()
 end
@@ -634,7 +634,7 @@ end
 function builtin_file_append(intr)
 	local text = popString(intr)
 	local filename = popString(intr)
-	local f = io.open(filename, "a")
+	local f = io.open(filename, "ab")
 	f:write(text)
 	f:close()
 end
