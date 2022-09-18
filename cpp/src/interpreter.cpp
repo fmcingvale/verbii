@@ -76,6 +76,8 @@ void Interpreter::print_word_calls() {
 	}
 }
 
+#include "util.hpp"
+
 void Interpreter::print_stats() {	
 	cout << "\n==== Runtime Stats ====" << endl;
 	cout << "* General:\n";
@@ -88,9 +90,8 @@ void Interpreter::print_stats() {
 	cout << "  Total calls: " << nr_total_calls << endl;
 	cout << "  Tail calls: " << nr_tailcalls << endl;
 	
-	auto current = chrono::steady_clock::now();
-	chrono::duration<double> diff = current - STARTUP_TIME;
-	cout << "  Total time: " << diff.count() << endl;
+	double tottime = current_system_cpu_time() - STARTUP_TIME;
+	cout << "  Total time: " << tottime << endl;
 
 	if(PROFILE_CALLS) {
 		cout << "Opcode calls:" << endl;

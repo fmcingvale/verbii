@@ -102,7 +102,7 @@
 	(print "  Max stack depth: " (- (intr-SP_EMPTY intr) (min-run-SP intr)))
 	(print "  Max callstack depth: " (max-callstack intr))
 	(print "  Tail calls: " (nr-tail-calls intr))
-	(print "  Total time: " (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0))
+	(print "  Total time: " (- (current-system-tick-time) STARTUP_TIME))
 
 	(let ((mstats (memory-statistics)))
 		(print "* Chicken:")

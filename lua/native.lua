@@ -17,14 +17,11 @@ STACKTRACE_ON_EXCEPTION = true
 -- file to write like stdout
 local FILE_STDOUT = io.stdout
 
--- local STARTUP_TIME = SOCKET.gettime()
-
-function get_usec_time()
-	local t = POSIX.gettimeofday()
-	return t["sec"] + t["usec"]/1000000.0
+function current_system_tick_time()
+	return os.clock()
 end
 
-STARTUP_TIME = get_usec_time()
+STARTUP_TIME = current_system_tick_time()
 
 function int_divmod(a, b)
 	-- see notes in C++ implementation of this function.
@@ -802,9 +799,7 @@ BUILTINS = {
 	["bit-shl"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a<<n) & 0xffffffff) end},
 	["bit-shr"] = { {"number","number"}, function(intr,a,n) intr:pushInt((a>>n) & 0xffffffff) end},
 	
-	--["run-time"] = { {}, function(intr) intr:push(new_Float(SOCKET:gettime()-STARTUP_TIME)) end},
-	["run-time"] = { {}, function(intr) intr:push(new_Float(get_usec_time()-STARTUP_TIME)) end},
-	["cpu-time"] = { {}, function(intr) intr:push(new_Float(os.clock())) end},
+	["cpu-time"] = { {}, function(intr) intr:push(new_Float(current_system_tick_time() - STARTUP_TIME)) end},
 	[",,new-dict"] = { {}, function(intr) intr:push(new_Dict()) end},
 
 	-- new words needed for running boot.verb

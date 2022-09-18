@@ -23,7 +23,11 @@ ALLOW_OVERWRITE_WORDS = False
 EXIT_ON_EXCEPTION = True
 STACKTRACE_ON_EXCEPTION = True
 
-STARTUP_TIME = time.time()
+def current_system_tick_time():
+	# process_time() does not appear to be high resolution?
+	return time.process_time_ns() / 1e9
+
+STARTUP_TIME = current_system_tick_time()
 
 # file for writing output (puts, .c)
 FILE_STDOUT = sys.stdout
@@ -632,8 +636,7 @@ BUILTINS = {
 	'bit-shr': ([], builtin_bit_shr),
 	'bit-shl': ([], builtin_bit_shl),
 	
-	'run-time': ([], lambda I: I.push(time.time()-STARTUP_TIME)),
-	'cpu-time': ([], lambda I: I.push(time.process_time())),
+	'cpu-time': ([], lambda I: I.push(current_system_tick_time()-STARTUP_TIME)),
 	',,new-dict': ([], lambda I: I.push({})),
 
 	# new words needed for running boot.verb

@@ -36,7 +36,10 @@
 
 (define FP_STDOUT '()) ; null for normal stdout, non-null for file
 
-(define STARTUP_TIME (current-process-milliseconds))
+(define (current-system-tick-time)
+	(/ (receive (a b) (cpu-time) (+ a b)) 1000.0))
+
+(define STARTUP_TIME (current-system-tick-time))
 
 ; ( xn .. x1 N -- list of N items )
 (define (builtin-make-list intr N)
@@ -632,10 +635,9 @@
 		(list "bit-shl" (list 'i 'i) (lambda (intr a n) (push intr (bitwise-and (arithmetic-shift a n) #xffffffff))))
 		(list "bit-shr" (list 'i 'i) (lambda (intr a n) (push intr (bitwise-and (arithmetic-shift a (- 0 n)) #xffffffff))))
 
-		(list "run-time" '() 
-			(lambda (intr) (push intr (make-lang-float (/ (- (current-process-milliseconds) STARTUP_TIME) 1000.0)))))
 		(list "cpu-time" '()
-			(lambda (intr) (push intr (make-lang-float (/ (receive (a b) (cpu-time) (+ a b)) 1000.0)))))
+			(lambda (intr) (push intr (make-lang-float (- (current-system-tick-time) STARTUP_TIME)))))
+			
 		(list ",,new-dict" '() (lambda (intr) (push intr (new-Dict))))
 
 		(list "file-exists?" (list 's) (lambda (intr name) (push intr (regular-file? name))))

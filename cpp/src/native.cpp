@@ -34,7 +34,7 @@ bool EXIT_ON_EXCEPTION = true;
 // should a stacktrace be printed on exception?
 bool STACKTRACE_ON_EXCEPTION = true;
 
-std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
+double STARTUP_TIME;
 
 #include <iostream>
 #include <malloc.h>
@@ -565,15 +565,8 @@ static void builtin_bit_shl(Interpreter *intr) {
 		intr->push(newInt((((unsigned long)a)<<nr) & MASK32));
 }
 
-static void builtin_run_time(Interpreter *intr) {
-	auto current = chrono::steady_clock::now();
-	chrono::duration<double> diff = current - STARTUP_TIME;
-	intr->push(newFloat(diff.count()));
-}
-
 static void builtin_cpu_time(Interpreter *intr) {
-	intr->push(newFloat(((double)clock())/CLOCKS_PER_SEC));
-
+	intr->push(newFloat(current_system_cpu_time() - STARTUP_TIME));
 }
 
 static void builtin_new_dict(Interpreter *intr) {
@@ -866,7 +859,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 		{ "bit-shr", builtin_bit_shr },
 		{ "bit-shl", builtin_bit_shl },
 
-		{ "run-time", builtin_run_time },
 		{ "cpu-time", builtin_cpu_time },
 		{ ",,new-dict", builtin_new_dict },
 

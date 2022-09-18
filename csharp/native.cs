@@ -14,8 +14,12 @@ class Builtins {
 	public static bool ALLOW_OVERWRITING_WORDS = false;
 	public static bool EXIT_ON_EXCEPTION = true;
 	public static bool STACKTRACE_ON_EXCEPTION = true;
-	public static long STARTUP_TIME_MSEC = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+	public static double STARTUP_TIME = current_system_tick_time();
 	public static StreamWriter FP_STDOUT = StreamWriter.Null;
+
+	public static double current_system_tick_time() {
+		return Process.GetCurrentProcess().TotalProcessorTime.TotalSeconds;
+	}
 
 	public static long popInt(Interpreter intr, string where) {
 		var obj = intr.pop();
@@ -854,10 +858,8 @@ class Builtins {
 		{"bit-shl", bit_shl},
 		{"bit-shr", bit_shr},
 
-		{"run-time",
-			intr => intr.push(new LangFloat(((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0))},
 		{"cpu-time",
-			intr => intr.push(new LangFloat(Process.GetCurrentProcess().TotalProcessorTime.TotalSeconds))},
+			intr => intr.push(new LangFloat(Builtins.current_system_tick_time() - Builtins.STARTUP_TIME))},
 		{",,new-dict", intr => intr.push(new LangDict())},
 
 		{"file-exists?", intr => intr.push(new LangBool(File.Exists(popString(intr,"file-exists?"))))},

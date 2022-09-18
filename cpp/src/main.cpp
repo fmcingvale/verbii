@@ -68,10 +68,9 @@ void deserialize_and_run(Interpreter *intr, string filename) {
 #include "util.hpp"
 
 int main(int argc, char *argv[]) {
-	// under gcc 9.4 this is not necessary -- STARTUP_TIME is set automatically from
-	// its declaration. however it fails under clang 7.5 so init it explicitly ...
-	STARTUP_TIME = chrono::steady_clock::now();
-		
+	// cpu-time will be relative to this
+	STARTUP_TIME = current_system_cpu_time();
+
 	x_mem_init();
 
 	bool SHOW_RUN_STATS = false;

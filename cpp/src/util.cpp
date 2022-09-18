@@ -6,6 +6,7 @@
 #include "util.hpp"
 #include "errors.hpp"
 #include <sys/stat.h>
+#include <time.h>
 using namespace std;
 
 #ifdef _MSC_VER
@@ -40,3 +41,7 @@ int file_size(const string &filename) {
 	return (int)st.st_size;
 }
 #endif
+
+double current_system_cpu_time() {
+	return ((double)clock())/CLOCKS_PER_SEC;
+}

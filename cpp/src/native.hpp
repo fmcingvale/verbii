@@ -7,8 +7,6 @@
 #pragma once
 #include <map>
 #include <string>
-#include <chrono>
-#include <ctime>
 #include "interpreter.hpp"
 #include "langtypes.hpp"
 
@@ -25,7 +23,9 @@ extern bool EXIT_ON_EXCEPTION;
 
 extern bool STACKTRACE_ON_EXCEPTION;
 
-extern std::chrono::time_point<std::chrono::steady_clock> STARTUP_TIME;
+// cpu-time reports the amount of time since verbii started, so
+// this is set immediately upon startup
+extern double STARTUP_TIME;
 
 
 

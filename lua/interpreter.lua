@@ -30,7 +30,7 @@ function Interpreter:print_stats()
 	print("  Max callstack depth: " .. tostring(self.max_callstack))
 	print("  Tail calls: " .. tostring(self.nr_tail_calls))
 	print("  Saved frames: " .. tostring(self.nr_saved_frames))
-	print("  Run time: " .. tostring(get_usec_time()-STARTUP_TIME))
+	print("  Run time: " .. tostring(current_system_tick_time()-STARTUP_TIME))
 	print("* Lua:")
 	print("  Memory in use: " .. tostring(math.ceil(1024*collectgarbage("count"))))
 	

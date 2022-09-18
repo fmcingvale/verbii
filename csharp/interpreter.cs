@@ -106,7 +106,7 @@ public class Interpreter {
 		Console.WriteLine("  Max callstack depth: " + max_callstack);
 		Console.WriteLine("  Saved frames: " + nr_saved_frames);
 		Console.WriteLine("  Tail calls: " + nr_tailcalls);
-		Console.WriteLine("  Total time: " + (((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - Builtins.STARTUP_TIME_MSEC) / 1000.0));
+		Console.WriteLine("  Total time: " + (Builtins.current_system_tick_time() - Builtins.STARTUP_TIME));
 		Console.WriteLine("* Notices:");
 		if(SP != SP_EMPTY)
 			Console.WriteLine("  Stack is not empty! (" + (SP_EMPTY-SP) + " items)");		

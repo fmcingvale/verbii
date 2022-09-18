@@ -9,3 +9,4 @@
 bool file_exists(const std::string &filename);
 int file_size(const std::string &filename);
 
+double current_system_cpu_time();

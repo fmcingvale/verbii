@@ -69,9 +69,9 @@ class Interpreter(object):
 		self.nr_calls = 0
 
 	def print_stats(self):
-		from native import BUILTINS, STARTUP_TIME
+		from native import BUILTINS, STARTUP_TIME, current_system_tick_time
 		from time import time
-
+	
 		print("\n==== Runtime Stats ====")
 		print("* General:")
 		print("  Builtin words: {0}".format(len(BUILTINS)))
@@ -81,7 +81,7 @@ class Interpreter(object):
 		print("  Total calls: {0}".format(self.nr_calls))
 		print("  Tail calls: {0}".format(self.nr_tailcalls))
 		print("  Saved frames: {0}".format(self.nr_saved_frames))
-		print("  Run time: {0:0.1f}".format(time()-STARTUP_TIME))
+		print("  Run time: {0:f}".format(current_system_tick_time()-STARTUP_TIME))
 
 	def heap_alloc(self, nr):
 		"alloc space for nr objects, returning starting index"
