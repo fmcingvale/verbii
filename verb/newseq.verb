@@ -3,6 +3,8 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 \
+\	** THESE HAVE BEEN INCORPORATED INTO init.verb SO THIS FILE IS JUST FOR HISTORICAL REFERENCE **
+\
 \ Demos below show that these versions outperform the existing versions
 \ of these functions anywhere from 20% faster to 3x faster.
 \
