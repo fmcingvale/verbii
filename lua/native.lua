@@ -6,8 +6,6 @@
 	Ported from Python version
 ]]
 require("langtypes")
--- local SOCKET = require("socket") -- luasocket
-local POSIX = require("posix") -- luaposix
 
 -- these are globals
 ALLOW_OVERWRITING_WORDS = false
@@ -697,7 +695,11 @@ function builtin_file_pathsep(intr)
 end
 
 function builtin_getcwd(intr)
-	intr:push(new_String(POSIX.getcwd()))
+	-- from: https://www.programming-idioms.org/idiom/106/get-program-working-directory/3804/lua
+	-- hackish way to avoid having to use external library
+	-- the getenv() is for linux; the popen() part is for windows
+	local dir = os.getenv("PWD") or io.popen("cd"):read()
+	intr:push(new_String(dir))
 end
 
 function builtin_atan2(intr)
