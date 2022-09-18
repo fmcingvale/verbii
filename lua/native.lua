@@ -606,15 +606,6 @@ function builtin_file_exists(intr)
 	intr:push(file_exists(popString(intr)))
 end
 
-function builtin_file_mtime(intr)
-	local filename = popString(intr)
-	if not file_exists(filename) then
-		error(">>>No such file: " .. filename)
-	else
-		intr:push(POSIX.stat(filename)["mtime"])
-	end
-end
-
 function builtin_deserialize(intr)
 	local f = io.open(popString(intr), "r")
 	deserialize_stream(intr, f)
@@ -804,7 +795,6 @@ BUILTINS = {
 
 	-- new words needed for running boot.verb
 	["file-exists?"] = { {}, builtin_file_exists},
-	["file-mtime"] = { {}, builtin_file_mtime},
 	["open-as-stdout"] = { {}, builtin_open_as_stdout},
 	["deserialize"] = { {}, builtin_deserialize},
 	["prompt"] = { {}, builtin_prompt},

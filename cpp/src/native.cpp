@@ -578,15 +578,6 @@ static void builtin_file_exists(Interpreter *intr) {
 	intr->push(newBool(file_exists(filename)));
 }
 
-static void builtin_file_mtime(Interpreter *intr) {
-	auto filename = popString(intr,"file-exists?");
-	struct stat st;
-	if(stat(filename, &st) < 0)
-		throw LangError("No such file: " + string(filename));
-	else
-		intr->push(newInt(st.st_mtime));
-}
-
 // ( filename -- ; open filename and write stdout there )
 // ( void -- ; close any file attached to stdout and reset to normal stdout )
 //
@@ -864,7 +855,6 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 
 			// new words needed for running boot.verb
 		{ "file-exists?", builtin_file_exists },
-		{ "file-mtime", builtin_file_mtime },
 		{ "open-as-stdout", builtin_open_as_stdout },
 		{ "deserialize", builtin_deserialize },
 		{ "prompt", builtin_prompt },

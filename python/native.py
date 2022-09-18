@@ -641,7 +641,6 @@ BUILTINS = {
 
 	# new words needed for running boot.verb
 	'file-exists?': ([], lambda I: I.push(os.path.isfile(popString(I,'file-exists?')))),
-	'file-mtime': ([], lambda I: I.push(os.path.getmtime(popString(I,'file-mtime')))),
 	'open-as-stdout': ([], builtin_open_as_stdout),
 	'deserialize': ([], builtin_deserialize),
 	'prompt': ([], builtin_prompt),

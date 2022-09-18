@@ -641,11 +641,6 @@
 		(list ",,new-dict" '() (lambda (intr) (push intr (new-Dict))))
 
 		(list "file-exists?" (list 's) (lambda (intr name) (push intr (regular-file? name))))
-		(list "file-mtime" (list 's) 
-			(lambda (intr name)
-				(if (regular-file? name)
-					(push intr (vector-ref (file-stat name) 8))
-					(lang-error 'file-mtime "No such file" name))))
 		(list "deserialize" (list 's)
 			(lambda (intr filename)
 				(let ((fileIn (open-input-file filename)))

@@ -863,7 +863,6 @@ class Builtins {
 		{",,new-dict", intr => intr.push(new LangDict())},
 
 		{"file-exists?", intr => intr.push(new LangBool(File.Exists(popString(intr,"file-exists?"))))},
-		{"file-mtime", intr => intr.push(new LangInt(File.GetLastWriteTime(popString(intr,"file-mtime")).Ticks))},
 		{"set-allow-overwrite-words", intr => ALLOW_OVERWRITING_WORDS = popBool(intr,"set-allow-overwrite-words")},
 		{"set-exit-on-exception", intr => EXIT_ON_EXCEPTION = popBool(intr,"set-exit-on-exception")},
 		{"set-stacktrace-on-exception", intr => STACKTRACE_ON_EXCEPTION = popBool(intr,"set-stacktrace-on-exception")},
