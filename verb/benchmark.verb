@@ -23,9 +23,9 @@
 \ time & display how long func runs
 : timeit ( func -- )
 	@locals [ t0 t1 ]
-	run-time t0!
+	cpu-time t0!
 	func call
-	run-time t1!
+	cpu-time t1!
 	"     * Ran in" . t1 t0 - . "seconds" . CR
 	;
 	
@@ -33,9 +33,9 @@
 \ what = text description of what is being calculated / second
 : timeit-ops ( func nrops what -- )
 	@locals [ t0 t1 ]
-	run-time t0!
+	cpu-time t0!
 	func call
-	run-time t1!
+	cpu-time t1!
 	"     * Ran in" . t1 t0 - . "seconds (" .. nrops t1 t0 - / . what .. "/second)" . CR
 	;
 	
@@ -74,7 +74,7 @@
 		\ Lua = 22 seconds
 		[ [ "medium" ] { { { ( i ) i gen-ith-fibonacci-cond . } 0 1 23 for-count CR } 23 "numbers" timeit-ops } ]
 		\ C++ = 23 seconds
-		[ [ "large" ] { { { ( i ) i gen-ith-fibonacci-cond . } 0 1 29 for-count CR } 29 "numbers" timeit } ]
+		[ [ "large" ] { { { ( i ) i gen-ith-fibonacci-cond . } 0 1 29 for-count CR } 29 "numbers" timeit-ops	 } ]
 		[ else { "Bad BENCH-SIZE: " BENCH-SIZE + error } ]
 	] case
 	
@@ -161,22 +161,41 @@
 	get-all-benchmarks
 	\ total time should not include any script startup time, etc.,
 	\ so measure it here ...
-	run-time t0!
+	cpu-time t0!
 	{ run-benchmark-by-name } for-each
-	run-time t1!
+	cpu-time t1!
+	unittest-summary
+	"    Total time:" . t1 t0 - . "seconds" . CR
+	;
+	
+: run-one-benchmark ( namestring )
+	@locals [ t0 t1 ]
+	unittest-init
+
+	\ total time should not include any script startup time, etc.,
+	\ so measure it here ...
+	cpu-time t0!
+	'benchmark- namestring string->symbol + run-benchmark-by-name
+	cpu-time t1!
 	unittest-summary
 	"    Total time:" . t1 t0 - . "seconds" . CR
 	;
 	
 : show-usage
 	"Usage: verbii benchmark.verb -- [small|medium|large]" . CR 
+	"       verbii benchmark.verb -- [small|medium|large] testname" . CR
 	;
 	
 SCRIPT-ARGS length 
 [
 	[ [ 0 ] { show-usage } ]
-	[ [ 1 ] {
+	[ [ 1 2 ] {
 			SCRIPT-ARGS 0 get BENCH-SIZE!
+			SCRIPT-ARGS 1 get void? if >>run-all
+			\ run just the specified test
+			SCRIPT-ARGS 1 get run-one-benchmark
+			return
+			@run-all
 			run-all-benchmarks
 			} ]
 	[ else { show-usage } ]
