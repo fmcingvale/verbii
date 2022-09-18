@@ -10,6 +10,14 @@ Python:
 	* cd verb
 	* ..\python\verbii.bat run-all-tests.verb
 	
+Lua:
+	* If you DO NOT have Lua installed, see extern/lua/README-FIRST.txt 
+		(requires Visual Studio, any recent edition should be fine).
+	* cd to verbii source directory
+	* setenv.bat
+	* cd verb
+	* ..\lua\verbii.bat run-all-tests.verb
+	
 C#:
 	* Get .NET SDK x64 6.0 from https://dotnet.microsoft.com/en-us/download
 	* cd to verbii source directory

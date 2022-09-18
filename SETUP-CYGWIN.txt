@@ -56,27 +56,21 @@ Chicken:
 	$ cd ../verb
 	$ ../chicken/verbii run-all-tests.verb
 
+Lua:
+----
 
-
+	Any Lua 5.3 or 5.4 should work fine.
+	
+	If for some reason you want to build your own, see: extern/lua/README-FIRST.txt
+	
+	Test:
+	$ cd verb
+	$ ../lua/verbii run-all-tests.verb
+	
 ====================================================================================
  Currently broken -- NOTE -- these are not broken PORTS, they are broken build tools
  under mingw (i.e. the builds that break are not verbii but 3rd party sources)
 ====================================================================================
-
-Lua:	
-	** BROKEN ** luarocks can't find luaposix **
-	** Tried building my own lua 5.4.x with same result **
-	
-	* lua (5.3.6)
-	* liblua-devel (5.3.6)
-	* unzip
-	
-Cygwin doesn't seem to have luarocks, so:
-	* wget https://luarocks.org/releases/luarocks-3.9.1.tar.gz
-	* tar zxpf luarocks-3.9.1.tar.gz
-	* cd luarocks-3.9.1
-	* ./configure && make && make install
-		
 	
 C#:
 	* No semi-easy way to install mono under cygwin 

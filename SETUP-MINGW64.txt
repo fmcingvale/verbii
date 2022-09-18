@@ -48,6 +48,11 @@ General:
 	$ cd ../verb
 	$ ../csharp/verbii run-all-tests.verb
 	
+* Lua:
+
+	Any Lua 5.3.x or 5.4.x should work fine.
+	
+	If you want/need to build your own, Lua should build fine from source, but extern/lua/README-FIRST.txt is an alternative.
 
 * Chicken:
 	
@@ -82,29 +87,3 @@ General:
 		$ cd verb
 		$ ..\chicken\verbii.bat run-all-tests.verb		
 	
-====================================================================================
- Currently broken -- NOTE -- these are not broken PORTS, they are broken build tools
- under mingw (i.e. the builds that break are not verbii but 3rd party sources)
-====================================================================================
-
-* Lua:
-
-	** BROKEN **
-
-	$ wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
-	$ tar zxf lua-5.4.4.tar.gz
-	$ cd lua-5.4.4
-	$ make PLAT=mingw
-	$ make PLAT=mingw install
-	
-	Install leaves out a file ...
-	$ cp src/lua54.dll /usr/local/bin/
-	
-	$ wget https://luarocks.org/releases/luarocks-3.9.1.tar.gz
-	$ tar zxf luarocks-3.9.1.tar.gz
-	$ cd luarocks-3.9.1
-	$ ./configure && make && sudo make install
-	
-
- 
-

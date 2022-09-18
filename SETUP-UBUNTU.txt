@@ -38,28 +38,9 @@ Python:
 Lua:
 ----
 
-	The default version of lua-posix is for lua 5.3, but I want lua 5.4, so I build my own:
-
-	*NOTE* Do ALL builds from a directory OUTSIDE of the verbii source tree.
-
-	* wget https://www.lua.org/ftp/lua-5.4.4.tar.gz
-	* tar zxf lua-5.4.4.tar.gz
-	* cd lua-5.4.4
-	* make
-	* sudo make install
-
-	Install luarocks per: https://luarocks.org/#quick-start
-
-	What I did ...
-	  * wget https://luarocks.org/releases/luarocks-3.9.1.tar.gz
-	  * tar zxpf luarocks-3.9.1.tar.gz
-	  * cd luarocks-3.9.1
-	  * ./configure && make && sudo make install
-
-	  NOTE: REMOVE built directory BEFORE running 'luarocks install', else it will 
-	  install to the built directory.
-
-	* sudo luarocks install luaposix
+	Any Lua 5.3 or 5.4 should work fine.
+	
+	If for some reason you want to build your own, see: extern/lua/README-FIRST.txt
 	
 	Test:
 	$ cd verb
