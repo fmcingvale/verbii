@@ -194,7 +194,7 @@
 	31 34359738369 bit-first-one expect==
 	;
 	
-: test-zzz-bit-leading-ones-slow
+: test-bit-leading-ones-slow
 	32 "ffffffff" parse-hex bit-leading-ones-slow expect==
 	25 "ffffff8f" parse-hex bit-leading-ones-slow expect==
 	20 "fffff7ff" parse-hex bit-leading-ones-slow expect==
@@ -206,7 +206,7 @@
 	 0 "7fffffff" parse-hex bit-leading-ones-slow expect==
 	;
 
-: test-zzz-bit-leading-ones
+: test-bit-leading-ones
 	32 "ffffffff" parse-hex bit-leading-ones expect==
 	25 "ffffff8f" parse-hex bit-leading-ones expect==
 	20 "fffff7ff" parse-hex bit-leading-ones expect==
@@ -218,7 +218,7 @@
 	 0 "7fffffff" parse-hex bit-leading-ones expect==
 	;
 	
-: test-zzz-bit-leading-zeros
+: test-bit-leading-zeros
 	32 "00000000" parse-hex bit-leading-zeros expect==
 	31 "00000001" parse-hex bit-leading-zeros expect==
 	24 "0000008f" parse-hex bit-leading-zeros expect==
@@ -464,6 +464,20 @@
 	14.442702213911256 1872345 log expect==f 
 	299.322976849677283 987e127 log expect==f
 	-1.6460323971461603 0.1928134 log expect==f
+	;
+
+: test-log10
+	3 1000 log10 expect==f 
+	9 1e9 log10 expect==f 
+	0 1 log10 expect==f 
+	5.26229665005705653 182934.93485 log10 expect==f
+	;
+	
+: test-log2
+	14 16384 log2 expect==f 
+	31 2147483648 log2 expect==f
+	0 1 log2 expect==f 
+	31.5722018482939164	3192859334 log2 expect==f
 	;
 	
 : test-exp 

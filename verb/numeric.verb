@@ -25,6 +25,15 @@
 'FLOAT-MIN -1.7976931348623149E+308 make-const
 
 \ ( n -- ; get n as binary string )
+\ log(10), for changing base below
+'LOGN_10 2.30258509299404568 make-var
+\ log(2), for changing base below
+'LOGN_2  0.69314718055994531 make-var
+
+\ log, base 10
+: log10 ( v -- L ) 	v log LOGN_10 / ;
+\ log, base 2
+: log2 ( v -- L ) v log LOGN_2 / ;
 : str.bin
 	32 "" -rot
 	@loop ( s n i )
