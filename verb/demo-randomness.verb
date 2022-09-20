@@ -390,26 +390,51 @@
 		p prob %diff 1 fmt-percent "%" + 6 str.w . CR
 	} apply-for-each
 	;
+	
+\ count total number of 1 and 0 bits in vals -- should be 50/50
+: do-count-bits-test ( vals )
+	@locals [ count0 count1 ]
+	0 count0!
+	0 count1!
+	vals
+	{ ( x )
+		@locals [ n ]
+		x bit-count-ones n!
+		count1 n + count1!
+		count0 32 n - + count0!
+	} for-each
+	"Count bits (0:1):" .
+		count0 vals length 32 * / 1 fmt-percent "%" + . count0 .
+		":" .
+		count1 vals length 32 * / 1 fmt-percent "%" + . count1 . CR
+	;
 
 \ generate NR random numbers, using the currently selected algorithm, and perform
 \ randomness tests on it
 : do-randomness-tests ( NR )
-	@locals [ vals ]
+	@locals [ int32vals fpvals vals10 ]
 	null random-seed
 	
-	[ ] vals!
-	\ generate NR random values from 0..9
+	\ generate NR random 32 bit values
+	[ ] int32vals!
 	{
-		vals
-			0 10 randint append!		
+		int32vals random-int32 append!		
 	} NR repeat
 	
-	vals test-binned-digits
-	vals test-spatial-matrix
+	\ take those values and make floats [0..1)
+	int32vals { ( x ) x MAX-INT32 1 + / } map fpvals!
+	
+	\ make ints on [0..9]
+	fpvals { ( x ) x 10 * floor } map vals10!
+	
+	vals10 test-binned-digits
+	vals10 test-spatial-matrix
 	
 	NR do-sequence-tests
 	
-	vals do-digit-distance-test
+	vals10 do-digit-distance-test
+	
+	int32vals do-count-bits-test
 	
 	NR 10 / do-birthday-sequence
 	;
@@ -420,7 +445,7 @@
 	
 	"* === xoshiro128++ ======================================================" . CR
 	"xoshiro128++" RANDOM-MODULE!
-	100000 do-randomness-tests
+	200000 do-randomness-tests
 	
 	"* === xoshiro128** ======================================================" . CR 
 	"xoshiro128**" RANDOM-MODULE!
@@ -445,7 +470,7 @@
 	"* === worker3 ===========================================================" . CR
 	"worker3" RANDOM-MODULE!
 	10000 do-randomness-tests
-
+	
 	;
 		
 \ "xoshiro128++" RANDOM-MODULE!
