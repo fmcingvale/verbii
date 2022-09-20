@@ -118,9 +118,8 @@
 		"Seed value too short (must be >= 4), got: " seedtext + error
 	;
 		
-\ returns random number between [0..1)
-\ ( -- n )
-: random 
+\ returns random 32 bit integer
+: random-int32 ( -- n )
 	RANDOM-MODULE "xorshift32" == if >>xor32 
 	RANDOM-MODULE "mersenne" == if >>mersenne
 	RANDOM-MODULE "xoshiro128++" == if >>xos128++
@@ -131,26 +130,30 @@
 	"Unknown random module: " RANDOM-MODULE str + error 
 	
 	@xor32 
-		xorshift32 MAX-INT32 1 + / return
+		xorshift32 return
 		
 	@mersenne
-		mersenne-random-extract MAX-INT32 1 + / return
+		mersenne-random-extract return
 		
 	@xos128++
-		xoshiro128pp-next MAX-INT32 1 + / return
+		xoshiro128pp-next return
 	
 	@xos128**
-		xoshiro128ss-next MAX-INT32 1 + / return
+		xoshiro128ss-next return
 	
 	@worker
-		randworker-gen32bit MAX-INT32 1 + / return
+		randworker-gen32bit return
 		
 	@worker2
-		randworker2-generate-32 MAX-INT32 1 + / return
+		randworker2-generate-32 return
 		
 	@worker3
-		randworker3-generate-32 MAX-INT32 1 + / return
+		randworker3-generate-32 return
 	;
+
+\ returns random number between [0..1)
+\ ( -- n )
+: random ( -- n ) random-int32 MAX-INT32 1 + / ;
 
 \ Returns random integer on the interval [a, b)
 \ ( a b -- n )
