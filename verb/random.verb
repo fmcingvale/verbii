@@ -21,7 +21,7 @@
 'RANDOM-MODULE "xoshiro128++" make-var
 \ 'RANDOM-MODULE "xoshiro128**" make-var
 
-\ seed random number generator -- the seed is generated from the hash value of the
+\ seed random number generator -- the seed is generated from the fnv-1a hash value of the
 \ given string. the string should contain at least 128 bits of information
 \ (so i.e. a string of hex chars [= 4 bits each] would need to be length 32.
 : random-seed ( seedtext )
@@ -52,6 +52,7 @@
 	RANDOM-MODULE "xoshiro128**" == if >>xos128**
 	RANDOM-MODULE "worker" == if >>worker
 	RANDOM-MODULE "worker2" == if >>worker2
+	RANDOM-MODULE "worker3" == if >>worker3
 	"Unknown random module: " RANDOM-MODULE str + error 
 	
 	@xor32
@@ -80,6 +81,10 @@
 	@worker2
 		\ as with worker above, this is just a calibration
 		init-randworker2 return
+	
+	@worker3
+		\ nothing to do -- will init itself when needed
+		return
 		
 	@tooshort
 		"Seed value too short (must be >= 4), got: " seedtext + error
@@ -94,6 +99,7 @@
 	RANDOM-MODULE "xoshiro128**" == if >>xos128**
 	RANDOM-MODULE "worker" == if >>worker
 	RANDOM-MODULE "worker2" == if >>worker2
+	RANDOM-MODULE "worker3" == if >>worker3
 	"Unknown random module: " RANDOM-MODULE str + error 
 	
 	@xor32 
@@ -113,6 +119,9 @@
 		
 	@worker2
 		randworker2-generate-32 MAX-INT32 1 + / return
+		
+	@worker3
+		randworker3-generate-32 MAX-INT32 1 + / return
 	;
 
 \ Returns random integer on the interval [a, b)

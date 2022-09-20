@@ -4,7 +4,8 @@
 \ The idea here is *NOT* to use this as a replacement for one of the
 \ standard random modules. First of all it is 100x slower than the standard
 \ modules. Secondly it likely would fail a number of statistical tests of
-\ randomness (although they perform "OK" under the tests defined in rtest.verb)
+\ randomness (although "worker3" performs OK in demo-randomness.verb; worker 
+\ and worker2 are pretty bad)
 \
 \ Rather, the purpose of this module is to provide seed values for use with
 \ the standard random modules. Therefore, the long-term statistical properties
@@ -21,7 +22,7 @@
 \ Like other random modules, this is not designed nor intended for use in cryptographic applications.
 \
 \ (NOTE: This CAN be used just like any other random module, but setting RANDOM-MODULE
-\  to "worker" or "worker2", but this is only intended for running the statistical tests.)
+\  to "worker", "worker2" or "worker3", but this is only intended for running the statistical tests.)
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
@@ -155,4 +156,95 @@
 	\ that should distribute the bits better than they are in the string
 	text fnv-1a-32 \ int32-to-hex . CR
 	;
+	
+\ =================================================================
+\ Worker #3 - the work is based on computing hashcashes
+\ =================================================================
+
+\ this is a standard hashcash type function:
+\ 	find a string that starts with 'prefix' and produces an fnv-1a 
+\ 	hash with nrbits leading zero bits
+: do-hash-work ( prefix nrbits -- count )
+	@locals [ hash mask ]
+	0 count!
+	\ create mask with nrbits leading 1s
+	0 mask!
+	{ mask 1 bit-shr 2147483648 bit-or mask! } nrbits repeat
+	\ "MASK:" . mask int32-to-hex . CR
+	@loop
+		prefix count str + fnv-1a-32
+		\ see if leading nrbits are zero
+		mask bit-and 0 == if >>done
+		\ else ++counter and continue searching
+		count 1 + count! <<loop
+	@done
+		\ prefix count str + dup . CR
+		\ fnv-1a-32 int32-to-hex . CR
+		count
+	;
+
+\ now, use the variability of the cpu-time taken by the above function to 
+\ create a semi-random string of hex chars.
+\
+\ repeatedly run do-hash-work, extending the string with the cpu-time
+\ taken on each iteration, then hashing that, until the string is EXTENDED by 
+\ at least LEN hex chars. returns the extension (does NOT include prefix)
+\
+\ the returned extension is the randomly generated string
+: do-hash-work-compounding ( prefix nrbits LEN -- extension )
+	@locals [ t1 t0 ]
+	"" extension!
+	@loop
+		extension length LEN >= if >>done 
+		cpu-time t0!
+		prefix extension + nrbits do-hash-work drop \ . CR
+		cpu-time t1!
+		\ "TIME:" . t1 t0 - . CR
+		\ EXTEND string by fnv-1a hash of: extension + cpu-time
+		\ 	* remove 0,9,. from cpu-time string since those repeat a lot
+		extension 
+			extension t1 t0 - str string-remove-0-9-dot + fnv-1a-32 int32-to-hex + extension!
+		<<loop
+	@done
+		extension
+	;
+	
+\ remove "0", "9" and "." from text
+: string-remove-0-9-dot ( text -- out )
+	text { ( c ) c "0" != c "9" != c "." != and and } filter
+	;
+
+'RANDWORKER3-COUNTER 0 make-var
+
+\ the prefix is NOT part of the final random string, however, it gets hashed into
+\ the final string, so try and make it somewhat unique using the date + cpu-time + counter
+: randworker3-make-starting-prefix
+	RANDWORKER3-COUNTER 1 + RANDWORKER3-COUNTER!
+	time-string "*" + cpu-time str string-remove-0-9-dot + ":" + RANDWORKER3-COUNTER str + ":" +
+	;
+
+\ hex string that is used 8 chars at a time to make a 32 bit integer
+'RANDWORKER3-STATE null make-var
+	
+\ compute the next 16 values and cache them -- computing 16 at a time allows a lot
+\ more mixing of hash values than if i generated 1 at a time
+: randworker3-fill-state
+	randworker3-make-starting-prefix 8 ( nrbits ) 8 16 * ( LEN ) do-hash-work-compounding
+	RANDWORKER3-STATE!
+	;
+
+\ call this to generate 32 bit random integers. there is no 'seed' function to call.
+: randworker3-generate-32
+	\ need 8 hex chars to make 32 bit integer
+	RANDWORKER3-STATE null? if >>fill
+	RANDWORKER3-STATE length 8 >= if >>ok 
+	@fill
+	\ refill state 
+	randworker3-fill-state
+	@ok
+	\ take next 8 hex chars and make integer
+	RANDWORKER3-STATE 0 8 slice parse-hex 
+	RANDWORKER3-STATE 8 -1 slice RANDWORKER3-STATE!
+	;
+	
 	
