@@ -12,6 +12,7 @@
 
 "random" import
 "numeric" import
+"unittest" import
 
 \ sum values in a list
 : sum-list ( vals -- sum )
@@ -89,6 +90,11 @@
 	"worker2" RANDOM-MODULE!
 
 	1000 random-speedtest	
+
+	"* worker3 ..." . CR
+	"worker3" RANDOM-MODULE!
+
+	1000 random-speedtest	
 	;
 	
 \ claim:
@@ -111,10 +117,10 @@
 	} for-each
 	
 	\ "Vals:" . vals . CR
-	"Bins:" . bins . CR
-	"Sum:" . bins sum-list . CR
-	"Average:" . bins sum-list bins length / . CR
-	"Chi-square:" . bins expected chi-square . CR
+	"    Bins:" . bins . CR
+	"    Sum:" . bins sum-list . CR
+	"    Average:" . bins sum-list bins length / . CR
+	"    Chi-square (< 14.864):" . bins expected chi-square . CR
 	;
 	
 \ claim:
@@ -156,17 +162,20 @@
 		matrix row get col v put!
 	} 0 1 vals length for-count
 	
-	"Spatial counts:" . CR
+	8 f.setprec 
+	
+	"Spatial counts (each < 14.864):" . CR
 	matrix 
 	{ ( row ) 
 		@locals [ avg ]
-		row . 
+		\ row . 
+		"    [" . row { 5 str.w . } for-each "]" .
 		\ make expected values for EACH row since the counts won't necessarily add up to NR.
 		\ this assumes I want to measure the distribution of the digits that were actually generated,
 		\ instead of the distribution from a perfect set
 		row average avg!
 		[ ] { avg append } 10 repeat expected!
-		row expected chi-square . CR
+		row expected chi-square 10 str.w . CR
 	} for-each
 	;
 
@@ -193,9 +202,9 @@
 	[ ] { vals length 1 - 4 / append } 4 repeat expected!
 	
 	"* 2-sequence *" . CR
-	"COUNTS:" . counts . CR
-	"EXPECT:" . expected . CR
-	"Chi-square:" . counts expected chi-square . CR
+	\ "COUNTS:" . counts . CR
+	\ "EXPECT:" . expected . CR
+	"    Chi-square (< 6.251):" . counts expected chi-square . CR
 	;
 
 \ claim:
@@ -221,9 +230,9 @@
 	[ ] { vals length 2 - 8 / append } 8 repeat expected!
 	
 	"* 3-sequence *" . CR
-	"COUNTS:" . counts . CR
-	"EXPECT:" . expected . CR
-	"Chi-square:" . counts expected chi-square . CR
+	\ "COUNTS:" . counts . CR
+	\ "EXPECT:" . expected . CR
+	"    Chi-square (< 12.017):" . counts expected chi-square . CR
 	;
 
 \ claim:
@@ -248,9 +257,9 @@
 	[ ] { vals length 3 - 16 / append } 16 repeat expected!
 	
 	"* 4-sequence *" . CR
-	"COUNTS:" . counts . CR
-	"EXPECT:" . expected . CR
-	"Chi-square:" . counts expected chi-square . CR
+	\ "COUNTS:" . counts . CR
+	\ "EXPECT:" . expected . CR
+	"    Chi-square (< 22.307):" . counts expected chi-square . CR
 	;
 
 \ given a list of values and a digit [0,9], make a second list which is the distance
@@ -282,13 +291,16 @@
 	;
 	
 : do-digit-distance-test ( vals )
+	"* digit distances" . CR
+	8 f.setprec
+		
 	{ ( n )
 		@locals [ distances ]
-		n .
+		"    " . n 3 str.w .
 		vals n make-digit-distances distances!
 		\ i THINK the distances should be normally distributed??
-		"Average:" . distances average .
-		"Stddev:" . distances stddev.p . CR
+		"    Average:" . distances average 10 str.w .
+		"    Stddev:" . distances stddev.p 10 str.w . CR
 	} 0 1 10 for-count
 	;
 	
@@ -309,6 +321,76 @@
 	vals test-4sequence
 	;
 	
+\ pick random days on [1,365] and return nr of tries before a duplicate was found
+: do-birthday-test ( -- nr )
+	@locals [ days i ]
+	
+	\ make a 365 element list of zeroes
+	[ ] days!
+	{ days 0 append! } 365 repeat
+	0 nr!
+	@loop
+		0 365 randint i! \ pick random day, as index
+		\ "I:" . i . CR
+		days i get 0 != if >>done \ done when i hit an entry twice 
+		days i 1 put!
+		nr 1 + nr! <<loop
+	@done
+		nr
+	;
+	
+\ apply-for-each -- like for-each, except:
+\	* only works for lists
+\	* each list element must be a list which is applied to the passed function as its arguments
+: apply-for-each ( seq func -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		seq i get unmake drop func call
+		i 1 + i! <<loop
+	@done 
+		;
+	
+: do-birthday-sequence ( NR )
+	@locals [ counts n ] 
+		
+	"* birthday test" . CR
+
+	"    #        prob     expect   %diff" . CR
+	\ make a 365 length list of 0s
+	[ ] counts!
+	{ counts 0 append! } 365 repeat 
+	
+	{ 	do-birthday-test n!
+		counts n
+			counts n get 1 + put!
+	} NR repeat
+	
+	\ list of:
+	\	[ #elements cumulative% ]
+	\ see table of values at e.g.: https://en.wikipedia.org/wiki/Birthday_problem
+	[
+		[ 5 0.027 ]
+		[ 10 0.117 ]
+		[ 20 0.411 ]
+		[ 23 0.507 ]
+		[ 30 0.706 ]
+		[ 40 0.891 ]
+		[ 50 0.970 ]
+		[ 60 0.994 ]
+	]
+	{
+		( nr prob )
+		@locals [ p ]
+		counts 0 nr slice sum-list NR / p!
+		8 f.setprec
+		"    " . nr 2 str.w . p 10 str.w . prob 10 str.w . 
+		4 f.setprec
+		p prob %diff 1 fmt-percent "%" + 6 str.w . CR
+	} apply-for-each
+	;
+
 \ generate NR random numbers, using the currently selected algorithm, and perform
 \ randomness tests on it
 : do-randomness-tests ( NR )
@@ -328,38 +410,49 @@
 	NR do-sequence-tests
 	
 	vals do-digit-distance-test
+	
+	NR 10 / do-birthday-sequence
 	;
 
 : test-all-random-modules
 	\ dice example from: https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test
 	[ 5 8 9 8 10 20 ] [ 10 10 10 10 10 10 ] chi-square . CR
 	
-	"* xoshiro128++ ..." . CR
+	"* === xoshiro128++ ======================================================" . CR
 	"xoshiro128++" RANDOM-MODULE!
 	100000 do-randomness-tests
 	
-	"* xoshiro128**" . CR 
+	"* === xoshiro128** ======================================================" . CR 
 	"xoshiro128**" RANDOM-MODULE!
 	100000 do-randomness-tests
-
-	"* mersenne twister ..." . CR 
+	
+	"* === mersenne twister ==================================================" . CR 
 	"mersenne" RANDOM-MODULE!
 	100000 do-randomness-tests
-
-	"* xorshift32 ..." . CR 
+	
+	"* === xorshift32 ========================================================" . CR 
 	"xorshift32" RANDOM-MODULE!
 	100000 do-randomness-tests
-
-	"* worker ..." . CR
+	
+	"* === worker1 ===========================================================" . CR
 	"worker" RANDOM-MODULE!
 	1000 do-randomness-tests
 	
-	"* worker2 ..." . CR
+	"* === worker2 ===========================================================" . CR
 	"worker2" RANDOM-MODULE!
 	5000 do-randomness-tests
 	
+	"* === worker3 ===========================================================" . CR
+	"worker3" RANDOM-MODULE!
+	10000 do-randomness-tests
+
 	;
-	
+		
+\ "xoshiro128++" RANDOM-MODULE!
+\ "worker3" RANDOM-MODULE!
+\ "hello world lala yada yada xyz abc def ghi" random-seed
+\ 10000 do-birthday-sequence
+
 \ do-speedtest
 test-all-random-modules
 
@@ -367,5 +460,7 @@ test-all-random-modules
 
 \ [ 1 2 3 0 4 0 0 5 6 7 0 9 10 0 11 12 13 14 ] 0 make-digit-distances . CR
 
+\ "worker3" RANDOM-MODULE!
+\ { random . CR } 20 repeat
 
 
