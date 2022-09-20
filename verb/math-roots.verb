@@ -47,12 +47,6 @@
 	@diverges void \ solution diverged
 	;
 
-: sign ( x -- sign )
-	x 0 < if >>negative
-	1 return
-	@negative -1 return
-	;
-
 \ Bisection method
 \ ref: https://en.wikipedia.org/wiki/Bisection_method
 
