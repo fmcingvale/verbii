@@ -502,3 +502,112 @@
 	12.47569064793040000 VALS stddev.s expect==f
 	;
 	
+: test-fp-frac-part
+	\ these should work as exact comparisons
+	0.125 123.125 fp-frac-part expect==
+	0.125 -123.125 fp-frac-part expect==
+	0.0625 5768.0625 fp-frac-part expect==
+	0.0625 -5768.0625 fp-frac-part expect==
+	0.0078125 9876.0078125 fp-frac-part expect==
+	0.0078125 -9876.0078125 fp-frac-part expect==
+	0.0009765625 572129.0009765625 fp-frac-part expect==
+	0.0009765625 -572129.0009765625 fp-frac-part expect==
+	;
+	
+: test-round
+	124 123.7 round expect==
+	-124 -123.7 round expect==
+	123 123.4 round expect==
+	-123 -123.4 round expect==
+	1 0.517 round expect==
+	-1 -0.517 round expect==
+	0 0.489 round expect==
+	0 -0.489 round expect==
+	;
+	
+: test-fp-mantissa
+	@locals [ m p ]
+	12345.8125e23 fp-mantissa p! m!
+	0.123458125 m expect==f
+	28 p expect==
+	
+	0.00008125 fp-mantissa p! m!
+	0.8125 m expect==f 
+	-4 p expect==
+	
+	-12345.8125e23 fp-mantissa p! m!
+	-0.123458125 m expect==f
+	28 p expect==
+	
+	-0.00008125 fp-mantissa p! m!
+	-0.8125 m expect==f 
+	-4 p expect==
+	
+	0.1234567 fp-mantissa p! m!
+	0.1234567 m expect==f 
+	0 p expect==
+	
+	-0.1234567 fp-mantissa p! m!
+	-0.1234567 m expect==f 
+	0 p expect==
+	;
+	
+: test-fmt-ndecimal
+	"12.37" 12.365 2 fmt-ndecimal expect==
+	"12.36" 12.364 2 fmt-ndecimal expect==
+	
+	"-12.37" -12.365 2 fmt-ndecimal expect==
+	"-12.36" -12.364 2 fmt-ndecimal expect==
+	
+	"0.126" 0.1258 3 fmt-ndecimal expect==
+	"0.125" 0.1254 3 fmt-ndecimal expect==
+	
+	"-0.126" -0.1258 3 fmt-ndecimal expect==
+	"-0.125" -0.1254 3 fmt-ndecimal expect==
+	
+	"765.1238" 765.12375 4 fmt-ndecimal expect==
+	"765.1237" 765.12374 4 fmt-ndecimal expect==
+	
+	"-765.1238" -765.12375 4 fmt-ndecimal expect==
+	"-765.1237" -765.12374 4 fmt-ndecimal expect==
+	;
+	
+: test-fp-exp-string
+	"e+123" 123 fp-exp-string expect==
+	"e+5" 5 fp-exp-string expect==
+	"" 0 fp-exp-string expect==
+	"e-7" -7 fp-exp-string expect==
+	"e-45" -45 fp-exp-string expect==
+	;
+	
+: test-fmt-float 
+	"7.81e-3" 0.0078125 4 2 fmt-float expect==
+	"7.8125e-3" 0.0078125 2 4 fmt-float expect==
+	"6.25e-2" 0.0625 4 2 fmt-float expect==
+	"6.3e-2" 0.0625 4 1 fmt-float expect==
+	"1.25e-1" 0.125 4 2 fmt-float expect==
+	"1.13" 1.125 4 2 fmt-float expect==
+	"12.01" 12.0078125 4 2 fmt-float expect==
+	"12.00781" 12.0078125 4 5 fmt-float expect==
+	"123.13" 123.125 4 2 fmt-float expect==
+	"1234.13" 1234.125 4 2 fmt-float expect==
+	"1234.51e+1" 12345.125 4 2 fmt-float expect==
+	"1234.56e+2" 123456.0078125 4 2 fmt-float expect==
+	"1234.57e+5" 123456789.123456 4 2 fmt-float expect==
+
+	"-7.81e-3" -0.0078125 4 2 fmt-float expect==
+	"-7.82e-3" -0.0078175 4 2 fmt-float expect==
+	
+	"-12.00782" -12.0078175 4 5 fmt-float expect==
+	;
+	
+: test-fmt-percent
+	"54.12" 0.5412 2 fmt-percent expect==
+	"65.3" 0.653 1 fmt-percent expect==
+	"1.00" 0.0100 2 fmt-percent expect==
+	"100.00" 1.0 2 fmt-percent expect==
+	"12" 0.12 0 fmt-percent expect==
+	"15" 0.147 0 fmt-percent expect==
+	"0.10" 0.001 2 fmt-percent expect==
+	"12.346" 0.123456 3 fmt-percent expect==
+	;

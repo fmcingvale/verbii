@@ -24,7 +24,6 @@
 'FLOAT-MAX 1.7976931348623149E+308 make-const
 'FLOAT-MIN -1.7976931348623149E+308 make-const
 
-\ ( n -- ; get n as binary string )
 \ log(10), for changing base below
 'LOGN_10 2.30258509299404568 make-var
 \ log(2), for changing base below
@@ -34,12 +33,167 @@
 : log10 ( v -- L ) 	v log LOGN_10 / ;
 \ log, base 2
 : log2 ( v -- L ) v log LOGN_2 / ;
+
+\ ======================================================================
+\ More floating point utilities & formatting
+\ ======================================================================
+
 \ get sign of x as 1 or -1
 : sign ( x -- s )
 	x 0 < if >>negative
 	1 return
 	@negative -1 return
 	;
+
+\ get fractional part of v (always positive)
+: fp-frac-part ( v -- frac ) v abs v abs floor - ;
+	
+\ round v to integer
+: round ( v -- i )
+	@locals [ sgn ]
+	v sign sgn! \ do below with positive values then adjust at end
+	v abs v!
+	
+	v fp-frac-part 0.5 >= if >>up
+	v floor sgn * return
+	@up v floor 1 + sgn * return
+	;
+
+\ split value into m (mantissa) [0..1] and p (power), so that:
+\	v = m * 10^p
+: fp-mantissa ( v -- m p )
+	@locals [ sgn ]
+	v sign sgn! \ do below with positive values then adjust at end
+	v abs v!
+	
+	v log10 floor 1 + p!
+	v 10 p pow / sgn * p
+	;
+	
+\ format V to string with N decimal digits
+\ -- it is better to use fmt-float -- this only works for smaller numbers
+: fmt-ndecimal ( v n -- s )
+	@locals [ D sgn ds ]
+	"" sgn!
+	v 0 >= if >>nosign
+	v neg v!
+	"-" sgn!
+	@nosign
+	10 n pow floor D!	\ shift by N digits (as integer)
+	\ "D:" . D . CR
+	\ "V:" . v . "N:" . n . CR
+	v D * v!
+	\ "V*10^N:" . v . CR
+	\ "FRAC:" . v fp-frac-part . CR
+	v round v!
+	\ "ROUNDED:" . v . CR
+	\ get decimal part as string
+	v D mod str ds!
+	\ left pad with zeros until correct width
+	@pad
+		ds length n >= if >>done-pad
+		"0" ds + ds! <<pad
+	@done-pad
+	sgn
+	v D // str +
+	"." + ds +
+	;
+	
+\ given a numerical exponent, return appropriate exponent string for floating point format
+: fp-exp-string ( e )
+	e 0 == if >>zero-exp
+	e 0 > if >>plus-exp 
+		\ e < 0 => "e-NNN"
+		"e" e str + return 
+	@plus-exp 
+		"e+" e str + return
+	@zero-exp		
+		""
+	;
+	
+\ format floating point number with more precise control than default str formatting
+\
+\	NI = number of integer digits (max)
+\	ND = number of decimal places (max)
+: fmt-float ( v NI ND -- s )
+	@locals [ M P newexp sgn ]
+	\ "** FMT-FLOAT" . CR
+	\ make sign string then do all calcs on positive values
+	"" sgn!
+	v 0 >= if >>done-sign
+	v neg v!
+	"-" sgn!
+	@done-sign
+	
+	\ "V:" . v . "NI:" . NI . "ND:" . ND . CR
+	v fp-mantissa P! M!
+	\ "M:" . M . "P:" . P . CR
+	\ see which case I have:
+	\ low case:
+	\	0 <= v < 1
+	\ middle case:
+	\	1 <= v < 10^NI
+	\ high case:
+	\	10^NI < v
+	v 1 < if >>low-case
+	v 1 >= v 10 NI pow < and if >>middle-case
+	>>high-case
+	@low-case
+		\ i think there are at least two options here:
+		\	1. always do M*10 so there is always 1 digit in front of the decimal point
+		\	2. allow keeping a certain number of leading 0s in decimals -- sometimes
+		\ 		more natural to write 0.003 instead of 3e-3, but e.g. for 0.003456,
+		\		it might be more important to keep the trailing digits 
+		\
+		\ for now just do M*10 and adjust exponent in string -- I *THINK* the 2nd case can
+		\ be accomplished by the caller, given this function and fmt-ndecimal
+		sgn
+		M 10 * ND fmt-ndecimal +
+		P 1 - fp-exp-string + 
+			\ "RET:" . dup . 
+			return
+	@high-case
+		\ too many integer digits, so multiply M up to NI integer digits,
+		\ then round and add adjusted exponent
+		sgn
+		M 10 NI pow * ND fmt-ndecimal +
+		P NI - fp-exp-string +  
+			\ "RET:" . dup . 
+			return
+	@middle-case
+		\ integer part fits in NI digits, so just round decimal part
+		sgn 
+		v ND fmt-ndecimal + \ "RET:" . dup . 
+		return	
+	;
+	
+\ takes a calculated percentage [0..1] and formats it as [0..100] with N decimal places (N=0 ...)
+: fmt-percent ( p n -- pstr )
+	@locals [ s ]
+	n 0 == if >>zero
+	n 0 < if >>bad
+	\ "FMT PERCENT:" . p . CR
+	p 10 n 2 + pow * round str s!
+	\ "INT:" . s n tail-drop . CR
+	\ "DEC:" . s n tail . CR
+	s n tail-drop 
+	\ check empty int part (i.e. percent < 1)
+	dup length 0 == if >>add-leading-zero
+	>>leading-done 
+	@add-leading-zero
+		drop "0"
+	@leading-done
+	"." + s n tail + return
+	\ no decimals places, just do *100 and round
+	@zero p 100 * round str return
+	@bad "Bad N in fmt-percent: " n str + error
+	;
+	
+\ ======================================================================
+\ Binary formatting
+\ ======================================================================
+
+\ ( n -- ; format n as binary string )
 : str.bin
 	32 "" -rot
 	@loop ( s n i )
@@ -363,9 +517,3 @@
 	@error "Need at least 2 values in stddev.s, got: " numbers repr + error
 	;
 	
-	
-	
-		
-		
-		
-		
