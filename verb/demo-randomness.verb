@@ -46,7 +46,7 @@
 : random-speedtest ( NR )
 	@locals [ i t0 t1 ]
 	
-	"abcdefgh12345678" random-seed
+	null random-seed
 	0 i!
 	cpu-time t0!
 	@loop
@@ -307,7 +307,7 @@
 \ generate NR random numbers over [0,1] and do seqeuence testing	
 : do-sequence-tests ( NR )
 	@locals [ vals ]
-	"abcdefgh12345678" random-seed
+	null random-seed
 	
 	[ ] vals!
 	\ generate NR random values from [0,1]
@@ -395,7 +395,7 @@
 \ randomness tests on it
 : do-randomness-tests ( NR )
 	@locals [ vals ]
-	"abcdefgh12345678" random-seed
+	null random-seed
 	
 	[ ] vals!
 	\ generate NR random values from 0..9

@@ -21,29 +21,57 @@
 'RANDOM-MODULE "xoshiro128++" make-var
 \ 'RANDOM-MODULE "xoshiro128**" make-var
 
-\ seed random number generator -- the seed is generated from the fnv-1a hash value of the
-\ given string. the string should contain at least 128 bits of information
-\ (so i.e. a string of hex chars [= 4 bits each] would need to be length 32.
-: random-seed ( seedtext )
+\ seed random number generator in one of several ways:
+\
+\	* text - generate seed from the fnv-1a hash of text
+\ 		the string should contain at least 128 bits of information
+\		(so i.e. a string of hex chars [= 4 bits each] would need to be length 32.
+\	
+\	* list of 4 integers - use the values directly as the 128 bit seed 
+\
+\	* null - generate own seed
+: random-seed ( seedval )
 	@locals [ n vals ]
-		\ "SEEDTEXT:" . seedtext . CR
-	seedtext length 4 < if >>tooshort
-	\ pad to length 4
-	@pad
-		seedtext length 4 mod 0 == if >>divide 
-		seedtext "*" + seedtext! <<pad
-	@divide
-		\ "PADDED:" . seedtext . CR
-	\ divide into 4 chunks of equal length and set vals list from the hashes
-	seedtext length 4 / floor n!
-	[ ] vals!
-	{ seedtext length 0 != }
-		{ vals
-				\ "CHUNK:" . seedtext 0 n slice . CR
-			seedtext 0 n slice fnv-1a-32 append!
-			seedtext n -1 slice seedtext! 
-		} /while
+	\ seed what kind of seed i received:
+	seedval string? if >>seed-is-text 
+	seedval list? if >>seed-is-list 
+	seedval null? if >>seed-is-null
+	"Bad seed value (expecting string, list or null): " seedval str + error
+	
+	@seed-is-text
+			\ "SEEDTEXT:" . seedtext . CR
+		seedval length 4 < if >>tooshort
+		\ pad to length 4
+		@pad
+			seedval length 4 mod 0 == if >>divide 
+			seedval "*" + seedtext! <<pad
+		@divide
+			\ "PADDED:" . seedtext . CR
+		\ divide into 4 chunks of equal length and set vals list from the hashes
+		seedval length 4 / floor n!
+		[ ] vals!
+		{ seedval length 0 != }
+			{ vals
+					\ "CHUNK:" . seedtext 0 n slice . CR
+				seedval 0 n slice fnv-1a-32 append!
+				seedval n -1 slice seedval! 
+			} /while
+			
+		>>use-seed 
 		
+	@seed-is-list
+		seedval vals!
+		>>use-seed
+		
+	@seed-is-null
+		\ use worker3 to generate 4 random 32 bit integers for seed
+		\ (worker3 APPEARS to have the best randomness performance, from demo-randomness.verb,
+		\ of the 3 worker methods)
+		[ ] vals!
+		{ vals randworker3-generate-32 append! } 4 repeat
+		>>use-seed
+		
+	@use-seed
 		\ "VALS:" . vals . CR
 	\ decide how to use vals based on active random module
 	RANDOM-MODULE "xorshift32" == if >>xor32
