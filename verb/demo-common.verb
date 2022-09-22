@@ -5,8 +5,50 @@
 
 ( https://rosettacode.org/wiki/Sieve_of_Eratosthenes )
 
+\ old: 1803863833
+
 \ find all primes from 2..nr
 : prime-sieve ( nr -- primes )
+	@locals [ i list ]
+	[ ] list!
+	\ fill with nr true values
+	0 i!
+	WHILE i nr <= DO
+		list true append!
+		i 1 + i!
+	END
+	
+	\ for i=2..sqrt(nr)
+	2 i!
+	\ while i <= sqrt(nr)
+	WHILE i nr sqrt <= DO
+		\ for j=2..(nr-1), set list[i*j] = false, where i*j <= nr
+		\ for-count would be inefficient here since it cannot conditionally stop,
+		\ so use while instead
+		@locals [ j ]
+		2 j! \ j is prime, every multiple is not
+		\ while i*j <= nr
+		WHILE i j * nr <= DO		
+			list i j * false put list!
+			j 1 + j!
+		END
+		i 1 + i!
+	END
+	
+	\ indexes of true entries (i>=2) are prime 
+	[ ] primes!
+	2 i!
+	WHILE i nr 1 - < DO
+		list i get not if >>skip
+		primes i append!
+		@skip
+		i 1 + i!
+	END
+	primes
+	;
+
+\ find all primes from 2..nr
+: prime-sieve-old ( nr -- primes )
 	@locals [ i list ]
 	[ ] list!
 	\ fill with nr true values

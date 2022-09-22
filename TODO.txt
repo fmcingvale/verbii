@@ -37,6 +37,9 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
+* things like /while cause way too much memory allocation when there are multiple inner loops. while/case/cond should be
+	syntax that get translated to if/loops which will eliminate need to create closures like with /while etc.
+
 * get rid of rest of lua POSIX functions with workarounds.
 
 * Need to get rid of getcwd() -- one possibility is to just use "." and don't add a 'chdir' command so cwd will always be the same
