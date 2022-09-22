@@ -26,3 +26,139 @@
 
 ( ------ compiler ------- )
 
+'NEXT-UNIQUE-SYMBOL-NUMBER 0 make-var
+
+: make-unique-symbol ( -- nr )
+	NEXT-UNIQUE-SYMBOL-NUMBER 1 + NEXT-UNIQUE-SYMBOL-NUMBER!
+	'auto-symbol- NEXT-UNIQUE-SYMBOL-NUMBER str string->symbol +
+	;
+	
+\ parses:
+\	WHILE cond-words ... DO do-words ... END
+\
+\ .. and converts into primitive instructions.
+\
+\ Assumes WHILE was just read.
+: syntax-while 
+	@locals [ obj cond-list do-list label-start label-done code ]
+	[ ] cond-list!
+	[ ] do-list!
+	@loop-read-while
+		syntax-next obj!
+		obj void? if >>eof
+		obj 'DO == if >>loop-read-do 
+		\ else append to cond-list and continue
+		obj is-inline-list? if >>inline-while
+		cond-list obj append! <<loop-read-while 
+	@inline-while
+		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+		\ remove ,,inline 
+		cond-list obj 1 -1 slice extend! <<loop-read-while
+		
+	\ same thing for DO ... END 
+	@loop-read-do
+		syntax-next obj!
+		obj void? if >>eof
+		obj 'END == if >>got-end
+		\ else append to do-list and continue
+		obj is-inline-list? if >>inline-do
+		do-list obj append! <<loop-read-do
+	@inline-do
+		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+		\ remove ,,inline 
+		do-list obj 1 -1 slice extend! <<loop-read-do
+	
+	@got-end
+		\ "HELLO WRITE CODE" . CR
+		\ "COND-LIST:" . cond-list . CR
+		\ "DO-LIST:" . do-list . CR
+		\ now rewrite pieces into a normal if loop and put in an inline list
+		',,inline 1 make-list code!
+		\ make unique labels
+		make-unique-symbol label-start!
+		make-unique-symbol label-done!
+		\ make code:
+		\ 	@start-label
+		\ 		cond ... not if >>done-label
+		\		do-list ... <<start-label
+		\	@done-label
+		code '@ label-start + append!
+		code cond-list extend!
+		code 'not 'if '>> label-done + 3 make-list extend!
+		\ "CODE 1:" . code . CR
+		code do-list extend!
+		code '<< label-start + '@ label-done + 2 make-list extend!
+		\ "CODE 2:" . code . CR
+		\ return code
+		code return
+		
+	@eof "End of input inside WHILE ... DO ... END" error
+		;
+
+\ parse next word from input into runnable object
+: syntax-next ( -- obj )
+	@locals [ word ]
+	reader-next word!
+		 \ "syntax-next:" . dup . CR
+	word void? if >>void
+	word '( == if >>comment \ )
+	word '\ == if >>line-comment
+	word '{ == if >>v2-closure
+	word '[ == if >>list
+	word '#op( == if >>opcode  \ )
+	word ': == if >>v2-worddef
+	word 'del == if >>del
+	word 'true == if >>true-literal
+	word 'false == if >>false-literal
+	word 'null == if >>null-literal
+	word 'WHILE == if >>syntax-while
+	
+	( look for triple-quoted string first )
+	word 0 3 slice TRIPLEQUOTE == if >>triplestring
+	( now single quoted string )
+	word 0 get '" == if >>string ( "... )
+	\ test for correct format before passing to parse-int or parse-float since those functions
+	\ may (depending on platform) happily parse something like "123abc" as 123 
+	word int-symbol? if >>integer
+	word float-symbol? if >>float
+	word 0 get '# != if >>nomatch 
+	word 1 -1 slice float-symbol? if >>float-literal
+	@nomatch
+		( leave unprocessed word on stack )
+		word
+		return
+	@void
+		void
+		return ( leave void on stack )
+	@v2-worddef
+		v2-syntax-define-word return
+	@del
+		syntax-del return
+	@comment
+		syntax-comment syntax-next return ( skip comment and return NEXT object )
+	@line-comment
+		syntax-line-comment syntax-next return ( skip comment and return NEXT object )
+	@v2-closure
+		syntax-v2-closure return
+	@syntax-while
+		syntax-while return
+	@list
+		syntax-list return
+	@opcode
+		syntax-opcode return
+	@triplestring
+		( call syntax-triple-string with first piece on stack )
+		word syntax-triple-string return
+	@string
+		( call syntax-string with first piece on stack )
+		word syntax-string return
+	@integer
+		word parse-int return
+	@float
+		word parse-float return
+	@float-literal ( #NN.NN form )
+		word 1 -1 slice parse-float return
+	@true-literal true return
+	@false-literal false return
+	@null-literal null return
+	;
