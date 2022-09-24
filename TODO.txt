@@ -37,19 +37,10 @@ Global TODO
 
 ---[   Features   ]------------------------------------------------------
 
-* things like /while cause way too much memory allocation when there are multiple inner loops. while/case/cond should be
-	syntax that get translated to if/loops which will eliminate need to create closures like with /while etc.
-
-* get rid of rest of lua POSIX functions with workarounds.
-
-* Need to get rid of getcwd() -- one possibility is to just use "." and don't add a 'chdir' command so cwd will always be the same
-
 * C++ port (at least) is not 8-bit clean on strings -- Object uses a char* to store strings & symbols, so e.g. file-read of a binary
   file would not work as expected since it would be cutoff at the first null.
   
 * add @globals to replace make-var. both faster AND could then be interpolated into lists like args/locals (and unlike make-var names)
-
-* benchmark hash functions - see if any usable to replace mtime for checking if file needs to be recompiled.
 
 * benchmark random functions and set a default in random module
 
