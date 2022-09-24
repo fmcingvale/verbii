@@ -402,5 +402,112 @@
 	END
 	171873 sum expect==
 	;
-				
+
+: *if-tester-1 ( x )
+	""
+	IF x 1 == THEN
+		drop "ONE-"
+	END
+	"END-" +
+	;
+	
+: *if-tester-2 ( x )
+	IF x 1 == THEN
+		"ONE-"
+	ELSE
+		"NONE-"
+	END
+	;
+
+: *if-tester-3 ( x )
+	""
+	IF x 1 == THEN
+		drop "ONE-"
+	ELIF x 2 == THEN
+		drop "TWO-"
+	END
+	"END-" +
+	;
+
+: *if-tester-4 ( x )
+	IF x 1 == THEN
+		"ONE-"
+	ELIF x 2 == THEN
+		"TWO-"
+	ELSE
+		"NONE-"
+	END
+	;
+	
+: *if-tester-5 ( x )
+	IF x 1 == THEN
+		"ONE-"
+	ELIF x 2 == THEN
+		"TWO-"
+	ELIF x 3 == THEN
+		"THREE-"
+	ELIF x 4 == THEN
+		"FOUR-"
+	ELSE
+		"NONE-"
+	END
+	;
+	
+: *if-tester-6 ( x )
+	IF x 0 > THEN
+		IF x 4 < THEN
+			IF x 1 == THEN
+				"ONE/"
+			ELIF x 2 == THEN
+				"TWO/"
+			ELSE
+				"THREE/"
+			END
+		ELIF x 7 < THEN
+			IF x 4 == THEN
+				"FOUR/"
+			ELIF x 5 == THEN
+				"FIVE/"
+			ELSE
+				"SIX/" 
+			END
+		ELSE
+			"+++/" 
+		END
+	ELSE
+		IF x -4 > THEN
+			IF x -1 == THEN
+				"-ONE/"
+			ELIF x -2 == THEN
+				"-TWO/"
+			ELSE
+				"-THREE/"
+			END
+		ELIF x -7 > THEN
+			IF x -4 == THEN
+				"-FOUR/"
+			ELIF x -5 == THEN
+				"-FIVE/"
+			ELSE
+				"-SIX/"
+			END
+		ELSE
+			"---/"
+		END
+	END
+	;
+	
+: *if-test-runner ( func vals -- out )
+	vals { ( accum x ) accum x func call + } "" fold
+	;
+	
+: test-IF-syntax
+	"ONE-END-END-" { *if-tester-1 } [ 1 2 ] *if-test-runner expect==
+	"ONE-NONE-" { *if-tester-2 } [ 1 2 ] *if-test-runner expect==
+	"ONE-END-TWO-END-END-" { *if-tester-3 } [ 1 2 3 ] *if-test-runner expect==
+	"ONE-TWO-NONE-" { *if-tester-4 } [ 1 2 3 ] *if-test-runner expect==
+	"ONE-TWO-THREE-FOUR-NONE-" { *if-tester-5 } [ 1 2 3 4 5 ] *if-test-runner expect==
+	"---/-SIX/-FIVE/-FOUR/-THREE/-TWO/-ONE/ONE/TWO/THREE/FOUR/FIVE/SIX/+++/" 
+		{ *if-tester-6 } [ -7 -6 -5 -4 -3 -2 -1 1 2 3 4 5 6 7 ] *if-test-runner expect==
+	;
 			

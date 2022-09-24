@@ -46,68 +46,146 @@
 	'auto-symbol- NEXT-UNIQUE-SYMBOL-NUMBER str string->symbol +
 	;
 	
+\ convenience for when you don't care about the index value, just need to know
+\ if an item is found
+: contains? ( list obj -- result )
+	list obj find-equal void? if >>false 
+	true return
+	@false false
+	;
+	
+\ TODO -- this could be used when parsing other things like lists, lambdas, etc.
+\
+\ parse reader stream into a list until any of the given symbols are found (upon return, symbol will have been read)
+\
+\ returns parsed list
+: syntax-collect-until-any-symbol ( symbols -- list stop-symbol )
+	@locals [ obj ]
+	[ ] list!
+	@loop
+		syntax-next obj!
+		obj void? if >>eof
+		symbols obj contains? if >>done
+		\ else append to list and continue
+		obj is-inline-list? if >>inline
+		list obj append! <<loop
+	@inline
+		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+		\ remove ,,inline 
+		list obj 1 -1 slice extend! <<loop
+	@done
+		\ return ( list stop-symbol )
+		list obj return
+	@eof
+		"End of input looking for: " symbols str + error
+	;
+
+\ simplification of above when looking for only one symbol (so don't need stop-symbol)
+: syntax-collect-until-symbol ( symbol -- list )
+	symbol 1 make-list syntax-collect-until-any-symbol drop
+	;
+
 \ parses:
 \	WHILE cond-words ... DO do-words ... END
 \
 \ .. and converts into primitive instructions.
 \
 \ Assumes WHILE was just read.
-: syntax-while 
-	@locals [ obj cond-list do-list label-start label-done code ]
-	[ ] cond-list!
-	[ ] do-list!
-	@loop-read-while
-		syntax-next obj!
-		obj void? if >>eof
-		obj 'DO == if >>loop-read-do 
-		\ else append to cond-list and continue
-		obj is-inline-list? if >>inline-while
-		cond-list obj append! <<loop-read-while 
-	@inline-while
-		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
-		\ remove ,,inline 
-		cond-list obj 1 -1 slice extend! <<loop-read-while
-		
-	\ same thing for DO ... END 
-	@loop-read-do
-		syntax-next obj!
-		obj void? if >>eof
-		obj 'END == if >>got-end
-		\ else append to do-list and continue
-		obj is-inline-list? if >>inline-do
-		do-list obj append! <<loop-read-do
-	@inline-do
-		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
-		\ remove ,,inline 
-		do-list obj 1 -1 slice extend! <<loop-read-do
+: syntax-while ( -- code )
+	@locals [ obj cond-list do-list label-start label-done ]
+	\ read: cond-list ... DO 
+	'DO syntax-collect-until-symbol cond-list!
+	\ read: do-words ... END
+	'END syntax-collect-until-symbol do-list!
 	
+	\ now rewrite pieces into a normal if loop and put in an inline list
+	',,inline 1 make-list code!
+	\ make unique labels
+	make-unique-symbol label-start!
+	make-unique-symbol label-done!
+	\ make code:
+	\ 	@start-label
+	\ 		cond ... not if >>done-label
+	\		do-list ... <<start-label
+	\	@done-label
+	code '@ label-start + append!
+	code cond-list extend!
+	code 'not 'if '>> label-done + 3 make-list extend!
+	code do-list extend!
+	code '<< label-start + '@ label-done + 2 make-list extend!
+	\ return code
+	code return
+	;
+	
+\ parses: IF test1 ... THEN do1 ...
+\		  ELIF test2 ... THEN do2 ...
+\		  ELSE do3 ... 
+\		  END
+: syntax-if ( -- code )
+	@locals [ test-list do-list pairs stop ]
+	[ ] pairs!
+	\ read all pairs of test:do 
+	@loop
+		\ read: test ... THEN
+		'THEN syntax-collect-until-symbol test-list!
+	@read-do
+		\ read: do ... [ELIF | ELSE | END]
+		[ ELIF ELSE END ] syntax-collect-until-any-symbol stop! do-list!
+		\ add [ test-list do-list ] to pairs
+		pairs test-list do-list 2 make-list append!
+		\ see which stop symbol i received and decide what to do
+		'ELIF stop == if >>got-elif 
+		'ELSE stop == if >>got-else 
+		'END stop == if >>got-end
+		"Expecting [ELIF | ELSE | END], got: " stop str + error 
+	@got-elif 
+		\ make sure i didn't get another ELIF after an ELSE
+		test-list null? if >>bad-elif 
+		\ ready to read next test ... THEN ... do ...
+		<<loop
+	@got-else
+		\ make sure i didn't get another ELSE after the last one 
+		test-list null? if >>bad-else 
+		\ NO test, just need to read the do ... clause
+		null test-list! 
+		<<read-do 
+	@bad-elif "Syntax error: Got ELIF after ELSE" error 
+	@bad-else "Syntax error: Got ELSE after ELSE" error 
 	@got-end
-		\ "HELLO WRITE CODE" . CR
-		\ "COND-LIST:" . cond-list . CR
-		\ "DO-LIST:" . do-list . CR
-		\ now rewrite pieces into a normal if loop and put in an inline list
+		@locals [ label-end label-next ]
+		\ "PARSED 'IF' SYNTAX:" . pairs . CR
+		\ create code as inline-list
 		',,inline 1 make-list code!
-		\ make unique labels
-		make-unique-symbol label-start!
-		make-unique-symbol label-done!
-		\ make code:
-		\ 	@start-label
-		\ 		cond ... not if >>done-label
-		\		do-list ... <<start-label
-		\	@done-label
-		code '@ label-start + append!
-		code cond-list extend!
-		code 'not 'if '>> label-done + 3 make-list extend!
-		\ "CODE 1:" . code . CR
-		code do-list extend!
-		code '<< label-start + '@ label-done + 2 make-list extend!
-		\ "CODE 2:" . code . CR
-		\ return code
-		code return
+		\ make a label to jump to after successful matching and running of a do .. clause
+		make-unique-symbol label-end!
+		\ loop over all [ test do ] pairs
+		pairs
+		{ ( test-list do-list )
+			test-list null? if >>make-else \ if test is null, then its the ELSE clause 
+			\ normal case -- make a label to jump to when test is false to run next case
+			make-unique-symbol label-next!
+			\ write test + if into code
+			code test-list extend [ not if ] extend '>> label-next + append
+			\ write do ... into code then jump to END
+			do-list extend '>> label-end + append
+			\ write label-next that the above jumps to for running next case
+			'@ label-next + append!
+			\ ... and continue with next pair 
+			return
+			
+			@make-else
+			\ pair is the ELSE clause; no test, just write the do .. 
+			code do-list extend!
+			\ no need to write a jump -- just fall through to label-end
+		} apply-for-each
+			
+		\ finally add the end label that all of the above clauses jump to when done 
+		code '@ label-end + append!
 		
-	@eof "End of input inside WHILE ... DO ... END" error
-		;
-
+		\ "CREATED CODE:" . code . CR
+		code
+	;
+	
 \ parse next word from input into runnable object
 : syntax-next ( -- obj )
 	@locals [ word ]
@@ -125,6 +203,7 @@
 	word 'false == if >>false-literal
 	word 'null == if >>null-literal
 	word 'WHILE == if >>syntax-while
+	word 'IF == if >>syntax-if
 	
 	( look for triple-quoted string first )
 	word 0 3 slice TRIPLEQUOTE == if >>triplestring
@@ -155,6 +234,8 @@
 		syntax-v2-closure return
 	@syntax-while
 		syntax-while return
+	@syntax-if
+		syntax-if return
 	@list
 		syntax-list return
 	@opcode
