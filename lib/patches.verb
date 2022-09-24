@@ -24,6 +24,19 @@
 	@done
 	;
 
+\ apply-for-each -- like for-each, except:
+\	* only works for lists
+\	* each list element must be a list which is applied to the passed function as its arguments
+: apply-for-each ( seq func -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		seq i get unmake drop func call
+		i 1 + i! <<loop
+	@done 
+		;
+	
 ( ------ compiler ------- )
 
 'NEXT-UNIQUE-SYMBOL-NUMBER 0 make-var
