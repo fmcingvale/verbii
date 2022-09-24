@@ -39,9 +39,9 @@
 	[ ] primes!
 	2 i!
 	WHILE i nr 1 - < DO
-		list i get not if >>skip
-		primes i append!
-		@skip
+		IF list i get THEN
+			primes i append!
+		END
 		i 1 + i!
 	END
 	primes

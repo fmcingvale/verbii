@@ -58,12 +58,13 @@
 		n c!
 		\ for k = 0..7
 		{ ( k )
-			c 1 bit-and 0 !=
+			IF c 1 bit-and 0 != THEN
 				\ c = 0xedb88320L ^ (c >> 1)
-				{ CRC32-CONST c 1 bit-shr bit-xor c! }
+				CRC32-CONST c 1 bit-shr bit-xor c!
+			ELSE
 				\ c = c >> 1
-				{ c 1 bit-shr c! }
-				ifelse
+				c 1 bit-shr c!
+			END
 		} 0 1 8 for-count
 		CRC32-TABLE c append drop
 	} 0 1 256 for-count

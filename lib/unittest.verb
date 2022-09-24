@@ -156,8 +156,9 @@
 	"* Summary:" . CR
 	"    Tests passed:" . UNITTEST-NR-PASS . CR
 	"    Tests failed:" . UNITTEST-NR-FAIL . CR
-	SP UNITTEST-SP0 ==
-		{ "    Stack: ok" . CR }
-		{ "    ** ERROR ** Items left on stack" . CR }
-		ifelse
+	IF SP UNITTEST-SP0 == THEN
+		"    Stack: ok" . CR
+	ELSE
+		"    ** ERROR ** Items left on stack" . CR
+	END
 	;

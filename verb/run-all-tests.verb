@@ -114,16 +114,14 @@
 		false is-verbii-filename!
 		SCRIPT-ARGS 0 get filename!
 		\ make sure filename ends in .verb or .verb.b
-		filename 2 tail ".b" ==
-			{
-				filename 2 tail-drop filename!
-			} ifthen
+		IF filename 2 tail ".b" == THEN
+			filename 2 tail-drop filename!
+		END
 			
-		filename 5 tail ".verb" ==
-			{
-				filename 5 tail-drop filename!
-				true is-verbii-filename!
-			} ifthen
+		IF filename 5 tail ".verb" == THEN
+			filename 5 tail-drop filename!
+			true is-verbii-filename!
+		END
 			
 		is-verbii-filename not if >>bad-filename
 		\ else import and run JUST this test

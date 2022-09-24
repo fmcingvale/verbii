@@ -59,9 +59,9 @@
 	@loop
 		i nr 2 / > if >>done ( can stop at nr/2 )
 		\ if (nr/i) has 0 remainder, then add i to list
-		nr i mod 0 ==
-			{ list i append drop }
-			ifthen
+		IF nr i mod 0 == THEN
+			list i append!
+		END
 		i 1 + i! <<loop
 	@done
 		list
@@ -94,9 +94,9 @@
 	@locals [ list ]
 	[ ] list!
 	{ ( n )
-		n prime?
-			{ list n append drop }
-			ifthen
+		IF n prime? THEN
+			list n append!
+		END
 	} start 1 end start - for-count
 	list
 	;
@@ -154,12 +154,12 @@
 
 \ toggle state of DOOR[i]
 : toggle-door ( i )
-	DOORS i get 0 ==
-		{ DOORS i 1 put }
-		{ DOORS i 0 put }
-		ifelse
-		drop
-		;
+	IF DOORS i get 0 == THEN
+		DOORS i 1 put!
+	ELSE
+		DOORS i 0 put!
+	END
+	;
 	
 : test-rosetta-100-doors
 	\ outer loop, use an increment value from 1..100

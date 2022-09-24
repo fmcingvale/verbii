@@ -15,7 +15,9 @@
 	\ comments lines are joined with \n -- no \n after final line
 	@loop-comments ( stream )
 		stream-reader-next-line line! ( stream )
-		line void? { "EOF inside comment header"  error } ifthen
+		IF line void? THEN
+			"EOF inside comment header"  error
+		END
 		line 0 get "!" == if >>loop-code 
 		comment-lines line append comment-lines! \ add any other line to comments and continue
 		<<loop-comments
