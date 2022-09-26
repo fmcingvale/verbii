@@ -148,8 +148,20 @@ public class LangString : LangObject {
 	public string value;
 
 	public override string typename() { return "string"; }
-	public override string fmtDisplay() { return value; }
-	public override string fmtStackPrint() { return "\"" + value + "\""; }
+	public override string fmtDisplay() {
+		// convert non-printable chars to "\xCODE"
+		string s = "";			
+		foreach(var c in value) {
+			int code = (int)c;
+			if(code < 32 || code > 126)
+				s += "\\x" + code.ToString("x2");
+			else
+				s += c;
+		}
+		return s;
+	}
+
+	public override string fmtStackPrint() { return "\"" + fmtDisplay() + "\""; }
 
 	public override bool hasLength() { return true; }
 	// NOTE: string size limited to 32-bits
@@ -178,8 +190,19 @@ public class LangSymbol : LangObject {
 	}
 
 	public override string typename() { return "symbol"; }
-	public override string fmtDisplay() { return value; }
-	public override string fmtStackPrint() { return "'" + value; }
+	public override string fmtDisplay() { 
+		// convert non-printable chars to "\xCODE"
+		string s = "";			
+		foreach(var c in value) {
+			int code = (int)c;
+			if(code < 32 || code > 126)
+				s += "\\x" + code.ToString("x2");
+			else
+				s += c;
+		}
+		return s;
+	}
+	public override string fmtStackPrint() { return "'" + fmtDisplay(); }
 
 	public override bool hasLength() { return true; }
 	public override int getLength() { return value.Length; }

@@ -60,6 +60,41 @@ class BoundLambda {
 	CallFrameData *outer;
 };
 
+class StringData {
+	public:
+	// if keepPointer is false, makes a copy of bytes
+	// else, keeps pointer instead of copying
+	// ** NOTE ** when setting keepPointer=true, bytes must already
+	// have a NULL at end that is NOT included in len
+	StringData(const char *bytes, int len, bool keepPointer) {
+		if(keepPointer) {
+			_str = bytes;
+			_length = len;
+		}
+		else {
+			char *buf = (char*)x_malloc(len + 1);
+			memcpy(buf, bytes, len);
+			// add NULL that's not included in length so that _str can be
+			// directly used as a C string (which assumes that the string
+			// does not contain NULLs of course)
+			buf[len] = 0; 
+			_str = buf;
+			_length = len; // does NOT include NULL
+		}
+	}
+
+	int length() const { return _length; }
+	const char *as_cstr() const { return _str; }
+
+	protected:
+	const char *_str;
+	int _length;
+	// NOTE: size of str is length+1 to add a null at the end
+};
+
+// make a string type that can hold binary data
+typedef std::vector<char> STRINGTYPE;
+
 // this is intended to be a POD type, so no non-default constructors, destructors, base classes,
 // and small enough to pass as value -- any large parts will be stored in pointers
 #if defined(USE_GCMALLOC)
@@ -89,10 +124,7 @@ class Object {
 
 	// convenience -- test if symbol AND equal to given string
 	// if n>0 then only require that many chars to match
-	bool isSymbol(const char *s, int n=0) const 
-		{ return type == TYPE_SYMBOL &&
-			((n == 0 && !strcmp(data.str,s)) ||
-			(n > 0 && !strncmp(data.str, s, n))); }
+	bool isSymbol(const char *s, int n=0) const;
 	bool isList() const { return type == TYPE_LIST; }
 	bool isDict() const { return type == TYPE_DICT; }
 			
@@ -104,9 +136,9 @@ class Object {
 	ObjList *asList() const { return data.objlist; }
 	ObjDict *asDict() const { return data.objdict; }
 	 
-	const char *asString() const { return data.str; }
-	const char *asSymbol() const { return data.str; }
-
+	const StringData *asString() const { return data.str; }
+	const StringData *asSymbol() const { return data.str; }
+	
 	uint64_t asOpcode() const { return data.opcode; }
 
 	// '==' builtin (exact match except allows for int==float)
@@ -160,7 +192,8 @@ class Object {
 		ObjList *objlist; // for lambdas & lists
 		ObjDict *objdict; // for dict
 		double d;
-		const char *str; // strings & symbols, immutable
+		// use vector instead of std::string so it can hold any binary data
+		StringData *str; // strings & symbols, immutable
 		BoundLambda *boundLambda;
 		int64_t opcode;
 	} data;
@@ -229,13 +262,16 @@ Object newInt(VINT i);
 Object newBool(bool b);
 Object newLambda(ObjList *objlist);
 Object newFloat(double d);
-// copies s, unless keepPointer is true, in which case it 
-// takes ownership of s (and len is ignored)
-Object newString(const char *s, size_t len, bool keepPointer=false);
+// copies s
+Object newString(const char *s, size_t len);
 Object newString(const std::string& );
+// takes existing StringData instead of copying
+Object newString(StringData *data);
 // like above
-Object newSymbol(const char *s, size_t len, bool keepPointer=false);
+Object newSymbol(const char *s, size_t len);
 Object newSymbol(const std::string& );
+// takes existing StringData instead of copying
+Object newSymbol(StringData *data);
 
 Object newList(); // always makes empty list
 Object newList(ObjList *); // wraps existing list, does NOT copy

@@ -368,6 +368,20 @@ function dictSize(obj)
 	return count
 end
 
+-- replace non-printable chars with \xCODE
+function stringEscapeForDisplay(s)
+	local o = ""
+	for i=1,#s do
+		local b = string.byte(s,i)
+		if b < 32 or b > 126 then
+			o = o .. string.format("\\x%02x", b)
+		else
+			o = o .. string.sub(s, i, i)
+		end
+	end
+	return o
+end
+
 -- see c++ comments for display vs. stack format
 function fmtDisplay(obj)
 	if isVoid(obj) then
@@ -393,9 +407,9 @@ function fmtDisplay(obj)
 		return "#op( " .. opcode_code_to_name(obj.code) .. " " .. tostring(obj.A) .. " " ..
 				tostring(obj.B) .. " " .. tostring(obj.C) .. " )"
 	elseif isString(obj) then
-		return obj.value
+		return stringEscapeForDisplay(obj.value)		
 	elseif isSymbol(obj) then
-		return obj
+		return stringEscapeForDisplay(obj)		
 	elseif isList(obj) then
 		return fmtDisplayObjlist(obj, "[", "]")
 	elseif isDict(obj) then
@@ -454,9 +468,9 @@ function fmtStackPrint(obj)
 		return fmtDisplay(obj)
 	elseif isString(obj) then
 		-- in stack display, strings get " .. "
-		return '"' .. obj.value .. '"'
+		return '"' .. fmtDisplay(obj.value) .. '"'
 	elseif isSymbol(obj) then
-		return "'" .. obj
+		return "'" .. fmtDisplay(obj)
 	elseif isList(obj) then
 		return fmtStackPrintObjlist(obj, "[", "]")
 	else

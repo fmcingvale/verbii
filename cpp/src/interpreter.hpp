@@ -78,6 +78,7 @@ class Interpreter {
 	bool hasBuiltin(const char *name);
 
 	// user-defined words
+	// **NOTE** names here cannot contain NULLs
 	bool hasWord(const char *name);	
 	void defineWord(const char *name, ObjList *objlist, bool allow_overwrite);
 	void deleteWord(const char* name);

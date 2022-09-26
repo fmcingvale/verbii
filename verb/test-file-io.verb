@@ -2,6 +2,8 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
+"numeric" import
+
 : test-file-io
 	"temp-out.txt" file-delete
 	"temp-out.txt" file-exists? expect-false
@@ -58,5 +60,55 @@
 	10 d 4 get ord expect==
 	10 d 8 get ord expect==
 	13 d 12 get ord expect==
+	
+	"temp-out.txt" file-delete
 	;
 	
+\ test that strings & file I/O are 8-bit safe
+: test-binary-io
+	@locals [ bytes-in s s2 bytes-out ]
+	"" s!
+	[ 13 12 11 10 9 8 7 6 5 4 3 2 1 0 33 32 31 65 66 67 68 255 254 253 128 127 126 ] bytes-in!
+	\ make string using ascii vals from bytes-in
+	bytes-in { ( x ) s x chr + s! } for-each
+	s length bytes-in length expect==
+	"89326887" s fnv-1a-32 str.hex expect==
+	\ make sure byte values are correct when read back out
+	[ ] bytes-out!
+	s { ( c ) bytes-out c ord append! } for-each
+	bytes-in bytes-out expect==
+	
+	\ make sure str formatting is correct
+	"\x0d\x0c\x0b\x0a\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00! \x1fABCD\xff\xfe\xfd\x80\x7f~" s str expect==
+	
+	\ write to file
+	"test.bin" s file-write
+	
+	\ read back and ensure bytes came back the same
+	"test.bin" file-read s2!
+	[ ] bytes-out!
+	s2 { ( c ) bytes-out c ord append! } for-each
+	bytes-in bytes-out expect==
+	\ make sure hash matches
+	"89326887" s2 fnv-1a-32 str.hex expect==
+	\ make sure str formatting is correct
+	"\x0d\x0c\x0b\x0a\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00! \x1fABCD\xff\xfe\xfd\x80\x7f~" s2 str expect==
+	\ also check as symbol
+	"\x0d\x0c\x0b\x0a\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00! \x1fABCD\xff\xfe\xfd\x80\x7f~" s2 string->symbol str expect==
+	
+	\ check stack format (as string)
+	""""""" "\x0d\x0c\x0b\x0a\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00! \x1fABCD\xff\xfe\xfd\x80\x7f~" """"""" + + s2 repr expect==
+	
+	\ check stack format (as symbol)
+	"'\x0d\x0c\x0b\x0a\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00! \x1fABCD\xff\xfe\xfd\x80\x7f~" s2 string->symbol repr expect==
+	
+	\ do abbreviated test with file-append as well
+	"test.bin" file-delete
+	"test.bin" s file-append 
+	"test.bin" file-read s2!
+	[ ] bytes-out!
+	s2 { ( c ) bytes-out c ord append! } for-each
+	bytes-in bytes-out expect==
+	
+	"test.bin" file-delete
+	;

@@ -117,15 +117,10 @@ Object newFloat(double d) {
 	return obj;
 }
 
-Object newString(const char *s, size_t len, bool keepPointer) {
+Object newString(const char *s, size_t len) {
 	Object obj;
 	obj.type = TYPE_STRING;
-	if(keepPointer) {
-		obj.data.str = s;
-	}
-	else {
-		obj.data.str = x_strndup(s, len);
-	}
+	obj.data.str = new StringData(s, len, false); // copy s
 	return obj;
 }
 
@@ -133,21 +128,30 @@ Object newString(const string& s) {
 	return newString(s.c_str(), s.length());
 }
 
+Object newString(StringData *data) {
+	Object obj;
+	obj.type = TYPE_STRING;
+	obj.data.str = data;
+	return obj;
+}
+
 // like above
-Object newSymbol(const char *s, size_t len, bool keepPointer) {
+Object newSymbol(const char *s, size_t len) {
 	Object obj;
 	obj.type = TYPE_SYMBOL;
-	if(keepPointer) {
-		obj.data.str = s;
-	}
-	else {
-		obj.data.str = x_strndup(s, len);
-	}
+	obj.data.str = new StringData(s, len, false); // copy s
 	return obj;
 }
 
 Object newSymbol(const string& s) {
 	return newSymbol(s.c_str(), s.length());
+}
+
+Object newSymbol(StringData *data) {
+	Object obj;
+	obj.type = TYPE_SYMBOL;
+	obj.data.str = data;
+	return obj;
 }
 
 CallFrameData::CallFrameData() {
@@ -220,6 +224,26 @@ Object newOpcode(uint64_t packed_opcode) {
 	return obj;
 }
 
+bool Object::isSymbol(const char *s, int n) const {
+	if(type != TYPE_SYMBOL)
+		return false;
+
+	// compare full lengths if n==0
+	if(n == 0) {
+		if(strlen(s) != data.str->length())
+			return false;
+		else
+			return !memcmp(s, data.str->as_cstr(), data.str->length());
+	}
+	// compare only n chars
+	else {
+		if(strlen(s) < n || data.str->length() < n)
+			return false;
+		else
+			return !memcmp(s, data.str->as_cstr(), n);
+	}
+}
+
 bool Object::opEqual(const Object &other) const {
 	switch(type) {
 		case TYPE_NULL: return other.isNull();
@@ -232,8 +256,14 @@ bool Object::opEqual(const Object &other) const {
 		case TYPE_BOUND_LAMBDA: return false; // same
 		case TYPE_OPCODE: return (other.type == TYPE_OPCODE) &&
 				(other.data.opcode == data.opcode);
-		case TYPE_STRING: return other.type == TYPE_STRING && !strcmp(data.str,other.data.str);
-		case TYPE_SYMBOL: return other.type == TYPE_SYMBOL && !strcmp(data.str,other.data.str);
+		case TYPE_STRING: 
+			return other.type == TYPE_STRING && 
+					data.str->length() == other.data.str->length() &&
+					!memcmp(data.str->as_cstr(), other.data.str->as_cstr(), data.str->length());
+		case TYPE_SYMBOL: 
+			return other.type == TYPE_SYMBOL && 
+					data.str->length() == other.data.str->length() &&
+					!memcmp(data.str->as_cstr(), other.data.str->as_cstr(), data.str->length());		
 		case TYPE_VOID: return other.type == TYPE_VOID;
 		// lists are deep compared, via opEqual at each element
 		case TYPE_LIST:	{
@@ -285,11 +315,20 @@ bool Object::opGreater(const Object &other) const {
 			if (other.type == TYPE_FLOAT) return data.d > other.data.d;
 			break;
 		case TYPE_STRING:
-			if (other.type == TYPE_STRING) return strcmp(data.str, other.data.str) > 0;
-			break;
 		case TYPE_SYMBOL:
-			if (other.type == TYPE_SYMBOL) return strcmp(data.str, other.data.str) > 0;
-			break;
+			if(other.type == type) {
+				auto r = memcmp(data.str->as_cstr(), other.data.str->as_cstr(), min(data.str->length(), other.data.str->length()));
+				if(r == 0) {
+					if(data.str->length() < other.data.str->length())
+						return false;
+					else if(data.str->length() > other.data.str->length())
+						return true;
+					else
+						return false;
+				}
+				else
+					return r > 0;
+			}
 		case TYPE_LIST:
 		{
 			if(other.type != TYPE_LIST)
@@ -367,17 +406,27 @@ Object Object::opAdd(const Object &other) const {
 		// strings & symbols defined as immutable, so no changing this
 		case TYPE_STRING:
 			if(other.type == TYPE_STRING) {
-				string s = this->data.str;
-				s += other.data.str;
-				return newString(s);
+				// newlen = sum of lengths + null byte
+				int newlen = data.str->length() + other.data.str->length() + 1;
+				char *buf = (char*)x_malloc(newlen);
+				memcpy(buf, data.str->as_cstr(), data.str->length());
+				memcpy(buf+data.str->length(), other.data.str->as_cstr(), other.data.str->length());
+				// add null
+				buf[newlen] = 0;
+				return newString(new StringData(buf, newlen-1,true)); // give away pointer
 			}	
 			break;
 		case TYPE_SYMBOL:
 			if(other.type == TYPE_SYMBOL) {
-				string s = this->data.str;
-				s += other.data.str;
-				return newSymbol(s);
-			}
+				// newlen = sum of lengths + null byte
+				int newlen = data.str->length() + other.data.str->length() + 1;
+				char *buf = (char*)x_malloc(newlen);
+				memcpy(buf, data.str->as_cstr(), data.str->length());
+				memcpy(buf+data.str->length(), other.data.str->as_cstr(), other.data.str->length());
+				// add null
+				buf[newlen] = 0;
+				return newSymbol(new StringData(buf, newlen-1,true)); // give away pointer
+			}	
 			break;
 		case TYPE_LIST:
 			if(other.type == TYPE_LIST) {
@@ -434,7 +483,7 @@ int Object::length() const {
 	switch(type) {
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
-			return strlen(data.str);
+			return data.str->length();
 		case TYPE_LIST:
 			return (int)(data.objlist->size());
 		case TYPE_DICT:
@@ -452,7 +501,7 @@ Object Object::opSlice(VINT index, VINT nr) const {
 	switch(type) {
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
-			objsize = strlen(data.str);
+			objsize = data.str->length();
 			break;
 
 		case TYPE_LIST:
@@ -486,8 +535,8 @@ Object Object::opSlice(VINT index, VINT nr) const {
 	}
 
 	switch(type) {
-		case TYPE_STRING: return newString(x_strndup(data.str+index,nr), 0, true); // give away pointer
-		case TYPE_SYMBOL: return newSymbol(x_strndup(data.str+index,nr), 0, true); // give away pointer
+		case TYPE_STRING: return newString(data.str->as_cstr()+index, nr);
+		case TYPE_SYMBOL: return newSymbol(data.str->as_cstr()+index, nr);
 		case TYPE_LIST:
 			{
 				Object r = newList();
@@ -542,8 +591,25 @@ string Object::fmtDisplay() const {
 			return "<bound " + fmtDisplayObjList(data.boundLambda->objlist, "{", "}") + ">";
 		// *IMPORTANT* code is allowed to rely on being able to call 'str' on either a string or
 		// symbol and get a plain string
-		case TYPE_STRING: return string(data.str);
-		case TYPE_SYMBOL: return string(data.str);
+		case TYPE_STRING:
+		case TYPE_SYMBOL: 
+			{
+				string s = "";
+				int i;
+				for(i=0; i<data.str->length(); ++i) {
+					char c = data.str->as_cstr()[i];
+					if(c < 32 || c > 126) {
+						// turn non-printable chars into '%code'
+						char buf[10];
+						snprintf(buf, 9, "\\x%02x", (int)((unsigned char)c));
+						s += buf;
+					}
+					else
+						s += c;
+				}
+				return s;
+			}
+			
 		case TYPE_LIST: return fmtDisplayObjList(data.objlist, "[", "]");
 		case TYPE_DICT: {
 			// in order to ensure consistent output across languages, print with sorted keys.
@@ -603,9 +669,9 @@ string Object::fmtStackPrint() const {
 		case TYPE_BOUND_LAMBDA:
 			return "<bound " + fmtStackPrintObjList(data.boundLambda->objlist, "{", "}") + ">";
 		// add " .. " so its clear on stack that it is a string
-		case TYPE_STRING: return "\"" + string(data.str) + "\"";
+		case TYPE_STRING: return "\"" + fmtDisplay() + "\"";
 		// opposite of above -- since strings get " .. " then i don't get a ' here
-		case TYPE_SYMBOL: return "'" + string(data.str);
+		case TYPE_SYMBOL: return "'" + fmtDisplay();
 		case TYPE_LIST: return fmtStackPrintObjList(data.objlist, "[", "]");
 		case TYPE_DICT: {
 			// as above, just with fmtStackPrint

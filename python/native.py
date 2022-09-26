@@ -216,9 +216,15 @@ def builtin_file_read(I):
 	filename = popString(I, "file-read")
     # 'rb' so it doesn't translate EOL chars ...
 	f = open(filename,'rb')
-    # ... but still want a string, not bytes
-	buf = str(f.read(),'ascii')
-	I.push(LangString(buf))
+	# read as bytes
+	buf = f.read()
+	# TODO -- there must be a better way to do this ...
+	# convert bytes -> string a char at a time
+	s = ""
+	for bc in buf:
+		s += chr(bc)
+
+	I.push(LangString(s))
 	f.close()
 
 def builtin_make_list(I):
@@ -490,16 +496,24 @@ def builtin_open_as_stdout(I):
 
 def builtin_file_write(I):
 	text = popString(I,'file-write')
+	# make a bytes array ... there has to be a better way ...
+	buf = bytes()
+	for c in text: buf += bytes([ord(c)])
+
 	filename = popString(I,'file-write')
-	f = open(filename, 'w')
-	f.write(text)
+	f = open(filename, 'wb')
+	f.write(buf)
 	f.close()
 
 def builtin_file_append(I):
 	text = popString(I,'file-append')
+	# make a bytes array ... there has to be a better way ...
+	buf = bytes()
+	for c in text: buf += bytes([ord(c)])
+
 	filename = popString(I,'file-append')
-	f = open(filename, 'a')
-	f.write(text)
+	f = open(filename, 'ab')
+	f.write(buf)
 	f.close()
 
 def builtin_file_delete(I):

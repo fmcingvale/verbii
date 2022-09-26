@@ -334,6 +334,7 @@ void Interpreter::defineWord(const char *name, ObjList *objlist, bool allow_over
 }
 
 void Interpreter::deleteWord(const char* name) {
+	// **NOTE** strings containing NULLs won't work as keys here
 	auto userword = WORDS.find(name);
 	if(userword != WORDS.end()) {
 		WORDS.erase(name);
@@ -403,7 +404,7 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 		else if(obj.isSymbol()) {
 			if(obj.isSymbol("'",1)) {
 				// quoted symbol - remove one level of quoting and push
-				push(newSymbol(obj.asSymbol()+1, strlen(obj.asSymbol())-1));
+				push(newSymbol(obj.asSymbol()->as_cstr()+1, obj.asSymbol()->length()-1));
 				continue;
 			}
 			
@@ -465,20 +466,22 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 
 			// builtins, then userwords
 			if(obj.isSymbol()) {
-				auto bltin = BUILTINS.find(obj.asSymbol());
+				// **NOTE** strings containing NULLs won't work here
+				auto bltin = BUILTINS.find(obj.asSymbol()->as_cstr());
 				if(bltin != BUILTINS.end()) {
 					bltin->second(this);
 					if(PROFILE_CALLS) {
-						auto w = WORD_CALLS.find(obj.asSymbol());
+						auto w = WORD_CALLS.find(obj.asSymbol()->as_cstr());
 						if(w == WORD_CALLS.end())
-							WORD_CALLS[obj.asSymbol()] = 1; // new entry
+							WORD_CALLS[obj.asSymbol()->as_cstr()] = 1; // new entry
 						else
-							WORD_CALLS[obj.asSymbol()] += 1;
+							WORD_CALLS[obj.asSymbol()->as_cstr()] += 1;
 					}
 					continue;
 				}
 				
-				ObjList *wordlist = lookup_word(obj.asSymbol());
+				// **NOTE** strings containing NULLs won't work here
+				ObjList *wordlist = lookup_word(obj.asSymbol()->as_cstr());
 				if(wordlist) {
 					// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 					// i don't need to come back here, so pop my wordlist first to stop stack from growing
@@ -493,11 +496,11 @@ void Interpreter::run(ObjList *to_run, void (*debug_hook)(Interpreter*, Object))
 					code_call(wordlist);
 					//syntax->pushObjList(wordlist);
 					if(PROFILE_CALLS) {
-						auto w = WORD_CALLS.find(obj.asSymbol());
+						auto w = WORD_CALLS.find(obj.asSymbol()->as_cstr());
 						if(w == WORD_CALLS.end())
-							WORD_CALLS[obj.asSymbol()] = 1; // new entry
+							WORD_CALLS[obj.asSymbol()->as_cstr()] = 1; // new entry
 						else
-							WORD_CALLS[obj.asSymbol()] += 1;
+							WORD_CALLS[obj.asSymbol()->as_cstr()] += 1;
 					}
 					continue;
 				}

@@ -262,8 +262,8 @@
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "<true>" "<false>"))
-		((Symbol? obj) (string-append "'" obj)) ; obj is a string
-		((String? obj) (string-append "\"" (value obj) "\""))
+		((Symbol? obj) (string-append "'" (fmtDisplay obj))) ; obj is a string
+		((String? obj) (string-append "\"" (fmtDisplay obj) "\""))
 		((List? obj)
 			(fmtStackPrintObjlist (List-objlist obj) "[" "]"))
 		((Null? obj) "<null>")
@@ -298,6 +298,13 @@
 		(dynvector-fold (lambda (i str obj) (string-append str " " (fmtDisplay obj))) open-delim
 			objlist) " " close-delim))
 
+(define (char-to-hex c)
+	(let ((s ""))
+		(set! s (number->string (char->integer c) 16))
+		(if (< (string-length s) 2)
+			(set! s (string-append "0" s)))
+		s))
+
 (define (fmtDisplay obj)
 	(cond
 		((integer? obj) (number->string obj))
@@ -308,8 +315,28 @@
 					(string-drop-right s 2)
 					s)))
 		((boolean? obj) (if obj "true" "false"))
-		((Symbol? obj) obj) ; obj is a string
-		((String? obj) (value obj))
+		((Symbol? obj) 
+			(let ((s ""))
+				(string-for-each
+					(lambda (c)
+						(if (or (< (char->integer c) 32) (> (char->integer c) 126))
+							; write non-printable chars as \xCODE
+							(set! s (string-append s "\\x" (char-to-hex c)))
+							; else print as normal
+							(set! s (string-append s (string c)))))
+					obj)
+				s))
+		((String? obj) 
+			(let ((s ""))
+				(string-for-each
+					(lambda (c)
+						(if (or (< (char->integer c) 32) (> (char->integer c) 126))
+							; write non-printable chars as \xCODE
+							(set! s (string-append s "\\x" (char-to-hex c)))
+							; else print as normal
+							(set! s (string-append s (string c)))))
+					(value obj))
+				s))
 		((List? obj)
 			(string-append 
 				(dynvector-fold (lambda (i str obj) (string-append str " " (fmtDisplay obj))) "[" 

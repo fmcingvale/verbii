@@ -41,21 +41,23 @@ double STARTUP_TIME;
 #include "util.hpp"
 using namespace std;
 
-void file_write(const string &filename, const string &text) {
+// **NOTE** text MAY contain NULLs, so takes nr bytes to write
+void file_write(const string &filename, const char *text, int nr) {
 	FILE *fp = fopen(filename.c_str(),"w");
 	if(!fp)
 		throw LangError("Unable to create file: " + filename);
 
-	fwrite(text.c_str(),sizeof(char),text.size(),fp);
+	fwrite(text,sizeof(char),nr,fp);
 	fclose(fp);
 }
 
-void file_append(const string &filename, const string &text) {
+// as above, text is allowed to contain NULLs
+void file_append(const string &filename, const char *text, int nr) {
 	FILE *fp = fopen(filename.c_str(),"a");
 	if(!fp)
 		throw LangError("Unable to append to file: " + filename);
 
-	fwrite(text.c_str(),sizeof(char),text.size(),fp);
+	fwrite(text,sizeof(char),nr,fp);
 	fclose(fp);
 }
 
@@ -104,20 +106,26 @@ static double popFloatOrInt(Interpreter *intr, const char *errmsg) {
 		throw LangError(string(errmsg) + " (requires integer, got: " + obj.fmtStackPrint() + ")");
 }
 
-static const char *popString(Interpreter *intr, const char *errmsg) {
+static Object popStringObj(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isString()) {
 		throw LangError(string(errmsg) + " (requires string, got: " + obj.fmtStackPrint() + ")");
 	}
-	return obj.asString();
+	return obj;
 }
 
+// ONLY for cases where the text cannot contain NULLs (i.e. by language definition)
+static const char* popString(Interpreter *intr, const char *errmsg) {
+	return popStringObj(intr, errmsg).asString()->as_cstr();
+}
+
+// like above, assumes symbols cannot contain nulls
 static const char *popSymbol(Interpreter *intr, const char *errmsg) {
 	Object obj = intr->pop();
 	if(!obj.isSymbol()) {
 		throw LangError(string(errmsg) + " (requires symbol, got: " + obj.fmtStackPrint() + ")");
 	}
-	return obj.asSymbol();
+	return obj.asSymbol()->as_cstr();
 }
 
 static Object popList(Interpreter *intr, const char *errmsg) {
@@ -189,6 +197,7 @@ static void builtin_divmod(Interpreter *intr) {
 /* ( list name -- adds word ) */
 static void builtin_make_word(Interpreter *intr) {
 	//cout << "MAKE-WORD ENTRY:" << intr->reprStack() << endl;
+	// names cannot contain NULLs
 	const char *name = popSymbol(intr, "make-word bad name");
 	Object list = popList(intr, "make-word bad list");
 	intr->defineWord(name, list.data.objlist, ALLOW_OVERWRITING_WORDS);
@@ -255,6 +264,7 @@ static void builtin_setsp(Interpreter *intr) {
 }
 
 static void builtin_error(Interpreter *intr) {
+	// messages containing NULLs won't work here
 	const char *msg = popString(intr, "error requires message"); // do as 2 steps to avoid double-exception
 	throw LangError(msg);
 }
@@ -271,6 +281,7 @@ static void do_binop(Interpreter *intr, Object (Object::*op)(const Object &) con
 // ( filename -- text )
 // reads ALL text from filename
 static void builtin_file_read(Interpreter *intr) {
+	// filenames containing NULLs won't work here
 	const char *filename = popString(intr, "read-file missing filename");
 	if(!file_exists(filename))
 		throw LangError("No such file in read-file: " + string(filename));
@@ -326,9 +337,9 @@ static void builtin_get(Interpreter *intr) {
 		}
 		else {
 			if(obj.isString())
-				intr->push(newString(obj.asString()+index, 1));
+				intr->push(newString(obj.asString()->as_cstr()+index, 1));
 			else if(obj.isSymbol())
-				intr->push(newSymbol(obj.asSymbol()+index, 1));
+				intr->push(newSymbol(obj.asSymbol()->as_cstr()+index, 1));
 			else if(obj.isList())
 				intr->push(obj.asList()->at(index));
 		}
@@ -336,12 +347,13 @@ static void builtin_get(Interpreter *intr) {
 	else if(obj.isDict()) {
 		if(!indexOrKey.isString())
 			throw LangError("get expects string key, got: " + indexOrKey.fmtStackPrint());
-		auto entry = obj.asDict()->find(indexOrKey.asString());
+		auto entry = obj.asDict()->find(indexOrKey.asString()->as_cstr());
 		if(entry == obj.asDict()->end())
 			// no such key -> void (since void is never a valid stored object)
 			intr->push(newVoid());
 		else
-		 	intr->push((*obj.asDict())[indexOrKey.asString()]);
+			// keys cannot contain NULLs
+		 	intr->push((*obj.asDict())[indexOrKey.asString()->as_cstr()]);
 	}
 	else
 		throw LangError("get not supported for object: " + obj.fmtStackPrint());
@@ -373,7 +385,8 @@ static void builtin_put(Interpreter *intr) {
 	else if(dest.isDict()) {
 		if(!indexOrKey.isString())
 			throw LangError("put expects string key, got: " + indexOrKey.fmtStackPrint());
-		(*dest.asDict())[indexOrKey.asString()] = obj;
+		// keys cannot contain NULLs
+		(*dest.asDict())[indexOrKey.asString()->as_cstr()] = obj;
 		intr->push(dest);
 	}
 	else
@@ -417,12 +430,13 @@ static void builtin_greater(Interpreter *intr) {
 	pushBool(intr, a.opGreater(b));
 }
 
+// **NOTE** only call this in contexts where the strings cannot contain NULLs
 static const char *popStringOrSymbol(Interpreter *intr) {
 	Object o = intr->pop();
 	if(o.isString())
-		return o.asString();
+		return o.asString()->as_cstr();
 	else if(o.isSymbol())
-		return o.asSymbol();
+		return o.asSymbol()->as_cstr();
 	else
 		throw LangError("Expecting string or symbol but got: " + o.fmtStackPrint());
 }
@@ -441,11 +455,10 @@ static void builtin_unmake(Interpreter *intr) {
 	Object obj = intr->pop();
 	// strings & symbols are unmade into ASCII values
 	if(obj.isString() || obj.isSymbol()) {
-		int len = strlen(obj.data.str);
-		for(int i=0; i<len; ++i) {
-			intr->push(newInt((int)(obj.data.str[i])));
-		}
-		intr->push(newInt(len));
+		for(int i=0; i<obj.data.str->length(); ++i)
+			intr->push(newInt((unsigned char)(obj.data.str->as_cstr()[i])));
+	
+		intr->push(newInt(obj.data.str->length()));
 	}
 	else if(obj.isList()) {
 		for(auto obj : *obj.data.objlist) {
@@ -483,6 +496,7 @@ static void builtin_make_symbol(Interpreter *intr) {
 }
 
 static void builtin_dumpword(Interpreter *intr) {
+	// symbols cannot contain NULLs
 	const char* symbol = popSymbol(intr,"Bad name in .dumpword");
 	ObjList *wordlist = intr->lookup_word(symbol);
 	if(!wordlist) {
@@ -501,6 +515,7 @@ static void builtin_alloc(Interpreter *intr) {
 }
 
 static void builtin_del(Interpreter *intr) {
+	// symbols cannot contain NULLs
 	auto name = popSymbol(intr, "bad name in del");
 	intr->deleteWord(name);
 }
@@ -574,6 +589,7 @@ static void builtin_new_dict(Interpreter *intr) {
 }
 
 static void builtin_file_exists(Interpreter *intr) {
+	// filenames cannnot contain NULLs
 	auto filename = popString(intr,"file-exists?");
 	intr->push(newBool(file_exists(filename)));
 }
@@ -597,7 +613,8 @@ static void builtin_open_as_stdout(Interpreter *intr) {
 			fflush(fp_stdout);
 			fclose(fp_stdout);
 		}
-		fp_stdout = fopen(obj.asString(), "w");
+		// filenames with NULLs not supported
+		fp_stdout = fopen(obj.asString()->as_cstr(), "w");
 	}
 	else
 		throw LangError("Unknown arg to open-as-stdout: " + obj.fmtStackPrint());
@@ -606,6 +623,7 @@ static void builtin_open_as_stdout(Interpreter *intr) {
 #include "deserialize.hpp"
 
 static void builtin_deserialize(Interpreter *intr) {
+	// filename cannot contain NULLs
 	auto filename = popString(intr,"deserialize");
 	ifstream fileIn(filename);
 	deserialize_stream(intr, fileIn);
@@ -640,17 +658,21 @@ static void builtin_time_string(Interpreter *intr) {
 // ( filename string -- )
 // write string to filename, overwriting existing file
 static void builtin_file_write(Interpreter *intr) {
-	string text = popString(intr,"file-write");
+	// text MAY contain NULLs, so I need the string object, not the char*
+	auto text = popStringObj(intr,"file-write");
+	// filenames may not contain NULLs
 	string filename = popString(intr,"file-write");
-	file_write(filename, text);
+	file_write(filename, text.data.str->as_cstr(), text.data.str->length());
 }
 
 // ( filename string -- )
 // append string to end of file (or start new file)
 static void builtin_file_append(Interpreter *intr) {
-	string text = popString(intr,"file-append");
+	// like above, text MAY contain NULLs
+	auto text = popStringObj(intr,"file-append");
+	// but filename may not
 	string filename = popString(intr,"file-append");
-	file_append(filename, text);
+	file_append(filename, text.data.str->as_cstr(), text.data.str->length());
 }
 
 #include <cstdio>
@@ -658,6 +680,7 @@ static void builtin_file_append(Interpreter *intr) {
 // ( filename -- )
 // delete file if it exists (no error if it does not exist)
 static void builtin_file_delete(Interpreter *intr) {
+	// filename may not contain nulls
 	string filename = popString(intr,"file-append");
 	remove(filename.c_str());
 }
@@ -756,15 +779,14 @@ static void builtin_os_getcwd(Interpreter *intr) {
 // FNV-1a in verbii is as a file checksum, so not intended to be used against malicious 
 // attacks. The simplicity of implementing FNV-1a across ports is the primary consideration here.
 static void builtin_fnv_1a_32(Interpreter *intr) {
-	// bug: strings are not 8-bit clean since they are stored as a char* so nulls cannot be
-	// safely stored. for now, live with this ...
-	auto s = popString(intr,"fnv-1a-32");
+	// string is allowed to contain NULLs, so I need the string object NOT the char*
+	auto text = popStringObj(intr,"fnv-1a-32");
 	uint32_t hash = 2166136261; // offset basis
+	size_t i;
 
-	while(*s) {
-		hash ^= (uint32_t)(*s);
+	for(int i=0; i<text.data.str->length(); ++i) {
+		hash ^= (uint32_t)((unsigned char)(text.data.str->as_cstr()[i]));
 		hash *= 16777619; // FNV prime
-		++s;
 	}
 
 	intr->push(newInt(hash));

@@ -138,6 +138,17 @@ def fmtDisplayObjlist(objlist, open_delim, close_delim):
 	rlist.append(close_delim)
 	return ' '.join(rlist)
 
+# turn non-printable chars into "\xCODE"
+def stringEscapeForDisplay(s):
+	o = ""
+	for c in s:
+		if ord(c) < 32 or ord(c) > 126:
+			o += "\\x{0:02x}".format(ord(c))
+		else:
+			o += c
+
+	return o
+
 def fmtDisplay(obj):
 	"see c++ comments for display vs. stack format"
 	if isNull(obj):
@@ -166,9 +177,13 @@ def fmtDisplay(obj):
 		s += "}"
 		return s
 	elif isString(obj):
-		return obj.s
+		# turn non-printable chars into "%code"
+		return stringEscapeForDisplay(obj.s)
+		
 	elif isSymbol(obj):
-		return obj
+		# turn non-printable chars into "%code"
+		return stringEscapeForDisplay(obj)
+		
 	elif isOpcode(obj):
 		return fmtStackPrint(obj)
 	else:
@@ -204,9 +219,9 @@ def fmtStackPrint(obj):
 		return '<bound ' + fmtStackPrintObjlist(obj.objlist,"{","}") + '>'
 	elif isString(obj):
 		# in a stack display, strings get " ... "
-		return '"' + obj.s + '"'
+		return '"' + fmtDisplay(obj.s) + '"'
 	elif isSymbol(obj):
-		return "'" + obj
+		return "'" + fmtDisplay(obj)
 	elif isList(obj):
 		return fmtStackPrintObjlist(obj, '[', ']')
 	elif isDict(obj):
