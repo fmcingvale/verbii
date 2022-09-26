@@ -3,7 +3,7 @@
 # clean out ALL ports - useful before running count-code.sh, for example
 
 # c++
-( cd cpp; make clean )
+( cd cpp; ./clean.sh )
 
 # c#
 ( cd csharp; ./mono-clean.sh )
