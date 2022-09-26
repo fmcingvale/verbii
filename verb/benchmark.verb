@@ -18,7 +18,7 @@
 "demo-common" import 
 "hashing" import 
 "unittest" import
-"quicksort" import
+"sorting" import
 
 \ time & display how long func runs
 : timeit ( func -- )
@@ -142,7 +142,7 @@
 	.wordlist
 	{ 0 10 slice 'benchmark- == } filter
 	\ sort so tests run in same order on all platforms
-	quicksort
+	{ } quicksort
 	;
 
 \ run test by name (symbol)

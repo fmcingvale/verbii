@@ -12,7 +12,7 @@
 
 "unittest" import
 "paths" import \ for tail/tail-drop until they are moved to init
-"quicksort" import
+"sorting" import
 
 \ list all the test modules
 'ALL-TEST-MODULES [
@@ -32,6 +32,7 @@
 	"test-random-xorshift32"
 	"test-random-xoshiro128++"
 	"test-random-xoshiro128starstar"
+	"test-sorting"
 	"test-stackops"
 	"test-string"
 	"test-symbol"
@@ -46,7 +47,7 @@
 	.wordlist
 	{ 0 5 slice 'test- == } filter
 	\ sort so tests run in same order on all platforms
-	quicksort
+	{ } quicksort
 	;
 
 \ run test by name (symbol)

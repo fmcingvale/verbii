@@ -1,0 +1,108 @@
+\ Sorting functions
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ Mergesort
+
+: mergesort ( list getkey -- sorted )
+	@locals [ A B n ia ib ]
+	\ "SORT:" . list . CR
+	\ split list into two halves, A & B, and sort those separately
+	\
+	\ check special cases first
+	IF list length 2 < THEN
+		list return
+	ELSE
+		\ split into two lists, A & B
+		list length 2 // n!
+		list 0 n slice A!
+		list n -1 slice B!
+		\ sort those
+		A getkey mergesort A!
+		B getkey mergesort B!
+		\ now merge A & B together by sorting head values
+		[ ] sorted!
+		\ use indexes into A & B instead of doing head-drop each time since that eats tons of memory
+		0 ia!
+		0 ib!
+		WHILE A ia get void? B ib get void? and not DO
+			\ if at end of A or B, then done
+			IF A ia get void? THEN
+				\ A done, add rest of B to output since it's already sorted
+				sorted B ib -1 slice extend return
+			ELIF B ib get void? THEN
+				\ like above, but for A
+				sorted A ia -1 slice extend return
+			\ else, get next smallest element and add to sorted then continue
+			\ NOTE: take A if A <= B so that equal elements maintain their relative positions
+			ELIF A ia get getkey call B ib get getkey call > THEN
+				\ A > B
+				sorted B ib get append!
+				ib 1 + ib!
+			ELSE
+				\ A <= B
+				sorted A ia get append!
+				ia 1 + ia!
+			END
+		END
+		sorted return
+	END
+	;
+	
+: quicksort ( list getkey -- sorted )
+		\ "QUICKSORT LIST:" . list . CR
+	@locals [ A B x xkey XL i y ykey ]
+	\ test for base cases first
+	IF list length 1 <= THEN
+		list return \ 0 or 1 items, nothing to do 
+	ELIF list length 2 == THEN
+		\ base sorting case [X Y]
+		list 0 get x!
+		x getkey call xkey!
+		list 1 get y!
+		y getkey call ykey!
+		IF ykey xkey > THEN
+			list return \ Y > X so list is sorted
+		ELIF xkey ykey == THEN
+			\ don't swap if equal (for stable sort)
+			list return
+		ELSE
+			\ swap only if less
+			y x 2 make-list return
+		END
+	ELSE
+		\ normal case, partition and sort sublists
+		
+		\ pick any value to be the pivot - easier in verbii to pick start and slice rest
+		\ (note - must remove the pivot value, not enough to let it go into the >= list -- 
+		\ for example [ 1 2 3 ], after partitioning on 1 the lists would be [ ] [ 1 2 3 ] so the
+		\ subdividing would never terminate)
+		list 0 get x! 			\ x = list[0]
+		x getkey call xkey!		\ key for x
+		list 1 -1 slice list!	\ list = list[1:] 		
+		\ split list into: A < x, XL == x, B > x
+		[ ] A! [ ] B! [ ] XL!
+		0 i!
+		WHILE list i get void? not DO
+			list i get y!
+			y getkey call ykey!
+			IF ykey xkey > THEN
+				B y append!
+			ELIF ykey xkey == THEN
+				XL y append!
+			ELSE
+				A y append!
+			END
+			i 1 + i!
+		END		
+		\ recursively sort A & B lists
+		A getkey quicksort A!
+		B getkey quicksort B!
+		\ return A+[x]+XL+B
+		\ NOTE - this (should be!) a stable sort -- x was the first element of the original list,
+		\ so all elements in XL came after it in the original list.
+		A x append XL + B +
+		return
+	END
+	;
+	
