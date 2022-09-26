@@ -446,8 +446,12 @@
 	@done
 		;
 
+\ * NOTE * This has been replaced by the WHILE ... DO syntax (better performance,
+\ less memory usage). This is here just as an example of how new control structures
+\ CAN be added, in the absence of compiler support.
+\
 \ run lambda as long as test is true (test is run BEFORE lambda)
-: while ( test lambda )
+: /while ( test lambda )
 	@loop
 		test call not if >>done
 		lambda call <<loop
@@ -471,9 +475,21 @@
 		seq i get func call
 		i 1 + i! <<loop
 	@done 
-		;
-	
+		;	
 
+\ apply-for-each -- like for-each, except:
+\	* only works for lists
+\	* each list element must be a list which is applied to the passed function as its arguments
+: apply-for-each ( seq func -- )
+	@locals [ i ]
+	0 i!
+	@loop
+		i seq length >= if >>done 
+		seq i get unmake drop func call
+		i 1 + i! <<loop
+	@done 
+		;
+		
 \
 \	for-each-reverse -- same as for-each, but starts at the end
 \
@@ -558,6 +574,14 @@
 		index 1 + index! <<loop
 	@found index return
 	@not-found void
+	;
+	
+\ convenience for when you don't care about the index value, just need to know
+\ if an item is found
+: contains? ( list obj -- result )
+	list obj find-equal void? if >>false 
+	true return
+	@false false
 	;
 	
 \ fold - left fold

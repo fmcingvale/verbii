@@ -237,65 +237,215 @@
 
 \ parse next word from input into runnable object
 : syntax-next ( -- obj )
-	reader-next
+	@locals [ word ]
+	reader-next word!
 		 \ "syntax-next:" . dup . CR
-	dup void? if >>void
-	dup '( == if >>comment \ )
-	dup '\ == if >>line-comment
-	dup '{ == if >>v2-closure
-	dup '[ == if >>list
-	dup '#op( == if >>opcode  \ )
-	dup ': == if >>v2-worddef
-	dup 'del == if >>del
-	dup 'true == if >>true-literal
-	dup 'false == if >>false-literal
-	dup 'null == if >>null-literal
-
+	word void? if >>void
+	word '( == if >>comment \ )
+	word '\ == if >>line-comment
+	word '{ == if >>v2-closure
+	word '[ == if >>list
+	word '#op( == if >>opcode  \ )
+	word ': == if >>v2-worddef
+	word 'del == if >>del
+	word 'true == if >>true-literal
+	word 'false == if >>false-literal
+	word 'null == if >>null-literal
+	word 'WHILE == if >>syntax-while
+	word 'IF == if >>syntax-if
+	
 	( look for triple-quoted string first )
-	dup 0 3 slice TRIPLEQUOTE == if >>triplestring
+	word 0 3 slice TRIPLEQUOTE == if >>triplestring
 	( now single quoted string )
-	dup 0 get '" == if >>string ( "... )
+	word 0 get '" == if >>string ( "... )
 	\ test for correct format before passing to parse-int or parse-float since those functions
 	\ may (depending on platform) happily parse something like "123abc" as 123 
-	dup int-symbol? if >>integer
-	dup float-symbol? if >>float
-	dup 0 get '# != if >>nomatch dup 1 -1 slice float-symbol? if >>float-literal
+	word int-symbol? if >>integer
+	word float-symbol? if >>float
+	word 0 get '# != if >>nomatch 
+	word 1 -1 slice float-symbol? if >>float-literal
 	@nomatch
 		( leave unprocessed word on stack )
+		word
 		return
 	@void
+		void
 		return ( leave void on stack )
 	@v2-worddef
-		drop v2-syntax-define-word return
+		v2-syntax-define-word return
 	@del
-		drop syntax-del return
+		syntax-del return
 	@comment
-		drop syntax-comment syntax-next return ( skip comment and return NEXT object )
+		syntax-comment syntax-next return ( skip comment and return NEXT object )
 	@line-comment
-		drop syntax-line-comment syntax-next return ( skip comment and return NEXT object )
+		syntax-line-comment syntax-next return ( skip comment and return NEXT object )
 	@v2-closure
-		drop syntax-v2-closure return
+		syntax-v2-closure return
+	@syntax-while
+		syntax-while return
+	@syntax-if
+		syntax-if return
 	@list
-		drop syntax-list return
+		syntax-list return
 	@opcode
-		drop syntax-opcode return
+		syntax-opcode return
 	@triplestring
 		( call syntax-triple-string with first piece on stack )
-		syntax-triple-string return
+		word syntax-triple-string return
 	@string
 		( call syntax-string with first piece on stack )
-		syntax-string return
+		word syntax-string return
 	@integer
-		parse-int return
+		word parse-int return
 	@float
-		parse-float return
+		word parse-float return
 	@float-literal ( #NN.NN form )
-		1 -1 slice parse-float return
-	@true-literal drop true return
-	@false-literal drop false return
-	@null-literal drop null return
+		word 1 -1 slice parse-float return
+	@true-literal true return
+	@false-literal false return
+	@null-literal null return
 	;
 
+
+\ TODO -- this could be used when parsing other things like lists, lambdas, etc.
+\
+\ parse reader stream into a list until any of the given symbols are found (upon return, symbol will have been read)
+\
+\ returns parsed list
+: syntax-collect-until-any-symbol ( symbols -- list stop-symbol )
+	@locals [ obj ]
+	[ ] list!
+	@loop
+		syntax-next obj!
+		obj void? if >>eof
+		symbols obj contains? if >>done
+		\ else append to list and continue
+		obj is-inline-list? if >>inline
+		list obj append! <<loop
+	@inline
+		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+		\ remove ,,inline 
+		list obj 1 -1 slice extend! <<loop
+	@done
+		\ return ( list stop-symbol )
+		list obj return
+	@eof
+		"End of input looking for: " symbols str + error
+	;
+
+\ simplification of above when looking for only one symbol (so don't need stop-symbol)
+: syntax-collect-until-symbol ( symbol -- list )
+	symbol 1 make-list syntax-collect-until-any-symbol drop
+	;
+
+'NEXT-UNIQUE-SYMBOL-NUMBER 0 make-var
+
+: make-unique-symbol ( -- nr )
+	NEXT-UNIQUE-SYMBOL-NUMBER 1 + NEXT-UNIQUE-SYMBOL-NUMBER!
+	'auto-symbol- NEXT-UNIQUE-SYMBOL-NUMBER str string->symbol +
+	;
+	
+\ parses:
+\	WHILE cond-words ... DO do-words ... END
+\
+\ .. and converts into primitive instructions.
+\
+\ Assumes WHILE was just read.
+: syntax-while ( -- code )
+	@locals [ obj cond-list do-list label-start label-done ]
+	\ read: cond-list ... DO 
+	'DO syntax-collect-until-symbol cond-list!
+	\ read: do-words ... END
+	'END syntax-collect-until-symbol do-list!
+	
+	\ now rewrite pieces into a normal if loop and put in an inline list
+	',,inline 1 make-list code!
+	\ make unique labels
+	make-unique-symbol label-start!
+	make-unique-symbol label-done!
+	\ make code:
+	\ 	@start-label
+	\ 		cond ... not if >>done-label
+	\		do-list ... <<start-label
+	\	@done-label
+	code '@ label-start + append!
+	code cond-list extend!
+	code 'not 'if '>> label-done + 3 make-list extend!
+	code do-list extend!
+	code '<< label-start + '@ label-done + 2 make-list extend!
+	\ return code
+	code return
+	;
+	
+\ parses: IF test1 ... THEN do1 ...
+\		  ELIF test2 ... THEN do2 ...
+\		  ELSE do3 ... 
+\		  END
+: syntax-if ( -- code )
+	@locals [ test-list do-list pairs stop ]
+	[ ] pairs!
+	\ read all pairs of test:do 
+	@loop
+		\ read: test ... THEN
+		'THEN syntax-collect-until-symbol test-list!
+	@read-do
+		\ read: do ... [ELIF | ELSE | END]
+		[ ELIF ELSE END ] syntax-collect-until-any-symbol stop! do-list!
+		\ add [ test-list do-list ] to pairs
+		pairs test-list do-list 2 make-list append!
+		\ see which stop symbol i received and decide what to do
+		'ELIF stop == if >>got-elif 
+		'ELSE stop == if >>got-else 
+		'END stop == if >>got-end
+		"Expecting [ELIF | ELSE | END], got: " stop str + error 
+	@got-elif 
+		\ make sure i didn't get another ELIF after an ELSE
+		test-list null? if >>bad-elif 
+		\ ready to read next test ... THEN ... do ...
+		<<loop
+	@got-else
+		\ make sure i didn't get another ELSE after the last one 
+		test-list null? if >>bad-else 
+		\ NO test, just need to read the do ... clause
+		null test-list! 
+		<<read-do 
+	@bad-elif "Syntax error: Got ELIF after ELSE" error 
+	@bad-else "Syntax error: Got ELSE after ELSE" error 
+	@got-end
+		@locals [ label-end label-next ]
+		\ "PARSED 'IF' SYNTAX:" . pairs . CR
+		\ create code as inline-list
+		',,inline 1 make-list code!
+		\ make a label to jump to after successful matching and running of a do .. clause
+		make-unique-symbol label-end!
+		\ loop over all [ test do ] pairs
+		pairs
+		{ ( test-list do-list )
+			test-list null? if >>make-else \ if test is null, then its the ELSE clause 
+			\ normal case -- make a label to jump to when test is false to run next case
+			make-unique-symbol label-next!
+			\ write test + if into code
+			code test-list extend [ not if ] extend '>> label-next + append
+			\ write do ... into code then jump to END
+			do-list extend '>> label-end + append
+			\ write label-next that the above jumps to for running next case
+			'@ label-next + append!
+			\ ... and continue with next pair 
+			return
+			
+			@make-else
+			\ pair is the ELSE clause; no test, just write the do .. 
+			code do-list extend!
+			\ no need to write a jump -- just fall through to label-end
+		} apply-for-each
+			
+		\ finally add the end label that all of the above clauses jump to when done 
+		code '@ label-end + append!
+		
+		\ "CREATED CODE:" . code . CR
+		code
+	;
+	
 \ assumes @( was just read, parses until ) as an object list, prepended with ,,declargs
 : syntax-parse-decl-arglist
 	@locals [ outlist ]
