@@ -2,21 +2,23 @@
 Code sizes of all ports. 
 
 Stats that interest me ...
-	- Average port size: 1396 lines (initial goal was 1000)
-	- Verbii code makes up 52% of total lines of code
+	- Average port size: 1589 lines (initial goal was 1000)
+	- Verbii code makes up 57% of total lines of code
+	- Verbii code is 4.6x larger than the largest port (C++)
+	  and 9x larger than the smallest port (Python)
 	- Python has most compact code, followed closely by Scheme
 
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-Forth                           64           1878           2103           7417
-C++                             14            453            517           2183
-C#                               6            216            164           1385
-Lua                              5            217            170           1381
-Scheme                           6            199            273           1093
-Python                           6            223            168            942
+Verbii                          84           2422           3412          10347
+C++                             16            462            577           2238
+C#                               7            298            202           1662
+Lua                              6            287            231           1630
+Scheme                           6            250            304           1272
+Python                           7            295            226           1144
 -------------------------------------------------------------------------------
-SUM:                           101           3186           3395          14401
+SUM:                           126           4014           4952          18293
 -------------------------------------------------------------------------------
 
 (as measured by cloc, github.com/AlDanial/cloc)
