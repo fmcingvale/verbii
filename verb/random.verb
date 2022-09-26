@@ -44,7 +44,7 @@
 		\ pad to length 4
 		@pad
 			seedval length 4 mod 0 == if >>divide 
-			seedval "*" + seedtext! <<pad
+			seedval "*" + seedval! <<pad
 		@divide
 			\ "PADDED:" . seedtext . CR
 		\ divide into 4 chunks of equal length and set vals list from the hashes
@@ -115,7 +115,7 @@
 		return
 		
 	@tooshort
-		"Seed value too short (must be >= 4), got: " seedtext + error
+		"Seed value too short (must be >= 4), got: " seedval + error
 	;
 		
 \ returns random 32 bit integer
