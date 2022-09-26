@@ -1,0 +1,206 @@
+
+( ********* FOR HISTORICAL INTEREST ONLY ************** )
+( **** This was written before full closures existed -- this was a demo of how to do
+  **** pseudo-closure things without direct language support. I eventually expanded
+  **** on this with the 'self' mechanism, then finally to full closures with named captures )
+
+( since verbii doesn't call functions like "f(x,y,z)" there is no such thing as 
+  capturing/binding values by name, as in a traditional closure.
+
+  however, values can still be captured in dynamically created functions, since lists are
+  directly callable ... )
+
+: add-mul-xyz ( x y z -- x*y + z )
+	-rot * +
+	;
+
+( make function that takes x and calls add-mul-xyz with captured y & z )
+: make-func ( y z -- list )
+	( when called, x will be on stack, so just need to push y and z then call
+	 add-mul-xyz. since y & z are currently on the stack, just push add-mul-xyz and
+	 make a list ... )
+	 'add-mul-xyz 3 make-list
+	 ;
+
+( make a few instances to prove it works )
+var F1 1
+var F2 1
+var F3 1
+
+10 20 make-func F1 set!
+30 40 make-func F2 set!
+50 60 make-func F3 set!
+
+( print expected & actual results ... )
+11 10 * 20 + . 
+11 F1 ref call . CR
+11 30 * 40 + . 
+11 F2 ref call . CR
+11 50 * 60 + . 
+11 F3 ref call . CR 
+
+( ======================================================================================
+	pseudocode:
+		for i in length(seq):
+			state = lambda(seq[i],state)
+
+		return state
+		
+	lambda must leave updated state on stack
+
+	NOTES:
+		* lambda *cannot* assume anything about the state of the stack, except
+		  that the top is [seq[i],state]
+		* lambda *cannot* use locals since is it called within the locals context of
+		  for-each-state
+		* lambda can only use the passed state
+		
+		* for-each-state does NOT inspect or modify state, it only passes it to lambda
+		  and stores it as a result
+
+	leaves final state on stack
+  ====================================================================================== )
+: for-each-state ( sequence lambda state -- end-state )
+		( "for-each:" . CR )
+	>L >L dup length >L 0 >L ( L0=index, L1=length, L2=lambda, L3=state )
+		( "ENTRY: " . 4 .L CR )
+	@loop ( sequence )
+	L0 ref L1 ref >= if >>done
+	L0 ref +get L3 ref L2 ref 
+	call ( call lambda with stack: [seq[i],state] )
+		( "After call:" . .S CR )
+	L3 set! ( update state )
+	L0 ref 1 + L0 set! <<loop
+	@done 
+		drop L3 ref ( leave state on stack )
+		LP 4 + LP! ( clean up locals )
+	;
+
+( ======================================================================================
+	NOTES:
+		* lambda *cannot* assume anything about the stack, except that the top
+		  of the stack will be seq[i]
+		* lambda *cannot* use locals
+  ====================================================================================== )
+: for-each* ( sequence lambda -- ; calls lambda(obj) for each obj in sequence )
+	( wrap lambda in: [drop lambda call 0] to adjust state for for-each-state )
+	'drop swap 'call 0 4 make-list 
+		( "MADE WRAPPER:" . dup . CR )
+	0 for-each-state
+	drop ( drop state )
+	;
+
+10 20 30 40 50 5 make-list
+( count items )
+"List:" . dup . CR 
+"Counting: ... " .
+
+{ ( seq[i], state ) nip 1 + } 0 for-each-state
+"Result:" . . CR 
+"STACK:" . .S CR 
+
+11 22 33 44 55 5 make-list
+"List: " . dup . CR 
+"Printing items:" . CR 
+
+{ "Item:" . . CR } for-each*
+"STACK:" . .S CR 
+
+(
+	creates a new sequence:
+		newseq[i] = lambda(seq[i])
+
+	NOTE:
+		lambda *cannot* assume state of stack NOR use locals, it must operate
+		purely on each seq[i] value
+)
+: map ( sequence lambda -- new-sequence )
+	swap 
+	dup list? if >>map-list
+	dup string? if >>map-string
+	str "Bad sequence in map: " swap + error
+	@map-list
+		swap ( seq lambda )
+		( wrap lambda as: [swap lambda call append ] )
+		'swap swap 'call 'append 4 make-list
+			( "WRAPPER:" . dup . CR )
+		0 make-list for-each-state
+		return
+		
+	@map-string
+		( same as above, just different start state & append )
+		swap
+		'swap swap 'call '+ 4 make-list
+			( "WRAPPER:" . dup . CR )
+		0 make-string for-each-state
+		return
+		;
+
+(
+	make new sequence containing only the elements where
+		lambda(seq[i]) is true
+)
+: filter ( sequence lambda -- new-sequence )
+	swap 
+	dup list? if >>map-list
+	dup string? if >>map-string
+	str "Bad sequence in map: " swap + error
+	@map-list
+		swap ( seq lambda )
+		( wrap lambda as: [swap lambda call if >>keep append ] )
+		'swap swap 'call 'append 4 make-list
+			( "WRAPPER:" . dup . CR )
+		0 make-list for-each-state
+		return
+		
+	@map-string
+		( same as above, just different start state & append )
+		swap
+		'swap swap 'call '+ 4 make-list
+			( "WRAPPER:" . dup . CR )
+		0 make-string for-each-state
+		return
+		;
+
+: to-upper ( string -- first char of string as uppercase )
+	ord
+	dup 97 < if >>not-lower
+	dup 122 > if >>not-lower
+	32 - chr return
+	@not-lower chr
+	;
+
+: to-lower ( string -- first char of string as uppercase )
+	ord
+	dup 65 < if >>not-upper
+	dup 90 > if >>not-upper
+	32 + chr return
+	@not-upper chr
+	;
+
+10 20 30 40 4 make-list
+"LIST:" . dup . CR 
+{ 11 * } map 
+"RESULT of (11 *):" . . CR
+
+"abcdefg" 
+"String:" . dup . CR 
+{ " " + } map
+"With spaces:" . . CR 
+
+"abcdefg" "String:" . dup . CR 
+{ ord 32 - chr } map
+"As uppercase:" . . CR 
+
+"a mixed CaSe STRING A-Z 012345 !?$@"
+"String:" . dup . CR
+{ to-upper } map
+"As upper:" . . CR
+
+"a mixed CaSe STRING A-Z 012345 !?$@"
+"String:" . dup . CR
+{ to-lower } map
+"As lower:" . . CR
+
+( function currying example from: )
+( https://rosettacode.org/wiki/Partial_function_application )
