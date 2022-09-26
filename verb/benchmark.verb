@@ -19,6 +19,8 @@
 "hashing" import 
 "unittest" import
 "sorting" import
+"numeric" import
+"random" import 
 
 \ time & display how long func runs
 : timeit ( func -- )
@@ -26,7 +28,7 @@
 	cpu-time t0!
 	func call
 	cpu-time t1!
-	"     * Ran in" . t1 t0 - . "seconds" . CR
+	"     * Ran in" . t1 t0 - 4 2 fmt-float . "seconds" . CR
 	;
 	
 \ nrops = number of operations represented by func
@@ -36,7 +38,7 @@
 	cpu-time t0!
 	func call
 	cpu-time t1!
-	"     * Ran in" . t1 t0 - . "seconds (" .. nrops t1 t0 - / . what .. "/second)" . CR
+	"     * Ran in" . t1 t0 - 4 2 fmt-float . "seconds (" .. nrops t1 t0 - / 9 1 fmt-float . what .. "/second)" . CR
 	;
 	
 : benchmark-prime-sieve
@@ -135,6 +137,46 @@
 	500 gen-fibonacci-direct-list -1 get 1.39423224561697880e104 expect==f
 	;
 	
+: benchmark-quicksort 
+	@locals [ vals ]
+	[ ] vals!
+	\ make a fixed seed so this is repeatable
+	"hello world foobar bat" random-seed
+	BENCH-SIZE
+	[
+		\ Python = 30 seconds
+		[ [ "small" ] { { vals -100000 100000 randint append! } 17850 repeat } ]
+		\ Lua = 32 seconds
+		[ [ "medium" ] { { vals -100000 100000 randint append! } 36428 repeat } ]
+		\ C++ = 32 seconds
+		[ [ "large" ] { { vals -100000 100000 randint append! } 612244 repeat } ]
+	] case
+	
+	\ "LEN VALS:" . vals length . CR
+	 
+	{ vals { } quicksort drop } vals length "numbers" timeit-ops
+	;
+
+: benchmark-mergesort
+	@locals [ vals ]
+	[ ] vals!
+	\ make a fixed seed so this is repeatable
+	"hello world foobar bat" random-seed
+	BENCH-SIZE
+	[
+		\ Python = 30 seconds
+		[ [ "small" ] { { vals -100000 100000 randint append! } 13157 repeat } ]
+		\ Lua = 32 seconds
+		[ [ "medium" ] { { vals -100000 100000 randint append! } 25831 repeat } ]
+		\ C++ = 29 seconds
+		[ [ "large" ] { { vals -100000 100000 randint append! } 397217 repeat } ]
+	] case
+	
+	\ "LEN VALS:" . vals length . CR
+	 
+	{ vals { } mergesort drop } vals length "numbers" timeit-ops
+	;
+	
 \ get all user functions starting with 'benchmark-'
 \ ** duplication (with changed prefix) from run-all-tests.verb:get-all-tests **
 : get-all-benchmarks
@@ -165,7 +207,7 @@
 	{ run-benchmark-by-name } for-each
 	cpu-time t1!
 	unittest-summary
-	"    Total time:" . t1 t0 - . "seconds" . CR
+	"    Total time:" . t1 t0 - 4 2 fmt-float . "seconds" . CR
 	;
 	
 : run-one-benchmark ( namestring )
