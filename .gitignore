@@ -68,3 +68,8 @@ lib/quicksort.verb.b
 lib/paths.verb.b
 reference/xoshiro128starstar
 lib/sorting.verb.b
+lib/numeric.verb.b
+lib/random-mersenne.verb.b
+lib/random-xorshift32.verb.b
+lib/random-xoshiro128++.verb.b
+lib/random-xoshiro128starstar.verb.b
