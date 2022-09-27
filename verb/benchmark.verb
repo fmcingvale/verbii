@@ -177,6 +177,44 @@
 	{ vals { } mergesort drop } vals length "numbers" timeit-ops
 	;
 	
+: *generic-benchmark-random ( name nrloops-small nrloops-medium nrloops-large )
+	@locals [ nrloops ]
+	IF BENCH-SIZE "small" == THEN
+		nrloops-small nrloops!
+	ELIF BENCH-SIZE "medium" == THEN
+		nrloops-medium nrloops!
+	ELIF BENCH-SIZE "large" == THEN
+		nrloops-large nrloops!
+	ELSE
+		"Bad BENCH-SIZE: " BENCH-SIZE str + error
+	END
+	
+	\ use a fixed string for repeatability
+	name RANDOM-MODULE!
+	"the hello world jumped over the foo bar" random-seed
+	{ { random-int32 drop } nrloops repeat } nrloops "random ints" timeit-ops
+	;
+
+: benchmark-random-xorshift32
+	"xorshift32" 225338 401561 7238660 *generic-benchmark-random
+	;
+	
+: benchmark-random-mersenne
+	"mersenne" 63411 126182 2664500 *generic-benchmark-random
+	;
+
+: benchmark-random-xoshiro128++
+	"xoshiro128++" 80881 166320 3802806 *generic-benchmark-random
+	;
+
+: benchmark-random-xoshiro128starstar
+	"xoshiro128**" 80881 166320 3802806 *generic-benchmark-random
+	;
+
+: benchmark-random-worker3
+	"worker3" 1200 2400 27000 *generic-benchmark-random
+	;
+	
 \ get all user functions starting with 'benchmark-'
 \ ** duplication (with changed prefix) from run-all-tests.verb:get-all-tests **
 : get-all-benchmarks
