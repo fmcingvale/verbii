@@ -16,10 +16,6 @@ Global TODO
 
 ---[    Demos    ]------------------------------------------------------
 
-* simple demo games (i.e. 'guess the number', etc. beginner programming type things)
-
-* Chess engine
-
 * (mini) scheme -> verbii translator
 
 * more rosettacode tasks:
@@ -67,8 +63,6 @@ Global TODO
 	-- * -- BUT ... character-based is more what is expected in modern languages i think so
 	may be worth it overall.
 	
-* add mergesort
-
 * need to extend ,,del (or maybe just get rid of 'del NAME' and always make del stack-based??)
   to delete entries from more objects:
 	dict STRING ,,del ( delete a key from dictionary )
@@ -98,10 +92,7 @@ Global TODO
 
 * check all places (in all ports) where files are opened to make sure any errors are returned
   as verbii errors and don't crash the host language
-
-* need a better way to find lib/ than hardcoding/assuming path in repls
-	* also need to find modules in same path as source file without having to run in that directory
-	
+  
 * More error checking of input types in library/tests/demos
 
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
