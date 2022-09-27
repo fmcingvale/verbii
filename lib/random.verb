@@ -10,8 +10,7 @@
 "random-worker" import
 
 \ ==================================================================================
-\ this is the public API -- use names without the -xor32 prefix so the algorithm
-\ could be changed later without breaking compatibility
+\ this is the public API
 \ ==================================================================================
 
 \ uncomment one to choose default random module, or set at runtime via code
