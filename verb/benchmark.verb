@@ -215,6 +215,51 @@
 	"worker3" 1200 2400 27000 *generic-benchmark-random
 	;
 	
+: generate-random-text ( len -- text )
+	@locals [ charset ]
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" charset!
+	"" text!
+	WHILE text length len < DO
+		text charset 0 charset length randint get + text!
+	END
+	text
+	;
+		
+: generic-test-hash ( func text repeat-small repeat-medium repeat-large -- )
+	@locals [ nr-repeat ]
+	IF BENCH-SIZE "small" == THEN
+		repeat-small nr-repeat!
+	ELIF BENCH-SIZE "medium" == THEN
+		repeat-medium nr-repeat!
+	ELIF BENCH-SIZE "large" == THEN
+		repeat-large nr-repeat!
+	ELSE
+		"Bad BENCH-SIZE: " BENCH-SIZE str + error
+	END
+	
+	{ { text func call drop } nr-repeat repeat } text length nr-repeat * "chars" timeit-ops 
+	;
+	
+: benchmark-hashing
+	@locals [ text ]
+	\ setup random generation for repeatability
+	"xorshift32" RANDOM-MODULE! \ pick fastest method, don't care about randomness quality here
+	"hello world a random string blah blah" random-seed
+	"Generating ..." . CR
+	10000 generate-random-text text!
+	"Done" . CR
+	"Adler32 ..." . CR
+	{ adler32-calc } text 30 60 1100 generic-test-hash 
+	"CRC-32 ..." . CR
+	{ crc32-calc } text 26 52 1140 generic-test-hash
+	"FNV-32 (verbii) ..." . CR
+	{ hash-fnv-32 } text 30 60 1304 generic-test-hash
+	\ only run ~ 10 seconds here
+	"FNV-32 (native) ..." . CR
+	{ fnv-1a-32 } text 8000 16000 600000 generic-test-hash
+	;
+		
+	
 \ get all user functions starting with 'benchmark-'
 \ ** duplication (with changed prefix) from run-all-tests.verb:get-all-tests **
 : get-all-benchmarks
