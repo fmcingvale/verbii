@@ -33,6 +33,20 @@ void init_object_system() {
 	THE_FALSE->data.i = 0;
 }
 
+int isNull(Object *obj) { return (obj->type == TYPE_NULL) ? TRUE : FALSE; }
+int isVoid(Object *obj) { return (obj->type == TYPE_VOID) ? TRUE : FALSE; }
+int isInt(Object *obj) { return (obj->type == TYPE_INT) ? TRUE : FALSE; }
+int isFloat(Object *obj) { return (obj->type == TYPE_FLOAT) ? TRUE : FALSE; }
+int isBool(Object *obj) { return (obj->type == TYPE_BOOL) ? TRUE : FALSE; }
+int isString(Object *obj) { return (obj->type == TYPE_STRING) ? TRUE : FALSE; }
+int isSymbol(Object *obj) { return (obj->type == TYPE_SYMBOL) ? TRUE : FALSE; }
+int isLambda(Object *obj) { return (obj->type == TYPE_LAMBDA) ? TRUE : FALSE; }
+int isBoundLambda(Object *obj) { return ((obj->type == TYPE_LAMBDA) && (obj->data.lambda->outer != NULL)) ? TRUE : FALSE; }
+int isList(Object *obj) { return (obj->type == TYPE_LIST) ? TRUE : FALSE; }
+int isDict(Object *obj) { return (obj->type == TYPE_DICT) ? TRUE : FALSE; }
+int isOpcode(Object *obj) { return (obj->type == TYPE_OPCODE) ? TRUE : FALSE; }
+int isVoidFunctionPtr(Object *obj) { return (obj->type == TYPE_VOIDFUNCPTR) ? TRUE : FALSE; }
+
 Object* newInt(VINT i) {
 	Object *obj = basic_object(TYPE_INT);
 	obj->data.i = i;
@@ -55,6 +69,25 @@ Object* newFloat(double d) {
 	Object *obj = basic_object(TYPE_FLOAT);
 	obj->data.d = d;
 	return obj;
+}
+
+Object* parseInt(const char *str) {
+	// parser validates input format, so this should always succeed
+	return newInt(atoi(str));
+}
+
+Object* parseFloat(const char *str) {
+	// as above, str should have been validated by parser
+	return newFloat(atof(str));
+}
+
+Object* parseBool(const char *str) {
+	if(!strcmp(str,"true"))
+		return newBool(TRUE);
+	else if(!strcmp(str,"false"))
+		return newBool(FALSE);
+	else
+		error("Bad boolean literal: %s", str);
 }
 
 Object* newString(const char *s, int len) {
@@ -127,29 +160,45 @@ int isNumber(Object *a) {
 	return (a->type == TYPE_INT || a->type == TYPE_FLOAT) ? TRUE : FALSE;
 }
 
-UT_icd Object_icd = { sizeof(Object*), NULL, NULL, NULL };
-
 ObjArray *newObjArray() {
-	ObjArray *arr;
-	utarray_new(arr, &Object_icd);
-	return arr;
+	ObjArray *array = (ObjArray*)x_malloc(sizeof(ObjArray));
+	array->maxsize = 10; // just some initial size
+	array->items = (Object**)x_malloc(array->maxsize * sizeof(Object*));
+	array->length = 0;
+	return array;
 }
 
 void ObjArray_append(ObjArray* arr, Object *obj) {
-	utarray_push_back(arr, obj);
+	if(arr->length == arr->maxsize) {
+		// grow by 10% but at least by 10
+		int newsize = max((int)(arr->maxsize*0.1), 10);
+		Object **newptr = (Object**)realloc(arr->items, newsize*sizeof(Object*));
+		if(!newptr)
+			error("Out of memory!");
+
+		arr->items = newptr;
+		arr->maxsize = newsize;
+	}
+	arr->items[arr->length++] = obj;
 }
 
 int ObjArray_length(ObjArray* arr) {
-	return utarray_len(arr);
+	return arr->length;
 }
 
 Object* ObjArray_get(ObjArray* arr, int i) {
-	Object *o = utarray_eltptr(arr, i);
-	return o;
+	if(i < 0 || i >= arr->length)
+		return newVoid(); // index out of range is OK - returns void
+	else
+		return arr->items[i];
 }
+
 void ObjArray_put(ObjArray* arr, int i, Object *obj) {
-	Object *o = utarray_eltptr(arr, i);
-	*o = *obj;
+	if(i < 0 || i >= arr->length)
+		// out of bounds NOT allowed on put()
+		error("ObjArray index out of bounds in put(): %d", i);
+	
+	arr->items[i] = obj;
 }
 
 Object* newList() {
@@ -165,6 +214,7 @@ Object* newListKeepArray(ObjArray *array) {
 }
 
 void List_append(Object *list, Object *obj) {
+	printf("APPEND: %s\n", fmtStackPrint(obj));
 	ObjArray_append(list->data.array, obj);
 }
 
@@ -218,20 +268,6 @@ void Dict_delete(Object *dict, const char *key) {
 
 int Dict_size(Object *dict) {
 	return HASH_COUNT(dict->data.objdict);
-}
-
-static const char* fmtStackPrintObjArray(ObjArray *arr, char open_delim, char close_delim) {
-	UT_string *s;
-	utstring_new(s);
-	utstring_printf(s, "%c ", open_delim);
-	
-	Object *obj;
-	for(obj=utarray_front(arr); obj != NULL; obj=utarray_next(arr,obj)) {
-		utstring_printf(s, "%s ", fmtStackPrint(obj));
-	}
-
-	utstring_printf(s, "%c", close_delim);
-	return utstring_body(s);
 }
 
 int sort_objdictentry_by_name(ObjDictEntry *a, ObjDictEntry *b) {
@@ -399,7 +435,8 @@ int testGreater(Object *a, Object *b) {
 }
 
 static ObjArray *deepcopyObjArray(ObjArray *array) {
-	ObjArray *newarray = newObjArray();
+	ObjArray *newarray;
+	newObjArray(&newarray);
 	for(int i=0; i<ObjArray_length(array); ++i) 
 		ObjArray_append(newarray, deepcopy(ObjArray_get(array,i)));
 	
@@ -436,6 +473,20 @@ Object *deepcopy(Object *obj) {
 	}
 }
 
+static const char* fmtStackPrintObjArray(ObjArray *arr, char open_delim, char close_delim) {
+	UT_string *s;
+	utstring_new(s);
+	utstring_printf(s, "%c ", open_delim);
+	
+	for(int i=0; i<ObjArray_length(arr); ++i) {
+		printf("NEXT IS: %s\n", fmtStackPrint(ObjArray_get(arr,i)));
+		utstring_printf(s, "%s ", fmtStackPrint(ObjArray_get(arr,i)));
+	}
+
+	utstring_printf(s, "%c", close_delim);
+	return utstring_body(s);
+}
+
 const char* fmtStackPrint(Object *obj) {
 	UT_string *s;
 	utstring_new(s);
@@ -451,7 +502,7 @@ const char* fmtStackPrint(Object *obj) {
 			utstring_printf(s, "%lf", obj->data.d);
 			return utstring_body(s);
 		case TYPE_BOOL: 
-			return obj->data.i == TRUE ? "<TRUE>" : "<FALSE>";
+			return (obj->data.i == TRUE) ? "<true>" : "<false>";
 		case TYPE_LIST:
 			return fmtStackPrintObjArray(obj->data.array, '[', ']');
 		case TYPE_LAMBDA:

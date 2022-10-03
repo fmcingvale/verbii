@@ -42,17 +42,13 @@ typedef int64_t VINT;
 #define TRUE 1
 #define FALSE 0
 
-#include "utarray.h"
 #include "utstring.h"
 #include "uthash.h"
 
 struct _ObjDictEntry;
 struct _CallFrameData;
 struct _Lambda;
-// name this ObjArray instead of ObjArray to try and be less
-// confusing between the low level array object and the 
-// verbii list object
-typedef UT_array ObjArray;
+struct _ObjArray;
 
 typedef void (*VoidFunctionPtr)();
 
@@ -60,7 +56,7 @@ typedef struct _Object {
 	unsigned char type;
 	union {
 		VINT i; // ints, bools (TRUE|FALSE)
-		ObjArray *array; // for lists
+		struct _ObjArray *array; // for lists
 		struct _ObjDictEntry *objdict; // for dict
 		double d;
 		UT_string *str; // strings & symbols
@@ -99,8 +95,16 @@ typedef struct _Lambda {
 	CallFrameData *outer;
 } Lambda;
 
-#define min(a,b) ((a<b)? a:b)
-#define max(a,b) ((a>b)? a:b)
+typedef struct _ObjArray {
+	Object **items;
+	int length, maxsize;
+} ObjArray;
+
+#define min(a,b) ((a<b) ? (a) : (b))
+#define max(a,b) ((a>b) ? (a) : (b))
+
+// call this before using any other functions here
+void init_object_system();
 
 int isNull(Object *obj);
 int isVoid(Object *obj);
@@ -123,6 +127,10 @@ Object* newNull();
 Object* newVoid();
 Object* newInt(VINT i);
 Object* newFloat(double d);
+
+Object* parseInt(const char *str);
+Object* parseFloat(const char *str);
+Object* parseBool(const char *str);
 
 int isNumber(Object *a);
 

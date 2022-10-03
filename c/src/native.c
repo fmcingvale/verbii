@@ -504,7 +504,7 @@ static void builtin_alloc() {
 static void builtin_del() {
 	// symbols cannot contain NULLs
 	const char* name = popSymbol("del");
-	deleteWord(name);
+	deleteUserWord(name);
 }
 
 // ( y x -- atan2[y,x] )

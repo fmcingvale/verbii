@@ -75,3 +75,4 @@ lib/random-xoshiro128++.verb.b
 lib/random-xoshiro128starstar.verb.b
 lib/random.verb.b
 lib/random-worker.verb.b
+c/bin/

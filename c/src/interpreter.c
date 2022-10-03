@@ -31,9 +31,6 @@ Object *code; // List
 int codepos;
 CallFrameData *framedata;
 
-// get representation of stack for printing
-const char* reprStack();
-
 // 2 memory areas: stack & free memory
 //
 // the stack is of fixed size, so it lives at the bottom of memory.
@@ -405,6 +402,8 @@ void run(Object *objlist) {
 					// now this is just like calling a userword, below
 					// TODO -- tail call elimination??
 					//syntax->pushObjList(val.asLambda());
+
+					// NOTE - this is for both the bound & unbound case
 					code_call(val->data.lambda->list, val->data.lambda);
 				}
 				//else if(val.isBoundLambda()) {

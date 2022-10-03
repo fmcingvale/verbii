@@ -12,6 +12,8 @@
 
 extern Object *BUILTINS;
 
+void init_builtins();
+
 // set from main()
 extern Object *native_cmdline_args;
 

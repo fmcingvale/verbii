@@ -10,6 +10,9 @@
 // interpreter state is global
 #include "langtypes.h"
 
+// setup interpreter
+void init_interpreter();
+
 void push(Object *obj);
 Object* pop();
 
@@ -20,6 +23,8 @@ void set_SP(int sp);
 
 int get_codepos();
 void set_codepos(int pos);
+
+const char* reprStack();
 
 // current frame data or NULL
 extern CallFrameData *framedata;
@@ -45,10 +50,7 @@ void heap_set(int addr, Object *obj);
 Object* lookupUserWord(const char *name);
 int haveUserWord(const char *name);	
 void defineWord(const char *name, Object *list, int allow_overwrite);
-void deleteWord(const char* name);
+void deleteUserWord(const char* name);
 Object* getWordlist(); // returns a List
-
-// setup interpreter
-void init_interpreter();
 
 #endif // __interpreter_h__
