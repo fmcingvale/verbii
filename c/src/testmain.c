@@ -2,6 +2,7 @@
 #include "langtypes.h"
 #include "interpreter.h"
 #include "native.h"
+#include "deserialize.h"
 
 int main(void) {
 	printf("Hello C!\n");
@@ -62,5 +63,20 @@ int main(void) {
 
 	printf("STACK: [ %s ]\n", reprStack());
 
+	FILE *fp = fopen("../lib/init.verb.b","rb");
+	deserialize_stream(fp);
+
+	Object *words = getWordlist();
+	printf("LOADED WORDS:\n");
+	printf("%s\n", fmtStackPrint(words));
+
+	deleteUserWord("__main__");
+	
+	fp = fopen("../lib/compiler.verb.b","rb");
+	deserialize_stream(fp);
+
+	words = getWordlist();
+	printf("LOADED WORDS:\n");
+	printf("%s\n", fmtStackPrint(words));
 	
 }
