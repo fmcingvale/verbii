@@ -9,6 +9,7 @@
 #include "errors.h"
 #include "opcodes.h"
 #include "native.h"
+#include "langtypes.h"
 
 // sync with C++
 #define STACK_SIZE (1<<16)
@@ -117,6 +118,10 @@ void init_interpreter() {
 	nr_total_calls = 0;
 }
 
+void print_stats() {
+	printf("**TODO** print_stats()\n");
+}
+
 void push(Object *obj) {
 	if(SP <= SP_MIN)
 		error("Stack overflow");
@@ -142,6 +147,10 @@ void set_SP(int addr) {
 	SP = addr;
 	// stats
 	min_run_SP = min(min_run_SP, SP);
+}
+
+int stack_depth() {
+	return SP_EMPTY - SP;
 }
 
 int get_codepos() {
@@ -248,6 +257,16 @@ int haveUserWord(const char *name) {
 	return isVoid(lookupUserWord(name)) ? 0 : 1;
 }
 
+Object* getWordlist(void) {
+	Object *list = newList();
+	for(ObjDictEntry *ent=WORDS->data.objdict; ent != NULL; ent=ent->hh.next) {
+		//printf("ADD WORDLIST: %s\n", ent->name);
+		List_append(list,newSymbol(ent->name,-1));
+	}
+
+	return list;
+}
+
 void defineWord(const char *name, Object *list, int allow_overwrite) {
 	if(allow_overwrite || haveUserWord(name) == 0)
 		Dict_put(WORDS, name, list);
@@ -262,11 +281,13 @@ void deleteUserWord(const char* name) {
 	Dict_delete(WORDS, name);
 }
 
-void code_call(Object *new_code_list, Lambda *bound_lambda) {
+void code_call(Object *new_code_list, CallFrameData *bound_outer) {
 	if(callstack_cur < 0)
 		error("code_call but no code is running");
 	else if(callstack_cur >= (MAX_CALLSTACK_DEPTH-1))
 		error("Max callstack depth exceeded");
+
+	//printf("CODE CALL: %s, OUTER: %s\n", fmtStackPrint(new_code_list), bound_outer? "YES":"NO");
 
 	++nr_total_calls;
 
@@ -289,8 +310,10 @@ void code_call(Object *new_code_list, Lambda *bound_lambda) {
 	// as its .outer frame. when the bound lambda runs here in a new frame, it needs
 	// to have its .outer frame connected to the same .outer as when it was created,
 	// so it has access to the saved data (closure)
-	if(bound_lambda)
-		framedata->outer = bound_lambda->outer;		
+	if(bound_outer)
+		framedata->outer = bound_outer;		
+	else
+		framedata->outer = NULL;
 
 	// stats
 	max_callstack = max(max_callstack,(int)(callstack_cur+1));
@@ -348,10 +371,14 @@ void run(Object *objlist) {
 	while(1) {
 		Object *obj = nextCodeObj();
 		
+		//printf("STACK: [ %s ]\n", reprStack());
+		//printf("RUN (pos=%d): %s\n", codepos-1, fmtStackPrint(obj));
+
 		if(isOpcode(obj)) {
 			uint8_t code, A;
 			uint16_t B;
 			uint32_t C;
+			//fprintf(stderr, "OPCODE: %lx\n", obj->data.opcode);
 			opcode_unpack(obj->data.opcode, &code, &A, &B, &C);
 			if(code < 0 || code >= OPCODE_LAST_PLUS1)
 				error("Bad opcode: %d", code);
@@ -366,7 +393,7 @@ void run(Object *objlist) {
 				continue;
 			}
 			
-			if(isSymbolMatch(obj, "return", 6)) {
+			if(isSymbolMatch(obj, "return", -1)) {
 				// return from word by popping back to previous wordlist
 				code_return();
 				// if exited top level, exit program
@@ -376,7 +403,7 @@ void run(Object *objlist) {
 				continue;
 			}
 
-			if(isSymbolMatch(obj, "if", 2)) {
+			if(isSymbolMatch(obj, "if", -1)) {
 				Object *cond = pop();
 				//cout << "POPPED COND: " << cond.repr() << endl;
 				if(!isBool(cond))
@@ -395,8 +422,8 @@ void run(Object *objlist) {
 				continue;
 			}
 
-			if(isSymbolMatch(obj, "call", 4)) {
-				// top of stack must be a lambda OR a list
+			if(isSymbolMatch(obj, "call", -1)) {
+				// top of stack must be a lambda
 				Object *val = pop();
 				if(isLambda(val)) {
 					// now this is just like calling a userword, below
@@ -404,7 +431,7 @@ void run(Object *objlist) {
 					//syntax->pushObjList(val.asLambda());
 
 					// NOTE - this is for both the bound & unbound case
-					code_call(val->data.lambda->list, val->data.lambda);
+					code_call(val->data.lambda->list, val->data.lambda->outer);
 				}
 				//else if(val.isBoundLambda()) {
 				//	// as above but pass bound lambda so its new call frame will be
@@ -433,12 +460,12 @@ void run(Object *objlist) {
 					// i don't need to come back here, so pop my wordlist first to stop stack from growing
 					#if 1 // can turn off to test without tail call elimination, if desired
 					// FIXME - don't eliminate at toplevel since code_call expects a non-empty stack
-					if((callstack_cur >= 1) && (isVoid(peekNextCodeObj()) || isSymbolMatch(peekNextCodeObj(),"return",6))) {
+					if((callstack_cur >= 1) && (isVoid(peekNextCodeObj()) || isSymbolMatch(peekNextCodeObj(),"return",-1))) {
 						code_return();
 						++nr_tailcalls;
 					}
 					#endif
-					// execute word by pushing its objlist and continuing
+					// execute word by pushing its objlist and continuing (words never have an outer frame)
 					code_call(wordlist, NULL);
 					continue;
 				}

@@ -35,23 +35,23 @@ static const char* unescape_string(const char *src) {
 	UT_string *out;
 	utstring_new(out);
 	while(*src != 0) {
-		if(!strcmp(src, "%32")) {
+		if(!strncmp(src, "%32", 3)) {
 			utstring_printf(out, " ");
 			src += 3;
 		}
-		else if(!strcmp(src, "%09")) {
+		else if(!strncmp(src, "%09", 3)) {
 			utstring_printf(out, "\t");
 			src += 3;
 		}
-		else if(!strcmp(src, "%10")) {
+		else if(!strncmp(src, "%10", 3)) {
 			utstring_printf(out, "\n");
 			src += 3;
 		}
-		else if(!strcmp(src, "%13")) {
+		else if(!strncmp(src, "%13", 3)) {
 			utstring_printf(out, "\r");
 			src += 3;
 		}
-		else if(!strcmp(src, "%37")) {
+		else if(!strncmp(src, "%37", 3)) {
 			utstring_printf(out, "%%");
 			src += 3;
 		}
@@ -106,6 +106,7 @@ Object *deserialize_stream(FILE *fp) {
 						error("Expecting list after W but got: %s", fmtStackPrint(list));
 
 					// do not allow overwriting words when deserializing
+					//printf("DEFINE WORD: %s\n", name);
 					defineWord(name, list, FALSE);
 					// this produces nothing extra
 					return newVoid();

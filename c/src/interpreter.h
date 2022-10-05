@@ -21,6 +21,8 @@ void run(Object *list);
 int get_SP();
 void set_SP(int sp);
 
+int stack_depth();
+
 int get_codepos();
 void set_codepos(int pos);
 
@@ -31,12 +33,7 @@ extern CallFrameData *framedata;
 
 // stats
 void print_stats();
-extern int max_callstack;
-extern int min_run_SP;
-extern unsigned long nr_tailcalls;
 extern int max_frame_slot_used;
-extern int nr_total_calls;
-extern int nr_saved_frames;
 
 // allocate heap memory to store nr Objects - returns starting index
 int heap_alloc(int nr);
@@ -51,6 +48,11 @@ Object* lookupUserWord(const char *name);
 int haveUserWord(const char *name);	
 void defineWord(const char *name, Object *list, int allow_overwrite);
 void deleteUserWord(const char* name);
-Object* getWordlist(); // returns a List
+Object* getWordlist(void); // returns a List
+
+// used by main.c when making stacktraces
+Object* prevCodeObj();
+int havePushedFrames();
+void code_return();
 
 #endif // __interpreter_h__

@@ -1,0 +1,104 @@
+
+\ test program that uses *ONLY* builtin functions
+\ (primarily for testing early or broken ports)
+\
+\ this should ensure all builtins are checked
+\
+\ generally run by running with a working port, then running the .b file directly with -runb FILENAME
+: NL 10 .c 13 .c ;
+(
+"Hello verbii!" puts 10 .c 13 .c
+
+"Expect 123: " puts 123 str puts 10 .c 13 .c
+"Expect 456.75: " puts 456.75 str puts 10 .c 13 .c
+"""Expect "Hello world!": """ puts "Hello world!" repr puts 10 .c 13 .c 
+"Expect 'hello-a-symbol: " puts 'hello-a-symbol repr puts 10 .c 13 .c 
+
+"Expect 144: " puts 100 44 + str puts 10 .c 13 .c 
+"Expect [ 1 2 3 ]: " puts 1 2 3 3 make-list str puts 10 .c 13 .c 
+"Expect [ a b c d ]: " puts [ a b ] [ c d ] + str puts 10 .c 13 .c 
+"Expect [ 1 2 3 4 ]: " puts 0 make-list 1 append 2 append 3 append 4 append str puts 10 .c 13 .c 
+
+\ [ [ "aa" 11 ] [ "bb" 22 ] [ "cc" 33 ] ] make-dict str puts 10 .c 13 .c 
+
+"Expect 111: " puts 111 222 333 3 make-list 0 get str puts NL
+"Expect 222: " puts 111 222 333 3 make-list 1 get str puts NL
+"Expect 333: " puts 111 222 333 3 make-list 2 get str puts NL
+"Expect <*void*>: " puts 111 222 333 3 make-list 3 get str puts NL
+
+"Expect zz: " puts "xx" "yy" "zz" 3 make-list -1 get str puts NL 
+"Expect yy: " puts "xx" "yy" "zz" 3 make-list -2 get str puts NL 
+"Expect xx: " puts "xx" "yy" "zz" 3 make-list -3 get str puts NL 
+"Expect <*void*>: " puts "xx" "yy" "zz" 3 make-list -4 get str puts NL 
+
+"Expect 3 lines:" puts NL "ONE" puts NL "TWO" puts NL "THREE" puts NL
+
+"Expect { 11 22 33 }: " puts [ 11 22 33 ] make-lambda str puts NL
+"Expect 11 22 33 44: " puts 
+[ 11 str puts " " puts 22 str puts " " puts 33 str puts " " puts 44 str puts NL ] 'yy make-word
+yy 
+
+: demo-make-var ( name initval )
+	@locals [ addr ]
+	1 alloc addr! \ alloc storage
+	initval addr set! \ save initval
+	
+	\ make:
+	\	name = get data @ addr
+	\	name! = set data @ addr
+	
+	\ make word: : NAME addr ref ;
+	addr 'ref 2 make-list name make-word
+	\ make word: : NAME! addr set! ;
+	addr 'set! 2 make-list name '! + make-word
+	;
+	
+'XYZ 1234 demo-make-var 
+"Expect 1234: " puts XYZ str puts NL 
+5678 XYZ!
+"Expect 5678: " puts XYZ str puts NL 
+
+"Expect true: " puts 222 222 == str puts NL 
+"Expect false: " puts 222 333 == str puts NL
+
+"Expect true: " puts "yy" "yy" == str puts NL 
+"Expect false: " puts "yy" "zz" == str puts NL
+
+"Expect 123: " puts "aa" "bb" == if >>A >>B 
+@A 789 str puts >>C 
+@B 123 str puts
+@C NL
+
+"Expect 789: " puts "aa" "aa" == if >>A >>B 
+@A 789 str puts >>C 
+@B 123 str puts
+@C NL
+
+'abc '! + repr puts NL
+
+\ 'NL ,,del
+\ NL
+
+'NL .dumpword str puts NL
+
+\ ===============
+\ now some more advanced stuff
+\ ===============
+
+{ "A" puts } 10 repeat NL
+)
+
+[ "A" "B" "C" "D" ]
+{ ( s ) s puts } for-each NL 
+
+
+: foo ( x )
+	{
+		x 2 * str puts NL
+	} call
+	;
+	
+\ 'foo .dumpword str puts NL
+
+"Expect 200: " puts 100 foo 
+

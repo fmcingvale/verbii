@@ -42,6 +42,8 @@ typedef int64_t VINT;
 #define TRUE 1
 #define FALSE 0
 
+extern int FLOAT_PRECISION;
+
 #include "utstring.h"
 #include "uthash.h"
 
@@ -62,7 +64,7 @@ typedef struct _Object {
 		UT_string *str; // strings & symbols
 		struct _Lambda *lambda; // bound & unbound lambdas
 		// TODO -- why can't this just be in .i??
-		int64_t opcode;
+		uint64_t opcode;
 		// so that a void (*fn)() can be wrapped - for internal use, not visible from verbii
 		VoidFunctionPtr funcptr;
 	} data;
@@ -133,6 +135,7 @@ Object* parseFloat(const char *str);
 Object* parseBool(const char *str);
 
 int isNumber(Object *a);
+double asNumber(Object *a); // convert int or float to double
 
 Object* newBool(VINT b);
 
@@ -145,6 +148,7 @@ int string_length(Object *s);
 const char *string_cstr(Object *s);
 
 Object* newLambda(Object *list); // starts unbound
+// pass the LIST not another lambda
 Object* newBoundLambda(Object *list, CallFrameData *data);
 
 // the lower level array object
@@ -173,10 +177,14 @@ Object* newOpcode(uint64_t packed_opcode);
 // internal use only - not visible from verbii
 Object *newVoidFunctionPtr(VoidFunctionPtr funcptr);
 
+// generic function for strings/symbols/lists/dicts
+int length(Object *obj);
+
 Object *deepcopy(Object *obj);
 int testGreater(Object *a, Object *b);
 int testEqual(Object *a, Object *b);
 
+const char* fmtDisplayPrint(Object *obj);
 const char* fmtStackPrint(Object *obj);
 
 #endif // __langtypes_h__

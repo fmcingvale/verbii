@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "utstring.h"
+#include "opcodes.h"
 
 // singletons
 
@@ -17,6 +18,7 @@ Object *THE_VOID = NULL;
 Object *THE_TRUE = NULL;
 Object *THE_FALSE = NULL;
 
+int FLOAT_PRECISION = 17;
 
 static Object *basic_object(unsigned char type) {
 	Object *obj = (Object*)x_malloc(sizeof(Object));
@@ -73,7 +75,7 @@ Object* newFloat(double d) {
 
 Object* parseInt(const char *str) {
 	// parser validates input format, so this should always succeed
-	return newInt(atoi(str));
+	return newInt(atol(str));
 }
 
 Object* parseFloat(const char *str) {
@@ -133,10 +135,12 @@ Object *newVoidFunctionPtr(VoidFunctionPtr funcptr) {
 }
 
 Object* newBoundLambda(Object *list, CallFrameData *data) {
+	//printf("NEW BOUND LAMBDA FROM: %s @ %llx\n", fmtStackPrint(list), (long long unsigned int)list);
 	Object *obj = basic_object(TYPE_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
 	obj->data.lambda->list = list;
 	obj->data.lambda->outer = data;
+	//printf("MADE OBJECT: %s\n", fmtStackPrint(obj));
 	return obj;
 }
 
@@ -160,6 +164,27 @@ int isNumber(Object *a) {
 	return (a->type == TYPE_INT || a->type == TYPE_FLOAT) ? TRUE : FALSE;
 }
 
+double asNumber(Object *a) {
+	switch(a->type) {
+		case TYPE_INT: return a->data.i;
+		case TYPE_FLOAT: return a->data.d;
+		default: error("asNumber() expects int or float, got: %s", fmtStackPrint(a));
+	}
+}
+
+int length(Object *obj) {
+	switch(obj->type) {
+		case TYPE_STRING:
+		case TYPE_SYMBOL:
+			return string_length(obj);
+		case TYPE_LIST:
+			return List_length(obj);
+		case TYPE_DICT:
+			return Dict_size(obj);
+	}
+	error("'length' not supported for object: %s", fmtStackPrint(obj));
+}
+
 ObjArray *newObjArray() {
 	ObjArray *array = (ObjArray*)x_malloc(sizeof(ObjArray));
 	array->maxsize = 10; // just some initial size
@@ -171,8 +196,8 @@ ObjArray *newObjArray() {
 void ObjArray_append(ObjArray* arr, Object *obj) {
 	if(arr->length == arr->maxsize) {
 		// grow by 10% but at least by 10
-		int newsize = max((int)(arr->maxsize*0.1), 10);
-		Object **newptr = (Object**)realloc(arr->items, newsize*sizeof(Object*));
+		int newsize = arr->maxsize + max((int)(arr->maxsize*0.1), 10);
+		Object **newptr = (Object**)x_realloc(arr->items, newsize*sizeof(Object*));
 		if(!newptr)
 			error("Out of memory!");
 
@@ -214,7 +239,6 @@ Object* newListKeepArray(ObjArray *array) {
 }
 
 void List_append(Object *list, Object *obj) {
-	printf("APPEND: %s\n", fmtStackPrint(obj));
 	ObjArray_append(list->data.array, obj);
 }
 
@@ -436,7 +460,7 @@ int testGreater(Object *a, Object *b) {
 
 static ObjArray *deepcopyObjArray(ObjArray *array) {
 	ObjArray *newarray;
-	newObjArray(&newarray);
+	newarray = newObjArray();
 	for(int i=0; i<ObjArray_length(array); ++i) 
 		ObjArray_append(newarray, deepcopy(ObjArray_get(array,i)));
 	
@@ -473,17 +497,82 @@ Object *deepcopy(Object *obj) {
 	}
 }
 
-static const char* fmtStackPrintObjArray(ObjArray *arr, char open_delim, char close_delim) {
+static const char* fmtDisplayPrintObjArray(ObjArray *arr, char open_delim, char close_delim) {
 	UT_string *s;
 	utstring_new(s);
 	utstring_printf(s, "%c ", open_delim);
 	
 	for(int i=0; i<ObjArray_length(arr); ++i) {
-		printf("NEXT IS: %s\n", fmtStackPrint(ObjArray_get(arr,i)));
-		utstring_printf(s, "%s ", fmtStackPrint(ObjArray_get(arr,i)));
+		utstring_printf(s, "%s ", fmtDisplayPrint(ObjArray_get(arr,i)));
 	}
 
 	utstring_printf(s, "%c", close_delim);
+	return utstring_body(s);
+}
+
+const char* fmtDisplayPrint(Object *obj) {
+	UT_string *s;
+	utstring_new(s);
+	switch(obj->type) {
+		case TYPE_NULL: 
+			return "<null>";
+		case TYPE_VOID: 
+			return "<*void*>";
+		case TYPE_INT: 
+			utstring_printf(s, "%ld", obj->data.i);
+			return utstring_body(s);
+		case TYPE_FLOAT: 
+			utstring_printf(s, "%.*g", FLOAT_PRECISION, obj->data.d);
+			return utstring_body(s);
+		case TYPE_BOOL: 
+			return (obj->data.i == TRUE) ? "true" : "false";
+		case TYPE_LIST:
+			return fmtDisplayPrintObjArray(obj->data.array, '[', ']');
+		case TYPE_LAMBDA:
+			return fmtDisplayPrintObjArray(obj->data.lambda->list->data.array, '{', '}');
+		case TYPE_STRING:
+		case TYPE_SYMBOL:
+			utstring_printf(s, "%s", utstring_body(obj->data.str));
+			return utstring_body(s);
+		case TYPE_OPCODE:
+		{
+			uint8_t code;
+			uint8_t A;
+			uint16_t B;
+			uint32_t C;
+			opcode_unpack(obj->data.opcode, &code, &A, &B, &C);
+			utstring_printf(s, "#(op %s %d %d %d)", opcode_code_to_name(code), (int)A, (int)B, (int)C);
+			return utstring_body(s);
+		}
+		case TYPE_DICT: 
+		{
+			HASH_SORT(obj->data.objdict, sort_objdictentry_by_name);
+			ObjDictEntry *ent;
+			utstring_printf(s, "{ ");
+			for(ent=obj->data.objdict; ent != NULL; ent = ent->hh.next) {
+				utstring_printf(s, "%s -> %s ", ent->name, fmtDisplayPrint(ent->obj));
+			}
+			utstring_printf(s,"}");
+			return utstring_body(s);
+		}
+
+		default: 
+			error("** UNKNOWN TYPE IN fmtDisplayPrint: %d\n", obj->type);
+	}
+}
+
+static const char* fmtStackPrintObjArray(ObjArray *arr, const char *open_delim, const char *close_delim) {
+	UT_string *s;
+	utstring_new(s);
+	utstring_printf(s, "%s ", open_delim);
+	
+	//printf("STACK PRINT ARRAY @ %llx\n", (long long unsigned int)arr);
+
+	for(int i=0; i<ObjArray_length(arr); ++i) {
+		utstring_printf(s, "%s ", fmtStackPrint(ObjArray_get(arr,i)));
+	}
+
+	utstring_printf(s, "%s", close_delim);
 	return utstring_body(s);
 }
 
@@ -498,18 +587,32 @@ const char* fmtStackPrint(Object *obj) {
 		case TYPE_INT: 
 			utstring_printf(s, "%ld", obj->data.i);
 			return utstring_body(s);
-		case TYPE_FLOAT: 
-			utstring_printf(s, "%lf", obj->data.d);
+		case TYPE_FLOAT:
+			utstring_printf(s, "#%.*g", FLOAT_PRECISION, obj->data.d);
 			return utstring_body(s);
 		case TYPE_BOOL: 
 			return (obj->data.i == TRUE) ? "<true>" : "<false>";
 		case TYPE_LIST:
-			return fmtStackPrintObjArray(obj->data.array, '[', ']');
+			return fmtStackPrintObjArray(obj->data.array, "[", "]");
 		case TYPE_LAMBDA:
-			return fmtStackPrintObjArray(obj->data.lambda->list->data.array, '{', '}');
+			//printf("STACK PRINT LAMBDA @ %llx\n", (long long unsigned int)obj->data.lambda->list);
+			if(obj->data.lambda->outer)
+				return fmtStackPrintObjArray(obj->data.lambda->list->data.array, "<bound{", "}>");
+			else
+				return fmtStackPrintObjArray(obj->data.lambda->list->data.array, "{", "}");
 		case TYPE_STRING:
 			utstring_printf(s, "\"%s\"", utstring_body(obj->data.str));
 			return utstring_body(s);
+		case TYPE_OPCODE:
+		{
+			uint8_t code;
+			uint8_t A;
+			uint16_t B;
+			uint32_t C;
+			opcode_unpack(obj->data.opcode, &code, &A, &B, &C);
+			utstring_printf(s, "#(op %s %d %d %d)", opcode_code_to_name(code), (int)A, (int)B, (int)C);
+			return utstring_body(s);
+		}
 		case TYPE_SYMBOL:
 			utstring_printf(s, "'%s", utstring_body(obj->data.str));
 			return utstring_body(s);
@@ -524,8 +627,7 @@ const char* fmtStackPrint(Object *obj) {
 			utstring_printf(s,"}");
 			return utstring_body(s);
 		}
-
 		default: 
-			error("** UNKNOWN TYPE: %d\n", obj->type);
+			error("** UNKNOWN TYPE IN fmtStackPrint: %d\n", obj->type);
 	}
 }

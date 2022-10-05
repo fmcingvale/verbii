@@ -139,13 +139,8 @@ static Object* popDict(const char *where) {
 	return obj;
 }
 
-static void pushInt(VINT i) {
-	push(newInt(i));
-}
-
-static void pushBool(int b) {
-	push(newBool(b));
-}
+static void pushInt(VINT i) { push(newInt(i)); }
+static void pushBool(int b) { push(newBool(b)); }
 
 /*
 	can't count on rounding behavior of host language -- i.e. some languages/systems
@@ -221,14 +216,11 @@ static void builtin_ref() {
 	if(isInt(addr))		
 		push(heap_get(addr->data.i));
 	else
-		error("NOT IMPLEMENTED IN ref");
+		error("ref expects int, got: %s", fmtStackPrint(addr));
 }
 
-// set stack pointer from addr on stack
-// (SP values must be integers)
-static void builtin_setsp() {
-	set_SP(popInt("SP!"));	
-}
+static void builtin_getsp() { pushInt(get_SP()); }
+static void builtin_setsp() { set_SP(popInt("SP!")); }
 
 static void builtin_error() {
 	// messages containing NULLs won't work here
@@ -254,9 +246,15 @@ static void builtin_file_read() {
 static void builtin_make_list() {
 	Object *list = newList();
 	int nr = popInt("make-list");
+	// instead of adding an insert-type operation which would have to
+	// move items on every iteration, pre-fill array then I can put() in 
+	// the correct (opposite of stack) order
+	for(int i=0; i<nr; ++i)
+		List_append(list, newNull());
+
 	for(int i=0; i<nr; ++i) {
 		Object *obj = pop();
-		List_append(list, obj);
+		List_put(list, nr-i-1, obj);
 	}
 	push(list);
 }
@@ -328,6 +326,7 @@ static void builtin_slice() {
 static void builtin_get() {
 	Object* indexOrKey = pop();
 	Object* obj = pop();
+	//printf("GET FROM %s INDEX %s\n", fmtStackPrint(obj), fmtStackPrint(indexOrKey));	
 	if(isString(obj) || isSymbol(obj) || isList(obj)) {
 		if(!isInt(indexOrKey))
 			error("get expects integer index, got: %s", fmtStackPrint(indexOrKey));
@@ -411,6 +410,12 @@ static void builtin_make_lambda() {
 	push(newLambda(deepcopy(list)));
 }
 
+static void builtin_equal() {
+	Object *b = pop();
+	Object *a = pop();
+	pushBool(testEqual(a,b));
+}
+
 static void builtin_greater() {
 	Object *b = pop();
 	Object *a = pop();
@@ -441,15 +446,15 @@ static void builtin_unmake() {
 	// strings & symbols are unmade into ASCII values
 	if(isString(obj) || isSymbol(obj)) {
 		for(int i=0; i<string_length(obj); ++i)
-			push(newInt((unsigned char)(string_cstr(obj)[i])));
+			pushInt((unsigned char)(string_cstr(obj)[i]));
 	
-		push(newInt(string_length(obj)));
+		pushInt(string_length(obj));
 	}
 	else if(isList(obj)) {
 		for(int i=0; i<List_length(obj); ++i)
 			push(List_get(obj, i));
 		
-		push(newInt((int)(List_length(obj))));
+		pushInt((int)(List_length(obj)));
 	}
 	else if(isLambda(obj)) {
 		// push deepcopy of list so it can't be used to modify the lambda 
@@ -489,16 +494,15 @@ static void builtin_dumpword() {
 	if(isVoid(wordlist))
 		error("No such word in .dumpword: %s", symbol);
 	
-	push(newList(deepcopy(wordlist)));
+	//printf("DUMPING WORD: %s\n", fmtStackPrint(wordlist));
+	push(deepcopy(wordlist));
 }
 
-static void builtin_deepcopy() {
-	push(deepcopy(pop()));
-}
+static void builtin_deepcopy() { push(deepcopy(pop())); }
 
 static void builtin_alloc() {
 	int count = (int)popInt("alloc");
-	push(newInt(heap_alloc(count)));
+	pushInt(heap_alloc(count));
 }
 
 static void builtin_del() {
@@ -526,24 +530,24 @@ const VINT MASK32 = 0x00000000ffffffff;
 static void builtin_bit_and() {
 	VINT b = popInt("bit-and");
 	VINT a = popInt("bit-and");
-	push(newInt((a&b) & MASK32));
+	pushInt((a&b) & MASK32);
 }
 
 static void builtin_bit_or() {
 	VINT b = popInt("bit-or");
 	VINT a = popInt("bit-or");
-	push(newInt((a|b) & MASK32));
+	pushInt((a|b) & MASK32);
 }
 
 static void builtin_bit_xor() {
 	VINT b = popInt("bit-xor");
 	VINT a = popInt("bit-xor");
-	push(newInt((a^b) & MASK32));
+	pushInt((a^b) & MASK32);
 }
 
 static void builtin_bit_not() {
 	VINT a = popInt("bit-not");
-	push(newInt((~a) & MASK32));
+	pushInt((~a) & MASK32);
 }
 
 static void builtin_bit_shr() {
@@ -552,9 +556,9 @@ static void builtin_bit_shr() {
 	// apparently it is undefined behavior to shift >= 32 bits so check for that
 	// (without this check, it fails under mingw w/gcc 12)
 	if(nr >= 32)
-		push(newInt(0));
+		pushInt(0);
 	else
-		push(newInt((((unsigned long)a)>>nr) & MASK32));
+		pushInt((((unsigned long)a)>>nr) & MASK32);
 }
 
 static void builtin_bit_shl() {
@@ -562,23 +566,18 @@ static void builtin_bit_shl() {
 	VINT a = popInt("bit-shl");
 	// workaround as above
 	if(nr >= 32)
-		push(newInt(0));
+		pushInt(0);
 	else
-		push(newInt((((unsigned long)a)<<nr) & MASK32));
+		pushInt((((unsigned long)a)<<nr) & MASK32);
 }
 
-static void builtin_cpu_time() {
-	push(newFloat(current_system_cpu_time() - STARTUP_TIME));
-}
-
-static void builtin_new_dict() {
-	push(newDict());
-}
+static void builtin_cpu_time() { push(newFloat(current_system_cpu_time() - STARTUP_TIME)); }
+static void builtin_new_dict() { push(newDict()); }
 
 static void builtin_file_exists() {
 	// filenames cannnot contain NULLs
 	const char* filename = popString("file-exists?");
-	push(newBool(file_exists(filename)));
+	pushBool(file_exists(filename));
 }
 
 // ( filename -- ; open filename and write stdout there )
@@ -612,8 +611,10 @@ static void builtin_open_as_stdout() {
 static void builtin_deserialize() {
 	// filename cannot contain NULLs
 	const char *filename = popString("deserialize");
+	//printf("DESERIALIZE: %s\n", filename);
 	FILE *fpin = fopen(filename, "rb");
 	deserialize_stream(fpin);
+	fclose(fpin);
 	// no return, just loads words into interpreter
 }
 
@@ -709,15 +710,16 @@ static void builtin_opcode_packed() {
 
 	// this is (for example) why opcodes need to fit into 52-bits -- so they can be moved
 	// around as regular ints and not some wrapped object
-	push(newInt(op->data.opcode));
+	pushInt(op->data.opcode);
 }
 
 // ( lambda -- bound-lambda )
 static void builtin_bind_lambda() {
 	Object *lambda = popLambda("bind-lambda");
+	//printf("POPPED LAMBDA LIST @ %llx\n", (long long unsigned int)lambda->data.lambda->list);
 	// remember currently active frame -- when bound-lambda is called
 	// later, this frame will be set as its outer frame
-	push(newBoundLambda(lambda, framedata));
+	push(newBoundLambda(lambda->data.lambda->list, framedata));
 	// mark current frame as being bound now so it isn't freed
 	framedata->bound = TRUE;
 }
@@ -775,7 +777,210 @@ static void builtin_fnv_1a_32() {
 		hash *= 16777619; // FNV prime
 	}
 
-	push(newInt(hash));
+	pushInt(hash);
+}
+
+static void builtin_type_test(int (*test)(Object*)) {
+	Object *obj = pop();
+	pushBool((*test)(obj));
+}
+
+#define MAKE_TYPE_TEST(name,test) \
+	static void builtin_is_##name() { \
+		builtin_type_test(test); \
+	}
+
+MAKE_TYPE_TEST(int,isInt);
+MAKE_TYPE_TEST(float,isFloat);
+MAKE_TYPE_TEST(bool,isBool);
+MAKE_TYPE_TEST(null,isNull);
+MAKE_TYPE_TEST(void,isVoid);
+MAKE_TYPE_TEST(list,isList);
+MAKE_TYPE_TEST(string,isString);
+MAKE_TYPE_TEST(symbol,isSymbol);
+MAKE_TYPE_TEST(lambda,isLambda);
+MAKE_TYPE_TEST(bound_lambda,isBoundLambda);
+MAKE_TYPE_TEST(opcode,isOpcode);
+
+static Object* do_add(Object *a, Object *b) {
+
+	// any cases that aren't handled fall through to error() at end
+	switch(a->type) {
+		case TYPE_NULL: break;
+		case TYPE_INT:
+			if(b->type == TYPE_INT) {
+				return newInt(a->data.i + b->data.i);
+			}
+			else if(b->type == TYPE_FLOAT) {
+				return newFloat(a->data.i + b->data.d);
+			}
+			break;
+		case TYPE_FLOAT:
+			if(b->type == TYPE_INT) {
+				return newFloat(a->data.d + b->data.i);
+			}
+			else if(b->type == TYPE_FLOAT) {
+				return newFloat(a->data.d + b->data.d);
+			}
+			break;
+		case TYPE_BOOL: break;
+		case TYPE_LAMBDA: break;
+		case TYPE_BOUND_LAMBDA: break;
+		// strings & symbols defined as immutable, so make new objects
+		case TYPE_STRING:
+			if(b->type == TYPE_STRING) {
+				UT_string *out;
+				utstring_new(out);
+				utstring_concat(out, a->data.str);
+				utstring_concat(out, b->data.str);
+				return newString(utstring_body(out), utstring_len(out));
+			}	
+			break;
+		case TYPE_SYMBOL:
+			if(b->type == TYPE_SYMBOL) {
+				UT_string *out;
+				utstring_new(out);
+				utstring_concat(out, a->data.str);
+				utstring_concat(out, b->data.str);
+				return newSymbol(utstring_body(out), utstring_len(out));
+			}	
+			break;
+		case TYPE_LIST:
+			// list + list makes new object (use .extend to add to existing list instead)
+			if(b->type == TYPE_LIST) {
+				Object *newlist = newList();
+				for(int i=0; i<List_length(a); ++i)
+					List_append(newlist, List_get(a, i));
+
+				for(int i=0; i<List_length(b); ++i)
+					List_append(newlist, List_get(b, i));
+					
+				return newlist;
+			}
+			break;
+
+		default: 
+			break; // just to be explicit that I mean to fall through
+	}
+			
+	error("Bad operands for +: %s and %s", fmtStackPrint(a), fmtStackPrint(b));
+}
+
+static void builtin_add() {
+	Object *b = pop();
+	Object *a = pop();
+	push(do_add(a,b));
+}
+
+static Object* do_subtract(Object *a, Object *b) {
+	if(a->type == TYPE_INT && b->type == TYPE_INT) {
+		return newInt(a->data.i - b->data.i);
+	}
+	else if(isNumber(a) && isNumber(b)) {
+		return newFloat(asNumber(a) - asNumber(b));
+	}
+	error("Bad operands for -: %s and %s", fmtStackPrint(a), fmtStackPrint(b));
+}
+
+static void builtin_subtract() {
+	Object *b = pop();
+	Object *a = pop();
+	push(do_subtract(a,b));
+}
+
+static Object *do_multiply(Object *a, Object *b) {
+	if(a->type == TYPE_INT && b->type == TYPE_INT) {
+		return newInt(a->data.i * b->data.i);
+	}
+	else if(isNumber(a) && isNumber(b)) {
+		return newFloat(asNumber(a) * asNumber(b));
+	}
+	error("Bad operands for *: %s and %s", fmtStackPrint(a), fmtStackPrint(b));
+}
+
+static void builtin_multiply() {
+	Object *b = pop();
+	Object *a = pop();
+	push(do_multiply(a,b));
+}
+
+static Object* do_divide(Object *a, Object *b) {
+	if(isNumber(a) && isNumber(b)) {
+		double denom = asNumber(b);
+		if(denom == 0)
+			error("Divide by zero");
+		
+		return newFloat(asNumber(a) / denom);
+	}
+	error("Bad operands for /: ", fmtStackPrint(a), fmtStackPrint(b));
+}
+
+#define MAKE_UNARY_FLOAT_OP(func,name) \
+	static void builtin_##func() { \
+		push(newFloat(func(popFloatOrInt(name)))); \
+	}
+
+MAKE_UNARY_FLOAT_OP(sqrt,"sqrt")
+MAKE_UNARY_FLOAT_OP(cos,"cos")
+MAKE_UNARY_FLOAT_OP(sin,"sin")
+MAKE_UNARY_FLOAT_OP(tan,"tan")
+MAKE_UNARY_FLOAT_OP(acos,"acos")
+MAKE_UNARY_FLOAT_OP(asin,"asin")
+MAKE_UNARY_FLOAT_OP(log,"log")
+MAKE_UNARY_FLOAT_OP(exp,"exp")
+
+static void builtin_divide() {
+	Object *b = pop();
+	Object *a = pop();
+	push(do_divide(a,b));
+}
+
+static void builtin_length() { pushInt(length(pop())); }
+static void builtin_parse_int() { push(parseInt(popStringOrSymbol())); }
+static void builtin_parse_float() { push(parseFloat(popStringOrSymbol())); }
+static void builtin_void() { push(newVoid()); }
+static void builtin_repr() { push(newString(fmtStackPrint(pop()),-1)); }
+static void builtin_str() { push(newString(fmtDisplayPrint(pop()),-1)); }
+
+static void builtin_sys_platform() {
+	UT_string *s;
+	utstring_new(s);
+#if defined( __GNUC__)
+	utstring_printf(s, "gcc %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+#elif defined(_MSC_VER)
+	utstring_printf("msvc %s", _MSC_FULL_VER);
+#endif
+	push(newString(utstring_body(s), utstring_len(s)));
+}
+
+static void builtin_set_exit_on_exception() {
+	EXIT_ON_EXCEPTION = popBool(); 
+}
+
+static void builtin_set_allow_overwrite() {
+	ALLOW_OVERWRITING_WORDS = popBool();
+}
+
+static void builtin_stacktrace_on_exception() {
+	STACKTRACE_ON_EXCEPTION = popBool();
+}
+
+static void builtin_floor() { pushInt((VINT)floor(popFloatOrInt("floor"))); }
+static void builtin_depth() { pushInt(stack_depth()); }
+
+static void builtin_wordlist() {
+	push(getWordlist());
+}
+
+static void builtin_puts() {
+	if(fp_stdout!=NULL)
+		fprintf(fp_stdout, "%s", popString("puts"));
+	else
+		printf("%s", popString("puts"));
+}
+		
+static void builtin_fsetprec() {
+	FLOAT_PRECISION = popInt( "Bad arg to f.setprec");
 }
 
 typedef struct _BUILTIN_FUNC {
@@ -784,16 +989,44 @@ typedef struct _BUILTIN_FUNC {
 } BUILTIN_FUNC;
 
 BUILTIN_FUNC BLTINS[] = {
-	{"/mod", builtin_divmod},
-	{".c", builtin_printchar},
+	{ "/mod", builtin_divmod },
+	{ ".c", builtin_printchar },
+	{ "str", builtin_str },
+	{ "repr", builtin_repr },
+	{ "puts", builtin_puts },
+	{ "SP", builtin_getsp },
 	{ "SP!", builtin_setsp },
+	{ "depth", builtin_depth },
 	{ "ref", builtin_ref },
 	{ "set!", builtin_set },
 	{ ".dumpword", builtin_dumpword },
 	{ "error", builtin_error },
+	{ "sys-platform", builtin_sys_platform },
+	{ "set-exit-on-exception", builtin_set_exit_on_exception },
+	{ "set-allow-overwrite-words", builtin_set_allow_overwrite },
+	{ "set-stacktrace-on-exception", builtin_stacktrace_on_exception },
+	{ ".wordlist", builtin_wordlist },
 
+	{ "==", builtin_equal },
 	{ ">", builtin_greater },
-
+	
+	{ "+", builtin_add },
+	{ "-", builtin_subtract },
+	{ "*", builtin_multiply },
+	{ "/", builtin_divide },
+	
+	{ "int?", builtin_is_int },
+	{ "float?", builtin_is_float },
+	{ "bool?", builtin_is_bool },
+	{ "null?", builtin_is_null },
+	{ "void?", builtin_is_void },
+	{ "list?", builtin_is_list },
+	{ "string?", builtin_is_string },
+	{ "symbol?", builtin_is_symbol },
+	{ "lambda?", builtin_is_lambda },
+	{ "bound-lambda?", builtin_is_bound_lambda },
+	{ "opcode?", builtin_is_opcode },	
+	
 	{ "make-list", builtin_make_list },
 	{ "make-string", builtin_make_string },
 	{ "make-symbol", builtin_make_symbol },
@@ -803,6 +1036,12 @@ BUILTIN_FUNC BLTINS[] = {
 	{ "slice", builtin_slice },
 	{ "append", builtin_append },
 	{ "extend", builtin_extend },
+	
+	{ "length", builtin_length },
+
+	{ "parse-int", builtin_parse_int },
+	{ "parse-float", builtin_parse_float },
+	{ "void", builtin_void },
 	
 	{ "put", builtin_put },
 	{ "get", builtin_get },
@@ -833,8 +1072,17 @@ BUILTIN_FUNC BLTINS[] = {
 	{ "file-read", builtin_file_read },
 	{ "file-delete", builtin_file_delete },
 
-	{ "atan2", builtin_atan2},
-	{ "pow", builtin_pow},
+	{ "sqrt", builtin_sqrt },
+	{ "cos", builtin_cos },
+	{ "sin", builtin_sin },
+	{ "tan", builtin_tan },
+	{ "acos", builtin_acos },
+	{ "asin", builtin_asin },
+	{ "log", builtin_log },
+	{ "exp", builtin_exp },
+	{ "atan2", builtin_atan2 },
+	{ "pow", builtin_pow },
+	{ "floor", builtin_floor },
 	
 	{ "time-string", builtin_time_string },
 		
@@ -870,18 +1118,7 @@ void init_builtins() {
 
 #if 0
 std::map<std::string,BUILTIN_FUNC> BUILTINS { 
-	{"+", []() { do_binop(intr, &Object::opAdd); }},
-	{"-", []() { do_binop(intr, &Object::opSubtract); }},
-	{"*", []() { do_binop(intr, &Object::opMul); }},
-	{"/", []() { do_binop(intr, &Object::opDivide); }},
-	{"f.setprec", []() { FLOAT_PRECISION = popInt( "Bad arg to f.setprec");}},
-	{"puts", []() 
-		{
-			if(fp_stdout!=NULL)
-				fprintf(fp_stdout, "%s", popString(intr,"puts"));
-			else
-				printf("%s", popString(intr,"puts"));
-		}},
+
 	{"puts-stderr", []() 
 		{
 			fprintf(stderr, "%s", popString(intr,"puts"));			
@@ -890,66 +1127,14 @@ std::map<std::string,BUILTIN_FUNC> BUILTINS {
 		//          implemented natively anyways for internal error printing, so
 		//          no purpose in implementing twice
 
-		// convert TOS to verbose printable string (like for stack display)
-		{ "repr", [](Interpreter* intr) {push(newString(pop().fmtStackPrint())); } },
-			// convert TOS to normal printable string (like for '.')
-		{ "str", [](Interpreter* intr) {push(newString(pop().fmtDisplay())); } },
-		{ "==", [](Interpreter* intr) {pushBool(intr, pop().opEqual(pop())); } },
-		
-		{ "int?", [](Interpreter* intr) {push(newBool(pop().isInt())); } },
-		{ "float?", [](Interpreter* intr) {push(newBool(pop().isFloat())); } },
-		{ "bool?", [](Interpreter* intr) {push(newBool(pop().isBool())); } },
-		{ "null?", [](Interpreter* intr) {push(newBool(pop().isNull())); } },
-		{ "void?", [](Interpreter* intr) {push(newBool(pop().isVoid())); } },
-		{ "list?", [](Interpreter* intr) {push(newBool(pop().isList())); } },
-		{ "string?", [](Interpreter* intr) {push(newBool(pop().isString())); } },
-		{ "symbol?", [](Interpreter* intr) {push(newBool(pop().isSymbol())); } },
-		{ "lambda?", [](Interpreter* intr) {push(newBool(pop().isLambda())); } },
-		{ "bound-lambda?", [](Interpreter* intr) {push(newBool(pop().isBoundLambda())); } },
-		{ "opcode?", [](Interpreter* intr) {push(newBool(pop().isOpcode())); } },
 
-		{ "length", [](Interpreter* intr) {push(pop().opLength()); } },
-		{ "SP", [](Interpreter* intr) {push(newInt(intr->SP)); } },
-		{ ".wordlist", [](Interpreter* intr) {push(intr->getWordlist()); } },
-		
+	
 			// could implement next two in script, however, host language has to have this
 			// function anyways to deserialize programs, so just use that
-		{ "parse-int", [](Interpreter* intr) {push(parseInt(popStringOrSymbol(intr))); } },
-		{ "parse-float", [](Interpreter* intr) {push(parseFloat(popStringOrSymbol(intr))); } },
-		{ "void", [](Interpreter* intr) {push(newVoid()); } },
-
-		{ "set-exit-on-exception", [](Interpreter* intr) {EXIT_ON_EXCEPTION = popBool(intr); } },
-		{ "set-allow-overwrite-words", [](Interpreter* intr) {ALLOW_OVERWRITING_WORDS = popBool(intr); } },
-		{ "set-stacktrace-on-exception", [](Interpreter* intr) {STACKTRACE_ON_EXCEPTION = popBool(intr); } },
-
-			// more words added while making the random module
-			// this is commonly defined as returning a float, but i'm defining it to return an int --
-			// will make no difference in any math operation and this allows the result to be used
-			// in an integer context
-		{ "floor", [](Interpreter* intr) {push(newInt((VINT)floor(popFloatOrInt(intr,"floor")))); } },
-
 	
-#if defined( __GNUC__)
-		{ "sys-platform", [](Interpreter* intr) {push(newString(
-			 string("g++ ") + to_string(__GNUC__) + "." +
-				to_string(__GNUC_MINOR__) + "." + to_string(__GNUC_PATCHLEVEL__))); } },
-#elif defined(_MSC_VER)
-		{ "sys-platform", [](Interpreter* intr) {push(newString(
-			 string("msvc++ ") + to_string(_MSC_FULL_VER))); } },
-#endif
-		{"depth", [](){push(newInt(intr->SP_EMPTY - intr->SP));}},
-
 	
-	// more math functions
-	{"sqrt", [](){push(newFloat(sqrt(popFloatOrInt(intr, "sqrt"))));}},
-	{"cos", [](){push(newFloat(cos(popFloatOrInt(intr, "cos"))));}},
-	{"sin", [](){push(newFloat(sin(popFloatOrInt(intr, "sin"))));}},
-	{"tan", [](){push(newFloat(tan(popFloatOrInt(intr, "tan"))));}},
-	{"acos", [](){push(newFloat(acos(popFloatOrInt(intr, "cos"))));}},
-	{"asin", [](){push(newFloat(asin(popFloatOrInt(intr, "sin"))));}},
-	// natural log
-	{"log", [](){push(newFloat(log(popFloatOrInt(intr, "log"))));}},
-	{"exp", [](){push(newFloat(exp(popFloatOrInt(intr, "exp"))));}},
+	
+
 	
 	
 };

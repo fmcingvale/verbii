@@ -69,6 +69,7 @@ void opcode_FRAME_SET(uint8_t levels, uint16_t index, uint32_t _unused) {
 }
 
 void do_opcode_JUMP(int32_t offset) {
+	//fprintf(stderr, "JUMP offset: %d\n", offset);
 	set_codepos(get_codepos() + offset);
 }
 
