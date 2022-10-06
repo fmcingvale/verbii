@@ -10,6 +10,7 @@
 #include "opcodes.h"
 #include "native.h"
 #include "langtypes.h"
+#include "util.h"
 
 // sync with C++
 #define STACK_SIZE (1<<16)
@@ -119,7 +120,39 @@ void init_interpreter() {
 }
 
 void print_stats() {
-	printf("**TODO** print_stats()\n");
+	printf("\n==== Runtime Stats ====\n");
+	printf("* General:\n");
+	printf("  Builtin words: %d\n", Dict_size(BUILTINS));
+	printf("  User-defined words: %d\n", List_length(getWordlist()));
+	printf("  Max stack depth: %d\n", (SP_EMPTY - min_run_SP));
+	printf("  Max callstack depth: %d\n", max_callstack);
+	printf("  Max callframe data slot: %d\n", max_frame_slot_used);
+	printf("  Saved frames: %d\n", nr_saved_frames);
+	printf("  Total calls: %d\n", nr_total_calls);
+	printf("  Tail calls: %lu\n", nr_tailcalls);
+	
+	double tottime = current_system_cpu_time() - STARTUP_TIME;
+	printf("  Total time: %lf\n", tottime);
+
+	printf("* C:\n");
+#if defined(USE_GCMALLOC)
+	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
+	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
+	printf("  Heap size: %lu\n", pheap_size);
+	printf("  Free bytes: %lu\n", pfree_bytes);
+	printf("  Unmapped bytes: %lu\n", punmapped_bytes);
+	printf("  Bytes since gc: %lu\n", pbytes_since_gc);
+	printf("  Total bytes: %lu\n", ptotal_bytes);
+#else
+	printf("  xmalloc bytes: %d\n", X_BYTES_ALLOCATED);
+#endif
+	printf("  size of Object: %lu\n", sizeof(Object));
+
+	printf("* Notices:\n");
+	if(SP != SP_EMPTY) {
+		printf("  Stack is not empty! (%d items)\n", (SP_EMPTY-SP));
+		printf(" => %s\n", reprStack());
+	}
 }
 
 void push(Object *obj) {
