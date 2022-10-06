@@ -1,11 +1,6 @@
 /*
 	Interpreter - runs code.
 
-	There is no compilation step, not really even a parsing step -- the interpreter
-	runs directly from the objlists from the Reader. This makes the code smaller and
-	makes e.g. forward declarations really easy since nothing is evaluated until it
-	runs.
-
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 
@@ -151,7 +146,7 @@ int Interpreter::heap_alloc(int nr) {
 	if((HEAP_NEXTFREE + nr) >= HEAP_END) {
 		// not enough memory, double it
 		size_t newsize = max(HEAP_END+nr, (HEAP_END+1)*2);
-		OBJMEM = (Object*)x_realloc(OBJMEM, newsize);
+		OBJMEM = (Object*)x_realloc(OBJMEM, newsize*sizeof(Object));
 		HEAP_END = newsize - 1;
 	}
 	int addr = HEAP_NEXTFREE;

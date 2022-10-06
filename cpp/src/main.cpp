@@ -1,6 +1,5 @@
 //
-// An experimental minimized front end, seeing how much of the repl
-// I can push into verbii code
+// Frontend - most of the heavy lifting is in verbii code.
 //
 // Copyright (c) 2022 Frank McIngvale, see LICENSE
 //

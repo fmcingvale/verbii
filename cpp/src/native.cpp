@@ -176,15 +176,14 @@ static void builtin_divmod(Interpreter *intr) {
 	VINT a = popInt(intr, "Bad divmod numerator");
 	VINT mod;
 
-	if(b == 0) {
+	if(b == 0)
 		throw LangError("Divide by zero");
-	}
+
 	VINT quot = (VINT)floor(((double)(abs(a))) / ((double)(abs(b))));
 
 	bool samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
-	if(samesign) {
+	if(samesign)
 		mod = a - quot*b;
-	}
 	else {
 		mod = a + quot*b;
 		quot = -quot;

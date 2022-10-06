@@ -186,7 +186,7 @@ CallFrameData *CallFrameData::findFrameUp(int levels) {
 Object CallFrameData::getFrameObj(int levels, int index) {
 	//printf("GET OUTER OBJ, level=%d, index=%d\n", levels, index);
 	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
-		throw LangError("Out of bounds in CallFrameData::setLocalObj()");
+		throw LangError("Out of bounds in CallFrameData::getFrameObj()");
 	// go up number of levels
 	auto frame = findFrameUp(levels);
 	return frame->data[index];
@@ -195,7 +195,7 @@ Object CallFrameData::getFrameObj(int levels, int index) {
 void CallFrameData::setFrameObj(int levels, int index, Object obj) {
 	//printf("SET OUTER OBJ, level=%d, index=%d\n", levels, index);
 	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
-		throw LangError("Out of bounds in CallFrameData::setLocalObj()");
+		throw LangError("Out of bounds in CallFrameData::setFrameObj()");
 	// go up number of levels
 	auto frame = findFrameUp(levels);
 	frame->data[index] = obj;

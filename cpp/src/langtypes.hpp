@@ -119,6 +119,10 @@ class Object {
 	bool isString() const { return type == TYPE_STRING; }
 	bool isSymbol() const { return type == TYPE_SYMBOL; }
 	// 'version 2' closures
+	// **NOTE** Lamda and BoundLambda are intentionally distinct types,
+	// i.e. BoundLamdba is NOT a specialized version of a Lambda (they can be
+	// implemented with a single object at the host level, but are always
+	// distinct at the verbii level)
 	bool isBoundLambda() const { return type == TYPE_BOUND_LAMBDA; }
 	bool isOpcode() const { return type == TYPE_OPCODE; }
 
