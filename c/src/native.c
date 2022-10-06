@@ -161,8 +161,8 @@ static void builtin_divmod() {
 	if(b == 0)
 		error("Divide by zero");
 	
-	VINT quot = (VINT)floor(((double)(abs(a))) / ((double)(abs(b))));
-
+	VINT quot = (VINT)floor(((double)(labs(a))) / ((double)(labs(b))));
+	
 	int samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
 	if(samesign)
 		mod = a - quot*b;
@@ -729,6 +729,10 @@ static void builtin_file_pathsep() {
 	push(newString("/",1));
 }
 
+static void builtin_f_setprec() {
+	FLOAT_PRECISION = popInt("f.setprec");
+}	
+
 #ifdef _MSC_VER
 #include <direct.h>
 #else
@@ -1006,6 +1010,8 @@ BUILTIN_FUNC BLTINS[] = {
 	{ "set-allow-overwrite-words", builtin_set_allow_overwrite },
 	{ "set-stacktrace-on-exception", builtin_stacktrace_on_exception },
 	{ ".wordlist", builtin_wordlist },
+
+	{ "f.setprec", builtin_f_setprec },
 
 	{ "==", builtin_equal },
 	{ ">", builtin_greater },

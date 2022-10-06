@@ -497,16 +497,16 @@ Object *deepcopy(Object *obj) {
 	}
 }
 
-static const char* fmtDisplayPrintObjArray(ObjArray *arr, char open_delim, char close_delim) {
+static const char* fmtDisplayPrintObjArray(ObjArray *arr, const char* open_delim, const char* close_delim) {
 	UT_string *s;
 	utstring_new(s);
-	utstring_printf(s, "%c ", open_delim);
+	utstring_printf(s, "%s ", open_delim);
 	
 	for(int i=0; i<ObjArray_length(arr); ++i) {
 		utstring_printf(s, "%s ", fmtDisplayPrint(ObjArray_get(arr,i)));
 	}
 
-	utstring_printf(s, "%c", close_delim);
+	utstring_printf(s, "%s", close_delim);
 	return utstring_body(s);
 }
 
@@ -527,23 +527,31 @@ const char* fmtDisplayPrint(Object *obj) {
 		case TYPE_BOOL: 
 			return (obj->data.i == TRUE) ? "true" : "false";
 		case TYPE_LIST:
-			return fmtDisplayPrintObjArray(obj->data.array, '[', ']');
+			return fmtDisplayPrintObjArray(obj->data.array, "[", "]");
 		case TYPE_LAMBDA:
-			return fmtDisplayPrintObjArray(obj->data.lambda->list->data.array, '{', '}');
+			if(obj->data.lambda->outer)
+				return fmtDisplayPrintObjArray(obj->data.lambda->list->data.array, "<bound {", "}>");
+			else
+				return fmtDisplayPrintObjArray(obj->data.lambda->list->data.array, "{", "}");
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
-			utstring_printf(s, "%s", utstring_body(obj->data.str));
-			return utstring_body(s);
+			{
+				int i;
+				for(i=0; i<utstring_len(obj->data.str); ++i) {
+					char c = utstring_body(obj->data.str)[i];
+					if(c < 32 || c > 126) {
+						// turn non-printable chars into '%code'
+						char buf[10];
+						snprintf(buf, 9, "\\x%02x", (int)((unsigned char)c));
+						utstring_printf(s, "%s", buf);
+					}
+					else
+						utstring_printf(s, "%c", c);
+				}
+				return utstring_body(s);
+			}
 		case TYPE_OPCODE:
-		{
-			uint8_t code;
-			uint8_t A;
-			uint16_t B;
-			uint32_t C;
-			opcode_unpack(obj->data.opcode, &code, &A, &B, &C);
-			utstring_printf(s, "#(op %s %d %d %d)", opcode_code_to_name(code), (int)A, (int)B, (int)C);
-			return utstring_body(s);
-		}
+			return fmtStackPrint(obj);
 		case TYPE_DICT: 
 		{
 			HASH_SORT(obj->data.objdict, sort_objdictentry_by_name);
@@ -597,11 +605,11 @@ const char* fmtStackPrint(Object *obj) {
 		case TYPE_LAMBDA:
 			//printf("STACK PRINT LAMBDA @ %llx\n", (long long unsigned int)obj->data.lambda->list);
 			if(obj->data.lambda->outer)
-				return fmtStackPrintObjArray(obj->data.lambda->list->data.array, "<bound{", "}>");
+				return fmtStackPrintObjArray(obj->data.lambda->list->data.array, "<bound {", "}>");
 			else
 				return fmtStackPrintObjArray(obj->data.lambda->list->data.array, "{", "}");
 		case TYPE_STRING:
-			utstring_printf(s, "\"%s\"", utstring_body(obj->data.str));
+			utstring_printf(s, "\"%s\"", fmtDisplayPrint(obj));
 			return utstring_body(s);
 		case TYPE_OPCODE:
 		{
@@ -610,11 +618,11 @@ const char* fmtStackPrint(Object *obj) {
 			uint16_t B;
 			uint32_t C;
 			opcode_unpack(obj->data.opcode, &code, &A, &B, &C);
-			utstring_printf(s, "#(op %s %d %d %d)", opcode_code_to_name(code), (int)A, (int)B, (int)C);
+			utstring_printf(s, "#op( %s %d %d %d )", opcode_code_to_name(code), (int)A, (int)B, (int)C);
 			return utstring_body(s);
 		}
 		case TYPE_SYMBOL:
-			utstring_printf(s, "'%s", utstring_body(obj->data.str));
+			utstring_printf(s, "'%s", fmtDisplayPrint(obj));
 			return utstring_body(s);
 		case TYPE_DICT: 
 		{
