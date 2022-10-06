@@ -25,6 +25,7 @@
 	"test-hashing"
 	"test-io"
 	"test-lists"
+	"test-mathops"
 	"test-numeric"
 	"test-parsing"
 	"test-paths"
