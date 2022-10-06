@@ -42,7 +42,9 @@ int isFloat(Object *obj) { return (obj->type == TYPE_FLOAT) ? TRUE : FALSE; }
 int isBool(Object *obj) { return (obj->type == TYPE_BOOL) ? TRUE : FALSE; }
 int isString(Object *obj) { return (obj->type == TYPE_STRING) ? TRUE : FALSE; }
 int isSymbol(Object *obj) { return (obj->type == TYPE_SYMBOL) ? TRUE : FALSE; }
-int isLambda(Object *obj) { return (obj->type == TYPE_LAMBDA) ? TRUE : FALSE; }
+// lambda & bound-lambda are distinct types, even though they are implemented with a 
+// single object at the C level
+int isLambda(Object *obj) { return ((obj->type == TYPE_LAMBDA) && (obj->data.lambda->outer == NULL)) ? TRUE : FALSE; }
 int isBoundLambda(Object *obj) { return ((obj->type == TYPE_LAMBDA) && (obj->data.lambda->outer != NULL)) ? TRUE : FALSE; }
 int isList(Object *obj) { return (obj->type == TYPE_LIST) ? TRUE : FALSE; }
 int isDict(Object *obj) { return (obj->type == TYPE_DICT) ? TRUE : FALSE; }
@@ -558,7 +560,7 @@ const char* fmtDisplayPrint(Object *obj) {
 			ObjDictEntry *ent;
 			utstring_printf(s, "{ ");
 			for(ent=obj->data.objdict; ent != NULL; ent = ent->hh.next) {
-				utstring_printf(s, "%s -> %s ", ent->name, fmtDisplayPrint(ent->obj));
+				utstring_printf(s, "\"%s\" => %s ", ent->name, fmtDisplayPrint(ent->obj));
 			}
 			utstring_printf(s,"}");
 			return utstring_body(s);
@@ -630,7 +632,7 @@ const char* fmtStackPrint(Object *obj) {
 			ObjDictEntry *ent;
 			utstring_printf(s, "{ ");
 			for(ent=obj->data.objdict; ent != NULL; ent = ent->hh.next) {
-				utstring_printf(s, "%s -> %s ", ent->name, fmtStackPrint(ent->obj));
+				utstring_printf(s, "\"%s\" => %s ", ent->name, fmtStackPrint(ent->obj));
 			}
 			utstring_printf(s,"}");
 			return utstring_body(s);

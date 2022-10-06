@@ -425,7 +425,7 @@ void run(Object *objlist) {
 			if(isSymbolMatch(obj, "call", -1)) {
 				// top of stack must be a lambda
 				Object *val = pop();
-				if(isLambda(val)) {
+				if(isLambda(val) || isBoundLambda(val)) {
 					// now this is just like calling a userword, below
 					// TODO -- tail call elimination??
 					//syntax->pushObjList(val.asLambda());
