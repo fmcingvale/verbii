@@ -9,43 +9,44 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 #set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-#find_library(GC_LIBRARY
-#			NAMES gc gc.lib gc64_dll gc64_dll.lib
-#			PATHS ${PROJECT_SOURCE_DIR}/../libgc)
+find_library(GC_LIBRARY
+			NAMES gc gc.lib gc64_dll gc64_dll.lib
+			PATHS ${PROJECT_SOURCE_DIR}/../libgc)
 
 # on linux (ubuntu) it also needs -lgccpp
-#find_library(GCCPP_LIBRARY
-#			NAMES gccpp
-#			PATHS ${PROJECT_SOURCE_DIR}/../libgc)
+find_library(GCCPP_LIBRARY
+			NAMES gccpp
+			PATHS ${PROJECT_SOURCE_DIR}/../libgc)
 			
-#find_path(GC_INCLUDES 
-#			gc.h
-#			PATHS ${PROJECT_SOURCE_DIR}/../libgc/include /usr/include/gc /usr/local/gc
-#          )
+find_path(GC_INCLUDES 
+			gc.h
+			PATHS ${PROJECT_SOURCE_DIR}/../libgc/include /usr/include/gc /usr/local/gc
+          )
 
+# weird ... C++ port doesn't need this ...
 find_library(MATH_LIBRARY
 			NAMES m libm
 )
 
-#include_directories(${GC_INCLUDES})
+include_directories(${GC_INCLUDES})
 	
 add_executable(main main.c langtypes.c interpreter.c deserialize.c errors.c native.c opcodes.c util.c xmalloc.c)
 
 target_link_libraries(main ${MATH_LIBRARY})
 
 # can build without gc if needed
-#if(GC_LIBRARY AND GC_INCLUDES)
-#	add_definitions(-DUSE_GCMALLOC)
-#	target_link_libraries(main ${GC_LIBRARY})	
-#	message("** GC_INCLUDES ${GC_INCLUDES}")
-#	message("** GC_LIBRARY ${GC_LIBRARY}")
-#else()
-#	message("** Building without garbage collection")
-#endif()
+if(GC_LIBRARY AND GC_INCLUDES)
+	add_definitions(-DUSE_GCMALLOC)
+	target_link_libraries(main ${GC_LIBRARY})	
+	message("** GC_INCLUDES ${GC_INCLUDES}")
+	message("** GC_LIBRARY ${GC_LIBRARY}")
+else()
+	message("** Building without garbage collection")
+endif()
 
-#if(GCCPP_LIBRARY)
-#	target_link_libraries(main ${GCCPP_LIBRARY})	
-#endif()
+if(GCCPP_LIBRARY)
+	target_link_libraries(main ${GCCPP_LIBRARY})	
+endif()
 	
 # copy executable to root dir once built
 add_custom_command(
