@@ -144,7 +144,7 @@ void print_stats() {
 	printf("  Bytes since gc: %lu\n", pbytes_since_gc);
 	printf("  Total bytes: %lu\n", ptotal_bytes);
 #else
-	printf("  xmalloc bytes: %d\n", X_BYTES_ALLOCATED);
+	printf("  xmalloc bytes: %llu\n", X_BYTES_ALLOCATED);
 #endif
 	printf("  size of Object: %lu\n", sizeof(Object));
 

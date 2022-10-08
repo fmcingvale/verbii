@@ -5,7 +5,6 @@
 */
 #include "deserialize.h"
 #include "errors.h"
-#include "deserialize.h"
 
 // NOTE: like elsewhere, this code assumes garbage collection is being used, so
 // no attempt is made to free memory

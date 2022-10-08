@@ -77,7 +77,7 @@ Object* newFloat(double d) {
 
 Object* parseInt(const char *str) {
 	// parser validates input format, so this should always succeed
-	return newInt(atol(str));
+	return newInt(atoll(str));
 }
 
 Object* parseFloat(const char *str) {

@@ -77,3 +77,4 @@ lib/random.verb.b
 lib/random-worker.verb.b
 c/bin/
 c/main
+c/demo-builtins.verb.b

@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(verbii)
 
+include(CheckSymbolExists)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 
 # specify the C++ standard
@@ -27,6 +29,9 @@ find_path(GC_INCLUDES
 find_library(MATH_LIBRARY
 			NAMES m libm
 )
+
+# look for strncmp (missing under mingw for some reason)
+check_symbol_exists(strndup "string.h" HAVE_STRNDUP)
 
 include_directories(${GC_INCLUDES})
 	

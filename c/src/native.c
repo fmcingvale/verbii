@@ -161,7 +161,7 @@ static void builtin_divmod() {
 	if(b == 0)
 		error("Divide by zero");
 	
-	VINT quot = (VINT)floor(((double)(labs(a))) / ((double)(labs(b))));
+	VINT quot = (VINT)floor(((double)(llabs(a))) / ((double)(llabs(b))));
 	
 	int samesign = (a < 0 && b < 0) || (a >=0 && b >= 0);
 	if(samesign)

@@ -5,6 +5,7 @@
 */
 
 #include "xmalloc.h"
+#include <string.h>
 
 #if defined(USE_GCMALLOC)
 
@@ -31,7 +32,6 @@ char *x_strndup(const char *s, size_t n) {
 void x_free(void *ptr) { }
 
 #else // !USE_GCMALLOC
-#include <string.h>
 
 unsigned long long X_BYTES_ALLOCATED = 0;
 
@@ -60,7 +60,17 @@ char* x_strndup(const char* s, size_t n) {
 #else // assume posix
 char *x_strndup(const char *s, size_t n) {
 	X_BYTES_ALLOCATED += n + 1;
+#ifdef HAVE_STRNDUP
 	return strndup(s, n);
+#else
+	if(n < strlen(s))
+		return strdup(s);
+
+	char *buf = (char*)x_malloc(n+1);
+	memcpy(buf, s, n);
+	buf[n] = 0;
+	return buf;
+#endif
 }
 #endif
 
