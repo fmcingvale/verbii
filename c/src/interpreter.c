@@ -146,6 +146,14 @@ void print_stats() {
 #else
 	printf("  xmalloc bytes: %llu\n", X_BYTES_ALLOCATED);
 #endif
+	printf("  allocations by type:\n");
+	unsigned long tot_objects = 0;
+	for(int i=0; i<TYPE_LAST_PLUS_1; ++i) {
+		printf("    %12s = %12lu\n", TYPE_TO_NAME[i], ALLOCS_BY_TYPE[i]);
+		tot_objects += ALLOCS_BY_TYPE[i];
+	}
+	printf("  total objects: %lu\n", tot_objects);
+
 	printf("  size of Object: %lu\n", sizeof(Object));
 
 	printf("* Notices:\n");

@@ -20,6 +20,11 @@ Object *THE_FALSE = NULL;
 
 int FLOAT_PRECISION = 17;
 
+const char *TYPE_TO_NAME[] = { "null", "int", "bool", "lambda", "float", "string", "symbol",
+		"list", "void", "dict", "bound-lambda", "opcode", "void-funcptr" };
+		
+unsigned long int ALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+
 static Object *basic_object(unsigned char type) {
 	Object *obj = (Object*)x_malloc(sizeof(Object));
 	obj->type = type;
@@ -52,24 +57,29 @@ int isOpcode(Object *obj) { return (obj->type == TYPE_OPCODE) ? TRUE : FALSE; }
 int isVoidFunctionPtr(Object *obj) { return (obj->type == TYPE_VOIDFUNCPTR) ? TRUE : FALSE; }
 
 Object* newInt(VINT i) {
+	++ALLOCS_BY_TYPE[TYPE_INT];
 	Object *obj = basic_object(TYPE_INT);
 	obj->data.i = i;
 	return obj;
 }
 
 Object* newNull() {
+	++ALLOCS_BY_TYPE[TYPE_NULL];
 	return THE_NULL;
 }
 
 Object* newVoid() {
+	++ALLOCS_BY_TYPE[TYPE_VOID];
 	return THE_VOID;
 }
 
 Object* newBool(VINT b) {
+	++ALLOCS_BY_TYPE[TYPE_BOOL];
 	return b == 0? THE_FALSE : THE_TRUE;	
 }
 
 Object* newFloat(double d) {
+	++ALLOCS_BY_TYPE[TYPE_FLOAT];
 	Object *obj = basic_object(TYPE_FLOAT);
 	obj->data.d = d;
 	return obj;
@@ -95,6 +105,7 @@ Object* parseBool(const char *str) {
 }
 
 Object* newString(const char *s, int len) {
+	++ALLOCS_BY_TYPE[TYPE_STRING];
 	Object *obj = basic_object(TYPE_STRING);
 	utstring_new(obj->data.str);
 	if(len<0) len = strlen(s);
@@ -103,6 +114,7 @@ Object* newString(const char *s, int len) {
 }
 
 Object* newSymbol(const char *s, int len) {
+	++ALLOCS_BY_TYPE[TYPE_SYMBOL];
 	Object *obj = basic_object(TYPE_SYMBOL);
 	utstring_new(obj->data.str);
 	if(len<0) len = strlen(s);
@@ -123,6 +135,7 @@ const char *string_cstr(Object *s) {
 }
 
 Object* newLambda(Object *list) {
+	++ALLOCS_BY_TYPE[TYPE_LAMBDA];
 	Object *obj = basic_object(TYPE_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
 	obj->data.lambda->list = list;
@@ -131,12 +144,14 @@ Object* newLambda(Object *list) {
 }
 
 Object *newVoidFunctionPtr(VoidFunctionPtr funcptr) {
+	++ALLOCS_BY_TYPE[TYPE_VOIDFUNCPTR];
 	Object *obj = basic_object(TYPE_VOIDFUNCPTR);
 	obj->data.funcptr = funcptr;
 	return obj;
 }
 
 Object* newBoundLambda(Object *list, CallFrameData *data) {
+	++ALLOCS_BY_TYPE[TYPE_BOUND_LAMBDA];
 	//printf("NEW BOUND LAMBDA FROM: %s @ %llx\n", fmtStackPrint(list), (long long unsigned int)list);
 	Object *obj = basic_object(TYPE_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
@@ -147,6 +162,7 @@ Object* newBoundLambda(Object *list, CallFrameData *data) {
 }
 
 Object* newOpcode(uint64_t packed_opcode) {
+	++ALLOCS_BY_TYPE[TYPE_OPCODE];
 	Object *obj = basic_object(TYPE_OPCODE);
 	obj->data.opcode = packed_opcode;
 	return obj;
@@ -229,12 +245,14 @@ void ObjArray_put(ObjArray* arr, int i, Object *obj) {
 }
 
 Object* newList() {
+	++ALLOCS_BY_TYPE[TYPE_LIST];
 	Object *obj = basic_object(TYPE_LIST);
 	obj->data.array = newObjArray();
 	return obj;
 }
 
 Object* newListKeepArray(ObjArray *array) {
+	++ALLOCS_BY_TYPE[TYPE_LIST];
 	Object *obj = basic_object(TYPE_LIST);
 	obj->data.array = array; // takes ownership of array
 	return obj;
@@ -257,6 +275,7 @@ void List_put(Object *list, int i, Object *obj) {
 }
 
 Object *newDict() {
+	++ALLOCS_BY_TYPE[TYPE_DICT];
 	Object *obj = basic_object(TYPE_DICT);
 	obj->data.objdict = NULL;
 	return obj;

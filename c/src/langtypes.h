@@ -32,6 +32,12 @@
 // for internal use only - not visible from verbii - this is for convenience so
 // that a void (f*)() can be stored in an Object to be put in a dict.
 #define TYPE_VOIDFUNCPTR 12
+#define TYPE_LAST_PLUS_1 13
+
+// map above types to names
+extern const char *TYPE_TO_NAME[TYPE_LAST_PLUS_1];
+// stats on # allocs of each type
+unsigned long int ALLOCS_BY_TYPE[TYPE_LAST_PLUS_1];
 
 #include <stdint.h> // int64_t
 #include "xmalloc.h"
