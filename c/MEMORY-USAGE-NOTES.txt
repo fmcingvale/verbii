@@ -1,0 +1,71 @@
+
+run-all-tests.verb:
+  C = 8.6 Mb heap; C++ = 84 Mb heap
+  
+* C:
+  Heap size: 8577024
+  Free bytes: 1490944
+  Unmapped bytes: 0
+  Bytes since gc: 1000800
+  Total bytes: 206723344
+  size of Object: 16
+
+* C++:
+  Heap size: 84291584
+  Free bytes: 1974272
+  Unmapped bytes: 0
+  Bytes since gc: 31696336
+  Total bytes: 98192839
+  size of Object: 16
+
+chess/run-perft-tests - "position 6"
+
+C 4.8 Mb, C++ 859 Mb
+
+* C:
+  Heap size: 4820992
+  Free bytes: 1347584
+  Unmapped bytes: 0
+  Bytes since gc: 201936
+  Total bytes: 4869105456
+  size of Object: 16
+  
+* C++:
+  Heap size: 859238400
+  Free bytes: 7421952
+  Unmapped bytes: 0
+  Bytes since gc: 5979184
+  Total bytes: 3432213530
+  size of Object: 16
+
+  benchmark.verb -- medium
+
+C 12.2 Mb, C++ 801 Mb
+
+* C:
+  Heap size: 12181504
+  Free bytes: 7348224
+  Unmapped bytes: 0
+  Bytes since gc: 1643648
+  Total bytes: 4111956112
+  size of Object: 16
+
+  * C++:
+  Heap size: 801861632
+  Free bytes: 93597696
+  Unmapped bytes: 0
+  Bytes since gc: 156968272
+  Total bytes: 1037056777
+  size of Object: 16
+
+
+** OTHER PORTS **
+
+* benchmark large:
+
+Max memory estimated from Task Manager (except for C/C++)
+
+C - Heap size 183 Mb
+C# - Max 52 Mb (not much variation)
+pypy Max 118 Mb, varied from 40-118, mergsort & quicksort took the peak memory
+
