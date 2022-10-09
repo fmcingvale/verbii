@@ -131,6 +131,9 @@ int isDict(Object *obj);
 int isOpcode(Object *obj);
 int isVoidFunctionPtr(Object *obj);
 
+// require obj be given type or error
+void requiretype(const char *where, Object *obj, int type);
+
 Object* newNull();
 Object* newVoid();
 Object* newInt(VINT i);
@@ -166,7 +169,10 @@ void ObjArray_put(ObjArray* list, int i, Object *obj);
 
 // the verbii list object
 Object* newList(); // always makes empty list
-Object* newListKeepArray(ObjArray *array); // keeps pointer
+// extended list creation:
+//	initsize - set initial capacity to initsize (but still empty)
+//	fill - if != NULL, fill initval elements with this object so length==initsize
+Object* newListEx(int initsize, Object *fill);
 void List_append(Object* list, Object *obj);
 int List_length(Object* list);
 Object* List_get(Object* list, int i);

@@ -56,6 +56,11 @@ int isDict(Object *obj) { return (obj->type == TYPE_DICT) ? TRUE : FALSE; }
 int isOpcode(Object *obj) { return (obj->type == TYPE_OPCODE) ? TRUE : FALSE; }
 int isVoidFunctionPtr(Object *obj) { return (obj->type == TYPE_VOIDFUNCPTR) ? TRUE : FALSE; }
 
+void requiretype(const char *where, Object *obj, int type) {
+	if(obj->type != type)
+		error("%s expects %s but got %s", where, TYPE_TO_NAME[type], fmtStackPrint(obj));
+}
+
 Object* newInt(VINT i) {
 	++ALLOCS_BY_TYPE[TYPE_INT];
 	Object *obj = basic_object(TYPE_INT);
@@ -124,17 +129,22 @@ Object* newSymbol(const char *s, int len) {
 
 // works for strings OR symbols
 int string_length(Object *s) {
-	assert(isString(s) || isSymbol(s));
+	if(!isString(s) && !isSymbol(s))
+		error("Expecting string or symbol but got %s", fmtStackPrint(s));
+
 	return utstring_len(s->data.str);
 }
 
 // works for strings OR symbols
 const char *string_cstr(Object *s) {
-	assert(isString(s) || isSymbol(s));
+	if(!isString(s) && !isSymbol(s))
+		error("Expecting string or symbol but got %s", fmtStackPrint(s));
+
 	return utstring_body(s->data.str);
 }
 
 Object* newLambda(Object *list) {
+	requiretype("newLambda", list, TYPE_LIST);
 	++ALLOCS_BY_TYPE[TYPE_LAMBDA];
 	Object *obj = basic_object(TYPE_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
@@ -151,6 +161,7 @@ Object *newVoidFunctionPtr(VoidFunctionPtr funcptr) {
 }
 
 Object* newBoundLambda(Object *list, CallFrameData *data) {
+	requiretype("newBoundLambda", list, TYPE_LIST);
 	++ALLOCS_BY_TYPE[TYPE_BOUND_LAMBDA];
 	//printf("NEW BOUND LAMBDA FROM: %s @ %llx\n", fmtStackPrint(list), (long long unsigned int)list);
 	Object *obj = basic_object(TYPE_LAMBDA);
@@ -203,75 +214,66 @@ int length(Object *obj) {
 	error("'length' not supported for object: %s", fmtStackPrint(obj));
 }
 
-ObjArray *newObjArray() {
+Object* newListEx(int initsize, Object *fill) {
+	++ALLOCS_BY_TYPE[TYPE_LIST];
+	Object *obj = basic_object(TYPE_LIST);
+	
 	ObjArray *array = (ObjArray*)x_malloc(sizeof(ObjArray));
-	array->maxsize = 10; // just some initial size
+	array->maxsize = (initsize > 0) ? initsize : 10;
 	array->items = (Object**)x_malloc(array->maxsize * sizeof(Object*));
 	array->length = 0;
-	return array;
-}
 
-void ObjArray_append(ObjArray* arr, Object *obj) {
-	if(arr->length == arr->maxsize) {
-		// grow by 10% but at least by 10
-		int newsize = arr->maxsize + max((int)(arr->maxsize*0.1), 10);
-		Object **newptr = (Object**)x_realloc(arr->items, newsize*sizeof(Object*));
-		if(!newptr)
-			error("Out of memory!");
+	if(initsize > 0 && fill != NULL) {
+		for(int i=0; i<initsize; ++i)
+			array->items[i] = fill;
 
-		arr->items = newptr;
-		arr->maxsize = newsize;
+		array->length = initsize;
 	}
-	arr->items[arr->length++] = obj;
-}
 
-int ObjArray_length(ObjArray* arr) {
-	return arr->length;
-}
-
-Object* ObjArray_get(ObjArray* arr, int i) {
-	if(i < 0 || i >= arr->length)
-		return newVoid(); // index out of range is OK - returns void
-	else
-		return arr->items[i];
-}
-
-void ObjArray_put(ObjArray* arr, int i, Object *obj) {
-	if(i < 0 || i >= arr->length)
-		// out of bounds NOT allowed on put()
-		error("ObjArray index out of bounds in put(): %d", i);
-	
-	arr->items[i] = obj;
-}
-
-Object* newList() {
-	++ALLOCS_BY_TYPE[TYPE_LIST];
-	Object *obj = basic_object(TYPE_LIST);
-	obj->data.array = newObjArray();
+	obj->data.array = array;
 	return obj;
 }
 
-Object* newListKeepArray(ObjArray *array) {
-	++ALLOCS_BY_TYPE[TYPE_LIST];
-	Object *obj = basic_object(TYPE_LIST);
-	obj->data.array = array; // takes ownership of array
-	return obj;
+Object *newList() {
+	// start with a small nonzero maxsize empty list
+	return newListEx(10, NULL);
 }
 
 void List_append(Object *list, Object *obj) {
-	ObjArray_append(list->data.array, obj);
+	requiretype("append", list, TYPE_LIST);
+	if(list->data.array->length == list->data.array->maxsize) {
+		// grow by 10% but at least by 10
+		int newsize = list->data.array->maxsize + max((int)(list->data.array->maxsize*0.1), 10);
+		Object **newptr = (Object**)x_realloc(list->data.array->items, newsize*sizeof(Object*));
+		if(!newptr)
+			error("Out of memory!");
+
+		list->data.array->items = newptr;
+		list->data.array->maxsize = newsize;
+	}
+	list->data.array->items[list->data.array->length++] = obj;
 }
 
 int List_length(Object *list) {
-	return ObjArray_length(list->data.array);
+	requiretype("length", list, TYPE_LIST);
+	return list->data.array->length;
 }
 
 Object* List_get(Object *list, int i) {
-	return ObjArray_get(list->data.array, i);
+	requiretype("get", list, TYPE_LIST);
+	if(i < 0 || i >= list->data.array->length)
+		return newVoid(); // index out of range is OK - returns void
+	else
+		return list->data.array->items[i];
 }
 
 void List_put(Object *list, int i, Object *obj) {
-	ObjArray_put(list->data.array, i, obj);
+	requiretype("put", list, TYPE_LIST);
+	if(i < 0 || i >= list->data.array->length)
+		// out of bounds NOT allowed on put()
+		error("List index out of bounds in put(): %d", i);
+	
+	list->data.array->items[i] = obj;
 }
 
 Object *newDict() {
@@ -479,15 +481,6 @@ int testGreater(Object *a, Object *b) {
 	error("Cannot compare objects in >: %s and %s", fmtStackPrint(a), fmtStackPrint(b));
 }
 
-static ObjArray *deepcopyObjArray(ObjArray *array) {
-	ObjArray *newarray;
-	newarray = newObjArray();
-	for(int i=0; i<ObjArray_length(array); ++i) 
-		ObjArray_append(newarray, deepcopy(ObjArray_get(array,i)));
-	
-	return newarray;
-}
-
 Object *deepcopy(Object *obj) {
 	switch(obj->type) {
 		// all atomic or read-only types just return themselves
@@ -503,9 +496,14 @@ Object *deepcopy(Object *obj) {
 		case TYPE_OPCODE:
 			return obj;
 
-		case TYPE_LIST:
-			return newListKeepArray(deepcopyObjArray(obj->data.array));
-
+		case TYPE_LIST: {
+			Object *newlist = newListEx(List_length(obj),NULL);
+			newlist->data.array->length = List_length(obj);
+			for(int i=0; i<List_length(obj); ++i)
+				List_put(newlist, i, deepcopy(List_get(obj, i)));
+			
+			return newlist;
+		}
 		case TYPE_DICT: {
 			Object *newdict = newDict();
 			for(ObjDictEntry *ent=obj->data.objdict; ent != NULL; ent = ent->hh.next)
@@ -518,14 +516,14 @@ Object *deepcopy(Object *obj) {
 	}
 }
 
-static const char* fmtDisplayPrintObjArray(ObjArray *arr, const char* open_delim, const char* close_delim) {
+static const char* fmtDisplayPrintList(Object *list, const char* open_delim, const char* close_delim) {
+	requiretype("fmtDisplayPrintList", list, TYPE_LIST);
 	UT_string *s;
 	utstring_new(s);
 	utstring_printf(s, "%s ", open_delim);
 	
-	for(int i=0; i<ObjArray_length(arr); ++i) {
-		utstring_printf(s, "%s ", fmtDisplayPrint(ObjArray_get(arr,i)));
-	}
+	for(int i=0; i<List_length(list); ++i)
+		utstring_printf(s, "%s ", fmtDisplayPrint(List_get(list,i)));	
 
 	utstring_printf(s, "%s", close_delim);
 	return utstring_body(s);
@@ -548,12 +546,12 @@ const char* fmtDisplayPrint(Object *obj) {
 		case TYPE_BOOL: 
 			return (obj->data.i == TRUE) ? "true" : "false";
 		case TYPE_LIST:
-			return fmtDisplayPrintObjArray(obj->data.array, "[", "]");
+			return fmtDisplayPrintList(obj, "[", "]");
 		case TYPE_LAMBDA:
 			if(obj->data.lambda->outer)
-				return fmtDisplayPrintObjArray(obj->data.lambda->list->data.array, "<bound {", "}>");
+				return fmtDisplayPrintList(obj->data.lambda->list, "<bound {", "}>");
 			else
-				return fmtDisplayPrintObjArray(obj->data.lambda->list->data.array, "{", "}");
+				return fmtDisplayPrintList(obj->data.lambda->list, "{", "}");
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
 			{
@@ -590,16 +588,16 @@ const char* fmtDisplayPrint(Object *obj) {
 	}
 }
 
-static const char* fmtStackPrintObjArray(ObjArray *arr, const char *open_delim, const char *close_delim) {
+static const char* fmtStackPrintList(Object *list, const char *open_delim, const char *close_delim) {
+	requiretype("fmstStackPrintList", list, TYPE_LIST);
 	UT_string *s;
 	utstring_new(s);
 	utstring_printf(s, "%s ", open_delim);
 	
 	//printf("STACK PRINT ARRAY @ %llx\n", (long long unsigned int)arr);
 
-	for(int i=0; i<ObjArray_length(arr); ++i) {
-		utstring_printf(s, "%s ", fmtStackPrint(ObjArray_get(arr,i)));
-	}
+	for(int i=0; i<List_length(list); ++i)
+		utstring_printf(s, "%s ", fmtStackPrint(List_get(list,i)));
 
 	utstring_printf(s, "%s", close_delim);
 	return utstring_body(s);
@@ -622,13 +620,13 @@ const char* fmtStackPrint(Object *obj) {
 		case TYPE_BOOL: 
 			return (obj->data.i == TRUE) ? "<true>" : "<false>";
 		case TYPE_LIST:
-			return fmtStackPrintObjArray(obj->data.array, "[", "]");
+			return fmtStackPrintList(obj, "[", "]");
 		case TYPE_LAMBDA:
 			//printf("STACK PRINT LAMBDA @ %llx\n", (long long unsigned int)obj->data.lambda->list);
 			if(obj->data.lambda->outer)
-				return fmtStackPrintObjArray(obj->data.lambda->list->data.array, "<bound {", "}>");
+				return fmtStackPrintList(obj->data.lambda->list, "<bound {", "}>");
 			else
-				return fmtStackPrintObjArray(obj->data.lambda->list->data.array, "{", "}");
+				return fmtStackPrintList(obj->data.lambda->list, "{", "}");
 		case TYPE_STRING:
 			utstring_printf(s, "\"%s\"", fmtDisplayPrint(obj));
 			return utstring_body(s);
