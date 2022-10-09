@@ -49,6 +49,7 @@ typedef int64_t VINT;
 #define FALSE 0
 
 extern int FLOAT_PRECISION;
+extern unsigned long int NR_SMALL_INT_ALLOCS;
 
 #include "utstring.h"
 #include "uthash.h"

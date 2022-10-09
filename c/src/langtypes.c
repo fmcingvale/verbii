@@ -25,6 +25,8 @@ const char *TYPE_TO_NAME[] = { "null", "int", "bool", "lambda", "float", "string
 		
 unsigned long int ALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+unsigned long int NR_SMALL_INT_ALLOCS = 0;
+
 static Object *basic_object(unsigned char type) {
 	Object *obj = (Object*)x_malloc(sizeof(Object));
 	obj->type = type;
@@ -63,6 +65,10 @@ void requiretype(const char *where, Object *obj, int type) {
 
 Object* newInt(VINT i) {
 	++ALLOCS_BY_TYPE[TYPE_INT];
+	// adjust threshold experimentally to find majority use case
+	if(i >= -10 && i <= 1000)
+		++NR_SMALL_INT_ALLOCS;
+
 	Object *obj = basic_object(TYPE_INT);
 	obj->data.i = i;
 	return obj;

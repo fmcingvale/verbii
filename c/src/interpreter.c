@@ -152,6 +152,7 @@ void print_stats() {
 		printf("    %12s = %12lu\n", TYPE_TO_NAME[i], ALLOCS_BY_TYPE[i]);
 		tot_objects += ALLOCS_BY_TYPE[i];
 	}
+	printf("    #small ints:   %12lu\n", NR_SMALL_INT_ALLOCS);
 	printf("  total objects: %lu\n", tot_objects);
 
 	printf("  size of Object: %lu\n", sizeof(Object));
