@@ -35,7 +35,7 @@ void backtrace_curframe() {
 void print_backtrace() {
 	int i=0;
 	while(1) {
-		printf("FRAME %d: ", i);
+		printf("FRAME %d: ", i++);
 		backtrace_curframe();
 		if(havePushedFrames()) {
 			code_return();
@@ -68,94 +68,111 @@ void deserialize_and_run(const char *filename) {
 #include <limits.h>
 #include <stdlib.h>
 #include "util.h"
+#include <setjmp.h>
 
 int main(int argc, char *argv[]) {
 	// cpu-time will be relative to this
 	STARTUP_TIME = current_system_cpu_time();
 
-	x_mem_init();
-
-	init_gc_object();
-	init_builtins();
-	init_object_system();
-	
-	int SHOW_RUN_STATS = FALSE;
-	int DO_PROFILING = FALSE;
-	char *BOOTFILE = NULL;
-	char *RUN_BFILE = NULL;
-	// collect args that should be passed on to boot.verb, filtering out mine
-	Object *cmdline_args = newList();
-
-	// catch only the flags that have to be implemented natively
-	// pass the rest through as-is to boot.verb code
-	int i=1;
-	while(i<argc) {
-		if(!strcmp(argv[i], "-stats")) {
-			SHOW_RUN_STATS = TRUE;
-		}
-		else if(!strcmp(argv[i], "-libdir")) {
-			if(i >= (argc-1)) {
-				printf("Missing argument after -libdir\n");
-				exit(1);
-			}
-			UT_string *name;
-			utstring_new(name);
-			utstring_printf(name, "%s", argv[i+1]);
-			//printf("NAME: %s\n", name.c_str());
-			if(utstring_body(name)[utstring_len(name)-1] != '/' && 
-				utstring_body(name)[utstring_len(name)-1] != '\\') {
-				printf("-libdir paths must end with / or \\, got: %s\n", utstring_body(name));
-				exit(1);
-			}
-			utstring_printf(name, "boot.verb.b");
-			if(file_exists(utstring_body(name))) {
-				//printf("EXISTS: %s\n", name.c_str());
-				BOOTFILE = strdup(utstring_body(name));
-			}
-			// *ALSO* pass to script args since boot needs to know the paths
-			List_append(cmdline_args, newString(argv[i],-1));
-			List_append(cmdline_args, newString(argv[i+1],-1));
-			
-			++i;
-		}
-		else if(!strcmp(argv[i], "-profile")) {
-			DO_PROFILING = TRUE;
-			SHOW_RUN_STATS = TRUE; // -profile implies -stats
-		}
-		else if(!strcmp(argv[i], "-runb")) {
-			if(i >= (argc-1)) {
-				printf("Missing argument after -runb\n");
-				exit(1);
-			}
-			RUN_BFILE = strdup(argv[i+1]);
-		}
-		else {
-			List_append(cmdline_args, newString(argv[i],-1));
-		}
-		++i;
-	}
-	if(!RUN_BFILE && !BOOTFILE) {
-		printf("Cannot find boot.verb.b -- maybe you need to pass '-libdir PATH'?\n");
-		exit(1);
-	}
-	//printf("** BOOTFILE: %s\n", BOOTFILE.c_str());
-
 	while(1) {
-		init_interpreter();
-		//intr->PROFILE_CALLS = DO_PROFILING;
-		
-		// boot.verb expects cmdline args on top of stack on entry
-		push(cmdline_args);
-		//printf("STACK BEFORE BOOT: %s\n", intr->reprStack().c_str());
-		if(RUN_BFILE)
-			deserialize_and_run(RUN_BFILE);
-		else
-			deserialize_and_run(BOOTFILE);
+		if(setjmp(ERROR_JMP_BUF) == 0) {	
+			x_mem_init();
+
+			init_gc_object();
+			init_builtins();
+			init_object_system();
 			
-		if(SHOW_RUN_STATS)
-			print_stats();
-		break;
-	}
+			int SHOW_RUN_STATS = FALSE;
+			int DO_PROFILING = FALSE;
+			char *BOOTFILE = NULL;
+			char *RUN_BFILE = NULL;
+			// collect args that should be passed on to boot.verb, filtering out mine
+			Object *cmdline_args = newList();
+
+			// catch only the flags that have to be implemented natively
+			// pass the rest through as-is to boot.verb code
+			int i=1;
+			while(i<argc) {
+				if(!strcmp(argv[i], "-stats")) {
+					SHOW_RUN_STATS = TRUE;
+				}
+				else if(!strcmp(argv[i], "-libdir")) {
+					if(i >= (argc-1)) {
+						printf("Missing argument after -libdir\n");
+						exit(1);
+					}
+					UT_string *name;
+					utstring_new(name);
+					utstring_printf(name, "%s", argv[i+1]);
+					//printf("NAME: %s\n", name.c_str());
+					if(utstring_body(name)[utstring_len(name)-1] != '/' && 
+						utstring_body(name)[utstring_len(name)-1] != '\\') {
+						printf("-libdir paths must end with / or \\, got: %s\n", utstring_body(name));
+						exit(1);
+					}
+					utstring_printf(name, "boot.verb.b");
+					if(file_exists(utstring_body(name))) {
+						//printf("EXISTS: %s\n", name.c_str());
+						BOOTFILE = x_strdup(utstring_body(name));
+					}
+					// *ALSO* pass to script args since boot needs to know the paths
+					List_append(cmdline_args, newString(argv[i],-1));
+					List_append(cmdline_args, newString(argv[i+1],-1));
+					
+					++i;
+				}
+				else if(!strcmp(argv[i], "-profile")) {
+					DO_PROFILING = TRUE;
+					SHOW_RUN_STATS = TRUE; // -profile implies -stats
+				}
+				else if(!strcmp(argv[i], "-runb")) {
+					if(i >= (argc-1)) {
+						printf("Missing argument after -runb\n");
+						exit(1);
+					}
+					RUN_BFILE = x_strdup(argv[i+1]);
+				}
+				else {
+					List_append(cmdline_args, newString(argv[i],-1));
+				}
+				++i;
+			}
+			if(!RUN_BFILE && !BOOTFILE) {
+				printf("Cannot find boot.verb.b -- maybe you need to pass '-libdir PATH'?\n");
+				exit(1);
+			}
+			//printf("** BOOTFILE: %s\n", BOOTFILE.c_str());
+
+			init_interpreter();
+			//intr->PROFILE_CALLS = DO_PROFILING;
+				
+			// boot.verb expects cmdline args on top of stack on entry
+			push(cmdline_args);
+			//printf("STACK BEFORE BOOT: %s\n", intr->reprStack().c_str());
+			if(RUN_BFILE)
+				deserialize_and_run(RUN_BFILE);
+			else
+				deserialize_and_run(BOOTFILE);
+					
+			if(SHOW_RUN_STATS)
+				print_stats();
+
+			if(RUN_BFILE) x_free(RUN_BFILE);
+			if(BOOTFILE) x_free(BOOTFILE);
+			// made it here == successful exit
+			break;
+		}				
+		else {
+			if(STACKTRACE_ON_EXCEPTION)
+				print_backtrace();
+
+			printf("%s\n", ERROR_MESSAGE);
+			if(EXIT_ON_EXCEPTION)
+				break;	
+
+			// else, loop again which will reinit interpreter, etc.
+		}
+	}	
 #if 0
 		catch (LangError &err) {
 			auto errstr = "*** " + string(err.what()) + " ***";
@@ -169,4 +186,5 @@ int main(int argc, char *argv[]) {
 		}
 	}
 #endif
+	
 }

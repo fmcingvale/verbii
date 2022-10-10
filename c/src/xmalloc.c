@@ -80,3 +80,7 @@ void x_free(void *ptr) {
 
 #endif // USE_BOEHM_GC
 
+char *x_strdup(const char *s) {
+	return x_strndup(s, strlen(s));
+}
+

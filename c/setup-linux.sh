@@ -5,7 +5,9 @@ rm -rf bin/
 
 # uncomment one of the following build types ...
 
-# to build WITHOUT garbage collection, set USE_NO_GC ...
+# to build WITHOUT garbage collection, set USE_NO_GC
+#
+# this can be useful when tracking down weird bugs to turn off all gc
 #cmake -DCMAKE_BUILD_TYPE=Release -DUSE_NO_GC=1 -S src/ -B bin
 
 # to build WITH gc-object garbage collection
