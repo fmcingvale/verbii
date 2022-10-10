@@ -629,8 +629,14 @@ static void builtin_prompt() {
 	
 	if(!fgets(buf, 255, stdin))
 		push(newVoid());
-	else
+	else {
+		char *p = strchr(buf, '\n');
+		if(p) *p = 0;
+		p = strchr(buf, '\r');
+		if(p) *p = 0;
+	
 		push(newString(buf, strlen(buf)));
+	}
 }	
 
 #include <time.h>
