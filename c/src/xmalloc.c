@@ -7,7 +7,7 @@
 #include "xmalloc.h"
 #include <string.h>
 
-#if defined(USE_GCMALLOC)
+#if defined(USE_BOEHM_GC)
 
 void x_mem_init() {
 	GC_INIT();
@@ -31,7 +31,7 @@ char *x_strndup(const char *s, size_t n) {
 
 void x_free(void *ptr) { }
 
-#else // !USE_GCMALLOC
+#else // !USE_BOEHM_GC
 
 unsigned long long X_BYTES_ALLOCATED = 0;
 
@@ -78,5 +78,5 @@ void x_free(void *ptr) {
 	free(ptr);
 }
 
-#endif // USE_GCMALLOC
+#endif // USE_BOEHM_GC
 

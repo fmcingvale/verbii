@@ -76,10 +76,12 @@ typedef struct _Object {
 		VoidFunctionPtr funcptr;
 	} data;
 
+	#if defined(USE_GC_OBJECT)
 	// for garbage collector
 	uint8_t gc_mark;
 	uint8_t gc_count;
 	struct _Object *gc_next;
+	#endif
 } Object;
 
 // sync with C++ port
@@ -206,6 +208,7 @@ int testEqual(Object *a, Object *b);
 const char* fmtDisplayPrint(Object *obj);
 const char* fmtStackPrint(Object *obj);
 
+#if defined(USE_GC_OBJECT)
 // ONLY to be called by gc -- marks objects known by langtypes.c 
 void langtypes_mark_reachable_objects();
 
@@ -218,6 +221,6 @@ void freeobj_symbol(Object *str);
 void freeobj_list(Object *list);
 void freeobj_dict(Object *dict);
 void freeobj_lambda(Object *lambda);
-
+#endif
 
 #endif // __langtypes_h__

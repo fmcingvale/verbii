@@ -120,6 +120,7 @@ void init_interpreter() {
 	nr_total_calls = 0;
 }
 
+#if defined(USE_GC_OBJECT)
 void interpreter_mark_reachable_objects() {
 	// mark objects that can be found through my root objects
 
@@ -143,6 +144,7 @@ void interpreter_mark_reachable_objects() {
 		gc_mark_callframedata(callstack[i].framedata);		
 	}
 }
+#endif
 
 void print_stats() {
 	printf("\n==== Runtime Stats ====\n");
@@ -163,7 +165,8 @@ void print_stats() {
 	printf("  Total time: %lf\n", tottime);
 
 	printf("* C:\n");
-#if defined(USE_GCMALLOC)
+#if defined(USE_BOEHM_GC)
+	printf("  Garbage collector: Boehm-GC\n");
 	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
 	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
 	printf("  Heap size: %lu\n", pheap_size);
@@ -171,9 +174,13 @@ void print_stats() {
 	printf("  Unmapped bytes: %lu\n", punmapped_bytes);
 	printf("  Bytes since gc: %lu\n", pbytes_since_gc);
 	printf("  Total bytes: %lu\n", ptotal_bytes);
-#else
+#elif defined(USE_GC_OBJECT)
+	printf("  Garbage collector: gc-object\n");
 	printf("  xmalloc bytes: %llu\n", X_BYTES_ALLOCATED);
 	print_gc_object_stats();
+#else
+	printf("  Garbage collector: None\n");	
+	printf("  xmalloc bytes: %llu\n", X_BYTES_ALLOCATED);
 #endif
 	printf("  allocations by type:\n");
 	unsigned long tot_objects = 0;
@@ -445,13 +452,12 @@ void run(Object *objlist) {
 	framedata = callstack[callstack_cur].framedata;
 
 	while(1) {
-		#if 1
+		#if defined(USE_GC_OBJECT)
 		if(GCOBJ_OBJECTS_SINCE_COLLECT > 500000) {
 			printf("RUNNING COLLECTION\n");
 			gc_object_collect();
 		}
 		#endif
-
 
 		Object *obj = nextCodeObj();
 		

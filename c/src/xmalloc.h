@@ -5,12 +5,12 @@
 */
 #pragma once
 
-#if defined(USE_GCMALLOC)
+#if defined(USE_BOEHM_GC)
 #include <gc.h>
-#else // !USE_GCMALLOC
+#else // !USE_BOEHM_GC
 #include <stdlib.h>
 extern unsigned long long X_BYTES_ALLOCATED;
-#endif // USE_GCMALLOC
+#endif // USE_BOEHM_GC
 
 void x_mem_init();
 void* x_malloc(size_t size);

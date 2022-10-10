@@ -7,12 +7,7 @@
 #include "gc_object.h"
 #include "interpreter.h"
 
-typedef struct _GcObjectNode {
-	struct _GcObjectNode *next;
-	uint8_t count;
-	uint8_t mark;
-	Object *obj;
-} GcObjectNode;
+#if defined(USE_GC_OBJECT)
 
 static Object *GEN1_HEAD = NULL;
 static Object *GEN1_TAIL = NULL;
@@ -161,3 +156,22 @@ Object *new_gc_object(unsigned char type) {
 
 	return obj;
 }
+
+#else
+
+// not using GC-OBJECT - provide no-op replacements
+void init_gc_object() { }
+
+// ok, this is not a no-op, but just a x_malloc without the gc-object stuff
+Object *new_gc_object(unsigned char type) {
+	Object *obj = (Object*)x_malloc(sizeof(Object));
+	obj->type = type;
+	return obj;
+}
+
+void print_gc_object_stats() { }
+void gc_object_collect() { }
+void gc_mark_object(Object *obj) { }
+void print_all_gc_objects() { }
+
+#endif // USE_GC_OBJECT

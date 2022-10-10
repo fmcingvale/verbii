@@ -39,10 +39,14 @@ add_executable(main main.c langtypes.c interpreter.c deserialize.c errors.c nati
 
 target_link_libraries(main ${MATH_LIBRARY})
 
-# can build without gc if needed
-#if(GC_LIBRARY AND GC_INCLUDES)
-if(0)
-	add_definitions(-DUSE_GCMALLOC)
+# decide which garbage collector to use
+if(USE_GC_OBJECT)
+	# use custom garbage collector
+	add_definitions(-DUSE_GC_OBJECT)
+	message("** Using GC-OBJECT")
+elseif(GC_LIBRARY AND GC_INCLUDES AND (NOT USE_NO_GC))
+	add_definitions(-DUSE_BOEHM_GC)
+	message("** Using BOEHM-GC")
 	target_link_libraries(main ${GC_LIBRARY})	
 	message("** GC_INCLUDES ${GC_INCLUDES}")
 	message("** GC_LIBRARY ${GC_LIBRARY}")
