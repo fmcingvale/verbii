@@ -9,6 +9,7 @@
 #include "xmalloc.h"
 #include "deserialize.h"
 #include "native.h"
+#include "gc_object.h"
 
 void backtrace_curframe() {
 	UT_string *trace;
@@ -74,9 +75,10 @@ int main(int argc, char *argv[]) {
 
 	x_mem_init();
 
+	init_gc_object();
 	init_builtins();
 	init_object_system();
-
+	
 	int SHOW_RUN_STATS = FALSE;
 	int DO_PROFILING = FALSE;
 	char *BOOTFILE = NULL;

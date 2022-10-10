@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include "utstring.h"
 #include "opcodes.h"
+#include "gc_object.h"
 
 // singletons
 
@@ -27,19 +28,21 @@ unsigned long int ALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 unsigned long int NR_SMALL_INT_ALLOCS = 0;
 
-static Object *basic_object(unsigned char type) {
-	Object *obj = (Object*)x_malloc(sizeof(Object));
-	obj->type = type;
-	return obj;
+void init_object_system() {
+	THE_NULL = new_gc_object(TYPE_NULL);
+	THE_VOID = new_gc_object(TYPE_VOID);
+	THE_TRUE = new_gc_object(TYPE_BOOL);
+	THE_TRUE->data.i = 1;
+	THE_FALSE = new_gc_object(TYPE_BOOL);
+	THE_FALSE->data.i = 0;
 }
 
-void init_object_system() {
-	THE_NULL = basic_object(TYPE_NULL);
-	THE_VOID = basic_object(TYPE_VOID);
-	THE_TRUE = basic_object(TYPE_BOOL);
-	THE_TRUE->data.i = 1;
-	THE_FALSE = basic_object(TYPE_BOOL);
-	THE_FALSE->data.i = 0;
+void langtypes_mark_reachable_objects() {
+	// mark my objects that otherwise would not be found by gc
+	gc_mark_object(THE_NULL);
+	gc_mark_object(THE_VOID);
+	gc_mark_object(THE_TRUE);
+	gc_mark_object(THE_FALSE);	
 }
 
 int isNull(Object *obj) { return (obj->type == TYPE_NULL) ? TRUE : FALSE; }
@@ -69,7 +72,7 @@ Object* newInt(VINT i) {
 	if(i >= -10 && i <= 1000)
 		++NR_SMALL_INT_ALLOCS;
 
-	Object *obj = basic_object(TYPE_INT);
+	Object *obj = new_gc_object(TYPE_INT);
 	obj->data.i = i;
 	return obj;
 }
@@ -91,7 +94,7 @@ Object* newBool(VINT b) {
 
 Object* newFloat(double d) {
 	++ALLOCS_BY_TYPE[TYPE_FLOAT];
-	Object *obj = basic_object(TYPE_FLOAT);
+	Object *obj = new_gc_object(TYPE_FLOAT);
 	obj->data.d = d;
 	return obj;
 }
@@ -117,20 +120,28 @@ Object* parseBool(const char *str) {
 
 Object* newString(const char *s, int len) {
 	++ALLOCS_BY_TYPE[TYPE_STRING];
-	Object *obj = basic_object(TYPE_STRING);
+	Object *obj = new_gc_object(TYPE_STRING);
 	utstring_new(obj->data.str);
 	if(len<0) len = strlen(s);
 	utstring_bincpy(obj->data.str, s, len);
 	return obj;
 }
 
+void freeobj_string(Object *str) {
+	utstring_free(str->data.str);
+}
+
 Object* newSymbol(const char *s, int len) {
 	++ALLOCS_BY_TYPE[TYPE_SYMBOL];
-	Object *obj = basic_object(TYPE_SYMBOL);
+	Object *obj = new_gc_object(TYPE_SYMBOL);
 	utstring_new(obj->data.str);
 	if(len<0) len = strlen(s);
 	utstring_bincpy(obj->data.str, s, len);
 	return obj;
+}
+
+void freeobj_symbol(Object *str) {
+	utstring_free(str->data.str);
 }
 
 // works for strings OR symbols
@@ -152,16 +163,20 @@ const char *string_cstr(Object *s) {
 Object* newLambda(Object *list) {
 	requiretype("newLambda", list, TYPE_LIST);
 	++ALLOCS_BY_TYPE[TYPE_LAMBDA];
-	Object *obj = basic_object(TYPE_LAMBDA);
+	Object *obj = new_gc_object(TYPE_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
 	obj->data.lambda->list = list;
 	obj->data.lambda->outer = NULL;
 	return obj;
 }
 
+void freeobj_lambda(Object *lambda) {
+	x_free(lambda->data.lambda);
+}
+
 Object *newVoidFunctionPtr(VoidFunctionPtr funcptr) {
 	++ALLOCS_BY_TYPE[TYPE_VOIDFUNCPTR];
-	Object *obj = basic_object(TYPE_VOIDFUNCPTR);
+	Object *obj = new_gc_object(TYPE_VOIDFUNCPTR);
 	obj->data.funcptr = funcptr;
 	return obj;
 }
@@ -170,7 +185,7 @@ Object* newBoundLambda(Object *list, CallFrameData *data) {
 	requiretype("newBoundLambda", list, TYPE_LIST);
 	++ALLOCS_BY_TYPE[TYPE_BOUND_LAMBDA];
 	//printf("NEW BOUND LAMBDA FROM: %s @ %llx\n", fmtStackPrint(list), (long long unsigned int)list);
-	Object *obj = basic_object(TYPE_LAMBDA);
+	Object *obj = new_gc_object(TYPE_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
 	obj->data.lambda->list = list;
 	obj->data.lambda->outer = data;
@@ -180,7 +195,7 @@ Object* newBoundLambda(Object *list, CallFrameData *data) {
 
 Object* newOpcode(uint64_t packed_opcode) {
 	++ALLOCS_BY_TYPE[TYPE_OPCODE];
-	Object *obj = basic_object(TYPE_OPCODE);
+	Object *obj = new_gc_object(TYPE_OPCODE);
 	obj->data.opcode = packed_opcode;
 	return obj;
 }
@@ -222,7 +237,7 @@ int length(Object *obj) {
 
 Object* newListEx(int initsize, Object *fill) {
 	++ALLOCS_BY_TYPE[TYPE_LIST];
-	Object *obj = basic_object(TYPE_LIST);
+	Object *obj = new_gc_object(TYPE_LIST);
 	
 	ObjArray *array = (ObjArray*)x_malloc(sizeof(ObjArray));
 	array->maxsize = (initsize > 0) ? initsize : 10;
@@ -243,6 +258,11 @@ Object* newListEx(int initsize, Object *fill) {
 Object *newList() {
 	// start with a small nonzero maxsize empty list
 	return newListEx(10, NULL);
+}
+
+void freeobj_list(Object *list) {
+	x_free(list->data.array->items);
+	x_free(list->data.array);
 }
 
 void List_append(Object *list, Object *obj) {
@@ -284,7 +304,7 @@ void List_put(Object *list, int i, Object *obj) {
 
 Object *newDict() {
 	++ALLOCS_BY_TYPE[TYPE_DICT];
-	Object *obj = basic_object(TYPE_DICT);
+	Object *obj = new_gc_object(TYPE_DICT);
 	obj->data.objdict = NULL;
 	return obj;
 }
@@ -301,6 +321,23 @@ void Dict_put(Object *dict, const char *key, Object *obj) {
 	}
 	else
 		ent->obj = obj;
+}
+
+void freeobj_dict(Object *dict) {
+	#if 0
+	ObjDictEntry *ent = dict->data.objdict;
+	while(ent) {
+		ObjDictEntry *to_free = ent;
+		ent = ent->hh.next;
+		x_free(to_free);
+	}
+	#endif
+	// the right way from: https://troydhanson.github.io/uthash/userguide.html
+	ObjDictEntry *ent, *tmp;
+	HASH_ITER(hh, dict->data.objdict, ent, tmp) {
+		HASH_DEL(dict->data.objdict, ent);
+		x_free(ent);
+	}
 }
 
 Object *Dict_get(Object *dict, const char *key) {
@@ -340,7 +377,8 @@ static CallFrameData *findFrameUp(CallFrameData *frame, int levels) {
 
 CallFrameData* new_CallFrameData() {
 	CallFrameData* cf = (CallFrameData*)x_malloc(sizeof(CallFrameData));
-	memset(cf->data, 0, MAX_CALLFRAME_SLOTS*sizeof(Object*));
+	//memset(cf->data, 0, MAX_CALLFRAME_SLOTS*sizeof(Object*));
+	callframe_clear(cf);
 	cf->outer = NULL;
 	cf->bound = 0;
 	return cf;
@@ -363,9 +401,19 @@ void callframe_SetFrameObj(CallFrameData *frame, int levels, int index, Object *
 }
 
 void callframe_clear(CallFrameData *frame) {
-	memset(frame->data, 0, MAX_CALLFRAME_SLOTS*sizeof(CallFrameData*));
+	for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i)
+		frame->data[i] = THE_NULL;
+	//memset(frame->data, 0, MAX_CALLFRAME_SLOTS*sizeof(CallFrameData*));
 }
 
+void gc_mark_callframedata(CallFrameData *frame) {
+	for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i)
+		gc_mark_object(frame->data[i]);
+
+	if(frame->outer)
+		gc_mark_callframedata(frame->outer);
+}
+	
 int testEqual(Object *a, Object *b) {
 	switch(a->type) {
 		case TYPE_NULL: return isNull(b);
@@ -660,6 +708,9 @@ const char* fmtStackPrint(Object *obj) {
 			utstring_printf(s,"}");
 			return utstring_body(s);
 		}
+		case TYPE_VOIDFUNCPTR:
+			utstring_printf(s, "<funcptr %llx>", (long long)obj->data.funcptr);
+			return utstring_body(s);
 		default: 
 			error("** UNKNOWN TYPE IN fmtStackPrint: %d\n", obj->type);
 	}

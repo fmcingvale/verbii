@@ -35,12 +35,13 @@ check_symbol_exists(strndup "string.h" HAVE_STRNDUP)
 
 include_directories(${GC_INCLUDES})
 	
-add_executable(main main.c langtypes.c interpreter.c deserialize.c errors.c native.c opcodes.c util.c xmalloc.c)
+add_executable(main main.c langtypes.c interpreter.c deserialize.c errors.c native.c opcodes.c util.c gc_object.c xmalloc.c)
 
 target_link_libraries(main ${MATH_LIBRARY})
 
 # can build without gc if needed
-if(GC_LIBRARY AND GC_INCLUDES)
+#if(GC_LIBRARY AND GC_INCLUDES)
+if(0)
 	add_definitions(-DUSE_GCMALLOC)
 	target_link_libraries(main ${GC_LIBRARY})	
 	message("** GC_INCLUDES ${GC_INCLUDES}")

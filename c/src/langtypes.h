@@ -8,13 +8,13 @@
 #define __langtypes_h__
 
 #define TYPE_NULL 0
-#define  TYPE_INT 1
-#define  TYPE_BOOL 2
-#define  TYPE_LAMBDA 3
-#define  TYPE_FLOAT 4
-#define  TYPE_STRING 5
-#define  TYPE_SYMBOL 6
-#define  TYPE_LIST 7
+#define TYPE_INT 1
+#define TYPE_BOOL 2
+#define TYPE_LAMBDA 3
+#define TYPE_FLOAT 4
+#define TYPE_STRING 5
+#define TYPE_SYMBOL 6
+#define TYPE_LIST 7
 // a void type which is differentiated from null.
 // in general, void is used in eof-type situations but can be used in any context
 // where a function needs to differentiate a return value of null from a
@@ -23,7 +23,7 @@
 // would recur that there would be no way to differentiate a parsed void from eof.
 // void will only ever be a word, so it will always be parsed as a symbol. since void
 // normally shouldn't be used in data anyways, i don't think that's a problem.
-#define  TYPE_VOID 8
+#define TYPE_VOID 8
 #define TYPE_DICT 9
 // 'version 2' closure
 #define  TYPE_BOUND_LAMBDA 10
@@ -75,11 +75,17 @@ typedef struct _Object {
 		// so that a void (*fn)() can be wrapped - for internal use, not visible from verbii
 		VoidFunctionPtr funcptr;
 	} data;
+
+	// for garbage collector
+	uint8_t gc_mark;
+	uint8_t gc_count;
+	struct _Object *gc_next;
 } Object;
 
 // sync with C++ port
 #define MAX_CALLFRAME_SLOTS 32
 
+// *** TODO *** make this an Object so it can work with the gc_object system
 typedef struct _CallFrameData {
 	Object *data[MAX_CALLFRAME_SLOTS];
 	struct _CallFrameData *outer;
@@ -199,5 +205,19 @@ int testEqual(Object *a, Object *b);
 
 const char* fmtDisplayPrint(Object *obj);
 const char* fmtStackPrint(Object *obj);
+
+// ONLY to be called by gc -- marks objects known by langtypes.c 
+void langtypes_mark_reachable_objects();
+
+// ONLY for use by functions that are called by gc_object to mark objects
+void gc_mark_callframedata(CallFrameData *frame);
+
+// ONLY to be called by gc -- frees extra memory associate with object (NOT object itself)
+void freeobj_string(Object *str);
+void freeobj_symbol(Object *str);
+void freeobj_list(Object *list);
+void freeobj_dict(Object *dict);
+void freeobj_lambda(Object *lambda);
+
 
 #endif // __langtypes_h__

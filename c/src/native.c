@@ -468,23 +468,23 @@ static void builtin_unmake() {
 /* ( cn .. c1 N -- string of N chars ) */
 static void builtin_make_string() {
 	int nr = (int)popInt("make-symbol");
-	char *s = (char*)malloc(nr*sizeof(char));
+	char *s = (char*)x_malloc(nr*sizeof(char));
 	for(int i=0; i<nr; ++i)
 		s[nr-i-1] = (char)popInt("make-symbol");
 
 	push(newString(s, nr));
-	free(s);
+	x_free(s);
 }
 
 /* ( cn .. c1 N -- symbol of N chars ) */
 static void builtin_make_symbol() {
 	int nr = (int)popInt("make-symbol");
-	char *s = (char*)malloc(nr*sizeof(char));
+	char *s = (char*)x_malloc(nr*sizeof(char));
 	for(int i=0; i<nr; ++i)
 		s[nr-i-1] = (char)popInt("make-symbol");
 
 	push(newSymbol(s, nr));
-	free(s);
+	x_free(s);
 }
 
 static void builtin_dumpword() {

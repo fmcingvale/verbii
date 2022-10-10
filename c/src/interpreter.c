@@ -11,6 +11,7 @@
 #include "native.h"
 #include "langtypes.h"
 #include "util.h"
+#include "gc_object.h"
 
 // sync with C++
 #define STACK_SIZE (1<<16)
@@ -119,10 +120,37 @@ void init_interpreter() {
 	nr_total_calls = 0;
 }
 
+void interpreter_mark_reachable_objects() {
+	// mark objects that can be found through my root objects
+
+	// mark objects found in the stack
+	for(int i=SP; i<SP_EMPTY; ++i)
+		gc_mark_object(OBJMEM[i]);
+
+	// mark all objects found in heap
+	for(int i=HEAP_START; i<HEAP_NEXTFREE; ++i)
+		gc_mark_object(OBJMEM[i]);
+
+	// mark WORDS dict (which will then mark all code objects)
+	gc_mark_object(WORDS);
+
+	// mark BUILTINS dict
+	gc_mark_object(BUILTINS);
+
+	// mark objects in all callframes
+	for(int i=callstack_cur; i >= 0; --i) {
+		gc_mark_object(callstack[i].code);
+		gc_mark_callframedata(callstack[i].framedata);		
+	}
+}
+
 void print_stats() {
 	printf("\n==== Runtime Stats ====\n");
 	printf("* General:\n");
-	printf("  Builtin words: %d\n", Dict_size(BUILTINS));
+	if(BUILTINS != NULL)
+		printf("  Builtin words: %d\n", Dict_size(BUILTINS));
+	else
+		printf("  Builtin words: 0\n");
 	printf("  User-defined words: %d\n", List_length(getWordlist()));
 	printf("  Max stack depth: %d\n", (SP_EMPTY - min_run_SP));
 	printf("  Max callstack depth: %d\n", max_callstack);
@@ -145,6 +173,7 @@ void print_stats() {
 	printf("  Total bytes: %lu\n", ptotal_bytes);
 #else
 	printf("  xmalloc bytes: %llu\n", X_BYTES_ALLOCATED);
+	print_gc_object_stats();
 #endif
 	printf("  allocations by type:\n");
 	unsigned long tot_objects = 0;
@@ -177,7 +206,12 @@ Object* pop() {
 	if(SP >= SP_EMPTY)
 		error("Stack underflow");
 	
-	return OBJMEM[SP++];
+	// set slot to null first so gc won't hold onto it (technically this is not necessary
+	// for gc_object since it only counts the active stack items, but this will help
+	// a traditional gc that scans all memory)
+	Object *robj = OBJMEM[SP];
+	OBJMEM[SP++] = newNull();
+	return robj;
 }
 
 int get_SP() { return SP; }
@@ -411,6 +445,14 @@ void run(Object *objlist) {
 	framedata = callstack[callstack_cur].framedata;
 
 	while(1) {
+		#if 1
+		if(GCOBJ_OBJECTS_SINCE_COLLECT > 500000) {
+			printf("RUNNING COLLECTION\n");
+			gc_object_collect();
+		}
+		#endif
+
+
 		Object *obj = nextCodeObj();
 		
 		//printf("STACK: [ %s ]\n", reprStack());
