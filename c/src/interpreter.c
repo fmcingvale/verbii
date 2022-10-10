@@ -176,7 +176,8 @@ void print_stats() {
 	printf("  Total bytes: %lu\n", ptotal_bytes);
 #elif defined(USE_GC_OBJECT)
 	printf("  Garbage collector: gc-object\n");
-	printf("  xmalloc bytes: %llu\n", X_BYTES_ALLOCATED);
+	printf("  xmalloc bytes allocated: %llu\n", X_BYTES_ALLOCATED);
+	printf("  xmalloc bytes freed:     %llu\n", X_BYTES_FREED);
 	print_gc_object_stats();
 #else
 	printf("  Garbage collector: None\n");	
