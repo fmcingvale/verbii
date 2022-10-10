@@ -8,7 +8,6 @@
 #include "errors.h"
 #include <assert.h>
 #include <stdlib.h>
-#include "utstring.h"
 #include "opcodes.h"
 #include "gc_object.h"
 

@@ -51,8 +51,8 @@ typedef int64_t VINT;
 extern int FLOAT_PRECISION;
 extern unsigned long int NR_SMALL_INT_ALLOCS;
 
-#include "utstring.h"
-#include "uthash.h"
+#include "../../extern/c/utstring.h"
+#include "../../extern/c/uthash.h"
 
 struct _ObjDictEntry;
 struct _CallFrameData;
