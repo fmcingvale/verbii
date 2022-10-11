@@ -29,7 +29,7 @@ void set_codepos(int pos);
 const char* reprStack();
 
 // current frame data or NULL
-extern CallFrameData *framedata;
+extern Object *framedata;
 
 // stats
 void print_stats();

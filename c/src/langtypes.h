@@ -32,7 +32,9 @@
 // for internal use only - not visible from verbii - this is for convenience so
 // that a void (f*)() can be stored in an Object to be put in a dict.
 #define TYPE_VOIDFUNCPTR 12
-#define TYPE_LAST_PLUS_1 13
+// internal use, not visible from verbii
+#define TYPE_CALLFRAMEDATA 13
+#define TYPE_LAST_PLUS_1 14
 
 // map above types to names
 extern const char *TYPE_TO_NAME[TYPE_LAST_PLUS_1];
@@ -74,6 +76,7 @@ typedef struct _Object {
 		uint64_t opcode;
 		// so that a void (*fn)() can be wrapped - for internal use, not visible from verbii
 		VoidFunctionPtr funcptr;
+		struct _CallFrameData *framedata;
 	} data;
 
 	#if defined(USE_GC_OBJECT)
@@ -90,15 +93,19 @@ typedef struct _Object {
 // *** TODO *** make this an Object so it can work with the gc_object system
 typedef struct _CallFrameData {
 	Object *data[MAX_CALLFRAME_SLOTS];
-	struct _CallFrameData *outer;
+	Object *outer; // outer frame or NULL if top level
 	int bound;
 } CallFrameData;
 
-CallFrameData* new_CallFrameData();
+Object* new_CallFrameData();
 // get/set object in frame up #levels (0 == this frame)
-Object* callframe_GetFrameObj(CallFrameData *frame, int levels, int index);
-void callframe_SetFrameObj(CallFrameData *frame, int levels, int index, Object *obj);
-void callframe_clear(CallFrameData *frame);
+Object* callframe_GetFrameObj(Object *frame, int levels, int index);
+void callframe_SetFrameObj(Object *frame, int levels, int index, Object *obj);
+void callframe_clear(CallFrameData *framedata);
+int callframe_isBound(Object *frame);
+void callframe_setBound(Object *frame, int bound);
+Object *callframe_getOuter(Object *frame);
+void callframe_setOuter(Object *frame, Object *outer);
 
 typedef struct _ObjDictEntry {
 	const char *name;
@@ -109,7 +116,7 @@ typedef struct _ObjDictEntry {
 // for both bound & unbound lambdas
 typedef struct _Lambda {
 	Object *list;
-	CallFrameData *outer;
+	Object *outer; // outer CallFrameData or NULL if not found
 } Lambda;
 
 typedef struct _ObjArray {
@@ -167,7 +174,8 @@ const char *string_cstr(Object *s);
 
 Object* newLambda(Object *list); // starts unbound
 // pass the LIST not another lambda
-Object* newBoundLambda(Object *list, CallFrameData *data);
+// if framedata != NULL, sets .bound to TRUE
+Object* newBoundLambda(Object *list, Object *framedata);
 
 // the lower level array object
 ObjArray *newObjArray();
@@ -212,15 +220,14 @@ const char* fmtStackPrint(Object *obj);
 // ONLY to be called by gc -- marks objects known by langtypes.c 
 void langtypes_mark_reachable_objects();
 
-// ONLY for use by functions that are called by gc_object to mark objects
-void gc_mark_callframedata(CallFrameData *frame);
-
 // ONLY to be called by gc -- frees extra memory associate with object (NOT object itself)
 void freeobj_string(Object *str);
 void freeobj_symbol(Object *str);
 void freeobj_list(Object *list);
 void freeobj_dict(Object *dict);
 void freeobj_lambda(Object *lambda);
+void freeobj_callframedata(Object *frame);
+
 #endif
 
 #endif // __langtypes_h__

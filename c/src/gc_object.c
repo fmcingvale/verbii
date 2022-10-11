@@ -45,7 +45,7 @@ static void mark_reachable_from(Object *obj) {
 			gc_mark_object(obj->data.lambda->list);
 			// mark the callframe, if set
 			if(obj->data.lambda->outer)
-				gc_mark_callframedata(obj->data.lambda->outer);
+				gc_mark_object(obj->data.lambda->outer);
 			
 			break;
 
@@ -62,12 +62,31 @@ static void mark_reachable_from(Object *obj) {
 				gc_mark_object(ent->obj);				
 		}
 		break;
+
+		case TYPE_CALLFRAMEDATA: {
+			for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i)
+				gc_mark_object(obj->data.framedata->data[i]);
+
+			if(obj->data.framedata->outer)
+				gc_mark_object(obj->data.framedata->outer);
+		}
+		break;
 	}
 }	
 
+void gc_mark_object_no_subobjects(Object *obj) {
+	if(obj->gc_mark)
+		// already marked on this cycle, return immediately to avoid loops
+		// and also don't want to increase gc_count more than once per cycle
+		return; 
+	obj->gc_mark = 1;
+	obj->gc_count += 1;
+}
+
 void gc_mark_object(Object *obj) {
 	if(obj->gc_mark)
-		return; // already marked on this cycle, return immediately to avoid cycles
+		// same notes as above
+		return; 
 	obj->gc_mark = 1;
 	obj->gc_count += 1;
 	mark_reachable_from(obj);
@@ -109,6 +128,7 @@ static void remove_unmarked_objects(Object *head) {
 				case TYPE_DICT: freeobj_dict(obj); break;
 				case TYPE_LAMBDA:
 				case TYPE_BOUND_LAMBDA: freeobj_lambda(obj); break;
+				case TYPE_CALLFRAMEDATA: freeobj_callframedata(obj); break;
 			}
 			#endif
 			// ... and then free obj

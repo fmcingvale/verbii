@@ -21,6 +21,9 @@ void gc_object_collect();
 // ** DO NOT CALL unless called by gc to mark objects **
 void gc_mark_object(Object *obj);
 
+// special case - mark obj but DO NOT mark any contained objects
+void gc_mark_object_no_subobjects(Object *obj);
+
 void print_all_gc_objects();
 
 #endif // __gcobject_h__

@@ -22,7 +22,7 @@
 typedef struct _CallStackEntry {
 	Object *code; // List holding code to run
 	int pos;
-	CallFrameData *framedata;
+	Object *framedata;
 } CallStackEntry;
 
 // stack of current and previous frames
@@ -32,7 +32,7 @@ int callstack_cur; // index of currently running frame or -1
 // shortcuts for current frame
 Object *code; // List
 int codepos;
-CallFrameData *framedata;
+Object *framedata;
 
 // 2 memory areas: stack & free memory
 //
@@ -138,11 +138,17 @@ void interpreter_mark_reachable_objects() {
 	// mark BUILTINS dict
 	gc_mark_object(BUILTINS);
 
-	// mark objects in all callframes
+	// mark objects in all active callframes
 	for(int i=callstack_cur; i >= 0; --i) {
 		gc_mark_object(callstack[i].code);
-		gc_mark_callframedata(callstack[i].framedata);		
+		gc_mark_object(callstack[i].framedata);		
 	}
+
+	// for INACTIVE call frames, need to mark the CallFrame object
+	// to keep it alive (do NOT mark subobjects -- frame is inactive
+	// so any objects in those slots can be freely deleted)
+	for(int i=callstack_cur+1; i < MAX_CALLSTACK_DEPTH; ++i)
+		gc_mark_object_no_subobjects(callstack[i].framedata);
 }
 #endif
 
@@ -186,7 +192,7 @@ void print_stats() {
 	printf("  allocations by type:\n");
 	unsigned long tot_objects = 0;
 	for(int i=0; i<TYPE_LAST_PLUS_1; ++i) {
-		printf("    %12s = %12lu\n", TYPE_TO_NAME[i], ALLOCS_BY_TYPE[i]);
+		printf("    %15s = %12lu\n", TYPE_TO_NAME[i], ALLOCS_BY_TYPE[i]);
 		tot_objects += ALLOCS_BY_TYPE[i];
 	}
 	printf("    #small ints:   %12lu\n", NR_SMALL_INT_ALLOCS);
@@ -292,10 +298,6 @@ void heap_set(int addr, Object *obj) {
 	OBJMEM[addr] = obj;
 }
 
-CallFrameData *cur_framedata() {
-	return framedata;
-}
-
 Object* nextCodeObj() {
 	if(!code || codepos >= List_length(code))
 		return newVoid();
@@ -365,7 +367,8 @@ void deleteUserWord(const char* name) {
 	Dict_delete(WORDS, name);
 }
 
-void code_call(Object *new_code_list, CallFrameData *bound_outer) {
+// bound_outer is outer framedata or NULL if not a bound lambda
+void code_call(Object *new_code_list, Object *bound_outer) {
 	if(callstack_cur < 0)
 		error("code_call but no code is running");
 	else if(callstack_cur >= (MAX_CALLSTACK_DEPTH-1))
@@ -383,7 +386,7 @@ void code_call(Object *new_code_list, CallFrameData *bound_outer) {
 	callstack[callstack_cur].code = new_code_list;
 	callstack[callstack_cur].pos = 0;
 	// clear framedata to help GC
-	callframe_clear(callstack[callstack_cur].framedata);
+	callframe_clear(callstack[callstack_cur].framedata->data.framedata);
 	
 	// set shortcuts to new frame
 	code = new_code_list;
@@ -393,12 +396,10 @@ void code_call(Object *new_code_list, CallFrameData *bound_outer) {
 	// when the bound lambda was created, the current frame (at the time) was saved
 	// as its .outer frame. when the bound lambda runs here in a new frame, it needs
 	// to have its .outer frame connected to the same .outer as when it was created,
-	// so it has access to the saved data (closure)
-	if(bound_outer)
-		framedata->outer = bound_outer;		
-	else
-		framedata->outer = NULL;
-
+	// so it has access to the saved data (closure) -- bound_outer can also be NULL
+	// if no outer frame
+	callframe_setOuter(framedata, bound_outer);		
+	
 	// stats
 	max_callstack = max(max_callstack,(int)(callstack_cur+1));
 }
@@ -412,7 +413,7 @@ void code_return() {
 		error("code_return but no code is running");
 
 	// did framedata become bound?
-	if(callstack[callstack_cur].framedata->bound) {
+	if(callframe_isBound(callstack[callstack_cur].framedata)) {
 		// framedata has been bound to one or more lambdas, so it cannot be 
 		// freed. replace it in the stack with a new frame.
 		callstack[callstack_cur].framedata = new_CallFrameData();
@@ -445,7 +446,7 @@ void run(Object *objlist) {
 	callstack[callstack_cur].code = objlist;
 	callstack[callstack_cur].pos = 0;
 	// clear data to help GC
-	callframe_clear(callstack[callstack_cur].framedata);
+	callframe_clear(callstack[callstack_cur].framedata->data.framedata);
 
 	// set shortcuts that are used everywhere else
 	code = objlist;
@@ -454,7 +455,7 @@ void run(Object *objlist) {
 
 	while(1) {
 		#if defined(USE_GC_OBJECT)
-		if(GCOBJ_OBJECTS_SINCE_COLLECT > 500000) {
+		if(GCOBJ_OBJECTS_SINCE_COLLECT > 10000000) {
 			printf("RUNNING COLLECTION\n");
 			gc_object_collect();
 		}

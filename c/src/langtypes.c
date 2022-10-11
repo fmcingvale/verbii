@@ -21,9 +21,9 @@ Object *THE_FALSE = NULL;
 int FLOAT_PRECISION = 17;
 
 const char *TYPE_TO_NAME[] = { "null", "int", "bool", "lambda", "float", "string", "symbol",
-		"list", "void", "dict", "bound-lambda", "opcode", "void-funcptr" };
+		"list", "void", "dict", "bound-lambda", "opcode", "void-funcptr", "callframe-data" };
 		
-unsigned long int ALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+unsigned long int ALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 unsigned long int NR_SMALL_INT_ALLOCS = 0;
 
@@ -53,8 +53,8 @@ int isString(Object *obj) { return (obj->type == TYPE_STRING) ? TRUE : FALSE; }
 int isSymbol(Object *obj) { return (obj->type == TYPE_SYMBOL) ? TRUE : FALSE; }
 // lambda & bound-lambda are distinct types, even though they are implemented with a 
 // single object at the C level
-int isLambda(Object *obj) { return ((obj->type == TYPE_LAMBDA) && (obj->data.lambda->outer == NULL)) ? TRUE : FALSE; }
-int isBoundLambda(Object *obj) { return ((obj->type == TYPE_LAMBDA) && (obj->data.lambda->outer != NULL)) ? TRUE : FALSE; }
+int isLambda(Object *obj) { return (obj->type == TYPE_LAMBDA) ? TRUE : FALSE; }
+int isBoundLambda(Object *obj) { return (obj->type == TYPE_BOUND_LAMBDA) ? TRUE : FALSE; }
 int isList(Object *obj) { return (obj->type == TYPE_LIST) ? TRUE : FALSE; }
 int isDict(Object *obj) { return (obj->type == TYPE_DICT) ? TRUE : FALSE; }
 int isOpcode(Object *obj) { return (obj->type == TYPE_OPCODE) ? TRUE : FALSE; }
@@ -180,14 +180,15 @@ Object *newVoidFunctionPtr(VoidFunctionPtr funcptr) {
 	return obj;
 }
 
-Object* newBoundLambda(Object *list, CallFrameData *data) {
+Object* newBoundLambda(Object *list, Object *framedata) {
 	requiretype("newBoundLambda", list, TYPE_LIST);
 	++ALLOCS_BY_TYPE[TYPE_BOUND_LAMBDA];
 	//printf("NEW BOUND LAMBDA FROM: %s @ %llx\n", fmtStackPrint(list), (long long unsigned int)list);
-	Object *obj = new_gc_object(TYPE_LAMBDA);
+	Object *obj = new_gc_object(TYPE_BOUND_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
 	obj->data.lambda->list = list;
-	obj->data.lambda->outer = data;
+	obj->data.lambda->outer = framedata;
+	callframe_setBound(framedata, TRUE);
 	//printf("MADE OBJECT: %s\n", fmtStackPrint(obj));
 	return obj;
 }
@@ -363,56 +364,85 @@ int sort_objdictentry_by_name(ObjDictEntry *a, ObjDictEntry *b) {
 	return strcmp(a->name, b->name);
 }
 
-static CallFrameData *findFrameUp(CallFrameData *frame, int levels) {
+static Object *findFrameUp(Object *frame, int levels) {
+	requiretype("findFrameUp", frame, TYPE_CALLFRAMEDATA);
 	while(levels > 0) {
-		if(!frame || !frame->outer)
+		if(!frame || !frame->data.framedata->outer)
 			error("Bad level number in findFrameUp()");
 
 		levels -= 1;
-		frame = frame->outer;
+		frame = frame->data.framedata->outer;
 	}
 	return frame; // cannot be NULL due to above checks
 }
 
-CallFrameData* new_CallFrameData() {
+Object* new_CallFrameData() {
+	++ALLOCS_BY_TYPE[TYPE_CALLFRAMEDATA];
+	
+	Object *obj = new_gc_object(TYPE_CALLFRAMEDATA);
+
 	CallFrameData* cf = (CallFrameData*)x_malloc(sizeof(CallFrameData));
 	//memset(cf->data, 0, MAX_CALLFRAME_SLOTS*sizeof(Object*));
 	callframe_clear(cf);
 	cf->outer = NULL;
 	cf->bound = 0;
-	return cf;
+
+	obj->data.framedata = cf;
+	return obj;
 }
 
-Object* callframe_GetFrameObj(CallFrameData *frame, int levels, int index) {
+int callframe_isBound(Object *frame) {
+	requiretype("callframe_isBound", frame, TYPE_CALLFRAMEDATA);
+	return frame->data.framedata->bound;
+}
+
+void callframe_setBound(Object *frame, int bound) {
+	requiretype("callframe_setBound", frame, TYPE_CALLFRAMEDATA);
+	frame->data.framedata->bound = bound;
+}
+
+Object *callframe_getOuter(Object *frame) {
+	requiretype("callframe_getOuter", frame, TYPE_CALLFRAMEDATA);
+	return frame->data.framedata->outer;
+}
+
+void callframe_setOuter(Object *frame, Object *outer) {
+	requiretype("callframe_setOuter", frame, TYPE_CALLFRAMEDATA);
+	frame->data.framedata->outer = outer;
+}
+
+void freeobj_callframedata(Object *frame) {
+	requiretype("freeobj_callframedata", frame, TYPE_CALLFRAMEDATA);
+	x_free(frame->data.framedata);
+}
+
+Object* callframe_GetFrameObj(Object *frame, int levels, int index) {
+	requiretype("findFrameUp", frame, TYPE_CALLFRAMEDATA);
 	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
 		error("Out of bounds in callframe_GetFrameObj()");
 	// go up number of levels
 	frame = findFrameUp(frame, levels);
-	return frame->data[index];
+	return frame->data.framedata->data[index];
 }
 
-void callframe_SetFrameObj(CallFrameData *frame, int levels, int index, Object *obj) {
+void callframe_SetFrameObj(Object *frame, int levels, int index, Object *obj) {
+	requiretype("findFrameUp", frame, TYPE_CALLFRAMEDATA);
 	if(index < 0 || index >= MAX_CALLFRAME_SLOTS)
 		error("Out of bounds in callframe_SetFrameObj()");
 	// go up number of levels
 	frame = findFrameUp(frame, levels);
-	frame->data[index] = obj;
+	frame->data.framedata->data[index] = obj;
 }
 
 void callframe_clear(CallFrameData *frame) {
 	for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i)
 		frame->data[i] = THE_NULL;
 	//memset(frame->data, 0, MAX_CALLFRAME_SLOTS*sizeof(CallFrameData*));
+
+	frame->bound = 0;
+	frame->outer = NULL;
 }
 
-void gc_mark_callframedata(CallFrameData *frame) {
-	for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i)
-		gc_mark_object(frame->data[i]);
-
-	if(frame->outer)
-		gc_mark_callframedata(frame->outer);
-}
-	
 int testEqual(Object *a, Object *b) {
 	switch(a->type) {
 		case TYPE_NULL: return isNull(b);
@@ -601,10 +631,16 @@ const char* fmtDisplayPrint(Object *obj) {
 		case TYPE_LIST:
 			return fmtDisplayPrintList(obj, "[", "]");
 		case TYPE_LAMBDA:
+			//printf("STACK PRINT LAMBDA @ %llx\n", (long long unsigned int)obj->data.lambda->list);
 			if(obj->data.lambda->outer)
-				return fmtDisplayPrintList(obj->data.lambda->list, "<bound {", "}>");
-			else
-				return fmtDisplayPrintList(obj->data.lambda->list, "{", "}");
+				error("Got LAMBDA with outer data instead of BOUND-LAMBDA");
+			
+			return fmtDisplayPrintList(obj->data.lambda->list, "{", "}");
+		case TYPE_BOUND_LAMBDA:
+			if(!obj->data.lambda->outer)
+				error("Got BOUND-LAMBDA with NULL outer frame");
+
+			return fmtDisplayPrintList(obj->data.lambda->list, "<bound {", "}>");	
 		case TYPE_STRING:
 		case TYPE_SYMBOL:
 			{
@@ -677,9 +713,14 @@ const char* fmtStackPrint(Object *obj) {
 		case TYPE_LAMBDA:
 			//printf("STACK PRINT LAMBDA @ %llx\n", (long long unsigned int)obj->data.lambda->list);
 			if(obj->data.lambda->outer)
-				return fmtStackPrintList(obj->data.lambda->list, "<bound {", "}>");
-			else
-				return fmtStackPrintList(obj->data.lambda->list, "{", "}");
+				error("Got LAMBDA with outer data instead of BOUND-LAMBDA");
+			
+			return fmtStackPrintList(obj->data.lambda->list, "{", "}");
+		case TYPE_BOUND_LAMBDA:
+			if(!obj->data.lambda->outer)
+				error("Got BOUND-LAMBDA with NULL outer frame");
+
+			return fmtStackPrintList(obj->data.lambda->list, "<bound {", "}>");			
 		case TYPE_STRING:
 			utstring_printf(s, "\"%s\"", fmtDisplayPrint(obj));
 			return utstring_body(s);

@@ -725,9 +725,8 @@ static void builtin_bind_lambda() {
 	//printf("POPPED LAMBDA LIST @ %llx\n", (long long unsigned int)lambda->data.lambda->list);
 	// remember currently active frame -- when bound-lambda is called
 	// later, this frame will be set as its outer frame
+	// (this also marks framedata as bound)
 	push(newBoundLambda(lambda->data.lambda->list, framedata));
-	// mark current frame as being bound now so it isn't freed
-	framedata->bound = TRUE;
 }
 
 static void builtin_file_pathsep() {
