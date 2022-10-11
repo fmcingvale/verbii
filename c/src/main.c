@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
 			init_gc_object();
 			init_builtins();
-			init_object_system();
+			init_langtypes();
 			
 			int SHOW_RUN_STATS = FALSE;
 			int DO_PROFILING = FALSE;
@@ -186,7 +186,8 @@ int main(int argc, char *argv[]) {
 #endif
 #if defined(USE_GC_OBJECT)
 	shutdown_gc_object();
-	printf("  Final bytes allocated: %llu\n", X_BYTES_ALLOCATED);
-	printf("  Final bytes freed:     %llu\n", X_BYTES_FREED);
+	printf("  Final bytes allocated: %llu\n", XMEM_TOTAL_BYTES_ALLOCATED);
+	printf("  Final bytes freed:     %llu\n", XMEM_TOTAL_BYTES_FREED);
+	printf("  Bytes lost:            %llu\n", XMEM_TOTAL_BYTES_ALLOCATED - XMEM_TOTAL_BYTES_FREED);
 #endif
 }

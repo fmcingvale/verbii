@@ -130,7 +130,7 @@ typedef struct _ObjArray {
 #define max(a,b) ((a>b) ? (a) : (b))
 
 // call this before using any other functions here
-void init_object_system();
+void init_langtypes();
 
 int isNull(Object *obj);
 int isVoid(Object *obj);
@@ -243,6 +243,8 @@ int testEqual(Object *a, Object *b);
 
 const char* fmtDisplayPrint(Object *obj);
 const char* fmtStackPrint(Object *obj);
+
+void langtypes_print_stats();
 
 #if defined(USE_GC_OBJECT)
 // ONLY to be called by gc -- marks objects known by langtypes.c 

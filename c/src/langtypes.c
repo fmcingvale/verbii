@@ -28,7 +28,7 @@ unsigned long int DEALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 unsigned long int NR_SMALL_INT_ALLOCS = 0;
 
-void init_object_system() {
+void init_langtypes() {
 	THE_NULL = new_gc_object(TYPE_NULL);
 	THE_VOID = new_gc_object(TYPE_VOID);
 	THE_TRUE = new_gc_object(TYPE_BOOL);
@@ -827,4 +827,18 @@ const char* fmtStackPrint(Object *obj) {
 		default: 
 			error("** UNKNOWN TYPE IN fmtStackPrint: %d\n", obj->type);
 	}
+}
+
+void langtypes_print_stats() {
+	printf("  allocations by type (deallocations in parens):\n");
+	unsigned long tot_objects = 0;
+	for(int i=0; i<TYPE_LAST_PLUS_1; ++i) {
+		printf("    %15s = %12lu (%12lu %6.2lf%%)\n", TYPE_TO_NAME[i], ALLOCS_BY_TYPE[i], DEALLOCS_BY_TYPE[i],
+					(100.0*DEALLOCS_BY_TYPE[i])/ALLOCS_BY_TYPE[i]);
+		tot_objects += ALLOCS_BY_TYPE[i];
+	}
+	printf("    #small ints:   %12lu\n", NR_SMALL_INT_ALLOCS);
+	printf("  total objects: %lu\n", tot_objects);
+
+	printf("  size of Object: %lu\n", sizeof(Object));
 }

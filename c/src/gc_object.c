@@ -171,6 +171,7 @@ void print_all_gc_objects() {
 }
 
 void print_gc_object_stats() {
+	printf("  total collection time:   %lf\n", GC_OBJECT_TOTAL_COLLECT_TIME);
 	printf("  GEN1 objects: %llu\n", count_nodelist_length(GEN1_HEAD));
 }
 

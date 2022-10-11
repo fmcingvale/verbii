@@ -178,36 +178,9 @@ void print_stats() {
 	printf("  Total time: %lf\n", tottime);
 
 	printf("* C:\n");
-#if defined(USE_BOEHM_GC)
-	printf("  Garbage collector: Boehm-GC\n");
-	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
-	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
-	printf("  Heap size: %lu\n", pheap_size);
-	printf("  Free bytes: %lu\n", pfree_bytes);
-	printf("  Unmapped bytes: %lu\n", punmapped_bytes);
-	printf("  Bytes since gc: %lu\n", pbytes_since_gc);
-	printf("  Total bytes: %lu\n", ptotal_bytes);
-#elif defined(USE_GC_OBJECT)
-	printf("  Garbage collector: gc-object\n");
-	printf("  xmalloc bytes allocated: %llu\n", X_BYTES_ALLOCATED);
-	printf("  xmalloc bytes freed:     %llu\n", X_BYTES_FREED);
-	printf("  total collection time:   %lf\n", GC_OBJECT_TOTAL_COLLECT_TIME);
+	x_mem_print_stats();
+	langtypes_print_stats();
 	print_gc_object_stats();
-#else
-	printf("  Garbage collector: None\n");	
-	printf("  xmalloc bytes: %llu\n", X_BYTES_ALLOCATED);
-#endif
-	printf("  allocations by type (deallocations in parens):\n");
-	unsigned long tot_objects = 0;
-	for(int i=0; i<TYPE_LAST_PLUS_1; ++i) {
-		printf("    %15s = %12lu (%12lu %6.2lf%%)\n", TYPE_TO_NAME[i], ALLOCS_BY_TYPE[i], DEALLOCS_BY_TYPE[i],
-					(100.0*DEALLOCS_BY_TYPE[i])/ALLOCS_BY_TYPE[i]);
-		tot_objects += ALLOCS_BY_TYPE[i];
-	}
-	printf("    #small ints:   %12lu\n", NR_SMALL_INT_ALLOCS);
-	printf("  total objects: %lu\n", tot_objects);
-
-	printf("  size of Object: %lu\n", sizeof(Object));
 
 	printf("* Notices:\n");
 	if(SP != SP_EMPTY) {

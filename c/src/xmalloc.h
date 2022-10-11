@@ -10,9 +10,13 @@
 #include <gc.h>
 #else // !USE_BOEHM_GC
 #include <stdlib.h>
-extern unsigned long long X_BYTES_ALLOCATED;
+// bytes given to the user (does not count internal overhead)
+extern unsigned long long XMEM_USER_BYTES_ALLOCATED;
+// total bytes including overhead
+extern unsigned long long XMEM_TOTAL_BYTES_ALLOCATED;
 #if defined(USE_GC_OBJECT)
-extern unsigned long long X_BYTES_FREED;
+extern unsigned long long XMEM_USER_BYTES_FREED;
+extern unsigned long long XMEM_TOTAL_BYTES_FREED;
 #endif // USE_GC_OBJECT
 #endif // !USE_BOEHM_GC
 
@@ -25,5 +29,7 @@ void x_mem_gcollect();
 char *x_strdup(const char *s);
 char *x_strndup(const char *s, size_t n);
 void x_free(void *ptr);
+
+void x_mem_print_stats();
 
 #endif // __xmalloc_h__

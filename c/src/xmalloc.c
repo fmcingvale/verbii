@@ -1,5 +1,7 @@
 /*
-	xmalloc - wrapper to allow turning GC on/off completely for debugging, etc.
+	xmalloc - wrapper to allow multiple memory managers
+
+	Currently supports: Boehm GC, custom Object-GC and no GC (mainly for debugging)
 
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
@@ -34,6 +36,17 @@ char *x_strndup(const char *s, size_t n) {
 
 void x_free(void *ptr) { }
 
+void x_mem_print_stats() {
+	printf("  Garbage collector: Boehm-GC\n");
+	GC_word pheap_size, pfree_bytes, punmapped_bytes, pbytes_since_gc, ptotal_bytes;
+	GC_get_heap_usage_safe(&pheap_size, &pfree_bytes, &punmapped_bytes, &pbytes_since_gc, &ptotal_bytes);
+	printf("  Heap size: %lu\n", pheap_size);
+	printf("  Free bytes: %lu\n", pfree_bytes);
+	printf("  Unmapped bytes: %lu\n", punmapped_bytes);
+	printf("  Bytes since gc: %lu\n", pbytes_since_gc);
+	printf("  Total bytes: %lu\n", ptotal_bytes);
+}
+
 #else // !USE_BOEHM_GC
 
 // for USE_GC_OBJECT, I add a header to each allocated block so I can tell how many
@@ -48,8 +61,10 @@ typedef struct _MemBlockHeader {
 } MemBlockHeader;
 #endif // USE_GC_OBJECT
 
-unsigned long long X_BYTES_ALLOCATED = 0;
-unsigned long long X_BYTES_FREED = 0; // only GC_OBJECT uses this
+unsigned long long XMEM_USER_BYTES_ALLOCATED = 0;
+unsigned long long XMEM_TOTAL_BYTES_ALLOCATED = 0;
+unsigned long long XMEM_USER_BYTES_FREED = 0; // only GC_OBJECT uses this
+unsigned long long XMEM_TOTAL_BYTES_FREED = 0; // only GC_OBJECT uses this
 
 void x_mem_init() {
 }
@@ -61,10 +76,12 @@ void* the_real_x_malloc(const char *filename, int line, size_t size) {
 	MemBlockHeader *head = (MemBlockHeader*)ptr;
 	head->magic = MEMBLOCK_MAGIC;
 	head->size = size;
-	X_BYTES_ALLOCATED += size;
+	XMEM_USER_BYTES_ALLOCATED += size;
+	XMEM_TOTAL_BYTES_ALLOCATED += size + sizeof(MemBlockHeader);
 	return (void*)(((char*)ptr) + sizeof(MemBlockHeader));
 #else // no-GC case
-	X_BYTES_ALLOCATED += size;
+	XMEM_USER_BYTES_ALLOCATED += size;
+	XMEM_TOTAL_BYTES_ALLOCATED += size; // no extra overhead for the no-GC case
 	return malloc(size);
 #endif
 }
@@ -81,14 +98,16 @@ void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_s
 
 	// i don't want this to count as a full free+malloc, so instead, subtract
 	// current size then i'll add new size
-	X_BYTES_ALLOCATED -= head->size;
+	XMEM_USER_BYTES_ALLOCATED -= head->size;
+	XMEM_TOTAL_BYTES_ALLOCATED -= head->size; // the overhead is constant so just change the size portion
 	void *newptr = realloc((void*)head, new_size + sizeof(MemBlockHeader));
 	if(!newptr)
 		error("Out of memory in realloc()");
 
 	head = (MemBlockHeader*)newptr;
 	head->size = new_size;
-	X_BYTES_ALLOCATED += new_size;
+	XMEM_USER_BYTES_ALLOCATED += new_size;
+	XMEM_TOTAL_BYTES_ALLOCATED += new_size; // as above, overhead already accounted for
 	return ((char*)newptr) + sizeof(MemBlockHeader);
 #else // non-GC case
 	return realloc(ptr, new_size);
@@ -116,10 +135,24 @@ void x_free(void *ptr) {
 	if(head->magic != MEMBLOCK_MAGIC)
 		error("Bad magic number in x_realloc()");
 
-	X_BYTES_FREED += head->size;
+	XMEM_USER_BYTES_FREED += head->size;
+	XMEM_TOTAL_BYTES_FREED += head->size + sizeof(MemBlockHeader);
 	free(head);
 #else // no-GC case
 	free(ptr);
+#endif
+}
+
+void x_mem_print_stats() {
+#if defined(USE_GC_OBJECT)
+	printf("  Garbage collector: gc-object\n");
+	printf("  xmalloc user bytes allocated:  %llu\n", XMEM_USER_BYTES_ALLOCATED);
+	printf("  xmalloc user bytes freed:      %llu\n", XMEM_USER_BYTES_FREED);
+	printf("  xmalloc total bytes allocated: %llu\n", XMEM_TOTAL_BYTES_ALLOCATED);
+	printf("  xmalloc total bytes freed:     %llu\n", XMEM_TOTAL_BYTES_FREED);
+#else // no-GC
+	printf("  Garbage collector: None\n");	
+	printf("  xmalloc bytes: %llu\n", XMEM_TOTAL_BYTES_ALLOCATED);
 #endif
 }
 
