@@ -66,7 +66,6 @@ void requiretype(const char *where, Object *obj, int type) {
 }
 
 Object* newInt(VINT i) {
-	++ALLOCS_BY_TYPE[TYPE_INT];
 	// adjust threshold experimentally to find majority use case
 	if(i >= -10 && i <= 1000)
 		++NR_SMALL_INT_ALLOCS;
@@ -77,22 +76,18 @@ Object* newInt(VINT i) {
 }
 
 Object* newNull() {
-	++ALLOCS_BY_TYPE[TYPE_NULL];
 	return THE_NULL;
 }
 
 Object* newVoid() {
-	++ALLOCS_BY_TYPE[TYPE_VOID];
 	return THE_VOID;
 }
 
 Object* newBool(VINT b) {
-	++ALLOCS_BY_TYPE[TYPE_BOOL];
 	return b == 0? THE_FALSE : THE_TRUE;	
 }
 
 Object* newFloat(double d) {
-	++ALLOCS_BY_TYPE[TYPE_FLOAT];
 	Object *obj = new_gc_object(TYPE_FLOAT);
 	obj->data.d = d;
 	return obj;
@@ -118,7 +113,6 @@ Object* parseBool(const char *str) {
 }
 
 Object* newString(const char *s, int len) {
-	++ALLOCS_BY_TYPE[TYPE_STRING];
 	Object *obj = new_gc_object(TYPE_STRING);
 	utstring_new(obj->data.str);
 	if(len<0) len = strlen(s);
@@ -131,7 +125,6 @@ void freeobj_string(Object *str) {
 }
 
 Object* newSymbol(const char *s, int len) {
-	++ALLOCS_BY_TYPE[TYPE_SYMBOL];
 	Object *obj = new_gc_object(TYPE_SYMBOL);
 	utstring_new(obj->data.str);
 	if(len<0) len = strlen(s);
@@ -161,7 +154,6 @@ const char *string_cstr(Object *s) {
 
 Object* newLambda(Object *list) {
 	requiretype("newLambda", list, TYPE_LIST);
-	++ALLOCS_BY_TYPE[TYPE_LAMBDA];
 	Object *obj = new_gc_object(TYPE_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
 	obj->data.lambda->list = list;
@@ -174,7 +166,6 @@ void freeobj_lambda(Object *lambda) {
 }
 
 Object *newVoidFunctionPtr(VoidFunctionPtr funcptr) {
-	++ALLOCS_BY_TYPE[TYPE_VOIDFUNCPTR];
 	Object *obj = new_gc_object(TYPE_VOIDFUNCPTR);
 	obj->data.funcptr = funcptr;
 	return obj;
@@ -182,7 +173,6 @@ Object *newVoidFunctionPtr(VoidFunctionPtr funcptr) {
 
 Object* newBoundLambda(Object *list, Object *framedata) {
 	requiretype("newBoundLambda", list, TYPE_LIST);
-	++ALLOCS_BY_TYPE[TYPE_BOUND_LAMBDA];
 	//printf("NEW BOUND LAMBDA FROM: %s @ %llx\n", fmtStackPrint(list), (long long unsigned int)list);
 	Object *obj = new_gc_object(TYPE_BOUND_LAMBDA);
 	obj->data.lambda = (Lambda*)x_malloc(sizeof(Lambda));
@@ -194,7 +184,6 @@ Object* newBoundLambda(Object *list, Object *framedata) {
 }
 
 Object* newOpcode(uint64_t packed_opcode) {
-	++ALLOCS_BY_TYPE[TYPE_OPCODE];
 	Object *obj = new_gc_object(TYPE_OPCODE);
 	obj->data.opcode = packed_opcode;
 	return obj;
@@ -236,7 +225,6 @@ int length(Object *obj) {
 }
 
 Object* newListEx(int initsize, Object *fill) {
-	++ALLOCS_BY_TYPE[TYPE_LIST];
 	Object *obj = new_gc_object(TYPE_LIST);
 	
 	ObjArray *array = (ObjArray*)x_malloc(sizeof(ObjArray));
@@ -303,7 +291,6 @@ void List_put(Object *list, int i, Object *obj) {
 }
 
 Object *newDict() {
-	++ALLOCS_BY_TYPE[TYPE_DICT];
 	Object *obj = new_gc_object(TYPE_DICT);
 	obj->data.objdict = NULL;
 	return obj;
@@ -377,8 +364,6 @@ static Object *findFrameUp(Object *frame, int levels) {
 }
 
 Object* new_CallFrameData() {
-	++ALLOCS_BY_TYPE[TYPE_CALLFRAMEDATA];
-	
 	Object *obj = new_gc_object(TYPE_CALLFRAMEDATA);
 
 	CallFrameData* cf = (CallFrameData*)x_malloc(sizeof(CallFrameData));

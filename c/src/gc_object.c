@@ -172,6 +172,7 @@ void print_gc_object_stats() {
 }
 
 Object *new_gc_object(unsigned char type) {
+	++ALLOCS_BY_TYPE[type]; // stats
 	Object *obj = (Object*)x_malloc(sizeof(Object));
 	obj->type = type;
 	obj->gc_next = NULL;
@@ -191,6 +192,7 @@ void init_gc_object() { }
 
 // ok, this is not a no-op, but just a x_malloc without the gc-object stuff
 Object *new_gc_object(unsigned char type) {
+	++ALLOCS_BY_TYPE[type]; // stats
 	Object *obj = (Object*)x_malloc(sizeof(Object));
 	obj->type = type;
 	return obj;
