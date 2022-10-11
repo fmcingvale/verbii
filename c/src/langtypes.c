@@ -24,6 +24,7 @@ const char *TYPE_TO_NAME[] = { "null", "int", "bool", "lambda", "float", "string
 		"list", "void", "dict", "bound-lambda", "opcode", "void-funcptr", "callframe-data" };
 		
 unsigned long int ALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+unsigned long int DEALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 unsigned long int NR_SMALL_INT_ALLOCS = 0;
 

@@ -40,6 +40,8 @@
 extern const char *TYPE_TO_NAME[TYPE_LAST_PLUS_1];
 // stats on # allocs of each type
 unsigned long int ALLOCS_BY_TYPE[TYPE_LAST_PLUS_1];
+// stats on # deallocs of each type
+unsigned long int DEALLOCS_BY_TYPE[TYPE_LAST_PLUS_1];
 
 #include <stdint.h> // int64_t
 #include "xmalloc.h"

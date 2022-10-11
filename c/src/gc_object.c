@@ -136,6 +136,7 @@ static void remove_unmarked_objects(Object *head) {
 			#endif
 			// ... and then free obj
 			//printf("FREEING OBJECT: %s\n", fmtStackPrint(obj));
+			++DEALLOCS_BY_TYPE[obj->type];
 			x_free(obj);
 			
 		}
