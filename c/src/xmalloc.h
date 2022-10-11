@@ -17,8 +17,10 @@ extern unsigned long long X_BYTES_FREED;
 #endif // !USE_BOEHM_GC
 
 void x_mem_init();
-void* x_malloc(size_t size);
-void* x_realloc(void *ptr, size_t new_size);
+void* the_real_x_malloc(const char *filename, int line, size_t size);
+#define x_malloc(size) the_real_x_malloc(__FILE__,__LINE__,size)
+void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_size);
+#define x_realloc(ptr,size) the_real_x_realloc(__FILE__,__LINE__,ptr,size)
 void x_mem_gcollect();
 char *x_strdup(const char *s);
 char *x_strndup(const char *s, size_t n);

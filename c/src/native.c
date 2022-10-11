@@ -5,13 +5,14 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 
-//#include "native.h"
+#include "native.h"
 #include "langtypes.h"
 #include "errors.h"
 #include "xmalloc.h"
 #include "util.h"
 #include "interpreter.h"
 #include <math.h>
+#include <stdio.h>
 
 // file to write output
 static FILE *fp_stdout = NULL;
@@ -48,6 +49,7 @@ void file_append(const char* filename, const char *text, int nr) {
 	fclose(fp);
 }
 
+// NOTE: caller must free returned buffer
 char* file_read(const char* filename, int *nrbytes) {
 	if(!file_exists(filename))
 		error("Trying to read nonexistent file: %s", filename);
@@ -103,7 +105,7 @@ static Object* popStringObj(const char *where) {
 
 // ONLY for cases where the text cannot contain NULLs (i.e. by language definition)
 static const char* popString(const char *where) {
-	return utstring_body(popStringObj(where)->data.str);
+	return string_cstr(popStringObj(where));
 }
 
 // like above, assumes symbols cannot contain nulls
@@ -112,7 +114,7 @@ static const char *popSymbol(const char *where) {
 	if(!isSymbol(obj))
 		error("%s requires symbol, got: %s", where, fmtStackPrint(obj));
 	
-	return utstring_body(obj->data.str);
+	return string_cstr(obj);
 }
 
 static Object* popList(const char *where) {
@@ -240,6 +242,7 @@ static void builtin_file_read() {
 	char* text = file_read(filename, &nrbytes);
 	
 	push(newString(text, nrbytes));
+	x_free(text);
 }
 
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
@@ -838,20 +841,16 @@ static Object* do_add(Object *a, Object *b) {
 		// strings & symbols defined as immutable, so make new objects
 		case TYPE_STRING:
 			if(b->type == TYPE_STRING) {
-				UT_string *out;
-				utstring_new(out);
-				utstring_concat(out, a->data.str);
-				utstring_concat(out, b->data.str);
-				return newString(utstring_body(out), utstring_len(out));
+				Object *out = newString(string_cstr(a), string_length(a));
+				string_append(out, b);
+				return out;
 			}	
 			break;
 		case TYPE_SYMBOL:
 			if(b->type == TYPE_SYMBOL) {
-				UT_string *out;
-				utstring_new(out);
-				utstring_concat(out, a->data.str);
-				utstring_concat(out, b->data.str);
-				return newSymbol(utstring_body(out), utstring_len(out));
+				Object *out = newSymbol(string_cstr(a), string_length(a));
+				string_append(out, b);
+				return out;				
 			}	
 			break;
 		case TYPE_LIST:
@@ -952,14 +951,13 @@ static void builtin_repr() { push(newString(fmtStackPrint(pop()),-1)); }
 static void builtin_str() { push(newString(fmtDisplayPrint(pop()),-1)); }
 
 static void builtin_sys_platform() {
-	UT_string *s;
-	utstring_new(s);
+	Object *s = newString("",0);
 #if defined( __GNUC__)
-	utstring_printf(s, "gcc %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+	string_printf(s, "gcc %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #elif defined(_MSC_VER)
-	utstring_printf("msvc %s", _MSC_FULL_VER);
+	string_printf("msvc %s", _MSC_FULL_VER);
 #endif
-	push(newString(utstring_body(s), utstring_len(s)));
+	push(newString(string_cstr(s), string_length(s)));
 }
 
 static void builtin_set_exit_on_exception() {

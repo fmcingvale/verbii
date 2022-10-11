@@ -32,9 +32,9 @@ void init_object_system() {
 	THE_NULL = new_gc_object(TYPE_NULL);
 	THE_VOID = new_gc_object(TYPE_VOID);
 	THE_TRUE = new_gc_object(TYPE_BOOL);
-	THE_TRUE->data.i = 1;
+	THE_TRUE->data.i = TRUE;
 	THE_FALSE = new_gc_object(TYPE_BOOL);
-	THE_FALSE->data.i = 0;
+	THE_FALSE->data.i = FALSE;
 }
 
 void langtypes_mark_reachable_objects() {
@@ -64,6 +64,11 @@ int isVoidFunctionPtr(Object *obj) { return (obj->type == TYPE_VOIDFUNCPTR) ? TR
 void requiretype(const char *where, Object *obj, int type) {
 	if(obj->type != type)
 		error("%s expects %s but got %s", where, TYPE_TO_NAME[type], fmtStackPrint(obj));
+}
+
+void require_stringlike(const char *where, Object *obj) {
+	if(obj->type != TYPE_STRING && obj->type != TYPE_SYMBOL)
+		error("%s expects string or symbol but got %s", where, fmtStackPrint(obj));
 }
 
 Object* newInt(VINT i) {
@@ -113,44 +118,128 @@ Object* parseBool(const char *str) {
 		error("Bad boolean literal: %s", str);
 }
 
+// minimum number of chars to expand buffer by at a time
+#define STRINGBUF_MIN_ALLOC 16
+
+// length is zero but can hold initsize chars (plus internally-added NULL)
+static StringBuffer *new_string_buffer(int initsize) {
+	StringBuffer *buf = (StringBuffer*)x_malloc(sizeof(StringBuffer));
+	buf->maxsize = max(initsize+1, STRINGBUF_MIN_ALLOC);
+	buf->ptr = (char*)x_malloc(buf->maxsize);
+	buf->ptr[0] = 0;
+	buf->used = 1; // empty string + NULL
+	return buf;
+}
+
+static void free_string_buffer(StringBuffer *buf) {
+	x_free(buf->ptr);
+	x_free(buf);
+}
+
+// ensure buffer can hold an ADDITIONAL nr chars
+static void stringbuf_ensure_space(StringBuffer *buf, int nr) {
+	if((buf->maxsize - buf->used) < nr) {
+		int needed = nr - (buf->maxsize - buf->used);
+		int newsize = buf->maxsize + max(needed, STRINGBUF_MIN_ALLOC);
+		buf->ptr = (char*)x_realloc(buf->ptr, newsize);
+		buf->maxsize = newsize;
+	}
+}
+
+// append 1 character to string
+void string_addchar(Object *string, char c) {
+	require_stringlike("string_addchar", string);
+	StringBuffer *buf = string->data.buffer;
+	stringbuf_ensure_space(buf, 1);
+	buf->ptr[buf->used-1] = c;
+	buf->ptr[buf->used] = 0; // always NULL terminate so cstr() can be used anytime
+	++buf->used;
+}
+
+int string_length(Object *string) {
+	require_stringlike("string_length", string);
+	return string->data.buffer->used - 1;
+}
+
+const char *string_cstr(Object *string) {
+	require_stringlike("string_cstr", string);
+	// is always NULL terminated
+	return string->data.buffer->ptr;
+}
+
+static void stringbuf_copy_in(StringBuffer *buffer, const char *src, int nrbytes) {
+	stringbuf_ensure_space(buffer, nrbytes);
+	memcpy(buffer->ptr+buffer->used-1, src, nrbytes);
+	buffer->used += nrbytes;
+	buffer->ptr[buffer->used-1] = 0; // always add \0
+}
+
+void string_append(Object *string, Object *other) {
+	require_stringlike("string_append", string);
+	stringbuf_copy_in(string->data.buffer, string_cstr(other), string_length(other));
+}
+
+void string_append_cstr(Object *string, const char *other, int nrbytes) {
+	require_stringlike("string_append", string);
+	if(nrbytes<0)
+		nrbytes = strlen(other);
+
+	stringbuf_copy_in(string->data.buffer, other, nrbytes);
+}
+
+#include <stdio.h>
+#include <stdarg.h>
+
+void string_printf(Object *string, const char *fmt, ...) {
+	require_stringlike("string_printf", string);
+	// first, determine how long string will be, using a temp buffer
+	char temp[2];
+	va_list args;
+	va_start(args,fmt);
+	int nr = vsnprintf(temp, 1, fmt, args);
+	va_end(args);
+
+	// now create actual buffer -- per C standard, nr is the number of chars
+	// that would have been written NOT including the \0, so need +1
+	char *buf = (char*)x_malloc(nr+1);
+	va_start(args,fmt);
+	// per C standard, this will write (nr-1) chars, then \0, so pass nr+1
+	vsnprintf(buf, nr+1, fmt, args);
+	va_end(args);
+
+	// now copy into string
+	stringbuf_copy_in(string->data.buffer, buf, nr);
+	// free temp
+	x_free(buf);
+}
+
 Object* newString(const char *s, int len) {
 	Object *obj = new_gc_object(TYPE_STRING);
-	utstring_new(obj->data.str);
-	if(len<0) len = strlen(s);
-	utstring_bincpy(obj->data.str, s, len);
+	if(len<0)
+		len = strlen(s);
+
+	obj->data.buffer = new_string_buffer(len);
+	stringbuf_copy_in(obj->data.buffer, s, len);
 	return obj;
 }
 
 void freeobj_string(Object *str) {
-	utstring_free(str->data.str);
+	require_stringlike("freeobj_string", str);
+	free_string_buffer(str->data.buffer);
 }
 
 Object* newSymbol(const char *s, int len) {
 	Object *obj = new_gc_object(TYPE_SYMBOL);
-	utstring_new(obj->data.str);
-	if(len<0) len = strlen(s);
-	utstring_bincpy(obj->data.str, s, len);
+	if(len<0)
+		len = strlen(s);
+
+	obj->data.buffer = new_string_buffer(len);
+	stringbuf_copy_in(obj->data.buffer, s, len);
 	return obj;
 }
 
 void freeobj_symbol(Object *str) {
-	utstring_free(str->data.str);
-}
-
-// works for strings OR symbols
-int string_length(Object *s) {
-	if(!isString(s) && !isSymbol(s))
-		error("Expecting string or symbol but got %s", fmtStackPrint(s));
-
-	return utstring_len(s->data.str);
-}
-
-// works for strings OR symbols
-const char *string_cstr(Object *s) {
-	if(!isString(s) && !isSymbol(s))
-		error("Expecting string or symbol but got %s", fmtStackPrint(s));
-
-	return utstring_body(s->data.str);
+	free_string_buffer(str->data.buffer);
 }
 
 Object* newLambda(Object *list) {
@@ -587,31 +676,31 @@ Object *deepcopy(Object *obj) {
 
 static const char* fmtDisplayPrintList(Object *list, const char* open_delim, const char* close_delim) {
 	requiretype("fmtDisplayPrintList", list, TYPE_LIST);
-	UT_string *s;
-	utstring_new(s);
-	utstring_printf(s, "%s ", open_delim);
+	// use a String since it will be garbage collected automatically (only restriction is caller must
+	// use returned char* before returning to interpreter)
+	Object *str = newString("",0);
+	string_printf(str, "%s ", open_delim);
 	
 	for(int i=0; i<List_length(list); ++i)
-		utstring_printf(s, "%s ", fmtDisplayPrint(List_get(list,i)));	
+		string_printf(str, "%s ", fmtDisplayPrint(List_get(list,i)));	
 
-	utstring_printf(s, "%s", close_delim);
-	return utstring_body(s);
+	string_printf(str, "%s", close_delim);
+	return string_cstr(str);
 }
 
 const char* fmtDisplayPrint(Object *obj) {
-	UT_string *s;
-	utstring_new(s);
+	Object *str = newString("",-1);
 	switch(obj->type) {
 		case TYPE_NULL: 
 			return "<null>";
 		case TYPE_VOID: 
 			return "<*void*>";
 		case TYPE_INT: 
-			utstring_printf(s, "%ld", obj->data.i);
-			return utstring_body(s);
+			string_printf(str, "%ld", obj->data.i);
+			return string_cstr(str);
 		case TYPE_FLOAT: 
-			utstring_printf(s, "%.*g", FLOAT_PRECISION, obj->data.d);
-			return utstring_body(s);
+			string_printf(str, "%.*g", FLOAT_PRECISION, obj->data.d);
+			return string_cstr(str);
 		case TYPE_BOOL: 
 			return (obj->data.i == TRUE) ? "true" : "false";
 		case TYPE_LIST:
@@ -631,18 +720,16 @@ const char* fmtDisplayPrint(Object *obj) {
 		case TYPE_SYMBOL:
 			{
 				int i;
-				for(i=0; i<utstring_len(obj->data.str); ++i) {
-					char c = utstring_body(obj->data.str)[i];
+				for(i=0; i<string_length(obj); ++i) {
+					char c = string_cstr(obj)[i];
 					if(c < 32 || c > 126) {
-						// turn non-printable chars into '%code'
-						char buf[10];
-						snprintf(buf, 9, "\\x%02x", (int)((unsigned char)c));
-						utstring_printf(s, "%s", buf);
+						// turn non-printable chars into '%code'						
+						string_printf(str, "\\x%02x", (int)((unsigned char)c));
 					}
 					else
-						utstring_printf(s, "%c", c);
+						string_addchar(str, c);
 				}
-				return utstring_body(s);
+				return string_cstr(str);
 			}
 		case TYPE_OPCODE:
 			return fmtStackPrint(obj);
@@ -650,12 +737,12 @@ const char* fmtDisplayPrint(Object *obj) {
 		{
 			HASH_SORT(obj->data.objdict, sort_objdictentry_by_name);
 			ObjDictEntry *ent;
-			utstring_printf(s, "{ ");
+			string_printf(str, "{ ");
 			for(ent=obj->data.objdict; ent != NULL; ent = ent->hh.next) {
-				utstring_printf(s, "\"%s\" => %s ", ent->name, fmtDisplayPrint(ent->obj));
+				string_printf(str, "\"%s\" => %s ", ent->name, fmtDisplayPrint(ent->obj));
 			}
-			utstring_printf(s,"}");
-			return utstring_body(s);
+			string_printf(str,"}");
+			return string_cstr(str);
 		}
 
 		default: 
@@ -665,33 +752,33 @@ const char* fmtDisplayPrint(Object *obj) {
 
 static const char* fmtStackPrintList(Object *list, const char *open_delim, const char *close_delim) {
 	requiretype("fmstStackPrintList", list, TYPE_LIST);
-	UT_string *s;
-	utstring_new(s);
-	utstring_printf(s, "%s ", open_delim);
+	// as above, use a String
+	Object *str = newString("",0);
+	string_printf(str, "%s ", open_delim);
 	
 	//printf("STACK PRINT ARRAY @ %llx\n", (long long unsigned int)arr);
 
 	for(int i=0; i<List_length(list); ++i)
-		utstring_printf(s, "%s ", fmtStackPrint(List_get(list,i)));
+		string_printf(str, "%s ", fmtStackPrint(List_get(list,i)));
 
-	utstring_printf(s, "%s", close_delim);
-	return utstring_body(s);
+	string_printf(str, "%s", close_delim);
+	return string_cstr(str);
 }
 
 const char* fmtStackPrint(Object *obj) {
-	UT_string *s;
-	utstring_new(s);
+	// as above, use a string
+	Object *str = newString("",-1);
 	switch(obj->type) {
 		case TYPE_NULL: 
 			return "<null>";
 		case TYPE_VOID: 
 			return "<*void*>";
 		case TYPE_INT: 
-			utstring_printf(s, "%ld", obj->data.i);
-			return utstring_body(s);
+			string_printf(str, "%ld", obj->data.i);
+			return string_cstr(str);
 		case TYPE_FLOAT:
-			utstring_printf(s, "#%.*g", FLOAT_PRECISION, obj->data.d);
-			return utstring_body(s);
+			string_printf(str, "#%.*g", FLOAT_PRECISION, obj->data.d);
+			return string_cstr(str);
 		case TYPE_BOOL: 
 			return (obj->data.i == TRUE) ? "<true>" : "<false>";
 		case TYPE_LIST:
@@ -708,8 +795,8 @@ const char* fmtStackPrint(Object *obj) {
 
 			return fmtStackPrintList(obj->data.lambda->list, "<bound {", "}>");			
 		case TYPE_STRING:
-			utstring_printf(s, "\"%s\"", fmtDisplayPrint(obj));
-			return utstring_body(s);
+			string_printf(str, "\"%s\"", fmtDisplayPrint(obj));
+			return string_cstr(str);
 		case TYPE_OPCODE:
 		{
 			uint8_t code;
@@ -717,26 +804,26 @@ const char* fmtStackPrint(Object *obj) {
 			uint16_t B;
 			uint32_t C;
 			opcode_unpack(obj->data.opcode, &code, &A, &B, &C);
-			utstring_printf(s, "#op( %s %d %d %d )", opcode_code_to_name(code), (int)A, (int)B, (int)C);
-			return utstring_body(s);
+			string_printf(str, "#op( %s %d %d %d )", opcode_code_to_name(code), (int)A, (int)B, (int)C);
+			return string_cstr(str);
 		}
 		case TYPE_SYMBOL:
-			utstring_printf(s, "'%s", fmtDisplayPrint(obj));
-			return utstring_body(s);
+			string_printf(str, "'%s", fmtDisplayPrint(obj));
+			return string_cstr(str);
 		case TYPE_DICT: 
 		{
 			HASH_SORT(obj->data.objdict, sort_objdictentry_by_name);
 			ObjDictEntry *ent;
-			utstring_printf(s, "{ ");
+			string_printf(str, "{ ");
 			for(ent=obj->data.objdict; ent != NULL; ent = ent->hh.next) {
-				utstring_printf(s, "\"%s\" => %s ", ent->name, fmtStackPrint(ent->obj));
+				string_printf(str, "\"%s\" => %s ", ent->name, fmtStackPrint(ent->obj));
 			}
-			utstring_printf(s,"}");
-			return utstring_body(s);
+			string_printf(str,"}");
+			return string_cstr(str);
 		}
 		case TYPE_VOIDFUNCPTR:
-			utstring_printf(s, "<funcptr %llx>", (long long)obj->data.funcptr);
-			return utstring_body(s);
+			string_printf(str, "<funcptr %llx>", (long long)obj->data.funcptr);
+			return string_cstr(str);
 		default: 
 			error("** UNKNOWN TYPE IN fmtStackPrint: %d\n", obj->type);
 	}

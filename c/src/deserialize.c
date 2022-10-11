@@ -6,13 +6,12 @@
 #include "deserialize.h"
 #include "errors.h"
 
-// NOTE: like elsewhere, this code assumes garbage collection is being used, so
-// no attempt is made to free memory
+// NOTE: these routines use Strings internally, which are auto-collected, just have to make
+// sure to either use strings or strdup() them before returning to interpreter.
 
 // returns empty string on EOF
 static const char* next_line(FILE *fp) {
-	UT_string *line;
-	utstring_new(line);
+	Object *line = newString("",0);
 	// skip all \r, \n from previous line
 	int c;
 	while(1) {
@@ -22,44 +21,42 @@ static const char* next_line(FILE *fp) {
 	}
 	// carrover c from above loop
 	while(c != EOF && c != '\r' && c != '\n') {
-		char ch = (char)c;
-		utstring_bincpy(line, &ch, 1);
+		string_addchar(line, c);
 		c = fgetc(fp);
 	}
 	// serialized files are never binary, so this fine
-	return utstring_body(line);
+	return string_cstr(line);
 }
 
 static const char* unescape_string(const char *src) {
-	UT_string *out;
-	utstring_new(out);
+	Object *out = newString("",0);
 	while(*src != 0) {
 		if(!strncmp(src, "%32", 3)) {
-			utstring_printf(out, " ");
+			string_addchar(out, ' ');
 			src += 3;
 		}
 		else if(!strncmp(src, "%09", 3)) {
-			utstring_printf(out, "\t");
+			string_addchar(out, '\t');
 			src += 3;
 		}
 		else if(!strncmp(src, "%10", 3)) {
-			utstring_printf(out, "\n");
+			string_addchar(out, '\n');
 			src += 3;
 		}
 		else if(!strncmp(src, "%13", 3)) {
-			utstring_printf(out, "\r");
+			string_addchar(out, '\r');
 			src += 3;
 		}
 		else if(!strncmp(src, "%37", 3)) {
-			utstring_printf(out, "%%");
+			string_addchar(out, '%');
 			src += 3;
 		}
 		else {
-			utstring_bincpy(out, src, 1);
+			string_addchar(out, *src);
 			++src;
 		}
 	}
-	return utstring_body(out);
+	return string_cstr(out);
 }
 	
 // see notes in C++ port

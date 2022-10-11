@@ -12,6 +12,7 @@
 #include "langtypes.h"
 #include "util.h"
 #include "gc_object.h"
+#include <stdio.h>
 
 // sync with C++
 #define STACK_SIZE (1<<16)
@@ -27,7 +28,7 @@ typedef struct _CallStackEntry {
 
 // stack of current and previous frames
 CallStackEntry callstack[MAX_CALLSTACK_DEPTH];
-int callstack_cur; // index of currently running frame or -1
+int callstack_cur = -1; // index of currently running frame or -1
 
 // shortcuts for current frame
 Object *code; // List
@@ -41,7 +42,7 @@ Object *framedata;
 // reallocated as needed
 //
 // plain integers are used to address all 3 areas
-Object **OBJMEM;
+Object **OBJMEM = NULL;
 
 // current stack pointer (points to item on top of stack), empty value and lowest usable index
 int SP, SP_EMPTY, SP_MIN;
@@ -84,7 +85,7 @@ typedef struct _WordDictEntry {
 	UT_hash_handle hh;
 } WordDictEntry;
 
-Object *WORDS; // dictionary of user-defined words
+Object *WORDS = NULL; // dictionary of user-defined words
 
 void init_interpreter() {
 	// stack at bottom, grows downward from SP_EMPTY
@@ -125,18 +126,22 @@ void interpreter_mark_reachable_objects() {
 	// mark objects that can be found through my root objects
 
 	// mark objects found in the stack
-	for(int i=SP; i<SP_EMPTY; ++i)
-		gc_mark_object(OBJMEM[i]);
+	if(OBJMEM) { // don't crash if not initted
+		for(int i=SP; i<SP_EMPTY; ++i)
+			gc_mark_object(OBJMEM[i]);
 
-	// mark all objects found in heap
-	for(int i=HEAP_START; i<HEAP_NEXTFREE; ++i)
-		gc_mark_object(OBJMEM[i]);
+		// mark all objects found in heap
+		for(int i=HEAP_START; i<HEAP_NEXTFREE; ++i)
+			gc_mark_object(OBJMEM[i]);
+	}
 
 	// mark WORDS dict (which will then mark all code objects)
-	gc_mark_object(WORDS);
+	if(WORDS)
+		gc_mark_object(WORDS);
 
 	// mark BUILTINS dict
-	gc_mark_object(BUILTINS);
+	if(BUILTINS)
+		gc_mark_object(BUILTINS);
 
 	// mark objects in all active callframes
 	for(int i=callstack_cur; i >= 0; --i) {
@@ -147,8 +152,10 @@ void interpreter_mark_reachable_objects() {
 	// for INACTIVE call frames, need to mark the CallFrame object
 	// to keep it alive (do NOT mark subobjects -- frame is inactive
 	// so any objects in those slots can be freely deleted)
-	for(int i=callstack_cur+1; i < MAX_CALLSTACK_DEPTH; ++i)
-		gc_mark_object_no_subobjects(callstack[i].framedata);
+	if(OBJMEM) { // test to see if interpreter initted
+		for(int i=callstack_cur+1; i < MAX_CALLSTACK_DEPTH; ++i)
+			gc_mark_object_no_subobjects(callstack[i].framedata);
+	}
 }
 #endif
 
@@ -262,12 +269,12 @@ void set_codepos(int pos) {
 }
 
 const char* reprStack() {
-	UT_string *s;
-	utstring_new(s);
+	// like other functions that return temp strings, use a String object
+	Object *str;
 	for(int i=SP_EMPTY-1; i>=SP; --i) {
-		utstring_printf(s, "%s ", fmtStackPrint(OBJMEM[i]));		
+		string_printf(str, "%s ", fmtStackPrint(OBJMEM[i]));		
 	}
-	return utstring_body(s);
+	return string_cstr(str);
 }
 
 int heap_alloc(int nr) {
@@ -457,6 +464,9 @@ void run(Object *objlist) {
 
 	while(1) {
 		#if defined(USE_GC_OBJECT)
+		// use a higher number for production, but I like a lower value for testing
+		// since it stress tests the GC more
+		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 500000) {
 		if(GCOBJ_OBJECTS_SINCE_COLLECT > 10000000) {
 			printf("RUNNING COLLECTION\n");
 			gc_object_collect();
@@ -483,7 +493,7 @@ void run(Object *objlist) {
 		else if(isSymbol(obj)) {
 			if(isSymbolMatch(obj, "'", 1)) {
 				// quoted symbol - remove one level of quoting and push
-				push(newSymbol(utstring_body(obj->data.str)+1, -1));
+				push(newSymbol(string_cstr(obj)+1, -1));
 				continue;
 			}
 			

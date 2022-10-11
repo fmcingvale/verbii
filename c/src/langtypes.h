@@ -55,13 +55,13 @@ typedef int64_t VINT;
 extern int FLOAT_PRECISION;
 extern unsigned long int NR_SMALL_INT_ALLOCS;
 
-#include "../../extern/c/utstring.h"
 #include "../../extern/c/uthash.h"
 
 struct _ObjDictEntry;
 struct _CallFrameData;
 struct _Lambda;
 struct _ObjArray;
+struct _StringBuffer;
 
 typedef void (*VoidFunctionPtr)();
 
@@ -72,7 +72,7 @@ typedef struct _Object {
 		struct _ObjArray *array; // for lists
 		struct _ObjDictEntry *objdict; // for dict
 		double d;
-		UT_string *str; // strings & symbols
+		struct _StringBuffer *buffer; // strings & symbols
 		struct _Lambda *lambda; // bound & unbound lambdas
 		// TODO -- why can't this just be in .i??
 		uint64_t opcode;
@@ -166,13 +166,39 @@ double asNumber(Object *a); // convert int or float to double
 
 Object* newBool(VINT b);
 
+// for efficiency, strings & symbols are built on a StringBuffer which
+// is writeable; however at the verbii level, strings & symbols are immutable.
+typedef struct _StringBuffer {
+	char *ptr;
+	int maxsize;
+	// space used INCLUDING added null at end so ptr can be used directly as C-string
+	// (so true length of content is used-1)
+	int used; 
+} StringBuffer;
+
 Object* newString(const char *s, int len); // if len<0, use strlen(s)
 Object* newSymbol(const char *s, int len); // if len<0, use strlen(s)
 
-// works for strings OR symbols
-int string_length(Object *s);
-// get as NULL-terminated string - works for strings OR symbols
-const char *string_cstr(Object *s);
+// the following functions work on the internal StringBuffer, so will
+// work on both symbols & strings, despite being named string_*
+
+// append 1 character to string
+void string_addchar(Object *string, char c);
+// get length (since strings can store non NULL-terminated strings)
+int string_length(Object *string);
+// get as NULL-terminated string - this only works on non-binary data
+// that does not contain any other NULLs
+// NOTE: returned pointer must be used immediately (typically in a printf()),
+// before returning to the interpreter loop, or strdup'd if needed for long 
+// term use, since it is subject to garbage collection
+const char *string_cstr(Object *string);
+// append text to string in printf() way
+void string_printf(Object *string, const char *fmt, ...);
+// append another string to this one (this is more efficient that doing
+// a string_printf(s, "%s", ...) and works with binary data as well
+void string_append(Object *string, Object *other);
+// ... or to append a C string; pass nr=-1 to use strlen(other)
+void string_append_cstr(Object *string, const char *other, int nr);
 
 Object* newLambda(Object *list); // starts unbound
 // pass the LIST not another lambda

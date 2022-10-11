@@ -79,3 +79,7 @@ c/bin/
 c/main
 c/demo-builtins.verb.b
 c/src/main
+c/gmon.out
+c/src/gmon.out
+c/src/test-gc-object
+verb/gmon.out

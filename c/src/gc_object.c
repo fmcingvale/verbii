@@ -7,6 +7,7 @@
 #include "gc_object.h"
 #include "interpreter.h"
 #include "util.h"
+#include <stdio.h>
 
 #if defined(USE_GC_OBJECT)
 
@@ -129,6 +130,7 @@ static void remove_unmarked_objects(Object *head) {
 				case TYPE_SYMBOL: freeobj_symbol(obj); break;
 				case TYPE_LIST: freeobj_list(obj); break;
 				case TYPE_DICT: freeobj_dict(obj); break;
+				// can use same for both
 				case TYPE_LAMBDA:
 				case TYPE_BOUND_LAMBDA: freeobj_lambda(obj); break;
 				case TYPE_CALLFRAMEDATA: freeobj_callframedata(obj); break;
@@ -179,6 +181,9 @@ void shutdown_gc_object() {
 	// .. and collect them
 	remove_unmarked_objects(GEN1_HEAD);
 	printf("After 1 collection: %llu\n", count_nodelist_length(GEN1_HEAD));
+
+	// remove head
+	x_free(GEN1_HEAD);
 }
 
 Object *new_gc_object(unsigned char type) {

@@ -12,24 +12,23 @@
 #include "gc_object.h"
 
 void backtrace_curframe() {
-	UT_string *trace;
-	utstring_new(trace);
+	Object *trace = newString("",0);
+	
 	int nr = 7; // number of words to print in each frame
 	while(nr--) {
 		Object *o = prevCodeObj();
 		if(isVoid(o)) {
-			printf("%s\n", utstring_body(trace));
+			printf("%s\n", string_cstr(trace));
 			return;
 		}
 		else {
 			// ugh ... gross way to put string together, but at this point, wasting memory is irrelevant
-			UT_string *part;
-			utstring_new(part);
-			utstring_printf(part, "%s %s", fmtStackPrint(o), utstring_body(trace));
+			Object *part = newString("",0);
+			string_printf(part, "%s %s", fmtStackPrint(o), string_cstr(trace));
 			trace = part;
 		}
 	}
-	printf("%s\n", utstring_body(trace));
+	printf("%s\n", string_cstr(trace));
 }
 
 void print_backtrace() {
@@ -101,19 +100,18 @@ int main(int argc, char *argv[]) {
 						printf("Missing argument after -libdir\n");
 						exit(1);
 					}
-					UT_string *name;
-					utstring_new(name);
-					utstring_printf(name, "%s", argv[i+1]);
+					Object *name = newString("",0);
+					string_printf(name, "%s", argv[i+1]);
 					//printf("NAME: %s\n", name.c_str());
-					if(utstring_body(name)[utstring_len(name)-1] != '/' && 
-						utstring_body(name)[utstring_len(name)-1] != '\\') {
-						printf("-libdir paths must end with / or \\, got: %s\n", utstring_body(name));
+					if(string_cstr(name)[string_length(name)-1] != '/' && 
+						string_cstr(name)[string_length(name)-1] != '\\') {
+						printf("-libdir paths must end with / or \\, got: %s\n", string_cstr(name));
 						exit(1);
 					}
-					utstring_printf(name, "boot.verb.b");
-					if(file_exists(utstring_body(name))) {
+					string_printf(name, "boot.verb.b");
+					if(file_exists(string_cstr(name))) {
 						//printf("EXISTS: %s\n", name.c_str());
-						BOOTFILE = x_strdup(utstring_body(name));
+						BOOTFILE = x_strdup(string_cstr(name));
 					}
 					// *ALSO* pass to script args since boot needs to know the paths
 					List_append(cmdline_args, newString(argv[i],-1));

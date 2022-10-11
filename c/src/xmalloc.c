@@ -8,6 +8,7 @@
 #include "langtypes.h"
 #include "errors.h"
 #include <string.h>
+#include <stdio.h>
 
 #if defined(USE_BOEHM_GC)
 
@@ -15,11 +16,11 @@ void x_mem_init() {
 	GC_INIT();
 }
 
-void* x_malloc(size_t size) {
+void* the_real_x_malloc(const char *filename, int line, size_t size) {
 	return GC_malloc(size);
 }
 
-void* x_realloc(void *ptr, size_t new_size) {
+void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_size) {
 	return GC_realloc(ptr, new_size);
 }
 
@@ -53,7 +54,8 @@ unsigned long long X_BYTES_FREED = 0; // only GC_OBJECT uses this
 void x_mem_init() {
 }
 
-void* x_malloc(size_t size) {
+void* the_real_x_malloc(const char *filename, int line, size_t size) {
+	//printf("alloc @ %s:%d size=%d\n", filename, line, (int)size);
 #if defined(USE_GC_OBJECT)
 	void *ptr = malloc(size + sizeof(MemBlockHeader));
 	MemBlockHeader *head = (MemBlockHeader*)ptr;
@@ -67,11 +69,11 @@ void* x_malloc(size_t size) {
 #endif
 }
 
-void* x_realloc(void *ptr, size_t new_size) {
+void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_size) {
 #if defined(USE_GC_OBJECT)
 	// special case
 	if(!ptr)
-		return x_malloc(new_size);
+		return the_real_x_malloc(filename,line,new_size);
 
 	MemBlockHeader *head = (MemBlockHeader*)(((char*)ptr) - sizeof(MemBlockHeader));
 	if(head->magic != MEMBLOCK_MAGIC)
