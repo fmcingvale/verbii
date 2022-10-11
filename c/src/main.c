@@ -186,5 +186,9 @@ int main(int argc, char *argv[]) {
 		}
 	}
 #endif
-	
+#if defined(USE_GC_OBJECT)
+	shutdown_gc_object();
+	printf("  Final bytes allocated: %llu\n", X_BYTES_ALLOCATED);
+	printf("  Final bytes freed:     %llu\n", X_BYTES_FREED);
+#endif
 }

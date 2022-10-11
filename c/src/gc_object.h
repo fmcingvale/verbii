@@ -29,4 +29,8 @@ void gc_mark_object_no_subobjects(Object *obj);
 
 void print_all_gc_objects();
 
+// attempt to free all remaining objects -- do not use this module
+// again after this, without calling init_gc_object()
+void shutdown_gc_object();
+
 #endif // __gcobject_h__

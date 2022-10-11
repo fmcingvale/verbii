@@ -172,6 +172,15 @@ void print_gc_object_stats() {
 	printf("  GEN1 objects: %llu\n", count_nodelist_length(GEN1_HEAD));
 }
 
+void shutdown_gc_object() {
+	printf("Shutting down gc-object: %llu\n", count_nodelist_length(GEN1_HEAD));
+	// mark all objects as non-reachable
+	set_all_marks(GEN1_HEAD, 0);
+	// .. and collect them
+	remove_unmarked_objects(GEN1_HEAD);
+	printf("After 1 collection: %llu\n", count_nodelist_length(GEN1_HEAD));
+}
+
 Object *new_gc_object(unsigned char type) {
 	++ALLOCS_BY_TYPE[type]; // stats
 	Object *obj = (Object*)x_malloc(sizeof(Object));
