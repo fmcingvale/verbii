@@ -8,7 +8,10 @@
 
 #include "langtypes.h"
 
+#if defined(USE_GC_OBJECT)
 extern unsigned long long GCOBJ_OBJECTS_SINCE_COLLECT;
+extern double GC_OBJECT_TOTAL_COLLECT_TIME;
+#endif
 
 void init_gc_object();
 Object *new_gc_object(unsigned char type);

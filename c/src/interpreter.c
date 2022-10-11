@@ -184,6 +184,7 @@ void print_stats() {
 	printf("  Garbage collector: gc-object\n");
 	printf("  xmalloc bytes allocated: %llu\n", X_BYTES_ALLOCATED);
 	printf("  xmalloc bytes freed:     %llu\n", X_BYTES_FREED);
+	printf("  total collection time:   %lf\n", GC_OBJECT_TOTAL_COLLECT_TIME);
 	print_gc_object_stats();
 #else
 	printf("  Garbage collector: None\n");	

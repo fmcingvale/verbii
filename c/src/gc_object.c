@@ -6,8 +6,11 @@
 
 #include "gc_object.h"
 #include "interpreter.h"
+#include "util.h"
 
 #if defined(USE_GC_OBJECT)
+
+double GC_OBJECT_TOTAL_COLLECT_TIME = 0;
 
 static Object *GEN1_HEAD = NULL;
 static Object *GEN1_TAIL = NULL;
@@ -142,8 +145,12 @@ static void remove_unmarked_objects(Object *head) {
 }
 
 void gc_object_collect() {
+	double t0 = current_system_cpu_time();
 	gc_mark_all_live_objects();
 	remove_unmarked_objects(GEN1_HEAD);
+	double t1 = current_system_cpu_time();
+	
+	GC_OBJECT_TOTAL_COLLECT_TIME += (t1-t0);
 
 	GCOBJ_OBJECTS_SINCE_COLLECT = 0; // reset stats
 }
