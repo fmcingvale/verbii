@@ -65,6 +65,7 @@ unsigned long long XMEM_USER_BYTES_ALLOCATED = 0;
 unsigned long long XMEM_TOTAL_BYTES_ALLOCATED = 0;
 unsigned long long XMEM_USER_BYTES_FREED = 0; // only GC_OBJECT uses this
 unsigned long long XMEM_TOTAL_BYTES_FREED = 0; // only GC_OBJECT uses this
+unsigned long long XMEM_MAX_MEMORY_SIZE = 0; // only GC_OBJECT uses this
 
 void x_mem_init() {
 }
@@ -78,6 +79,8 @@ void* the_real_x_malloc(const char *filename, int line, size_t size) {
 	head->size = size;
 	XMEM_USER_BYTES_ALLOCATED += size;
 	XMEM_TOTAL_BYTES_ALLOCATED += size + sizeof(MemBlockHeader);
+	// track max memory allocated at any time
+	XMEM_MAX_MEMORY_SIZE = max(XMEM_MAX_MEMORY_SIZE, XMEM_TOTAL_BYTES_ALLOCATED - XMEM_TOTAL_BYTES_FREED);
 	return (void*)(((char*)ptr) + sizeof(MemBlockHeader));
 #else // no-GC case
 	XMEM_USER_BYTES_ALLOCATED += size;
@@ -146,6 +149,7 @@ void x_free(void *ptr) {
 void x_mem_print_stats() {
 #if defined(USE_GC_OBJECT)
 	printf("  Garbage collector: gc-object\n");
+	printf("  max memory in use:             %llu\n", XMEM_MAX_MEMORY_SIZE);
 	printf("  xmalloc user bytes allocated:  %llu\n", XMEM_USER_BYTES_ALLOCATED);
 	printf("  xmalloc user bytes freed:      %llu\n", XMEM_USER_BYTES_FREED);
 	printf("  xmalloc total bytes allocated: %llu\n", XMEM_TOTAL_BYTES_ALLOCATED);

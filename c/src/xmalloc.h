@@ -17,6 +17,7 @@ extern unsigned long long XMEM_TOTAL_BYTES_ALLOCATED;
 #if defined(USE_GC_OBJECT)
 extern unsigned long long XMEM_USER_BYTES_FREED;
 extern unsigned long long XMEM_TOTAL_BYTES_FREED;
+extern unsigned long long XMEM_MAX_MEMORY_SIZE;
 #endif // USE_GC_OBJECT
 #endif // !USE_BOEHM_GC
 
