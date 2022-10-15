@@ -410,9 +410,13 @@ void freeobj_dict(Object *dict) {
 	}
 	#endif
 	// the right way from: https://troydhanson.github.io/uthash/userguide.html
+	//printf("DELETE DICT %llx\n", (unsigned long long)dict);
+
 	ObjDictEntry *ent, *tmp;
 	HASH_ITER(hh, dict->data.objdict, ent, tmp) {
+		//printf("FREE DICT %s\n", ent->name);
 		HASH_DEL(dict->data.objdict, ent);
+		x_free((void*)ent->name); // was strdup'd
 		x_free(ent);
 	}
 }
@@ -429,8 +433,12 @@ Object *Dict_get(Object *dict, const char *key) {
 void Dict_delete(Object *dict, const char *key) {
 	ObjDictEntry *ent = NULL;
 	HASH_FIND(hh, dict->data.objdict, key, strlen(key), ent);
-	if(ent)
+	if(ent) {
 		HASH_DEL(dict->data.objdict, ent);
+		//printf("DICT FREE\n");
+		x_free((void*)ent->name);
+		x_free(ent);
+	}
 }
 
 int Dict_size(Object *dict) {

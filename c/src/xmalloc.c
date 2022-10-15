@@ -80,7 +80,7 @@ static MemBlockHeader *XMEM_TAIL = NULL;
 #endif
 void x_mem_init() {
 #if defined(USE_XMEM_TRACE)
-	printf("TRACE INIT\n");
+	//printf("TRACE INIT\n");
 	XMEM_HEAD = (MemBlockHeader*)malloc(sizeof(MemBlockHeader));
 	XMEM_HEAD->next = NULL;
 	XMEM_HEAD->prev = NULL;
