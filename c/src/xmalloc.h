@@ -27,10 +27,13 @@ void* the_real_x_malloc(const char *filename, int line, size_t size);
 void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_size);
 #define x_realloc(ptr,size) the_real_x_realloc(__FILE__,__LINE__,ptr,size)
 void x_mem_gcollect();
-char *x_strdup(const char *s);
-char *x_strndup(const char *s, size_t n);
+//char *x_strdup(const char *s);
+char *the_real_x_strndup(const char *filename, int linenr, const char *s, size_t n);
+#define x_strndup(s,n) the_real_x_strndup(__FILE__,__LINE__,s,n)
+#define x_strdup(s) the_real_x_strndup(__FILE__,__LINE__,s,strlen(s))
 void x_free(void *ptr);
 
 void x_mem_print_stats();
+void x_mem_print_trace();
 
 #endif // __xmalloc_h__

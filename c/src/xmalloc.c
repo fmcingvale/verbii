@@ -55,9 +55,17 @@ void x_mem_print_stats() {
 #if defined(USE_GC_OBJECT)
 #define MEMBLOCK_MAGIC 0xe8ab317f
 
+// TODO remove me and make configurable ...
+#define USE_XMEM_TRACE 1
+
 typedef struct _MemBlockHeader {
 	size_t size; // size of memory block, NOT counting this header
 	int magic; // MEMBLOCK_MAGIC
+	#if defined(USE_XMEM_TRACE)
+	struct _MemBlockHeader *prev, *next;
+	const char *filename;
+	int linenr;
+	#endif
 } MemBlockHeader;
 #endif // USE_GC_OBJECT
 
@@ -66,9 +74,39 @@ unsigned long long XMEM_TOTAL_BYTES_ALLOCATED = 0;
 unsigned long long XMEM_USER_BYTES_FREED = 0; // only GC_OBJECT uses this
 unsigned long long XMEM_TOTAL_BYTES_FREED = 0; // only GC_OBJECT uses this
 unsigned long long XMEM_MAX_MEMORY_SIZE = 0; // only GC_OBJECT uses this
-
+#if defined(USE_XMEM_TRACE)
+static MemBlockHeader *XMEM_HEAD = NULL;
+static MemBlockHeader *XMEM_TAIL = NULL;
+#endif
 void x_mem_init() {
+#if defined(USE_XMEM_TRACE)
+	printf("TRACE INIT\n");
+	XMEM_HEAD = (MemBlockHeader*)malloc(sizeof(MemBlockHeader));
+	XMEM_HEAD->next = NULL;
+	XMEM_HEAD->prev = NULL;
+	XMEM_TAIL = XMEM_HEAD;
+#endif
 }
+
+#if defined(USE_XMEM_TRACE)
+static void add_xmem_node(MemBlockHeader *node, const char *filename, int linenr) {
+	XMEM_TAIL->next = node;
+	node->next = NULL;
+	node->prev = XMEM_TAIL;
+	node->filename = filename;
+	node->linenr = linenr;
+	XMEM_TAIL = node;
+}
+
+static void remove_xmem_node(MemBlockHeader *node) {
+	node->prev->next = node->next;
+	if(node->next)
+		node->next->prev = node->prev;
+
+	if(node == XMEM_TAIL)
+		XMEM_TAIL = node->prev;
+}
+#endif
 
 void* the_real_x_malloc(const char *filename, int line, size_t size) {
 	//printf("alloc @ %s:%d size=%d\n", filename, line, (int)size);
@@ -81,6 +119,10 @@ void* the_real_x_malloc(const char *filename, int line, size_t size) {
 	XMEM_TOTAL_BYTES_ALLOCATED += size + sizeof(MemBlockHeader);
 	// track max memory allocated at any time
 	XMEM_MAX_MEMORY_SIZE = max(XMEM_MAX_MEMORY_SIZE, XMEM_TOTAL_BYTES_ALLOCATED - XMEM_TOTAL_BYTES_FREED);
+	#if defined(USE_XMEM_TRACE)
+	// add to linked list
+	add_xmem_node(head, filename, line);
+	#endif // USE_XMEM_TRACE
 	return (void*)(((char*)ptr) + sizeof(MemBlockHeader));
 #else // no-GC case
 	XMEM_USER_BYTES_ALLOCATED += size;
@@ -99,6 +141,10 @@ void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_s
 	if(head->magic != MEMBLOCK_MAGIC)
 		error("Bad magic number in x_realloc()");
 
+	#if defined(USE_XMEM_TRACE)
+	// remove from linked list before reallocating
+	remove_xmem_node(head);
+	#endif
 	// i don't want this to count as a full free+malloc, so instead, subtract
 	// current size then i'll add new size
 	XMEM_USER_BYTES_ALLOCATED -= head->size;
@@ -111,6 +157,9 @@ void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_s
 	head->size = new_size;
 	XMEM_USER_BYTES_ALLOCATED += new_size;
 	XMEM_TOTAL_BYTES_ALLOCATED += new_size; // as above, overhead already accounted for
+	#if defined(USE_XMEM_TRACE)
+	add_xmem_node(head, filename, line);
+	#endif // XMEM_TRACE
 	return ((char*)newptr) + sizeof(MemBlockHeader);
 #else // non-GC case
 	return realloc(ptr, new_size);
@@ -123,10 +172,10 @@ void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_s
 void x_mem_gcollect() {
 }
 
-char *x_strndup(const char *s, size_t n) {
+char *the_real_x_strndup(const char *filename, int linenr, const char *s, size_t n) {
 	n = min(strlen(s),n);
 	
-	char *buf = (char*)x_malloc(n+1);
+	char *buf = (char*)the_real_x_malloc(filename, linenr, n+1);
 	memcpy(buf, s, n);
 	buf[n] = 0;
 	return buf;
@@ -140,6 +189,9 @@ void x_free(void *ptr) {
 
 	XMEM_USER_BYTES_FREED += head->size;
 	XMEM_TOTAL_BYTES_FREED += head->size + sizeof(MemBlockHeader);
+	#if defined(USE_XMEM_TRACE)
+	remove_xmem_node(head);
+	#endif
 	free(head);
 #else // no-GC case
 	free(ptr);
@@ -160,9 +212,23 @@ void x_mem_print_stats() {
 #endif
 }
 
+void x_mem_print_trace() {
+#if defined(USE_XMEM_TRACE) && defined(USE_GC_OBJECT)
+	printf("  Memory trace:\n");
+	MemBlockHeader *node = XMEM_HEAD->next; // first node is fake
+	while(node) {
+		printf("%s @ %d, %ld bytes\n", node->filename, node->linenr, node->size);
+		node = node->next;
+	}
+#endif
+}
+
 #endif // USE_BOEHM_GC
 
+#if 0
 char *x_strdup(const char *s) {
 	return x_strndup(s, strlen(s));
 }
+#endif
+
 
