@@ -30,7 +30,7 @@ void x_mem_gcollect() {
 	GC_gcollect();
 }
 
-char *x_strndup(const char *s, size_t n) {
+char *the_real_x_strndup(const char *filename, int linenr, const char *s, size_t n) {
 	return GC_strndup(s, n);
 }
 
@@ -54,9 +54,6 @@ void x_mem_print_stats() {
 // the non-GC case to be pure vanilla malloc.
 #if defined(USE_GC_OBJECT)
 #define MEMBLOCK_MAGIC 0xe8ab317f
-
-// TODO remove me and make configurable ...
-#define USE_XMEM_TRACE 1
 
 typedef struct _MemBlockHeader {
 	size_t size; // size of memory block, NOT counting this header
