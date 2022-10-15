@@ -121,6 +121,10 @@ void init_interpreter() {
 	nr_total_calls = 0;
 }
 
+void shutdown_interpreter() {
+	x_free(OBJMEM);
+}
+
 #if defined(USE_GC_OBJECT)
 void interpreter_mark_reachable_objects() {
 	// mark objects that can be found through my root objects
@@ -439,8 +443,9 @@ void run(Object *objlist) {
 		#if defined(USE_GC_OBJECT)
 		// use a higher number for production, but I like a lower value for testing
 		// since it stress tests the GC more
+		if(GCOBJ_OBJECTS_SINCE_COLLECT > 100000) {
 		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 500000) {
-		if(GCOBJ_OBJECTS_SINCE_COLLECT > 10000000) {
+		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 10000000) {
 			printf("RUNNING COLLECTION\n");
 			gc_object_collect();
 		}

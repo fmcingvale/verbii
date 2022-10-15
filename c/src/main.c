@@ -186,8 +186,10 @@ int main(int argc, char *argv[]) {
 #endif
 #if defined(USE_GC_OBJECT)
 	shutdown_gc_object();
+	shutdown_interpreter();
 	printf("  Final bytes allocated: %llu\n", XMEM_TOTAL_BYTES_ALLOCATED);
 	printf("  Final bytes freed:     %llu\n", XMEM_TOTAL_BYTES_FREED);
 	printf("  Bytes lost:            %llu\n", XMEM_TOTAL_BYTES_ALLOCATED - XMEM_TOTAL_BYTES_FREED);
+	x_mem_print_trace();
 #endif
 }

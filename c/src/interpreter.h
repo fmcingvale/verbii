@@ -58,4 +58,6 @@ void code_return();
 // ONLY called by gc -- marks objects known by langtypes.c
 void interpreter_mark_reachable_objects();
 
+void shutdown_interpreter();
+
 #endif // __interpreter_h__
