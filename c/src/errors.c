@@ -15,7 +15,7 @@ jmp_buf ERROR_JMP_BUF;
 // TODO use a String object instead of char*
 char *ERROR_MESSAGE = NULL;
 
-void error(const char *fmt, ...) {
+_Noreturn void error(const char *fmt, ...) {
 	char temp[2];
 	va_list args;
 	va_start(args,fmt);
