@@ -39,9 +39,9 @@
 // map above types to names
 extern const char *TYPE_TO_NAME[TYPE_LAST_PLUS_1];
 // stats on # allocs of each type
-unsigned long int ALLOCS_BY_TYPE[TYPE_LAST_PLUS_1];
+extern unsigned long int ALLOCS_BY_TYPE[TYPE_LAST_PLUS_1];
 // stats on # deallocs of each type
-unsigned long int DEALLOCS_BY_TYPE[TYPE_LAST_PLUS_1];
+extern unsigned long int DEALLOCS_BY_TYPE[TYPE_LAST_PLUS_1];
 
 #include <stdint.h> // int64_t
 #include "xmalloc.h"
@@ -126,8 +126,12 @@ typedef struct _ObjArray {
 	int length, maxsize;
 } ObjArray;
 
-#define min(a,b) ((a<b) ? (a) : (b))
-#define max(a,b) ((a>b) ? (a) : (b))
+#ifndef min
+	#define min(a,b) ((a<b) ? (a) : (b))
+#endif
+#ifndef max
+	#define max(a,b) ((a>b) ? (a) : (b))
+#endif
 
 // call this before using any other functions here
 void init_langtypes();

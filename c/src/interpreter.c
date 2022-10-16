@@ -247,7 +247,7 @@ void set_codepos(int pos) {
 
 const char* reprStack() {
 	// like other functions that return temp strings, use a String object
-	Object *str;
+	Object *str = newString("",0);
 	for(int i=SP_EMPTY-1; i>=SP; --i) {
 		string_printf(str, "%s ", fmtStackPrint(OBJMEM[i]));		
 	}
@@ -257,14 +257,14 @@ const char* reprStack() {
 int heap_alloc(int nr) {
 	if((HEAP_NEXTFREE + nr) >= HEAP_END) {
 		// not enough memory, double it
-		size_t newsize = max(HEAP_END+nr, (HEAP_END+1)*2);
+		int newsize = max(HEAP_END+nr, (HEAP_END+1)*2);
 		OBJMEM = (Object**)x_realloc(OBJMEM, newsize*sizeof(Object*));
 		HEAP_END = newsize - 1;
 	}
 	int addr = HEAP_NEXTFREE;
 	HEAP_NEXTFREE += nr;
 	// init memory to nulls
-	for(int i=0; i<nr; ++i) {
+	for(VINT i=0; i<nr; ++i) {
 		OBJMEM[addr+i] = newNull();
 	}
 	return addr;
@@ -443,8 +443,10 @@ void run(Object *objlist) {
 		#if defined(USE_GC_OBJECT)
 		// use a higher number for production, but I like a lower value for testing
 		// since it stress tests the GC more
-		if(GCOBJ_OBJECTS_SINCE_COLLECT > 100000) {
+		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 100000) {
 		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 500000) {
+		if(GCOBJ_OBJECTS_SINCE_COLLECT >   500000) {
+		//if(GCOBJ_OBJECTS_SINCE_COLLECT >   5000000) {
 		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 10000000) {
 			printf("RUNNING COLLECTION\n");
 			gc_object_collect();

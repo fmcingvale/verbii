@@ -182,7 +182,7 @@ void string_append(Object *string, Object *other) {
 void string_append_cstr(Object *string, const char *other, int nrbytes) {
 	require_stringlike("string_append", string);
 	if(nrbytes<0)
-		nrbytes = strlen(other);
+		nrbytes = (int)strlen(other);
 
 	stringbuf_copy_in(string->data.buffer, other, nrbytes);
 }
@@ -216,7 +216,7 @@ void string_printf(Object *string, const char *fmt, ...) {
 Object* newString(const char *s, int len) {
 	Object *obj = new_gc_object(TYPE_STRING);
 	if(len<0)
-		len = strlen(s);
+		len = (int)strlen(s);
 
 	obj->data.buffer = new_string_buffer(len);
 	stringbuf_copy_in(obj->data.buffer, s, len);
@@ -231,7 +231,7 @@ void freeobj_string(Object *str) {
 Object* newSymbol(const char *s, int len) {
 	Object *obj = new_gc_object(TYPE_SYMBOL);
 	if(len<0)
-		len = strlen(s);
+		len = (int)strlen(s);
 
 	obj->data.buffer = new_string_buffer(len);
 	stringbuf_copy_in(obj->data.buffer, s, len);
@@ -295,7 +295,7 @@ int isNumber(Object *a) {
 
 double asNumber(Object *a) {
 	switch(a->type) {
-		case TYPE_INT: return a->data.i;
+		case TYPE_INT: return (double)a->data.i;
 		case TYPE_FLOAT: return a->data.d;
 		default: error("asNumber() expects int or float, got: %s", fmtStackPrint(a));
 	}
@@ -622,9 +622,9 @@ int testGreater(Object *a, Object *b) {
 			// its an error for elements to not be of the same types
 
 			// loop over min of lengths
-			size_t nr = min(List_length(a), List_length(b));
+			int nr = min(List_length(a), List_length(b));
 
-			for(size_t i=0; i<nr; ++i) {
+			for(int i=0; i<nr; ++i) {
 				if(testGreater(List_get(a,i), List_get(b,i))) {
 					// found first element where self>other, so entire test is TRUE
 					return TRUE;
@@ -848,5 +848,5 @@ void langtypes_print_stats() {
 	printf("    #small ints:   %12lu\n", NR_SMALL_INT_ALLOCS);
 	printf("  total objects: %lu\n", tot_objects);
 
-	printf("  size of Object: %lu\n", sizeof(Object));
+	printf("  size of Object: %d\n", (int)sizeof(Object));
 }

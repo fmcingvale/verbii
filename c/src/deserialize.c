@@ -78,10 +78,10 @@ Object *deserialize_stream(FILE *fp) {
 			case 'y': return newSymbol(line+2,-1);
 			case 'L': // list
 				{
-					int nr = parseInt(line+2)->data.i;
+					VINT nr = parseInt(line+2)->data.i;
 					Object *list = newList();
 					// read next nr objects into list
-					for(int i=0; i<nr; ++i)
+					for(VINT i=0; i<nr; ++i)
 						List_append(list, deserialize_stream(fp));
 
 					return list;

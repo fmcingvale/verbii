@@ -5,6 +5,11 @@
 	Copyright (c) 2022 Frank McIngvale, see LICENSE
 */
 
+// general assumption (here and elsewhere) regarding VINT:
+//	* when numeric results are expected, VINTs are preserved
+//	* when a VINT is used as a memory index, it is assumed an int (32-bit) is sufficient
+//	  so VINTs are often cast to int to avoid compiler warnings.
+
 #include "native.h"
 #include "langtypes.h"
 #include "errors.h"
@@ -59,7 +64,7 @@ char* file_read(const char* filename, int *nrbytes) {
 	buf = (char*)x_malloc((*nrbytes)*sizeof(char));
 	
 	FILE *fp = fopen(filename, "rb");
-	int r = fread(buf, sizeof(char), *nrbytes, fp);
+	int r = (int)fread(buf, sizeof(char), *nrbytes, fp);
 	if(r != *nrbytes)
 		error("Bad number of bytes read from %s", filename);
 	
@@ -207,7 +212,7 @@ static void builtin_set() {
 	Object *addr = pop();
 	Object *obj = pop();
 	if(isInt(addr))
-		heap_set(addr->data.i, obj);		
+		heap_set((int)addr->data.i, obj);		
 	else
 		error("NOT IMPLEMENTED IN set!");
 }
@@ -216,13 +221,13 @@ static void builtin_set() {
 static void builtin_ref() {
 	Object *addr = pop();
 	if(isInt(addr))		
-		push(heap_get(addr->data.i));
+		push(heap_get((int)addr->data.i));
 	else
 		error("ref expects int, got: %s", fmtStackPrint(addr));
 }
 
 static void builtin_getsp() { pushInt(get_SP()); }
-static void builtin_setsp() { set_SP(popInt("SP!")); }
+static void builtin_setsp() { set_SP((int)popInt("SP!")); }
 
 static void builtin_error() {
 	// messages containing NULLs won't work here
@@ -248,7 +253,7 @@ static void builtin_file_read() {
 // ( sn .. s1 N -- list of N items; N can be zero for an empty list )
 static void builtin_make_list() {
 	Object *list = newList();
-	int nr = popInt("make-list");
+	int nr = (int)popInt("make-list");
 	// instead of adding an insert-type operation which would have to
 	// move items on every iteration, pre-fill array then I can put() in 
 	// the correct (opposite of stack) order
@@ -271,7 +276,7 @@ static int object_length(Object *obj) {
 		error("Object does not support length: %s", fmtStackPrint(obj));
 }
 
-Object* slice_object(Object *obj, VINT index, VINT nr) {
+Object* slice_object(Object *obj, int index, int nr) {
 	int objsize = object_length(obj);
 	
 	// adjust index & nr for negative & out of bounds conditions
@@ -311,8 +316,8 @@ Object* slice_object(Object *obj, VINT index, VINT nr) {
 }
 
 static void builtin_slice() {
-	int nr = popInt("slice");
-	int index = popInt("slice");
+	int nr = (int)popInt("slice");
+	int index = (int)popInt("slice");
 	Object *obj = pop();
 	push(slice_object(obj, index, nr));
 }
@@ -333,7 +338,7 @@ static void builtin_get() {
 	if(isString(obj) || isSymbol(obj) || isList(obj)) {
 		if(!isInt(indexOrKey))
 			error("get expects integer index, got: %s", fmtStackPrint(indexOrKey));
-		int index = indexOrKey->data.i;
+		int index = (int)indexOrKey->data.i;
 		if(index < 0) 
 			index += object_length(obj); // allow negative indexes to count from end
 		if(index < 0 || index >= object_length(obj)) {
@@ -368,7 +373,7 @@ static void builtin_put() {
 	if(isList(dest)) {
 		if(!isInt(indexOrKey))
 			error("put expects integer index, got: %s", fmtStackPrint(indexOrKey));
-		int index = indexOrKey->data.i;
+		int index = (int)indexOrKey->data.i;
 		if(index < 0) index += object_length(dest); // negative indexes count from end
 		if(index < 0 || index >= object_length(dest))
 			error("index out of range in put");
@@ -439,7 +444,7 @@ static int popBool() {
 	if(!isBool(o))
 		error("Expecting bool but got: %s", fmtStackPrint(o));
 
-	return o->data.i;
+	return (int)o->data.i;
 }
 
 // 'unmake' works such that an immediate 'make-type' would give the 
@@ -638,7 +643,7 @@ static void builtin_prompt() {
 		p = strchr(buf, '\r');
 		if(p) *p = 0;
 	
-		push(newString(buf, strlen(buf)));
+		push(newString(buf, (int)strlen(buf)));
 	}
 }	
 
@@ -649,7 +654,7 @@ static void builtin_time_string() {
 	time_t now;
 	time(&now);
 	strftime(buf,sizeof(buf)-1,"%Y-%m-%d %H:%M:%S",localtime(&now));
-	push(newString(buf,strlen(buf)));
+	push(newString(buf,(int)strlen(buf)));
 }
 
 // ( filename string -- )
@@ -685,7 +690,7 @@ static void builtin_keys() {
 	Object *obj = popDict("keys");
 	Object *keys = newList();
 	for(ObjDictEntry *ent = obj->data.objdict; ent !=  NULL; ent = ent->hh.next)
-		List_append(keys, newString(ent->name, strlen(ent->name)));
+		List_append(keys, newString(ent->name, (int)strlen(ent->name)));
 	
 	push(keys);
 }
@@ -694,9 +699,9 @@ static void builtin_keys() {
 
 // opcode-name A B C make-opcode
 static void builtin_make_opcode() {
-	int C = popInt("make-opcode");
-	int B = popInt("make-opcode");
-	int A = popInt("make-opcode");
+	int C = (int)popInt("make-opcode");
+	int B = (int)popInt("make-opcode");
+	int A = (int)popInt("make-opcode");
 	const char *name = popStringOrSymbol();
 
 	// range checks
@@ -738,7 +743,7 @@ static void builtin_file_pathsep() {
 }
 
 static void builtin_f_setprec() {
-	FLOAT_PRECISION = popInt("f.setprec");
+	FLOAT_PRECISION = (int)popInt("f.setprec");
 }	
 
 #ifdef _MSC_VER
@@ -756,7 +761,7 @@ static void builtin_os_getcwd() {
 		error("Error in getcwd()");
 
 	// assumes path cannot contain NULLs
-	Object *s = newString(buf,strlen(buf));
+	Object *s = newString(buf,(int)strlen(buf));
 	free(buf);
 	push(s);
 }
@@ -782,7 +787,6 @@ static void builtin_fnv_1a_32() {
 	// string is allowed to contain NULLs, so I need the string object NOT the char*
 	Object *text = popStringObj("fnv-1a-32");
 	uint32_t hash = 2166136261; // offset basis
-	size_t i;
 
 	for(int i=0; i<string_length(text); ++i) {
 		hash ^= (uint32_t)((unsigned char)(string_cstr(text)[i]));
@@ -955,7 +959,7 @@ static void builtin_sys_platform() {
 #if defined( __GNUC__)
 	string_printf(s, "gcc %d.%d.%d", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #elif defined(_MSC_VER)
-	string_printf("msvc %s", _MSC_FULL_VER);
+	string_printf(s, "msvc %s", _MSC_FULL_VER);
 #endif
 	push(newString(string_cstr(s), string_length(s)));
 }
@@ -985,11 +989,7 @@ static void builtin_puts() {
 	else
 		printf("%s", popString("puts"));
 }
-		
-static void builtin_fsetprec() {
-	FLOAT_PRECISION = popInt( "Bad arg to f.setprec");
-}
-
+	
 typedef struct _BUILTIN_FUNC {
 	const char *name;
 	void (*fn)();
