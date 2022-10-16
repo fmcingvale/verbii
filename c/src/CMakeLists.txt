@@ -5,11 +5,12 @@ project(verbii)
 
 include(CheckSymbolExists)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 
 # specify the C++ standard
-#set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED True)
+
 
 find_library(GC_LIBRARY
 			NAMES gc gc.lib gc64_dll gc64_dll.lib
@@ -33,18 +34,19 @@ find_library(MATH_LIBRARY
 # look for strncmp (missing under mingw for some reason)
 check_symbol_exists(strndup "string.h" HAVE_STRNDUP)
 
-include_directories(${GC_INCLUDES})
-	
 add_executable(main main.c langtypes.c interpreter.c deserialize.c errors.c native.c opcodes.c util.c gc_object.c xmalloc.c)
 
-target_link_libraries(main ${MATH_LIBRARY})
+if(MATH_LIBRARY)
+	target_link_libraries(main ${MATH_LIBRARY})
+endif()
 
-# decide which garbage collector to use
+# decide which garbage collector to use	
 if(USE_GC_OBJECT)
 	# use custom garbage collector
 	add_definitions(-DUSE_GC_OBJECT)
 	message("** Using GC-OBJECT")
 elseif(GC_LIBRARY AND GC_INCLUDES AND (NOT USE_NO_GC))
+	include_directories(${GC_INCLUDES})
 	add_definitions(-DUSE_BOEHM_GC)
 	message("** Using BOEHM-GC")
 	target_link_libraries(main ${GC_LIBRARY})	
