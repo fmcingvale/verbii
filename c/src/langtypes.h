@@ -83,8 +83,8 @@ typedef struct _Object {
 
 	#if defined(USE_GC_OBJECT)
 	// for garbage collector
-	uint8_t gc_mark;
-	uint8_t gc_count;
+	uint8_t gc_mark:1;
+	uint8_t gc_count:7;
 	struct _Object *gc_next;
 	#endif
 } Object;

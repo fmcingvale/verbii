@@ -12,16 +12,28 @@
 #if defined(USE_GC_OBJECT)
 
 double GC_OBJECT_TOTAL_COLLECT_TIME = 0;
+uint64_t GC_OBJECT_TOTAL_COLLECTIONS = 0;
 
+// newly allocated objects go into GEN1 and then are moved into later
+// generations the longer they remain referenced
 static Object *GEN1_HEAD = NULL;
-static Object *GEN1_TAIL = NULL;
+
+static Object *GEN2_HEAD = NULL;
 
 unsigned long long GCOBJ_OBJECTS_SINCE_COLLECT = 0;
 
 void init_gc_object() {
 	// HEAD objects are always dummy nodes to simplify rest of code
-	GEN1_HEAD = (Object*)x_malloc(sizeof(Object));
-	GEN1_TAIL = GEN1_HEAD;
+	GEN1_HEAD = (Object*)x_malloc(sizeof(Object));	
+	GEN2_HEAD = (Object*)x_malloc(sizeof(Object));
+}
+
+// head must be a fake head node (GEN*_HEAD)
+static void gc_insert_object(Object *head, Object *obj) {
+	// insert at head -- ordering doesn't matter and this is much easier than
+	// having to keep track of the list tail
+	obj->gc_next = head->gc_next;
+	head->gc_next = obj;
 }
 
 static unsigned long long count_nodelist_length(Object *head) {
@@ -105,25 +117,14 @@ static unsigned long long count_marks(Object *head, uint8_t val) {
 	return count;
 }
 
-static void gc_mark_all_live_objects() {
-	//printf("** MARKING LIVE OBJECTS:\n");
-	set_all_marks(GEN1_HEAD, 0);
-	//printf("EXPECT ZERO: %llu\n", count_marks(GEN1_HEAD,1));
-
-	langtypes_mark_reachable_objects();
-	interpreter_mark_reachable_objects();
-	for(Object *node = GEN1_HEAD->gc_next; node; node = node->gc_next)
-		mark_reachable_from(node);
-
-	//printf("LIVE OBJECTS: %llu\n", count_marks(GEN1_HEAD,1));
-}
-	
-static void remove_unmarked_objects(Object *head) {
+// can pass promote_tail=NULL to skip promotions
+static void sweep_objects(Object *head, uint8_t promote_count, Object *promote_head) {
+	// since there is only a .gc_next, always operate on head->gc_next
 	while(head->gc_next) {
 		if(head->gc_next->gc_mark == 0) {
+			// unreachable object, remove
 			Object *obj = head->gc_next;
 			head->gc_next = head->gc_next->gc_next;
-			#if 1
 			// free extra data associated with obj
 			switch(obj->type) {
 				case TYPE_STRING: freeobj_string(obj); break;
@@ -135,12 +136,20 @@ static void remove_unmarked_objects(Object *head) {
 				case TYPE_BOUND_LAMBDA: freeobj_lambda(obj); break;
 				case TYPE_CALLFRAMEDATA: freeobj_callframedata(obj); break;
 			}
-			#endif
 			// ... and then free obj
 			//printf("FREEING OBJECT: %s\n", fmtStackPrint(obj));
 			++DEALLOCS_BY_TYPE[obj->type];
 			x_free(obj);
 			
+		}
+		else if(head->gc_count >= promote_count && promote_head != NULL) {
+			// remove from current list
+			Object *obj = head->gc_next;
+			head->gc_next = head->gc_next->gc_next;
+			// add to new list
+			gc_insert_object(promote_head, obj);
+			// reset count
+			obj->gc_count = 0;
 		}
 		else 
 			head = head->gc_next;
@@ -149,13 +158,31 @@ static void remove_unmarked_objects(Object *head) {
 
 void gc_object_collect() {
 	double t0 = current_system_cpu_time();
-	gc_mark_all_live_objects();
-	remove_unmarked_objects(GEN1_HEAD);
+	// clear marks on objects that I want to test for being reachable
+	set_all_marks(GEN1_HEAD, 0);
+	set_all_marks(GEN2_HEAD, 0);
+	// now mark the live objects
+
+	// some objects are only reachable from langtypes/interpreter internal references
+	langtypes_mark_reachable_objects();
+	interpreter_mark_reachable_objects();
+	
+	// mark objects reachable from other GEN1 objects
+	for(Object *node = GEN1_HEAD->gc_next; node; node = node->gc_next)
+		mark_reachable_from(node);
+
+	for(Object *node = GEN2_HEAD->gc_next; node; node = node->gc_next)
+		mark_reachable_from(node);
+
+	// promote older objects and remove unreachable objects
+	sweep_objects(GEN1_HEAD, 2, GEN2_HEAD);
+	sweep_objects(GEN2_HEAD, 0, NULL);
 	double t1 = current_system_cpu_time();
 	
 	GC_OBJECT_TOTAL_COLLECT_TIME += (t1-t0);
 
 	GCOBJ_OBJECTS_SINCE_COLLECT = 0; // reset stats
+	++GC_OBJECT_TOTAL_COLLECTIONS;
 }
 
 static void gc_print_object_list(Object *head) {
@@ -168,34 +195,39 @@ static void gc_print_object_list(Object *head) {
 void print_all_gc_objects() {
 	printf("GEN1 objects:\n");
 	gc_print_object_list(GEN1_HEAD);
+	printf("GEN2 objects:\n");
+	gc_print_object_list(GEN2_HEAD);
 }
 
 void print_gc_object_stats() {
+	printf("  number of collections: %lu\n", GC_OBJECT_TOTAL_COLLECTIONS);
 	printf("  total collection time:   %lf\n", GC_OBJECT_TOTAL_COLLECT_TIME);
 	printf("  GEN1 objects: %llu\n", count_nodelist_length(GEN1_HEAD));
+	printf("  GEN2 objects: %llu\n", count_nodelist_length(GEN2_HEAD));
 }
 
 void shutdown_gc_object() {
-	printf("Shutting down gc-object: %llu\n", count_nodelist_length(GEN1_HEAD));
+	printf("Shutting down gc-object: %llu %llu\n", count_nodelist_length(GEN1_HEAD), count_nodelist_length(GEN2_HEAD));
 	// mark all objects as non-reachable
 	set_all_marks(GEN1_HEAD, 0);
+	set_all_marks(GEN2_HEAD, 0);
 	// .. and collect them
-	remove_unmarked_objects(GEN1_HEAD);
-	printf("After 1 collection: %llu\n", count_nodelist_length(GEN1_HEAD));
+	sweep_objects(GEN1_HEAD, 0, NULL);
+	sweep_objects(GEN2_HEAD, 0, NULL);
+	printf("After 1 collection: %llu %llu\n", count_nodelist_length(GEN1_HEAD), count_nodelist_length(GEN2_HEAD));
 
 	// remove head
 	x_free(GEN1_HEAD);
+	x_free(GEN2_HEAD);
 }
 
 Object *new_gc_object(unsigned char type) {
 	++ALLOCS_BY_TYPE[type]; // stats
 	Object *obj = (Object*)x_malloc(sizeof(Object));
 	obj->type = type;
-	obj->gc_next = NULL;
-	// add into GEN1
-	GEN1_TAIL->gc_next = obj;
-	GEN1_TAIL = GEN1_TAIL->gc_next;
-
+	// new objects start in GEN1
+	gc_insert_object(GEN1_HEAD, obj);
+	
 	++GCOBJ_OBJECTS_SINCE_COLLECT;
 
 	return obj;

@@ -11,6 +11,7 @@
 #if defined(USE_GC_OBJECT)
 extern unsigned long long GCOBJ_OBJECTS_SINCE_COLLECT;
 extern double GC_OBJECT_TOTAL_COLLECT_TIME;
+extern uint64_t GC_OBJECT_TOTAL_COLLECTIONS;
 #endif
 
 void init_gc_object();
