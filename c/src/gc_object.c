@@ -24,7 +24,8 @@ unsigned long long GCOBJ_OBJECTS_SINCE_COLLECT = 0;
 
 void init_gc_object() {
 	// HEAD objects are always dummy nodes to simplify rest of code
-	GEN1_HEAD = (Object*)x_malloc(sizeof(Object));	
+	GEN1_HEAD = (Object*)x_malloc(sizeof(Object));
+	GEN1_HEAD->gc_next = NULL;
 	GEN2_HEAD = (Object*)x_malloc(sizeof(Object));
 }
 
@@ -170,13 +171,13 @@ void gc_object_collect() {
 	// mark objects reachable from other GEN1 objects
 	for(Object *node = GEN1_HEAD->gc_next; node; node = node->gc_next)
 		mark_reachable_from(node);
-
-	for(Object *node = GEN2_HEAD->gc_next; node; node = node->gc_next)
+	
+		for(Object *node = GEN2_HEAD->gc_next; node; node = node->gc_next)
 		mark_reachable_from(node);
-
+	
 	// promote older objects and remove unreachable objects
 	sweep_objects(GEN1_HEAD, 2, GEN2_HEAD);
-	sweep_objects(GEN2_HEAD, 0, NULL);
+		sweep_objects(GEN2_HEAD, 0, NULL);
 	double t1 = current_system_cpu_time();
 	
 	GC_OBJECT_TOTAL_COLLECT_TIME += (t1-t0);
