@@ -44,6 +44,9 @@ endif()
 if(USE_GC_OBJECT)
 	# use custom garbage collector
 	add_definitions(-DUSE_GC_OBJECT)
+	if(USE_XMEM_TRACE) # GC_OBJECT is a prerequisite for this
+		add_definitions(-DUSE_XMEM_TRACE)
+	endif()
 	message("** Using GC-OBJECT")
 elseif(GC_LIBRARY AND GC_INCLUDES AND (NOT USE_NO_GC))
 	include_directories(${GC_INCLUDES})
