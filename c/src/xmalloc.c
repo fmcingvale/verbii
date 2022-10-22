@@ -71,6 +71,8 @@ unsigned long long XMEM_TOTAL_BYTES_ALLOCATED = 0;
 unsigned long long XMEM_USER_BYTES_FREED = 0; // only GC_OBJECT uses this
 unsigned long long XMEM_TOTAL_BYTES_FREED = 0; // only GC_OBJECT uses this
 unsigned long long XMEM_MAX_MEMORY_SIZE = 0; // only GC_OBJECT uses this
+unsigned long long XMEM_BYTES_SINCE_GC = 0; // only GC_OBJECT uses this
+
 #if defined(USE_XMEM_TRACE)
 static MemBlockHeader *XMEM_HEAD = NULL;
 static MemBlockHeader *XMEM_TAIL = NULL;
@@ -114,6 +116,7 @@ void* the_real_x_malloc(const char *filename, int line, size_t size) {
 	head->size = size;
 	XMEM_USER_BYTES_ALLOCATED += size;
 	XMEM_TOTAL_BYTES_ALLOCATED += size + sizeof(MemBlockHeader);
+	XMEM_BYTES_SINCE_GC += size;
 	// track max memory allocated at any time
 	XMEM_MAX_MEMORY_SIZE = max(XMEM_MAX_MEMORY_SIZE, XMEM_TOTAL_BYTES_ALLOCATED - XMEM_TOTAL_BYTES_FREED);
 	#if defined(USE_XMEM_TRACE)
@@ -146,6 +149,7 @@ void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_s
 	// current size then i'll add new size
 	XMEM_USER_BYTES_ALLOCATED -= head->size;
 	XMEM_TOTAL_BYTES_ALLOCATED -= head->size; // the overhead is constant so just change the size portion
+	XMEM_BYTES_SINCE_GC -= head->size; // not sure if subtracting is the best thing for this stat; maybe I should only add?
 	void *newptr = realloc((void*)head, new_size + sizeof(MemBlockHeader));
 	if(!newptr)
 		error("Out of memory in realloc()");
@@ -154,6 +158,7 @@ void* the_real_x_realloc(const char *filename, int line, void *ptr, size_t new_s
 	head->size = new_size;
 	XMEM_USER_BYTES_ALLOCATED += new_size;
 	XMEM_TOTAL_BYTES_ALLOCATED += new_size; // as above, overhead already accounted for
+	XMEM_BYTES_SINCE_GC += new_size;
 	#if defined(USE_XMEM_TRACE)
 	add_xmem_node(head, filename, line);
 	#endif // XMEM_TRACE

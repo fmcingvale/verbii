@@ -164,6 +164,7 @@ void gc_object_collect() {
 	GC_OBJECT_TOTAL_COLLECT_TIME += (t1-t0);
 
 	GCOBJ_OBJECTS_SINCE_COLLECT = 0; // reset stats
+	XMEM_BYTES_SINCE_GC = 0;
 	++GC_OBJECT_TOTAL_COLLECTIONS;
 }
 
