@@ -66,7 +66,6 @@ struct _StringBuffer;
 typedef void (*VoidFunctionPtr)();
 
 typedef struct _Object {
-	unsigned char type;
 	union {
 		VINT i; // ints, bools (TRUE|FALSE)
 		struct _ObjArray *array; // for lists
@@ -82,10 +81,12 @@ typedef struct _Object {
 	} data;
 
 	#if defined(USE_GC_OBJECT)
+	uint8_t type:7;
 	// for garbage collector
 	uint8_t gc_mark:1;
-	uint8_t gc_count:7;
 	struct _Object *gc_next;
+	#else
+	unsigned char type;
 	#endif
 } Object;
 

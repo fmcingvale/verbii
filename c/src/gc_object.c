@@ -90,10 +90,8 @@ static void mark_reachable_from(Object *obj) {
 void gc_mark_object_no_subobjects(Object *obj) {
 	if(obj->gc_mark)
 		// already marked on this cycle, return immediately to avoid loops
-		// and also don't want to increase gc_count more than once per cycle
 		return; 
 	obj->gc_mark = 1;
-	obj->gc_count += 1;
 }
 
 void gc_mark_object(Object *obj) {
@@ -101,7 +99,6 @@ void gc_mark_object(Object *obj) {
 		// same notes as above
 		return; 
 	obj->gc_mark = 1;
-	obj->gc_count += 1;
 	mark_reachable_from(obj);
 }
 
@@ -138,16 +135,17 @@ static void sweep_objects(Object *head) {
 			x_free(obj);
 			
 		}
-		else 
+		else {
+			// clear marks as I go so I don't need a separate clear step later
+			head->gc_next->gc_mark = 0;
 			head = head->gc_next;
+		}
 	}
 }
 
 void gc_object_collect() {
 	double t0 = current_system_cpu_time();
-	// clear marks on objects that I want to test for being reachable
-	set_all_marks(GC_OBJECT_HEAD, 0);
-	// now mark the live objects
+	// mark the live objects (marks are already cleared)
 
 	// some objects are only reachable from langtypes/interpreter internal references
 	langtypes_mark_reachable_objects();
@@ -170,7 +168,7 @@ void gc_object_collect() {
 
 static void gc_print_object_list(Object *head) {
 	for(Object *node=head->gc_next; node; node = node->gc_next) {
-		printf("  %1d %4d %s\n", node->gc_mark, node->gc_count, fmtStackPrint(node));
+		printf("  %1d %4d %s\n", node->gc_mark, fmtStackPrint(node));
 		head = head->gc_next;
 	}
 }
@@ -202,6 +200,7 @@ Object *new_gc_object(unsigned char type) {
 	++ALLOCS_BY_TYPE[type]; // stats
 	Object *obj = (Object*)x_malloc(sizeof(Object));
 	obj->type = type;
+	obj->gc_mark = 0;
 	// insert to GC list
 	gc_insert_object(GC_OBJECT_HEAD, obj);
 	
