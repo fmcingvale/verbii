@@ -204,6 +204,10 @@ void string_append(Object *string, Object *other);
 // ... or to append a C string; pass nr=-1 to use strlen(other)
 void string_append_cstr(Object *string, const char *other, int nr);
 
+// **NOTE** it is critical to only use this API since it cooperates with GC-OBJECT
+// * for dictionaries, it is OK to access .objdict directly for READ-ONLY iteration,
+//   but otherwise, only use these functions.
+
 Object* newLambda(Object *list); // starts unbound
 // pass the LIST not another lambda
 // if framedata != NULL, sets .bound to TRUE
