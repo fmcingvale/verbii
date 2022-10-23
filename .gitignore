@@ -83,3 +83,5 @@ c/gmon.out
 c/src/gmon.out
 c/src/test-gc-object
 verb/gmon.out
+c/libgc/
+c/gc64.dll
