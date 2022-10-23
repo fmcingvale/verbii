@@ -35,14 +35,12 @@ void init_langtypes() {
 	THE_TRUE->data.i = TRUE;
 	THE_FALSE = new_gc_object(TYPE_BOOL);
 	THE_FALSE->data.i = FALSE;
-}
 
-void langtypes_mark_reachable_objects() {
-	// mark my objects that otherwise would not be found by gc
-	gc_mark_object(THE_NULL);
-	gc_mark_object(THE_VOID);
-	gc_mark_object(THE_TRUE);
-	gc_mark_object(THE_FALSE);	
+	// mark my objects as non-collectable (would otherwise would not be found by gc)
+	gc_mark_object_keep_non_recursive(THE_NULL);
+	gc_mark_object_keep_non_recursive(THE_VOID);
+	gc_mark_object_keep_non_recursive(THE_TRUE);
+	gc_mark_object_keep_non_recursive(THE_FALSE);	
 }
 
 int isNull(Object *obj) { return (obj->type == TYPE_NULL) ? TRUE : FALSE; }

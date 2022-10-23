@@ -81,9 +81,9 @@ typedef struct _Object {
 	} data;
 
 	#if defined(USE_GC_OBJECT)
-	uint8_t type:7;
+	uint8_t type:6;
 	// for garbage collector
-	uint8_t gc_mark:1;
+	uint8_t gc_marks:2;
 	struct _Object *gc_next;
 	#else
 	unsigned char type;
@@ -256,9 +256,6 @@ const char* fmtStackPrint(Object *obj);
 void langtypes_print_stats();
 
 #if defined(USE_GC_OBJECT)
-// ONLY to be called by gc -- marks objects known by langtypes.c 
-void langtypes_mark_reachable_objects();
-
 // ONLY to be called by gc -- frees extra memory associate with object (NOT object itself)
 void freeobj_string(Object *str);
 void freeobj_symbol(Object *str);

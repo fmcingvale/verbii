@@ -107,8 +107,12 @@ void init_interpreter() {
 	OBJMEM = (Object**)x_malloc((HEAP_END+1) * sizeof(Object*));
 
 	// init callstack
-	for(int i=0; i<MAX_CALLSTACK_DEPTH; ++i)
+	for(int i=0; i<MAX_CALLSTACK_DEPTH; ++i) {
 		callstack[i].framedata = new_CallFrameData();
+		// mark as non-collectible so I don't have to mark on every gc pass
+		// -- will remove mark when frames as bound (see below)
+		gc_mark_object_keep_non_recursive(callstack[i].framedata);
+	}
 
 	callstack_cur = -1;
 	code = NULL;
@@ -132,34 +136,30 @@ void interpreter_mark_reachable_objects() {
 	// mark objects found in the stack
 	if(OBJMEM) { // don't crash if not initted
 		for(int i=SP; i<SP_EMPTY; ++i)
-			gc_mark_object(OBJMEM[i]);
+			gc_mark_reachable(OBJMEM[i]);
 
 		// mark all objects found in heap
 		for(int i=HEAP_START; i<HEAP_NEXTFREE; ++i)
-			gc_mark_object(OBJMEM[i]);
+			gc_mark_reachable(OBJMEM[i]);
 	}
 
 	// mark WORDS dict (which will then mark all code objects)
 	if(WORDS)
-		gc_mark_object(WORDS);
+		gc_mark_reachable(WORDS);
 
 	// mark BUILTINS dict
 	if(BUILTINS)
-		gc_mark_object(BUILTINS);
+		gc_mark_reachable(BUILTINS);
 
 	// mark objects in all active callframes
 	for(int i=callstack_cur; i >= 0; --i) {
-		gc_mark_object(callstack[i].code);
-		gc_mark_object(callstack[i].framedata);		
+		gc_mark_reachable(callstack[i].code);
+		// the .framedata itself is already marked non-collectable, but active frames
+		// must be scanned for referenced objects
+		gc_mark_reachable(callstack[i].framedata);		
 	}
 
-	// for INACTIVE call frames, need to mark the CallFrame object
-	// to keep it alive (do NOT mark subobjects -- frame is inactive
-	// so any objects in those slots can be freely deleted)
-	if(OBJMEM) { // test to see if interpreter initted
-		for(int i=callstack_cur+1; i < MAX_CALLSTACK_DEPTH; ++i)
-			gc_mark_object_no_subobjects(callstack[i].framedata);
-	}
+	// the INACTIVE call frames do not need to be marked since they are non-collectable
 }
 #endif
 
@@ -402,7 +402,13 @@ void code_return() {
 	if(callframe_isBound(callstack[callstack_cur].framedata)) {
 		// framedata has been bound to one or more lambdas, so it cannot be 
 		// freed. replace it in the stack with a new frame.
+
+		// remove non-collectable bit on frame I'm about to release -- it will be
+		// kept alive by the frame that references it now
+		gc_clear_object_keep_non_recursive(callstack[callstack_cur].framedata);
 		callstack[callstack_cur].framedata = new_CallFrameData();
+		// mark replacement frame as non-collectable
+		gc_mark_object_keep_non_recursive(callstack[callstack_cur].framedata);
 		// stats
 		++nr_saved_frames;
 	}

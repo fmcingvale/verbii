@@ -23,7 +23,11 @@ void gc_object_collect();
 
 // mark object AND all objects reachable from object
 // ** DO NOT CALL unless called by gc to mark objects **
-void gc_mark_object(Object *obj);
+void gc_mark_reachable(Object *obj);
+
+// mark/unmark object as non-collectable (NON recursive)
+void gc_mark_object_keep_non_recursive(Object *obj);
+void gc_clear_object_keep_non_recursive(Object *obj);
 
 // special case - mark obj but DO NOT mark any contained objects
 void gc_mark_object_no_subobjects(Object *obj);
