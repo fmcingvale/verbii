@@ -41,14 +41,22 @@ if(MATH_LIBRARY)
 endif()
 
 # decide which garbage collector to use	
-if(USE_GC_OBJECT)
+#
+# USE_NO_GC turns off GC completely
+if(USE_NO_GC)
+	# no garbage collection, sometimes useful for debugging
+	message("** Building without garbage collection")
+# if Boehm GC not found, then use GC-OBJECT
+# USE_GC_OBJECT can also be specified to for its use even if Boehm GC is found
+elseif(USE_GC_OBJECT OR ((NOT GC_LIBRARY) OR (NOT GC_INCLUDES)))
 	# use custom garbage collector
 	add_definitions(-DUSE_GC_OBJECT)
 	if(USE_XMEM_TRACE) # GC_OBJECT is a prerequisite for this
 		add_definitions(-DUSE_XMEM_TRACE)
 	endif()
 	message("** Using GC-OBJECT")
-elseif(GC_LIBRARY AND GC_INCLUDES AND (NOT USE_NO_GC))
+# no overriding flag found, so use Boehm GC if found
+elseif(GC_LIBRARY AND GC_INCLUDES)
 	include_directories(${GC_INCLUDES})
 	add_definitions(-DUSE_BOEHM_GC)
 	message("** Using BOEHM-GC")
@@ -56,7 +64,8 @@ elseif(GC_LIBRARY AND GC_INCLUDES AND (NOT USE_NO_GC))
 	message("** GC_INCLUDES ${GC_INCLUDES}")
 	message("** GC_LIBRARY ${GC_LIBRARY}")
 else()
-	message("** Building without garbage collection")
+	# shouldn't be reachable, but ...
+	message("** Building without garbage collection [2]")
 endif()
 
 if(GCCPP_LIBRARY)
@@ -71,7 +80,4 @@ add_custom_command(
   ARGS -E copy $<TARGET_FILE:main> ${PROJECT_BINARY_DIR}/..
   )
 
-#message("Hello CMake!")
-#message("Platform: ${CMAKE_CXX_PLATFORM_ID}")
-#message("Version: ${CMAKE_CXX_COMPILER_VERSION}")
   

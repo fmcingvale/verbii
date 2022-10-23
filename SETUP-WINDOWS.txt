@@ -25,7 +25,15 @@ C#:
 	* cd verb
 	* ..\csharp\verbii.bat run-all-tests.verb
 	
-C++:
+C/C++:
+	** NOTE **
+		The C port can be built WITHOUT doing any of the following. However, for best
+		performance, it is recommended that you build the Boehm GC as described below.
+
+	** NOTE ** 
+		The procedure is the same for C or C++, but the following assumes the C++ path.
+	   	To build for C just change 'cpp' to 'c' in pathnames below.
+
 	* Install Visual Studio (tested with 2022 Community Edition / 17.3)
 		* Include components:
 			- MSVC vNNN ...
@@ -34,13 +42,13 @@ C++:
 			- C++ CMake tools
 			
 	* Get libgc source from: https://github.com/ivmai/bdwgc/releases
-		* Latest tested version = 8.0.6
+		* Latest tested version = 8.0.8
 		
 	* Unpack libgc sources under verbii/cpp/, which will give you e.g. verbii/cpp/gc-8.0.6
 	  Rename folder to libgc, so that it is now verbii/cpp/libgc
 	
 	* Get libatomic_ops from: https://github.com/ivmai/libatomic_ops/releases/
-		* Latest test version = 7.6.12
+		* Latest test version = 7.6.14
 		
 	* Unpack libatomic_ops under verbii/cpp/libgc which will give you e.g. verbii/cpp/libgc/libatomic_ops-7.6.12
 	  Rename folder to: verbii/cpp/libgc/libatomic_ops
@@ -65,8 +73,5 @@ C++:
 		$ cd ..\verb
 		$ ..\cpp\verbii.bat run-all-tests.verb
 		
-
-	** NOTE ** For some reason, the build uses Debug mode even through the setup script 
-	specifies Release.
 	
 	
