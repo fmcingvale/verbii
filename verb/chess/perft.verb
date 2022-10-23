@@ -33,7 +33,7 @@
 	@locals [ subleaves submoves t0 t1 ]
 	0 nrmoves!
 	0 nrleaves!
-	run-time t0!
+	cpu-time t0!
 	SIDE-TO-MOVE gen-full-moves 
 	{ ( move )
 		move print-move-long ":" .
@@ -46,7 +46,7 @@
 		move unmake-move
 	} for-each
 	
-	run-time t1!
+	cpu-time t1!
 	nrleaves . "leaf nodes (" .. nrmoves . "moves)" . 
 	nrmoves t1 t0 - / floor . "moves/second" . CR
 	;
