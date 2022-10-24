@@ -147,10 +147,6 @@ void interpreter_mark_reachable_objects() {
 	if(WORDS)
 		gc_mark_reachable(WORDS);
 
-	// mark BUILTINS dict
-	if(BUILTINS)
-		gc_mark_reachable(BUILTINS);
-
 	// mark objects in all active callframes
 	for(int i=callstack_cur; i >= 0; --i) {
 		gc_mark_reachable(callstack[i].code);
@@ -166,10 +162,7 @@ void interpreter_mark_reachable_objects() {
 void print_stats() {
 	printf("\n==== Runtime Stats ====\n");
 	printf("* General:\n");
-	if(BUILTINS != NULL)
-		printf("  Builtin words: %d\n", Dict_size(BUILTINS));
-	else
-		printf("  Builtin words: 0\n");
+	printf("  Builtin words: %d\n", get_number_of_builtins());
 	printf("  User-defined words: %d\n", List_length(getWordlist()));
 	printf("  Max stack depth: %d\n", (SP_EMPTY - min_run_SP));
 	printf("  Max callstack depth: %d\n", max_callstack);
@@ -539,9 +532,12 @@ void run(Object *objlist) {
 			// builtins, then userwords
 			if(isSymbol(obj)) {
 				// **NOTE** strings containing NULLs won't work here
-				Object *bltin = Dict_get(BUILTINS, string_cstr(obj));
-				if(isVoidFunctionPtr(bltin)) {
-					(bltin->data.funcptr)();
+				int index = lookup_builtin_index(string_cstr(obj));
+				//Object *bltin = Dict_get(BUILTINS, string_cstr(obj));
+				//if(isVoidFunctionPtr(bltin)) {
+				if(index >= 0) {
+					call_builtin_by_index(index);
+					//(bltin->data.funcptr)();
 					continue;
 				}
 				

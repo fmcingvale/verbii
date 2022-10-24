@@ -7,6 +7,7 @@
 #include "gc_object.h"
 #include "interpreter.h"
 #include "util.h"
+#include "native.h"
 #include <stdio.h>
 
 #if defined(USE_GC_OBJECT)
@@ -154,8 +155,10 @@ void gc_object_collect() {
 	double t0 = current_system_cpu_time();
 	// mark the live objects (marks are already cleared)
 
-	// some objects are only reachable from langtypes/interpreter internal references
+	// some objects are only reachable from module internal references, so 
+	// call those modules to mark their objects
 	interpreter_mark_reachable_objects();
+	native_mark_reachable_objects();
 	
 	// mark objects reachable from other objects
 	for(Object *node = GC_OBJECT_HEAD->gc_next; node; node = node->gc_next)
@@ -230,7 +233,7 @@ Object *new_gc_object(unsigned char type) {
 
 void print_gc_object_stats() { }
 void gc_object_collect() { }
-void gc_mark_object(Object *obj) { }
+void gc_mark_reachable(Object *obj) { }
 void print_all_gc_objects() { }
 
 void gc_mark_object_keep_non_recursive(Object *obj) { }

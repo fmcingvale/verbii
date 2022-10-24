@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
 			x_mem_init();
 
 			init_gc_object();
+			init_langtypes(); // builtins needs small ints to be allocated first
 			init_builtins();
-			init_langtypes();
 			
 			int SHOW_RUN_STATS = FALSE;
 			int DO_PROFILING = FALSE;

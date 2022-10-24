@@ -16,6 +16,7 @@
 #include "xmalloc.h"
 #include "util.h"
 #include "interpreter.h"
+#include "gc_object.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -1110,41 +1111,60 @@ BUILTIN_FUNC BLTINS[] = {
 	{NULL, NULL}
 };
 
-Object *BUILTINS; // dict
+static Object *BUILTINS; // dict
+
+// maps builtin name to index into BLTINS
+static Object *BUILTINS_NAME_TO_INDEX;
+
+int lookup_builtin_index(const char *name) {
+	Object *index = Dict_get(BUILTINS_NAME_TO_INDEX, name);
+	if(isVoid(index))
+		return -1;
+	else if(isInt(index))
+		return index->data.i;
+	else
+		error("Unexpected error in lookup_builtin_index()");
+}
+
+void call_builtin_by_index(int i) {
+	if(i < 0 || i >= (sizeof(BLTINS)/sizeof(BLTINS[0])))
+		error("Bad builtin index %d", i);
+
+	BLTINS[i].fn();
+}
+
+int get_number_of_builtins() {
+	if(BUILTINS != NULL)
+		return Dict_size(BUILTINS);
+	else
+		return 0;
+}
 
 void init_builtins() {
 	BUILTINS = newDict();
+	BUILTINS_NAME_TO_INDEX = newDict();
 	int i=0;
 	while(1) {
 		if(BLTINS[i].name == NULL)
 			break; // end of list
 
+		//fprintf(stderr, "ADDING BUILTIN: %s\n", BLTINS[i].name);
 		// wrap function in an Object for convenience so i can store in a regular dict
 		Dict_put(BUILTINS, BLTINS[i].name, newVoidFunctionPtr(BLTINS[i].fn));
+
+		// map name -> index into BLTINS
+		Dict_put(BUILTINS_NAME_TO_INDEX, BLTINS[i].name, newInt(i));
+
 		++i;
 	}
 }
 
-#if 0
-std::map<std::string,BUILTIN_FUNC> BUILTINS { 
+// mark my objects that can't be normally found by the gc
+void native_mark_reachable_objects() {
+	// mark BUILTINS dict
+	if(BUILTINS)
+		gc_mark_reachable(BUILTINS);
 
-	{"puts-stderr", []() 
-		{
-			fprintf(stderr, "%s", popString(intr,"puts"));			
-		}},
-		// - NOTE - repr & str COULD be implemented in verbii, however, they have to be
-		//          implemented natively anyways for internal error printing, so
-		//          no purpose in implementing twice
-
-
-	
-			// could implement next two in script, however, host language has to have this
-			// function anyways to deserialize programs, so just use that
-	
-	
-	
-
-	
-	
-};
-#endif
+	if(BUILTINS_NAME_TO_INDEX)
+		gc_mark_reachable(BUILTINS_NAME_TO_INDEX);
+}
