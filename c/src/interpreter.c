@@ -68,7 +68,17 @@ typedef struct _WordDictEntry {
 	UT_hash_handle hh;
 } WordDictEntry;
 
-Object *WORDS = NULL; // dictionary of user-defined words
+static Object *WORDS = NULL; // dictionary of user-defined words
+
+// map userword name -> integer index
+static Object *USERWORD_TO_INDEX = NULL;
+// userwords, as a linear array of Lists (indexes are from WORD_TO_INDEX)
+static Object **USERWORDS_ARRAY = NULL;
+// keep a count independent of the above dicts in case it is slow
+// to get their counts programatically
+static int NR_USERWORDS = 0;
+// max size of USERWORDS_ARRAY
+static int USERWORDS_ARRAY_MAXSIZE = 0;
 
 void init_interpreter() {
 	// stack at bottom, grows downward from SP_EMPTY
@@ -85,6 +95,8 @@ void init_interpreter() {
 
 	// clear userwords
 	WORDS = newDict();
+	// this will be populated as words are added
+	USERWORD_TO_INDEX = newDict();
 
 	// allocate stack+heap
 	OBJMEM = (Object**)x_malloc((HEAP_END+1) * sizeof(Object*));
@@ -316,10 +328,33 @@ Object* getWordlist(void) {
 }
 
 void defineWord(const char *name, Object *list, int allow_overwrite) {
-	if(allow_overwrite || haveUserWord(name) == 0)
+	// NOTE: 'WORDS' will eventually go away, but maintain parallel code paths for now
+	int exists = haveUserWord(name);
+	if(!exists) {
+		// new word
 		Dict_put(WORDS, name, list);
-	else
+		if((NR_USERWORDS+1) > USERWORDS_ARRAY_MAXSIZE) {
+			USERWORDS_ARRAY_MAXSIZE += 10;
+			Object **newarr = (Object**)x_realloc(USERWORDS_ARRAY, USERWORDS_ARRAY_MAXSIZE*sizeof(Object*));
+			if(!newarr)
+				error("Out of memory!");
+
+			USERWORDS_ARRAY = newarr;
+		}
+		// make a new entry and map its index
+		Dict_put(USERWORD_TO_INDEX, name, newInt(NR_USERWORDS));
+		USERWORDS_ARRAY[NR_USERWORDS] = list;
+		++NR_USERWORDS;
+	}
+	else if(!allow_overwrite) {
 		error("Trying to redefine word: %s", name);
+	}
+	else {
+		// overwriting existing word, so lookup its index
+		int index = Dict_get(USERWORD_TO_INDEX, name)->data.i;
+		USERWORDS_ARRAY[index] = list;
+		Dict_put(WORDS, name, list);
+	}		
 }
 
 void deleteUserWord(const char* name) {
@@ -327,6 +362,8 @@ void deleteUserWord(const char* name) {
 		error("Trying to delete non-existent word: %s", name);
 
 	Dict_delete(WORDS, name);
+	int index = Dict_get(USERWORD_TO_INDEX, name)->data.i;
+	USERWORDS_ARRAY[index] = NULL; // can be reused later if same word defined again
 }
 
 // bound_outer is outer framedata or NULL if not a bound lambda
@@ -513,8 +550,13 @@ void run(Object *objlist) {
 				}
 				
 				// **NOTE** strings containing NULLs won't work here
-				Object *wordlist = lookupUserWord(string_cstr(obj));
-				if(isList(wordlist)) {
+				//Object *wordlist = lookupUserWord(string_cstr(obj));
+				Object *obj_index = Dict_get(USERWORD_TO_INDEX, string_cstr(obj));
+				if(isInt(obj_index)) {
+					Object *wordlist = USERWORDS_ARRAY[obj_index->data.i];
+					if(!wordlist)
+						error("Attempt to call deleted word: %s", string_cstr(obj));
+
 					// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
 					// i don't need to come back here, so pop my wordlist first to stop stack from growing
 					#if 1 // can turn off to test without tail call elimination, if desired
