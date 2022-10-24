@@ -533,11 +533,12 @@ void run(Object *objlist) {
 			if(isSymbol(obj)) {
 				// **NOTE** strings containing NULLs won't work here
 				int index = lookup_builtin_index(string_cstr(obj));
-				//Object *bltin = Dict_get(BUILTINS, string_cstr(obj));
-				//if(isVoidFunctionPtr(bltin)) {
 				if(index >= 0) {
+					// replace symbol with CALL-BUILTIN opcode (note: this is an example of why code is immutable from
+					// usercode perspective -- allows behind the scenes optimizations to be done)
+					List_put(code, codepos-1, newOpcode(opcode_pack(OPCODE_CALL_BUILTIN, index, 0, 0)));
+					// call it this time, next time will be handled by opcode
 					call_builtin_by_index(index);
-					//(bltin->data.funcptr)();
 					continue;
 				}
 				
