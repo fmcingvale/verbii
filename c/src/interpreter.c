@@ -53,23 +53,6 @@ int HEAP_END;
 // next available index to allocate
 int HEAP_NEXTFREE;
 
-#if 0
-int hasBuiltin(const char *name);
-
-Object nextCodeObj();
-Object nextCodeObjOrFail(const char *failmsg);
-Object peekNextCodeObj();
-Object prevCodeObj();
-Object prevCodeObjOrFail(const char *failmsg);
-
-Object nextSymbolOrFail(const char *failmsg);
-
-// if the code is from a BoundLambda, pass it as the 3rd parameter
-void code_call(ObjList *new_code, BoundLambda *bound_lambda=NULL);
-int havePushedFrames();
-void code_return();
-#endif
-
 // stats
 void print_stats();
 int max_callstack;
@@ -510,11 +493,6 @@ void run(Object *objlist) {
 					// NOTE - this is for both the bound & unbound case
 					code_call(val->data.lambda->list, val->data.lambda->outer);
 				}
-				//else if(val.isBoundLambda()) {
-				//	// as above but pass bound lambda so its new call frame will be
-				//	// connected the same outer frame that was captured with bind-lambda
-				//	code_call(val.data.boundLambda->objlist, val.data.boundLambda);
-				//}
 				else
 					error("call expects a lambda or bound-lambda, but got: %s", fmtStackPrint(val));
 				
