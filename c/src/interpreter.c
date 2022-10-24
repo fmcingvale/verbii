@@ -440,14 +440,6 @@ void run(Object *objlist) {
 
 	while(1) {
 		#if defined(USE_GC_OBJECT)
-		// use a higher number for production, but I like a lower value for testing
-		// since it stress tests the GC more
-		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 20000) {
-		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 100000) {
-		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 500000) {
-		//if(GCOBJ_OBJECTS_SINCE_COLLECT >   500000) {
-		//if(GCOBJ_OBJECTS_SINCE_COLLECT >   5000000) {
-		//if(GCOBJ_OBJECTS_SINCE_COLLECT > 10000000) {
 		if(XMEM_BYTES_SINCE_GC > 128000000) {
 			printf("RUNNING COLLECTION %lu\n", GC_OBJECT_TOTAL_COLLECTIONS);
 			gc_object_collect();
