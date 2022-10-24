@@ -26,7 +26,14 @@ const char *TYPE_TO_NAME[] = { "null", "int", "bool", "lambda", "float", "string
 unsigned long int ALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 unsigned long int DEALLOCS_BY_TYPE[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+// small integers are so common, create a single copy of them.
+// this is the same range the Python uses [-5,256]
+// 0..256 == 257 slots + 5 more for -1..-5
+static Object *SMALL_INT_OBJECTS[262];
+
 unsigned long int NR_SMALL_INT_ALLOCS = 0;
+
+Object* newIntNoCache(VINT i);
 
 void init_langtypes() {
 	THE_NULL = new_gc_object(TYPE_NULL);
@@ -41,6 +48,13 @@ void init_langtypes() {
 	gc_mark_object_keep_non_recursive(THE_VOID);
 	gc_mark_object_keep_non_recursive(THE_TRUE);
 	gc_mark_object_keep_non_recursive(THE_FALSE);	
+
+	// create the singleton small integer objects
+	for(int i=-5; i<=256; ++i) {
+		SMALL_INT_OBJECTS[i+5] = newIntNoCache(i);
+		// mark as non-collectable for gc-object
+		gc_mark_object_keep_non_recursive(SMALL_INT_OBJECTS[i+5]);
+	}
 }
 
 int isNull(Object *obj) { return (obj->type == TYPE_NULL) ? TRUE : FALSE; }
@@ -69,10 +83,17 @@ void require_stringlike(const char *where, Object *obj) {
 		error("%s expects string or symbol but got %s", where, fmtStackPrint(obj));
 }
 
+Object* newIntNoCache(VINT i) {
+	Object *obj = new_gc_object(TYPE_INT);
+	obj->data.i = i;
+	return obj;
+}
+
 Object* newInt(VINT i) {
-	// adjust threshold experimentally to find majority use case
-	if(i >= -10 && i <= 1000)
+	if(i >= -5 && i <= 256) { // keep stats on small integer usage
 		++NR_SMALL_INT_ALLOCS;
+		return SMALL_INT_OBJECTS[i+5];
+	}
 
 	Object *obj = new_gc_object(TYPE_INT);
 	obj->data.i = i;
