@@ -177,7 +177,7 @@ void gc_object_collect() {
 
 static void gc_print_object_list(Object *head) {
 	for(Object *node=head->gc_next; node; node = node->gc_next) {
-		printf("  %1d %4d %s\n", node->gc_marks, fmtStackPrint(node));
+		printf("  %d %s\n", node->gc_marks, fmtStackPrint(node));
 		head = head->gc_next;
 	}
 }
