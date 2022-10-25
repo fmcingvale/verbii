@@ -62,13 +62,7 @@ int max_frame_slot_used;
 int nr_total_calls;
 int nr_saved_frames;
 
-typedef struct _WordDictEntry {
-	const char *name;
-	Object *list;
-	UT_hash_handle hh;
-} WordDictEntry;
-
-static Object *WORDS = NULL; // dictionary of user-defined words
+//static Object *WORDS = NULL; // dictionary of user-defined words
 
 // map userword name -> integer index
 static Object *USERWORD_TO_INDEX = NULL;
@@ -94,7 +88,7 @@ void init_interpreter() {
 	HEAP_NEXTFREE = HEAP_START;
 
 	// clear userwords
-	WORDS = newDict();
+	//WORDS = newDict();
 	// this will be populated as words are added
 	USERWORD_TO_INDEX = newDict();
 
@@ -139,8 +133,16 @@ void interpreter_mark_reachable_objects() {
 	}
 
 	// mark WORDS dict (which will then mark all code objects)
-	if(WORDS)
-		gc_mark_reachable(WORDS);
+	//if(WORDS)
+	//	gc_mark_reachable(WORDS);
+
+	gc_mark_reachable(USERWORD_TO_INDEX);
+
+	// mark code lists as reachable
+	for(int i=0; i<NR_USERWORDS; ++i) {
+		if(USERWORDS_ARRAY[i])
+			gc_mark_reachable(USERWORDS_ARRAY[i]);
+	}
 
 	// mark objects in all active callframes
 	for(int i=callstack_cur; i >= 0; --i) {
@@ -310,7 +312,16 @@ Object* prevCodeObjOrFail(const char *failmsg) {
 }
 
 Object* lookupUserWord(const char *name) {
-	return Dict_get(WORDS, name);
+	//return Dict_get(WORDS, name);
+	Object *indexobj = Dict_get(USERWORD_TO_INDEX, name);
+	if(isInt(indexobj)) {
+		if(USERWORDS_ARRAY[indexobj->data.i]) // make sure word wasn't deleted
+			return USERWORDS_ARRAY[indexobj->data.i];
+		else
+			return newVoid(); // word has been deleted
+	}
+	else
+		return newVoid();
 }
 
 int haveUserWord(const char *name) {
@@ -319,9 +330,11 @@ int haveUserWord(const char *name) {
 
 Object* getWordlist(void) {
 	Object *list = newList();
-	for(ObjDictEntry *ent=WORDS->data.objdict; ent != NULL; ent=ent->hh.next) {
-		//printf("ADD WORDLIST: %s\n", ent->name);
-		List_append(list,newSymbol(ent->name,-1));
+	for(ObjDictEntry *ent=USERWORD_TO_INDEX->data.objdict; ent != NULL; ent=ent->hh.next) {
+		int index = ent->obj->data.i;
+		if(USERWORDS_ARRAY[index]) // make sure word wasn't deleted
+			//printf("ADD WORDLIST: %s\n", ent->name);
+			List_append(list,newSymbol(ent->name,-1));
 	}
 
 	return list;
@@ -332,7 +345,7 @@ void defineWord(const char *name, Object *list, int allow_overwrite) {
 	int exists = haveUserWord(name);
 	if(!exists) {
 		// new word
-		Dict_put(WORDS, name, list);
+		//Dict_put(WORDS, name, list);
 		if((NR_USERWORDS+1) > USERWORDS_ARRAY_MAXSIZE) {
 			USERWORDS_ARRAY_MAXSIZE += 10;
 			Object **newarr = (Object**)x_realloc(USERWORDS_ARRAY, USERWORDS_ARRAY_MAXSIZE*sizeof(Object*));
@@ -353,7 +366,7 @@ void defineWord(const char *name, Object *list, int allow_overwrite) {
 		// overwriting existing word, so lookup its index
 		int index = Dict_get(USERWORD_TO_INDEX, name)->data.i;
 		USERWORDS_ARRAY[index] = list;
-		Dict_put(WORDS, name, list);
+		//Dict_put(WORDS, name, list);
 	}		
 }
 
@@ -361,7 +374,9 @@ void deleteUserWord(const char* name) {
 	if(!haveUserWord(name)) 
 		error("Trying to delete non-existent word: %s", name);
 
-	Dict_delete(WORDS, name);
+	//Dict_delete(WORDS, name);
+
+	// keep in USERWORD_TO_INDEX so index can be reused if word is redefined later
 	int index = Dict_get(USERWORD_TO_INDEX, name)->data.i;
 	USERWORDS_ARRAY[index] = NULL; // can be reused later if same word defined again
 }
