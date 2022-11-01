@@ -50,6 +50,8 @@ void defineWord(const char *name, Object *list, int allow_overwrite);
 void deleteUserWord(const char* name);
 Object* getWordlist(void); // returns a List
 
+void call_userword_by_index(int index);
+
 // used by main.c when making stacktraces
 Object* prevCodeObj();
 int havePushedFrames();

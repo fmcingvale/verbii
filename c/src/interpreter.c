@@ -451,6 +451,27 @@ void code_return() {
 	}
 }
 
+void call_userword_by_index(int index) {
+	if(index < 0 || index >= NR_USERWORDS)
+		error("Bad userword index %d", index);
+
+	Object *wordlist = USERWORDS_ARRAY[index];
+	if(!wordlist)
+		error("Attempt to call deleted word: %d", index);
+
+	// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
+	// i don't need to come back here, so pop my wordlist first to stop stack from growing
+	#if 1 // can turn off to test without tail call elimination, if desired
+	// FIXME - don't eliminate at toplevel since code_call expects a non-empty stack
+	if((callstack_cur >= 1) && (isVoid(peekNextCodeObj()) || isSymbolMatch(peekNextCodeObj(),"return",-1))) {
+		code_return();
+		++nr_tailcalls;
+	}
+	#endif
+	// execute word by pushing its objlist and continuing (words never have an outer frame)
+	code_call(wordlist, NULL);
+}	
+
 void run(Object *objlist) {
 	if(callstack_cur >= 0)
 		error("Interpreter run() called recursively");
@@ -568,21 +589,13 @@ void run(Object *objlist) {
 				//Object *wordlist = lookupUserWord(string_cstr(obj));
 				Object *obj_index = Dict_get(USERWORD_TO_INDEX, string_cstr(obj));
 				if(isInt(obj_index)) {
-					Object *wordlist = USERWORDS_ARRAY[obj_index->data.i];
-					if(!wordlist)
-						error("Attempt to call deleted word: %s", string_cstr(obj));
-
-					// tail call elimination -- if i'm at the end of this wordlist OR next word is 'return', then
-					// i don't need to come back here, so pop my wordlist first to stop stack from growing
-					#if 1 // can turn off to test without tail call elimination, if desired
-					// FIXME - don't eliminate at toplevel since code_call expects a non-empty stack
-					if((callstack_cur >= 1) && (isVoid(peekNextCodeObj()) || isSymbolMatch(peekNextCodeObj(),"return",-1))) {
-						code_return();
-						++nr_tailcalls;
-					}
-					#endif
-					// execute word by pushing its objlist and continuing (words never have an outer frame)
-					code_call(wordlist, NULL);
+					// replace symbol with CALL-USERWORD opcode (NOTE: this relies on the property that
+					// a symbol in USERWORD_TO_INDEX will always resolve to the same index. i.e. if 
+					// a word "foo" has index 4, then foo is deleted and then created again, it will
+					// still map to index 4. this is guaranteed by the implementation.
+					List_put(code, codepos-1, newOpcode(opcode_pack(OPCODE_CALL_USERWORD, 0, 0, obj_index->data.i)));
+					// call it this time; next time it will be called via the opcode
+					call_userword_by_index(obj_index->data.i);
 					continue;
 				}
 			}

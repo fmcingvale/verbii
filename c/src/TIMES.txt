@@ -1,0 +1,25 @@
+
+Timing before/after adding builtin opcodes.
+
+	(1) baseline
+	(2) after adding opcodes for builtins
+	(3) after adding builtins for userwords
+
+Times measured via -stats
+
+run-all-tests
+	1.28 1.26 1.31 1.21 avg 1.27
+	1.06 1.02 0.98 0.98 avg 1.01  (79.5%)
+	0.79 0.79 0.94 0.92 avg 0.86  (85.1% of previous; 67.7% of original)
+
+benchmark large
+	476.5 481 484.1  avg 480.5 
+	358 366 366.5    avg 363.5    (75.7%)
+	314 310 313   	 avg 312.3    (85.9% of previous; 65% of original)
+
+perft test 
+	70 66.5 67.7    avg 68.1
+	58.3 54.8 55.1  avg 56.1      (82.4%)
+	40.5 39.7 40.3  avg 40.2      (71.7% of previous; 59% of original)
+	
+	

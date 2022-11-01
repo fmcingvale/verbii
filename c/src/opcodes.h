@@ -29,8 +29,14 @@
 // this is a runtime optimization; this opcode is not emitted from the compiler
 #define OPCODE_CALL_BUILTIN 4
 
+// call a userword
+// C = userword index (for call_userword_by_index)
+//
+// this is a runtime optimization; this opcode is not emitted from the compiler
+#define OPCODE_CALL_USERWORD 5
+
 // the CURRENT last OPCODE_* number + 1
-#define OPCODE_LAST_PLUS1 5
+#define OPCODE_LAST_PLUS1 6
 
 // since the packed opcode is limited to 52 bits, a *signed* 64-bit value is
 // used so that it is compatible with the native verbii integer type

@@ -24,7 +24,7 @@ void opcode_unpack(int64_t packed, uint8_t *code, uint8_t *A, uint16_t *B, uint3
 }
 
 static char* opcode_names_by_index[] = {
-	"FRAME-GET", "FRAME-SET", "JUMP-FORW", "JUMP-BACK", "CALL-BUILTIN",
+	"FRAME-GET", "FRAME-SET", "JUMP-FORW", "JUMP-BACK", "CALL-BUILTIN", "CALL-USERWORD",
 };
 
 // only used during compilation so does not have to be fast
@@ -86,6 +86,10 @@ void opcode_CALL_BUILTIN(uint8_t index, uint16_t _B, uint32_t _C) {
 	call_builtin_by_index(index);
 }
 
+void opcode_CALL_USERWORD(uint8_t _A, uint16_t _B, uint32_t index) {
+	call_userword_by_index(index);
+}
+
 // make sure order matches ordering of values!
 opcode_func OPCODE_FUNCTIONS[] = {
 	opcode_FRAME_GET,
@@ -93,4 +97,5 @@ opcode_func OPCODE_FUNCTIONS[] = {
 	opcode_JUMP_FORW,
 	opcode_JUMP_BACK,
 	opcode_CALL_BUILTIN,
+	opcode_CALL_USERWORD,
 };
