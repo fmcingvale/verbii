@@ -73,10 +73,12 @@ int isDict(Object *obj) { return (obj->type == TYPE_DICT) ? TRUE : FALSE; }
 int isOpcode(Object *obj) { return (obj->type == TYPE_OPCODE) ? TRUE : FALSE; }
 int isVoidFunctionPtr(Object *obj) { return (obj->type == TYPE_VOIDFUNCPTR) ? TRUE : FALSE; }
 
+#ifndef USE_FAST_MACROS
 void requiretype(const char *where, Object *obj, int type) {
 	if(obj->type != type)
 		error("%s expects %s but got %s", where, TYPE_TO_NAME[type], fmtStackPrint(obj));
 }
+#endif // USE_FAST_MACROS
 
 void require_stringlike(const char *where, Object *obj) {
 	if(obj->type != TYPE_STRING && obj->type != TYPE_SYMBOL)
@@ -537,12 +539,14 @@ void callframe_SetFrameObj(Object *frame, int levels, int index, Object *obj) {
 }
 
 void callframe_clear(CallFrameData *frame) {
+#ifndef NO_CLEAR_CALLFRAMES
 	for(int i=0; i<MAX_CALLFRAME_SLOTS; ++i)
 		frame->data[i] = THE_NULL;
 	//memset(frame->data, 0, MAX_CALLFRAME_SLOTS*sizeof(CallFrameData*));
 
 	frame->bound = 0;
 	frame->outer = NULL;
+#endif
 }
 
 int testEqual(Object *a, Object *b) {

@@ -7,6 +7,8 @@
 #ifndef __langtypes_h__
 #define __langtypes_h__
 
+#include "build_defs.h"
+
 #define TYPE_NULL 0
 #define TYPE_INT 1
 #define TYPE_BOOL 2
@@ -155,7 +157,13 @@ int isOpcode(Object *obj);
 int isVoidFunctionPtr(Object *obj);
 
 // require obj be given type or error
+#ifndef USE_FAST_MACROS
 void requiretype(const char *where, Object *obj, int type);
+#else
+	#define requiretype(where,obj,_type) \
+		if(obj->type != _type) \
+			error("%s expects type=%d but got %d", where, _type, fmtStackPrint(obj));
+#endif
 
 Object* newNull();
 Object* newVoid();
