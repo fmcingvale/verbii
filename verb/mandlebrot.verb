@@ -1,0 +1,78 @@
+\
+\ Simple mandlebrot drawing.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+\ mandlebrot equation:
+\	z[n+1] = z[n]^2 + c ; z[0] = 0
+\
+\ calculating z^2:
+\
+\	z = a + bi
+\	z^2 = (a + bi) * (a + bi) = a^2 + (a*b)i + (a*b)i + (b^2)i^2 = a^2 - b^2 + (2*a*b)i 
+
+\ iterate Z[i+1] = Z[i]^2 + C 
+\
+\ where: CR = real part of C; CI = imaginary part of C
+\ 	
+\ maxiter = maximum number of iterations
+: iterate ( CR CI maxiter )
+	@locals [ ZR+ ZI+ ZR ZI i ]
+	0 ZR! 0 ZI! \ Z[0] = 0 + 0i
+	0 i! \ iteration count
+	WHILE i maxiter < DO
+		\ ZR+ = ZR^2 - ZI^2 + CR
+		ZR ZR * ZI ZI * - CR + ZR+!
+		\ ZI+ = 2 * ZR * ZI + CI
+		2 ZR * ZI * CI + ZI+!
+		\ if magnitude of Z[i+1] > 2 then can assume it blows up
+		IF ZR+ ZR+ * ZI+ ZI+ * + sqrt 2 > THEN
+			i return \ return bail out count
+		END
+		\ else continue iteration
+		i 1 + i!
+		ZR+ ZR!
+		ZI+ ZI!
+	END 
+	\ if i made it here, then Z never exceeded, so assume it does not escape
+	-1 return
+	;
+	
+'PALETTE "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" make-var
+
+\ iterate over C values from (xstart + ystart*i) .. (xend + yend*i)
+: draw ( xstart xend ystart yend nrcols nrrows maxiter )
+	@locals [ col row xstep ystep res ]
+	xend xstart - nrcols / xstep!
+	yend ystart - nrrows / ystep!
+	0 row!
+	WHILE row nrrows < DO
+		0 col!
+		WHILE col nrcols < DO
+			xstart col xstep * +  \ CR
+			ystart row ystep * +  \ CI
+			maxiter 
+			iterate res!
+			
+			IF res 0 < THEN
+				" " puts \ did not escape
+			ELSE
+				PALETTE 
+					res maxiter / PALETTE length * floor get puts
+			END 
+			col 1 + col!
+		END
+		CR
+		row 1 + row!
+	END 
+	;
+	
+\ -1.5 0.5 1 -1 100 40 100 draw
+-0.4 0.2 -1.087 -0.487 100 40 100 draw
+
+			
+			
+		
+	
+
+
