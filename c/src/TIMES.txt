@@ -1,9 +1,10 @@
 
-Timing before/after adding builtin opcodes.
+Timing before/after some optimizations.
 
 	(1) baseline
 	(2) after adding opcodes for builtins
 	(3) after adding builtins for userwords
+	(4) after optimizing bind-lambda calls
 
 Times measured via -stats
 
@@ -11,15 +12,51 @@ run-all-tests
 	1.28 1.26 1.31 1.21 avg 1.27
 	1.06 1.02 0.98 0.98 avg 1.01  (79.5%)
 	0.79 0.79 0.94 0.92 avg 0.86  (85.1% of previous; 67.7% of original)
+	0.93 1.06 1.02 0.92 avg 0.98  (114% of previous;  77.2% of original)
 
 benchmark large
 	476.5 481 484.1  avg 480.5 
 	358 366 366.5    avg 363.5    (75.7%)
 	314 310 313   	 avg 312.3    (85.9% of previous; 65% of original)
+	300 308 309      avg 305.7    (97.9% of previous; 64% of original)
 
 perft test 
 	70 66.5 67.7    avg 68.1
 	58.3 54.8 55.1  avg 56.1      (82.4%)
 	40.5 39.7 40.3  avg 40.2      (71.7% of previous; 59% of original)
+	39.6 39.9 39.7  avg 39.7	  (98.8% of previous; 58% of original)
+
+Memory use before/after binding optmization (all runs with -nocache):
+
+run-all-tests
+	Heap size: 11509760
+	Saved frames: 59371
+	Total bytes: 326808688
+
+perft test
+	Heap size: 6430720
+	Saved frames: 3085205
+	Total bytes: 2931849952
+
+benchmark large
+	Heap size: 200495104
+	Saved frames: 2819330
+	Total bytes: 55027883120
+
+After binding optimization:
+
+run-all-tests
+	Heap size: 11513856
+	Saved frames: 59240
+	Total bytes: 335737248
 	
+perft test
+	Heap size: 6430720
+	Saved frames: 3085219
+	Total bytes: 2941117584
+
+benchmark large
+	Total bytes: 2941117584
+	Saved frames: 2759369
+	Total bytes: 55035105024
 	

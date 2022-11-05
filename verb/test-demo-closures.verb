@@ -443,6 +443,85 @@
 	[ [ a b ] [ a b 123 ] ] 123 cD7-test expect==
 	;
 
+\ some more deep tests
+
+	
+\ in the unoptimized compiler (commit [bb47b0730edea6905365bc8b27eec6b3a7fde893]) the
+\ following results in 4 bind-lambda calls -- the compiler sees that ( x y ) are used in 
+\ the innermost lambda, so binds all lambdas above that.
+\
+\ the optimized compiler sees that ( x y ) are locals and ( a .. f ) are not used anywhere,
+\ so there are no bind-lambda calls.
+: weird-add ( a b c )
+	{ ( d )
+		{ ( e )
+			{ ( f )
+				{ ( x y ) x y + } } } }
+	;
+
+\ for historical reference - when this runs in a loop with and without the bind-lambda optimizations,
+\ the results were:
+\ 		unoptimized: 40.5 seconds, Saved frames: 40000034, Heap size: 4820992, Total bytes: 16650436464
+\		optimized:   15.7 seconds, Saved frames:       49, Heap size: 3612672, Total bytes:  1301596800
+\
+\ this is a worst-case situation for the non-optimized compiler since no bind-lambdas are actually required,
+\ and this optimization seems to make only minimal difference in runtimes for real code. However i think the
+\ design is better anyways to only put bind-lambdas where needed, and the code change was minimal, so it is
+\ worth keeping.
+: test-weird-add
+	@locals [ f1 f2 f3 f4 i t1 t0 ]
+	"A" "B" "C" weird-add f1!
+	"D" f1 call f2!
+	"E" f2 call f3!
+	"F" f3 call f4!
+	"G" "H" f4 call "GH" expect==
+	;
+
+\ similar to above, the unoptimized compiler emits 4 bind-lambdas.
+\ the optimized compiler sees that only ( f ) is needed from the outer context
+\ in the innermost function, so emits only 1 bind lambda.
+: weird-add-2 ( a b c )
+	{ ( d )
+		{ ( e )
+			{ ( f )
+				{ ( x y ) f x y + + } } } }
+	;
+
+\ for historical reference, the optimized vs non-optimized compiler results:	
+\ 		unoptimized: 40.4 seconds, Saved frames: 40000035, Heap size: 4820992, Total bytes: 16971016384
+\ 		optimized:   22.0 seconds, Saved frames: 10000050, Heap size: 4820992, Total bytes:  5463092832
+: test-weird-add-2
+	@locals [ f1 f2 f3 f4 i t1 t0 ]
+	"A" "B" "C" weird-add-2 f1!
+	"D" f1 call f2! 
+	"E" f2 call f3! 
+	"F" f3 call f4!
+	"G" "H" f4 call "FGH" expect==
+	;
+	
+\ this is a more realistic example, where vars in an outermost lambda are used in a deeply nested
+\ lambda, but not in between. the test here is to make sure the compiler recognizes that the intermediate
+\ lambdas need to be bound, despite not using any outer vars themselves. (this would not have been a issue
+\ with the non-optimizing compiler since it always bound all the lambdas in the chain as long as any
+\ frame var was used within)
+: weird-add-3 ( a b c )
+	{ ( w )
+		{ ( x )
+			{ ( y )
+				{ ( z )
+					{ a b c + + } } } } }
+	;
+	
+: test-weird-add-3
+	@locals [ f1 f2 f3 f4 f5 ]
+	"X" "Y" "Z" weird-add-3 f1! \ a b c
+	11 f1 call f2! \ w
+	22 f2 call f3! \ x
+	33 f3 call f4! \ y 
+	44 f4 call f5! \ z 
+	f5 call "XYZ" expect==
+	;
+	
 \ test variations of @( .. ), @args, @locals ... duplicates some of above but is
 \ compact and nice to have in one place
 

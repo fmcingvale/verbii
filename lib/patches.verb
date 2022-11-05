@@ -14,3 +14,211 @@
 ( ------ init ----------- )
 	
 ( ------ compiler ------- )
+\ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
+\ (the difference being that plain lists are never bound to a frame since they are never called as code)
+\
+\ max-frame-level is the maximum frame level (from i.e. OP-FRAME-GET) that is required to resolve rewritten
+\ references. so i.e. if max-level == 0, then the rewritten objlist only accesses its only locals and doesn't
+\ need to be bound to an outer frame at runtime.
+\
+\ *NOTE* a value of -1 for max-frame-level means NOTHING was rewritten.
+: v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist max-frame-level )
+	@locals [ argnames localnames env i ]
+			
+		\ scan objlist for , @( ... ), @args, @locals
+		objlist
+		compile-collect-args-locals localnames! argnames! new-objlist!
+		
+		\ track max frame level required (set to -1 so i can tell later if i rewrote anything)
+		-1 max-frame-level!
+		
+		\ set objlist to rewritten list without @args/@locals
+		new-objlist objlist!
+		\ clear new-objlist now
+		[ ] new-objlist!
+		
+		\ note: i don't have to reserve space for locals -- interpreter creates frame
+		\ with sufficient space, so i only have to pop args into frame ...
+		
+		\ make code to push args to locals (add to new-objlist)
+		\ (pop in reverse order of argnames, so range starts at (#argnames-1)
+		{ ( i )
+			new-objlist
+				'FRAME-SET 0 i 0 make-opcode
+				append drop
+		} argnames length 1 - 				\ start index = #argnames-1
+			-1 								\ count by -1
+				argnames length for-count	\ for argnames args
+		
+		\ create an environment to resolve names 
+		plain-list if >>make-env-plain-list
+		
+		\ make environment for new closure, chained to outer-env
+		\ -- add args first since those are at lowest indexes
+		new-closure-env env!
+		\ add args first so they'll get assigned indexes starting at 0
+		\ -- arg names are NOT allowed to repeat
+		argnames
+		{ ( name )
+			env name closure-env-add-name
+		} for-each
+
+		\ env argnames closure-env-add-namelist
+		
+		\ now @locals -- these ARE allowed to duplicate names in arglist, in which
+		\ case they are ignored
+		\ WHY? it seems fairly common to have arglists like:
+		\		( a b -- a )
+		\ where the output a is a modified version of a, for example. there is no need
+		\ for a second var in these kinds of cases, and allowing the duplicated names
+		\ makes function signatures cleaner for a lot of common cases
+		
+		\ env localnames closure-env-add-namelist
+		localnames
+		{ ( name )
+			env closure-env-dict name str get void? not if >>dup-name 
+			env name closure-env-add-name
+			@dup-name \ not an error, just ignored
+		} for-each
+
+		\ .. and chain to my outer scope
+		env outer-env closure-env-set-up
+		>>begin-rewrite
+		
+	@make-env-plain-list
+		\ i'm rewriting a LIST, not code -- list will be flattened (see below) so will
+		\ run IN the outer-env, not a new environment
+		outer-env env!
+		\ IMPORTANT! nothing below here is allowed to modify env since that would modify
+		\ outer-env incorrectly
+		
+	@begin-rewrite
+	\ rewrite symbols using environment just created
+	0 i!
+	@rewrite-loop
+		\ i objlist length >= if >>done 
+		
+		objlist i get void? if >>done 
+		objlist i get symbol? if >>symbol
+		objlist i get list? if >>rewrite-inner-plain-list
+		objlist i get lambda? if >>rewrite-inner-lambda
+		\ fall through for everyting else, copy as-is
+	@copy-element
+		\ subtlety here: if i'm working on a plain-list, then, if it contains ANY captures (or any in
+		\ ANY nested list/lambda) then it will be flattened and then remade at runtime. this means that every element
+		\ in the list will be evaluated -- what i WANT to happen is for everything to be pushed to the stack,
+		\ and the only things that should really be evaluated are opcodes that pull values from my frame.
+		\ however, i need to quote any symbols so they will be pushed as symbols instead of run. when they are
+		\ seen, the outer quoting will be removed, so when make-list runs, they will end up back in the list as
+		\ intended. even though I don't know HERE whether a list will be flattened or not,
+		\ i can replace them unconditionally since if the list contains no captures, this list will never
+		\ be used (see below as well e.g. @plain-list-no-rewrites)
+		plain-list not if >>normal-copy-element
+		objlist i get symbol? not if >>normal-copy-element
+			\ it is a symbol in a plain list, so add a level of quoting
+			new-objlist '' objlist i get + append new-objlist! >>next
+		@normal-copy-element
+			\ not a symbol or not in a plain-list, so just copy as is
+			new-objlist objlist i get append new-objlist! >>next
+		
+	@symbol
+		@locals [ level index sym ]
+		objlist i get sym!
+		\ see if symbol is in my env or any outer scope
+		env sym closure-env-lookup-name index! level!
+		index void? if <<copy-element \ not in environment, so copy as is 
+		\ turn symbol into get/set opcode (tied into the comments below, this never
+		\ changes the size of the list -- the symbol & the opcode that replaces it
+		\ are both single objects)
+		new-objlist
+			sym level index closure-env-make-ref-or-set
+			append new-objlist!
+		\ remember max level so i can tell at the end if I need to be bound to an outer frame
+		max-frame-level level max max-frame-level!
+		>>next 
+		
+	@rewrite-inner-lambda
+		@locals [ sub-objlist sub-max-frame-level ]
+		\ call rewrite recursively with my env as the outer scope
+		objlist i get unmake \ get lambda as list to pass
+		env false v2-compile-rewrite-args-locals sub-max-frame-level! sub-objlist!
+		\ turn new sub-objlist back into lambda now that its rewritten and add to new-objlist
+		new-objlist
+			sub-objlist make-lambda append new-objlist!
+		\ does rewritten code require any vars from my (or higher) frames? 
+		sub-max-frame-level 0 <= if >>done-rewrite-sub \ max level == 0 means it only needs its locals (-1 means it needs NO vars)
+		\ this lambda requires values from my (or higher) frames, so needs to be bound to my
+		\ runtime frame ...
+		new-objlist 'bind-lambda append new-objlist!
+		
+	@done-rewrite-sub
+		\ several subtleties here -- i might never use any values from a higher frame, but have a sub-lambda that does so,
+		\ so i need to take sub-max-frame into account. NOTE -- since i am 1 level up, i subtract 1 from sub-max-level 
+		\ (i.e. a sub-lambda requiring a value 2 frames up is only 1 frame up for me, so should be counted that way ... 
+		\ so if sub-max is 1 for example, *I* do not need to be bound to an outer frame since those are my locals.
+		\
+		\ HOWEVER, once the level is >= 0, NEVER decrease it below 0 since that would then be mistaken for meaning nothing was
+		\ rewritten -- in the case of lists, that would mean the original lists are deepcopied instead of the replacement
+		\ list being used, so lambdas inside a list would never be transformed correctly.
+		\
+		\ note that this does not harm the optimization at all, since level=0 means only locals are used, so this does not
+		\ cause any lambdas to be bound unnecessarily.
+		IF sub-max-frame-level 0 > THEN
+			max-frame-level sub-max-frame-level 1 - max max-frame-level!
+		ELSE
+			max-frame-level sub-max-frame-level max max-frame-level!
+		END
+		>>next
+		
+	@rewrite-inner-plain-list
+		@locals [ list-length ]
+		\ rewrite vars inside a list without binding frame to it at runtime (since the list will
+		\ be expanded, it will be filled from MY frame) -- also see code at beginning that
+		\ knows not to create a new env for plain lists
+		
+		\ remember ORIGINAL length of list i'm about to rewrite. after rewriting i could have something like:
+		\	BEFORE: [ a b [ c d [ e f ] ] ]
+		\	AFTER: a b c d e f 2 make-list 3 make-list 3 make-list
+		\ in other words, the inner lists have been flattened so the literal length is longer, but the
+		\ RUNTIME length (i.e. for make-list) is the same -- rewriting is a 1-to-1 replacement of varnames
+		\ with a single opcode, so the final RUNTIME length will be the same.
+		objlist i get length list-length!
+		\ rewrite list
+		objlist i get env true v2-compile-rewrite-args-locals sub-max-frame-level! sub-objlist!
+		\ did I rewrite anything?
+		sub-max-frame-level 0 < if >>plain-list-no-rewrites
+		\ else, the rewrites occurred in MY ENV so flatten list so runtime references are correct
+		new-objlist
+			sub-objlist extend \ flatten sub-objlist into new-objlist
+			\ add code to remake list at runtime -- see notes above on the length passed to make-list
+			list-length append 'make-list append new-objlist!
+		\ like above, i need to account for sub-max-frame-level in my max-frame-level.
+		\ *UNLIKE* above, the rewrites occurred in MY frame, so I do NOT subtract 1 as i did above
+		max-frame-level sub-max-frame-level max max-frame-level!
+		>>next 
+		
+	@plain-list-no-rewrites
+		\ nothing rewritten, so leave list as-is and it can be instantiated by deepcopy at runtime
+		new-objlist objlist i get append new-objlist!
+		
+		>>next \ just to be clear ...
+		
+	@next
+		i 1 + i! <<rewrite-loop
+		
+	@done
+		new-objlist max-frame-level return	
+		;
+		
+\ take a parsed objlist, presumably from byte-compile, and perform finalization:
+\	* transform @args [ .. ] and @locals [ .. ] into code and handles closure creation
+\
+\ returns a new list, does NOT modify objlist
+: compile-finalize-word ( objlist -- newlist )
+	\ always a toplevel function - no outer environment
+	objlist void false v2-compile-rewrite-args-locals
+	drop \ don't need max-frame-level here; top level functions cannot have outer frames by definition
+	\ now that all the rewriting above is done, can replace << and >> with jump opcodes
+	compiler-optimize-jumps
+	return \ return new objlist
+	;
