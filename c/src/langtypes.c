@@ -470,11 +470,12 @@ int sort_objdictentry_by_name(ObjDictEntry *a, ObjDictEntry *b) {
 	return strcmp(a->name, b->name);
 }
 
-static Object *findFrameUp(Object *frame, int levels) {
+static Object *findFrameUp(Object *frame, int _levels) {
 	requiretype("findFrameUp", frame, TYPE_CALLFRAMEDATA);
+	int levels = _levels;
 	while(levels > 0) {
 		if(!frame || !frame->data.framedata->outer)
-			error("Bad level number in findFrameUp()");
+			error("Bad level number [%d] in findFrameUp()", _levels);
 
 		levels -= 1;
 		frame = frame->data.framedata->outer;
