@@ -14,6 +14,62 @@
 ( ------ init ----------- )
 	
 ( ------ compiler ------- )
+
+\ get next char [string] from reader without advancing stream
+: reader-peek-char ( -- char )
+	IF READER-POS READER-TEXT-LEN >= THEN
+		void \ return void on eof
+	ELSE
+		READER-TEXT READER-POS get ( char )
+	END
+	;
+	
+\ get next char [string] from reader stream or void on eof
+: reader-next-char ( -- char )
+	IF READER-POS READER-TEXT-LEN >= THEN
+		void \ return void on eof
+	ELSE
+		READER-TEXT READER-POS get ( char )
+		READER-POS 1 + READER-POS!
+	END
+	;
+	
+\ get next string of either all whitespace -OR- non-whitespace
+: reader-next-chunk ( -- chunk )
+		\ "reader-next-chunk" . CR
+	@locals [ c ]
+	"" chunk!
+	\ see what next chunk starts with ...
+	reader-peek-char c!
+	IF c void? THEN
+		"" return \ return empty string
+	ELIF c whitespace? THEN
+		\ read whitespace chunk
+		WHILE true DO
+			reader-peek-char c!
+			\ if next is non-whitespace or void, then end whitespace chunk and return
+			IF c void? c whitespace? not or THEN
+				chunk return
+			\ else append char to chunk and continue
+			ELSE
+				chunk reader-next-char + chunk!
+			END
+		END
+	\ else, read non-whitespace chunk
+	ELSE
+		WHILE true DO
+			reader-peek-char c!
+			\ if next is whitespace or void, then end whitespace chunk and return
+			IF c void? c whitespace? or THEN
+				chunk return
+			\ else append char to chunk and continue
+			ELSE
+				chunk reader-next-char + chunk!
+			END
+		END
+	END
+	;
+	
 \ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
 \ (the difference being that plain lists are never bound to a frame since they are never called as code)
 \
