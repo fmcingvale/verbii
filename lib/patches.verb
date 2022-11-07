@@ -13,6 +13,16 @@
 	
 ( ------ init ----------- )
 	
+\ is first char of string whitespace?
+: whitespace? ( c -- result )
+	IF c string? c symbol? or THEN
+		c 0 get ord \ get as ascii 
+		32 <= \ treat everything <= space as whitespace )
+	ELSE
+		false \ non-string, void, etc.
+	END
+	;
+
 ( ------ compiler ------- )
 
 \ get next char [string] from reader without advancing stream
@@ -20,7 +30,7 @@
 	IF READER-POS READER-TEXT-LEN >= THEN
 		void \ return void on eof
 	ELSE
-		READER-TEXT READER-POS get ( char )
+		READER-TEXT READER-POS get \ return char on stack
 	END
 	;
 	
@@ -29,7 +39,7 @@
 	IF READER-POS READER-TEXT-LEN >= THEN
 		void \ return void on eof
 	ELSE
-		READER-TEXT READER-POS get ( char )
+		READER-TEXT READER-POS get \ return char on stack
 		READER-POS 1 + READER-POS!
 	END
 	;
@@ -42,7 +52,7 @@
 	\ see what next chunk starts with ...
 	reader-peek-char c!
 	IF c void? THEN
-		"" return \ return empty string
+		void return
 	ELIF c whitespace? THEN
 		\ read whitespace chunk
 		WHILE true DO
@@ -69,7 +79,219 @@
 		END
 	END
 	;
+
+\ skip any whitespace from current position in reader input
+: reader-skip-whitespace ( -- )
+	@locals [ c ]
+	WHILE true DO
+		reader-peek-char c!
+		IF c void? THEN return
+		ELIF c ord 32 > THEN return \ non-whitespace is next char
+		ELSE reader-next-char drop
+		END
+	END
+	;
 	
+\ get next non-whitespace chunk from reader stream (as a symbol), or void on eof
+: reader-next ( -- symbol )
+	@locals [ c ]
+	\ skip leading whitespace
+	reader-skip-whitespace
+	\ get next non-whitespace chunk
+	"" symbol!
+	WHILE true DO
+		\ i want to preserve any whitespace after word [e.g. for string parsing], so peek first
+		reader-peek-char c!
+		IF c void? THEN >>return-chunk
+		ELIF c ord 32 <= THEN >>return-chunk
+		\ not whitespace/EOF, append char to chunk and continue
+		ELSE symbol reader-next-char + symbol!
+		END
+	END
+	
+	@return-chunk
+		\ "RETURN-NEXT RETURNS:" . symbol . CR
+		IF symbol length 0 == THEN void return \ got no input, so treat as EOF
+		ELSE symbol string->symbol return
+		END
+	;
+
+\ is single char (string|symbol) a digit?
+: digit? ( char -- result )
+	IF char string? THEN char "0" >= char "9" <= and return
+	ELIF char symbol? THEN char '0 >= char '9 <= and return
+	ELSE "digit? requires string or symbol but got:" char str + error
+	END
+	;
+	
+\ if char is at start of string, remove it
+: ltrim-char ( string char -- string )
+	IF string 0 get char == THEN
+		string 1 -1 slice
+	ELSE
+		string
+	END
+	;
+	
+\ remove "+" or "-" from start of string (max 1 removal)
+: ltrim-sign ( string -- string )
+	IF string 0 get "+" == string 0 get "-" == or THEN
+		string 1 -1 slice
+	ELSE
+		string
+	END
+	;
+	
+\ remove all leftmost digits from string
+: ltrim-digits ( string -- string )
+	WHILE string length 0 > DO
+		IF string 0 get digit? not THEN string return \ no more digits on left side
+		ELSE string 1 -1 slice string! \ remove first char (which is a digit) and continue
+		END
+	END
+	string return \ empty string
+	;
+	
+\ true|false if string can be parsed as integer (i.e. a call to parse-int would succeed)
+: int-string? ( string -- result )
+	IF string any-digits? not THEN false return \ no digits in string, so cannot be an int
+	ELSE
+		string ltrim-sign
+			ltrim-digits \ chain operations
+			length 0 == return \ if removing +/- then digits yields an empty string, then it is an integer
+	END
+	;
+	
+\ true|false if string can be parsed as float (i.e. a call to parse-float would succeed)
+: float-string? ( string -- result )
+	\ NOTE - this will ALSO match integers, so use int-string? first to rule those out
+	IF string any-digits? not THEN false return \ must have digits, not just +/-/./e
+	ELSE
+		\ remove expected portions then see if i end up with an empty string
+		string ltrim-sign
+			ltrim-digits
+			"." ltrim-char
+			ltrim-digits
+			"e" ltrim-char
+			"E" ltrim-char
+			ltrim-sign
+			ltrim-digits
+			length 0 == return
+	END
+	;
+	
+\ unused function, can remove
+'dict-add-indexed-names ,,del
+
+\ ( first-piece-symbol -- string )
+: syntax-triple-string ( piece -- out )
+	@locals [ chunk ]
+		\ "SYNTAX-TRIPLE-STRING - INIT:" . piece . CR
+	\ convert to string first ...
+	piece symbol->string piece!
+	\ special case of only one piece ... """..."""
+	IF 	piece length 6 >=
+		piece -3 -1 slice TRIPLEQUOTE symbol->string == and THEN
+		\ "\ GOT SINGLE CHUNK" . CR
+		>>return
+	END
+	\ else, add chunks until i find one that ends in """
+	WHILE true DO
+		reader-next-chunk chunk!
+			\ "GOT NEXT CHUNK:" . chunk . CR
+		IF chunk void? THEN
+			"String ended inside triple-quoted string: " piece str + error
+		ELSE
+			piece chunk + piece!
+		END
+		\ does piece end with """ now?
+		IF piece -3 -1 slice TRIPLEQUOTE symbol->string == THEN
+			>>return
+		END
+	END
+	
+	@return ( remove triple quotes from both sides )
+		piece piece length 3 swap 6 - slice
+	;
+
+\ assumes [ was just read & dropped
+: syntax-list
+	0 make-list 
+	@loop ( list )
+		\ note - any inner lists/lambdas will be handled automatically by syntax-next,
+		\ so don't have to check for { or [ here
+		syntax-next
+			\ "SYNTAX-LIST GOT NEXT:" . dup . CR
+		dup void? if >>eof
+		dup '] == if >>closelist
+		dup is-inline-list? if >>inline-list 
+		\ anything else, append to list and continue
+		append <<loop
+	@eof ( list void )
+		"Unexpected end of input inside [ .. ]" error
+	@inline-list ( list inline-list )
+		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+		\ remove ,,inline 
+		1 -1 slice extend <<loop
+	@closelist ( list '] )
+		drop
+		;
+
+\ parse next word from input into runnable object
+: syntax-next ( -- obj )
+	@locals [ word ]
+	reader-next word!
+		\ "syntax-next word:" . word . CR
+	IF word void? THEN void return
+	ELIF word '( == THEN \ ) <- to fix syntax highlighting here
+		syntax-comment syntax-next return \ skip comment and return NEXT object
+	ELIF word '\ == THEN
+		syntax-line-comment syntax-next return \ skip comment and return NEXT object
+	ELIF word '{ == THEN
+		syntax-v2-closure return
+	ELIF word '[ == THEN
+		syntax-list return
+	ELIF word '#op( == THEN \ )
+		syntax-opcode return
+	ELIF word ': == THEN
+		v2-syntax-define-word return
+	ELIF word 'del == THEN
+		syntax-del return
+	ELIF word 'true == THEN 
+		true return
+	ELIF word 'false == THEN
+		false return
+	ELIF word 'null == THEN
+		null return
+	ELIF word 'WHILE == THEN
+		syntax-while return
+	ELIF word 'IF == THEN
+		syntax-if return
+	( look for triple-quoted string first )
+	ELIF word 0 3 slice TRIPLEQUOTE == THEN
+		\ "GOT TRIPLEQUOTE START:" . word . CR
+		\ call syntax-triple-string with first piece on stack
+		word syntax-triple-string return
+	( now single quoted string )
+	ELIF word 0 get '" == THEN \ "... <- fix syntax highlighting here
+		( call syntax-string with first piece on stack )
+		word syntax-string return
+	\ test for correct format before passing to parse-int or parse-float since those functions
+	\ may (depending on platform) happily parse something like "123abc" as 123 
+	ELIF word int-symbol? THEN
+		word parse-int return
+	ELIF word float-symbol? THEN
+		word parse-float return
+	ELIF word 0 get '# ==
+			word 1 -1 slice float-symbol? and THEN
+		word 1 -1 slice parse-float return
+	ELSE
+		\ "RET PLAIN WORD:" . word . CR
+		\ no match, return unprocessed word
+		word return
+	END
+	;
+
 \ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
 \ (the difference being that plain lists are never bound to a frame since they are never called as code)
 \
