@@ -43,86 +43,95 @@
 \ using void throughout I think will be less confusing in the long run
 \
 
-\ get next char [string] from reader without advancing stream )
+\ get next char [string] from reader without advancing stream
 : reader-peek-char ( -- char )
-	READER-POS READER-TEXT-LEN >= if >>eof
-	READER-TEXT READER-POS get ( char )
-	return
-	@eof 
+	IF READER-POS READER-TEXT-LEN >= THEN
 		void \ return void on eof
+	ELSE
+		READER-TEXT READER-POS get \ return char on stack
+	END
 	;
 
-\ get next char [string] from reader stream or void on eof )
+\ get next char [string] from reader stream or void on eof
 : reader-next-char ( -- char )
-	READER-POS READER-TEXT-LEN >= if >>eof
-	READER-TEXT READER-POS get ( char )
-	READER-POS 1 + READER-POS! ( char; ++pos )
-	return
-	@eof
-		void
+	IF READER-POS READER-TEXT-LEN >= THEN
+		void \ return void on eof
+	ELSE
+		READER-TEXT READER-POS get \ return char on stack
+		READER-POS 1 + READER-POS!
+	END
 	;
-
+	
 \ get next string of either all whitespace -OR- non-whitespace
 : reader-next-chunk ( -- chunk )
 		\ "reader-next-chunk" . CR
-	"" ( string )
+	@locals [ c ]
+	"" chunk!
 	\ see what next chunk starts with ...
-	reader-peek-char
-	dup void? if >>drop-return
-	dup whitespace? if >>ws 
-	\ else, non-whitespace
-	drop
-	@non-ws-loop ( string )
-	reader-peek-char ( if next is whitespace, do NOT want to read it )
-	dup void? if >>drop-return
-	dup whitespace? if >>drop-return
-	drop reader-next-char + <<non-ws-loop ( append to string and continue )
-
-	\ read whitespace chunk
-	@ws
-	drop
-	@ws-loop ( string )
-	reader-peek-char
-	dup void? if >>drop-return
-	dup whitespace? not if >>drop-return
-	drop reader-next-char + <<ws-loop
-
-	@drop-return ( string char )
-		drop return
+	reader-peek-char c!
+	IF c void? THEN
+		void return
+	ELIF c whitespace? THEN
+		\ read whitespace chunk
+		WHILE true DO
+			reader-peek-char c!
+			\ if next is non-whitespace or void, then end whitespace chunk and return
+			IF c void? c whitespace? not or THEN
+				chunk return
+			\ else append char to chunk and continue
+			ELSE
+				chunk reader-next-char + chunk!
+			END
+		END
+	\ else, read non-whitespace chunk
+	ELSE
+		WHILE true DO
+			reader-peek-char c!
+			\ if next is whitespace or void, then end whitespace chunk and return
+			IF c void? c whitespace? or THEN
+				chunk return
+			\ else append char to chunk and continue
+			ELSE
+				chunk reader-next-char + chunk!
+			END
+		END
+	END
 	;
 	
-\ get next non-whitespace chunk from reader stream, or void on eof
+\ skip any whitespace from current position in reader input
+: reader-skip-whitespace ( -- )
+	@locals [ c ]
+	WHILE true DO
+		reader-peek-char c!
+		IF c void? THEN return
+		ELIF c ord 32 > THEN return \ non-whitespace is next char
+		ELSE reader-next-char drop
+		END
+	END
+	;
+	
+\ get next non-whitespace chunk from reader stream (as a symbol), or void on eof
 : reader-next ( -- symbol )
-	"" ( word )
-	@skipws ( skip leading whitespace )
-		reader-peek-char
-		dup void? if >>void-on-read 
-		ord 32 > if >>word-loop
-		reader-next-char ( word char; ++pos )
-		drop
-		<<skipws
-
-	@void-on-read ( word void )
-		drop >>eof
-
-	@word-loop ( word )
-		( i want to preserve any whitespace after word [e.g. for string parsing], so peek first )
-		reader-peek-char ( word char )
-		dup void? if <<void-on-read
-		( check for whitespace )
-		dup ord 32 <= if >>space  ( treat anything from ' ' to NUL as whitespace )
-		( not whitespace, read char, append and continue )
-		drop reader-next-char + <<word-loop
-
-	@space ( word char )
-		drop ( fall through to return word below )
-
-	@eof ( word ) 
-		( return word, void on end of file )
-		dup length 0 == if >>isvoid
-		string->symbol return ( return word as symbol )
-
-	@isvoid drop void return
+	@locals [ c ]
+	\ skip leading whitespace
+	reader-skip-whitespace
+	\ get next non-whitespace chunk
+	"" symbol!
+	WHILE true DO
+		\ i want to preserve any whitespace after word [e.g. for string parsing], so peek first
+		reader-peek-char c!
+		IF c void? THEN >>return-chunk
+		ELIF c ord 32 <= THEN >>return-chunk
+		\ not whitespace/EOF, append char to chunk and continue
+		ELSE symbol reader-next-char + symbol!
+		END
+	END
+	
+	@return-chunk
+		\ "RETURN-NEXT RETURNS:" . symbol . CR
+		IF symbol length 0 == THEN void return \ got no input, so treat as EOF
+		ELSE symbol string->symbol return
+		END
 	;
 
 \ same as reader-next but doesn't change input stream position
@@ -136,15 +145,10 @@
 	
 \ is single char (string|symbol) a digit?
 : digit? ( char -- result )
-	char string? if >>string
-		char '0 < if >>notdigit
-		char '9 > if >>notdigit
-		true return  ( symbol match )
-	@string
-		char "0" < if >>notdigit
-		char "9" > if >>notdigit
-		true return
-	@notdigit false
+	IF char string? THEN char "0" >= char "9" <= and return
+	ELIF char symbol? THEN char '0 >= char '9 <= and return
+	ELSE "digit? requires string or symbol but got:" char str + error
+	END
 	;
 
 \ does string|symbol contain ANY digits?
@@ -154,39 +158,40 @@
 
 \ if char is at start of string, remove it
 : ltrim-char ( string char -- string )
-	string 0 get char == if >>trim
-		string return
-	@trim 
+	IF string 0 get char == THEN
 		string 1 -1 slice
+	ELSE
+		string
+	END
 	;
 
 \ remove "+" or "-" from start of string (max 1 removal)
 : ltrim-sign ( string -- string )
-	string 0 get "+" == if >>trim
-	string 0 get "-" == if >>trim
-		string return \ no change
-	@trim
-		string 1 -1 slice \ remove first char
+	IF string 0 get "+" == string 0 get "-" == or THEN
+		string 1 -1 slice
+	ELSE
+		string
+	END
 	;
 
 \ remove all leftmost digits from string
 : ltrim-digits ( string -- string )
-	@loop
-		string 0 get void? if >>done \ empty string
-		string 0 get digit? not if >>done
-		string 1 -1 slice string! <<loop
-	@done
-		string
+	WHILE string length 0 > DO
+		IF string 0 get digit? not THEN string return \ no more digits on left side
+		ELSE string 1 -1 slice string! \ remove first char (which is a digit) and continue
+		END
+	END
+	string return \ empty string
 	;
 
 \ true|false if string can be parsed as integer (i.e. a call to parse-int would succeed)
 : int-string? ( string -- result )
-	string any-digits? not if >>nodigits ( must have digits, not just +/- )
-	string ltrim-sign
-		ltrim-digits
-		length 0 == return
-	@nodigits 
-		false
+	IF string any-digits? not THEN false return \ no digits in string, so cannot be an int
+	ELSE
+		string ltrim-sign
+			ltrim-digits \ chain operations
+			length 0 == return \ if removing +/- then digits yields an empty string, then it is an integer
+	END
 	;
 
 \ like above but for symbols
@@ -197,38 +202,25 @@
 \ true|false if string can be parsed as float (i.e. a call to parse-float would succeed)
 : float-string? ( string -- result )
 	\ NOTE - this will ALSO match integers, so use int-string? first to rule those out
-	string any-digits? not if >>nodigits ( must have digits, not just +/-/./e )
-	string ltrim-sign
-		ltrim-digits
-		"." ltrim-char
-		ltrim-digits
-		"e" ltrim-char
-		"E" ltrim-char
-		ltrim-sign
-		ltrim-digits
-		length 0 == return
-	@nodigits 
-		false
+	IF string any-digits? not THEN false return \ must have digits, not just +/-/./e
+	ELSE
+		\ remove expected portions then see if i end up with an empty string
+		string ltrim-sign
+			ltrim-digits
+			"." ltrim-char
+			ltrim-digits
+			"e" ltrim-char
+			"E" ltrim-char
+			ltrim-sign
+			ltrim-digits
+			length 0 == return
+	END
 	;
 	
 \ as above but for symbols ... caller could also just unconditionally call 'str' on
 \ the argument before passing it
 : float-symbol? 
 	str float-string?
-	;
-
-\ add each name to dict with value set to size of dict at time name was added
-\ (i.e. adding [ "a" "b" "c" ] to an empty dict gives a=0, b=1, c=2)
-\ note: symbols are accepted and converted to strings
-: dict-add-indexed-names ( dict names -- dict-out )
-	@locals [ i ]
-	0 i!
-	@loop
-		i names length >= if >>done 
-		dict names i get str dict length put drop \ dict[name[i]] = len(dict)
-		i 1 + i! <<loop
-	@done
-		dict
 	;
 	
 ( make literal """ which cannot be written directly as source )
@@ -239,73 +231,56 @@
 : syntax-next ( -- obj )
 	@locals [ word ]
 	reader-next word!
-		 \ "syntax-next:" . dup . CR
-	word void? if >>void
-	word '( == if >>comment \ )
-	word '\ == if >>line-comment
-	word '{ == if >>v2-closure
-	word '[ == if >>list
-	word '#op( == if >>opcode  \ )
-	word ': == if >>v2-worddef
-	word 'del == if >>del
-	word 'true == if >>true-literal
-	word 'false == if >>false-literal
-	word 'null == if >>null-literal
-	word 'WHILE == if >>syntax-while
-	word 'IF == if >>syntax-if
-	
-	( look for triple-quoted string first )
-	word 0 3 slice TRIPLEQUOTE == if >>triplestring
-	( now single quoted string )
-	word 0 get '" == if >>string ( "... )
-	\ test for correct format before passing to parse-int or parse-float since those functions
-	\ may (depending on platform) happily parse something like "123abc" as 123 
-	word int-symbol? if >>integer
-	word float-symbol? if >>float
-	word 0 get '# != if >>nomatch 
-	word 1 -1 slice float-symbol? if >>float-literal
-	@nomatch
-		( leave unprocessed word on stack )
-		word
-		return
-	@void
-		void
-		return ( leave void on stack )
-	@v2-worddef
-		v2-syntax-define-word return
-	@del
-		syntax-del return
-	@comment
-		syntax-comment syntax-next return ( skip comment and return NEXT object )
-	@line-comment
-		syntax-line-comment syntax-next return ( skip comment and return NEXT object )
-	@v2-closure
+		\ "syntax-next word:" . word . CR
+	IF word void? THEN void return
+	ELIF word '( == THEN \ ) <- to fix syntax highlighting here
+		syntax-comment syntax-next return \ skip comment and return NEXT object
+	ELIF word '\ == THEN
+		syntax-line-comment syntax-next return \ skip comment and return NEXT object
+	ELIF word '{ == THEN
 		syntax-v2-closure return
-	@syntax-while
-		syntax-while return
-	@syntax-if
-		syntax-if return
-	@list
+	ELIF word '[ == THEN
 		syntax-list return
-	@opcode
+	ELIF word '#op( == THEN \ )
 		syntax-opcode return
-	@triplestring
-		( call syntax-triple-string with first piece on stack )
+	ELIF word ': == THEN
+		v2-syntax-define-word return
+	ELIF word 'del == THEN
+		syntax-del return
+	ELIF word 'true == THEN 
+		true return
+	ELIF word 'false == THEN
+		false return
+	ELIF word 'null == THEN
+		null return
+	ELIF word 'WHILE == THEN
+		syntax-while return
+	ELIF word 'IF == THEN
+		syntax-if return
+	( look for triple-quoted string first )
+	ELIF word 0 3 slice TRIPLEQUOTE == THEN
+		\ "GOT TRIPLEQUOTE START:" . word . CR
+		\ call syntax-triple-string with first piece on stack
 		word syntax-triple-string return
-	@string
+	( now single quoted string )
+	ELIF word 0 get '" == THEN \ "... <- fix syntax highlighting here
 		( call syntax-string with first piece on stack )
 		word syntax-string return
-	@integer
+	\ test for correct format before passing to parse-int or parse-float since those functions
+	\ may (depending on platform) happily parse something like "123abc" as 123 
+	ELIF word int-symbol? THEN
 		word parse-int return
-	@float
+	ELIF word float-symbol? THEN
 		word parse-float return
-	@float-literal ( #NN.NN form )
+	ELIF word 0 get '# ==
+			word 1 -1 slice float-symbol? and THEN
 		word 1 -1 slice parse-float return
-	@true-literal true return
-	@false-literal false return
-	@null-literal null return
+	ELSE
+		\ "RET PLAIN WORD:" . word . CR
+		\ no match, return unprocessed word
+		word return
+	END
 	;
-
 
 \ TODO -- this could be used when parsing other things like lists, lambdas, etc.
 \
@@ -315,22 +290,24 @@
 : syntax-collect-until-any-symbol ( symbols -- list stop-symbol )
 	@locals [ obj ]
 	[ ] list!
-	@loop
+	WHILE true DO
 		syntax-next obj!
-		obj void? if >>eof
-		symbols obj contains? if >>done
-		\ else append to list and continue
-		obj is-inline-list? if >>inline
-		list obj append! <<loop
-	@inline
-		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
-		\ remove ,,inline 
-		list obj 1 -1 slice extend! <<loop
-	@done
-		\ return ( list stop-symbol )
-		list obj return
-	@eof
-		"End of input looking for: " symbols str + error
+		IF obj void? THEN
+			"End of input looking for: " symbols str + error
+		ELIF symbols obj contains? THEN
+			\ return ( list stop-symbol )
+			list obj return
+		ELSE
+			\ else append to list and continue
+			IF obj is-inline-list? THEN
+				\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+				\ remove ,,inline 
+				list obj 1 -1 slice extend!
+			ELSE
+				list obj append!
+			END
+		END
+	END	
 	;
 
 \ simplification of above when looking for only one symbol (so don't need stop-symbol)
@@ -447,28 +424,28 @@
 	;
 	
 \ assumes @( was just read, parses until ) as an object list, prepended with ,,declargs
-: syntax-parse-decl-arglist
-	@locals [ outlist ]
+: syntax-parse-decl-arglist ( -- outlist )
+	@locals [ obj ]
 	',,declargs 1 make-list outlist!
-	@loop
-		syntax-next
-		dup void? if >>eof
-		dup ') == if >>done
-		\ else append object and continue
-		outlist swap append outlist! <<loop
-	@eof
-		drop "End of input inside @(" error
-	@done
-		drop outlist
+	WHILE true DO
+		syntax-next obj!
+		IF obj void? THEN "End of input inside @(" error
+		ELIF obj ') == THEN outlist return
+		ELSE
+			\ else append object and continue
+			outlist obj append!
+		END
+	END
 	;
 	
 \ is obj a list like: [ ,,inline ... ]
 : is-inline-list? ( obj -- result )
-	obj list? not if >>no 
-	obj length 0 == if >>no \ must be at least [ ,,inline ]
-	obj 0 get ',,inline != if >>no
-	true return 
-	@no false return
+	IF obj list? THEN
+		IF obj length 0 > THEN
+			obj 0 get ',,inline == return
+		END
+	END
+	false
 	;
 	
 \ assumes ':' was just read
@@ -612,51 +589,58 @@
 		dup length 2 - 1 swap slice ( remove quotes )
 	;
 	
+
 \ ( first-piece-symbol -- string )
-: syntax-triple-string 
+: syntax-triple-string ( piece -- out )
+	@locals [ chunk ]
+		\ "SYNTAX-TRIPLE-STRING - INIT:" . piece . CR
 	\ convert to string first ...
-	symbol->string
+	piece symbol->string piece!
 	\ special case of only one piece ... """..."""
-	dup length 6 >=
-	over -3 -1 slice TRIPLEQUOTE symbol->string == and if >>return
-
-	\ else, keep first-piece on stack and add more chunks until i find one
-	\ that ends in """
-	@read-loop
-		reader-next-chunk
-		dup void? if >>error-eos
-		+
-		dup -3 -1 slice TRIPLEQUOTE symbol->string == if >>return
-		<<read-loop
-
-	@error-eos
-		"String ended inside triple-quoted string: " swap + error
-
+	IF 	piece length 6 >=
+		piece -3 -1 slice TRIPLEQUOTE symbol->string == and THEN
+		\ "\ GOT SINGLE CHUNK" . CR
+		>>return
+	END
+	\ else, add chunks until i find one that ends in """
+	WHILE true DO
+		reader-next-chunk chunk!
+			\ "GOT NEXT CHUNK:" . chunk . CR
+		IF chunk void? THEN
+			"String ended inside triple-quoted string: " piece str + error
+		ELSE
+			piece chunk + piece!
+		END
+		\ does piece end with """ now?
+		IF piece -3 -1 slice TRIPLEQUOTE symbol->string == THEN
+			>>return
+		END
+	END
+	
 	@return ( remove triple quotes from both sides )
-		dup length 3 swap 6 - slice
+		piece piece length 3 swap 6 - slice
 	;
-
+	
 \ assumes [ was just read & dropped
-: syntax-list
-	0 make-list 
-	@loop ( list )
+: syntax-list ( -- list )
+	@locals [ obj ]
+	0 make-list list!
+	WHILE true DO
 		\ note - any inner lists/lambdas will be handled automatically by syntax-next,
 		\ so don't have to check for { or [ here
-		syntax-next
-		dup void? if >>eof
-		dup '] == if >>closelist
-		dup is-inline-list? if >>inline-list 
-		\ anything else, append to list and continue
-		append <<loop
-	@eof ( list void )
-		"Unexpected end of input inside [ .. ]" error
-	@inline-list ( list inline-list )
-		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
-		\ remove ,,inline 
-		1 -1 slice extend <<loop
-	@closelist ( list '] )
-		drop
-		;
+		syntax-next obj!
+		IF obj void? THEN "Unexpected end of input inside [ .. ]" error
+		ELIF obj '] == THEN list return 
+		ELIF obj is-inline-list? THEN
+			\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+			\ remove ,,inline 
+			list obj 1 -1 slice extend!
+		ELSE
+			\ anything else, append to list and continue
+			list obj append!
+		END
+	END
+	;
 		
 \ parse ( ... ) comment, with nesting. assumes "(" was just read.
 : syntax-comment
@@ -1018,15 +1002,21 @@
 
 \ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
 \ (the difference being that plain lists are never bound to a frame since they are never called as code)
-: v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist nr-rewritten )
+\
+\ max-frame-level is the maximum frame level (from i.e. OP-FRAME-GET) that is required to resolve rewritten
+\ references. so i.e. if max-level == 0, then the rewritten objlist only accesses its only locals and doesn't
+\ need to be bound to an outer frame at runtime.
+\
+\ *NOTE* a value of -1 for max-frame-level means NOTHING was rewritten.
+: v2-compile-rewrite-args-locals ( objlist outer-env plain-list -- new-objlist max-frame-level )
 	@locals [ argnames localnames env i ]
 			
 		\ scan objlist for , @( ... ), @args, @locals
 		objlist
 		compile-collect-args-locals localnames! argnames! new-objlist!
 		
-		\ track number of var references i rewrite
-		0 nr-rewritten!
+		\ track max frame level required (set to -1 so i can tell later if i rewrote anything)
+		-1 max-frame-level!
 		
 		\ set objlist to rewritten list without @args/@locals
 		new-objlist objlist!
@@ -1129,27 +1119,41 @@
 		new-objlist
 			sym level index closure-env-make-ref-or-set
 			append new-objlist!
-		\ increment counter
-		nr-rewritten 1 + nr-rewritten!
+		\ remember max level so i can tell at the end if I need to be bound to an outer frame
+		max-frame-level level max max-frame-level!
 		>>next 
 		
 	@rewrite-inner-lambda
-		@locals [ sub-objlist sub-nr-rewritten ]
+		@locals [ sub-objlist sub-max-frame-level ]
 		\ call rewrite recursively with my env as the outer scope
 		objlist i get unmake \ get lambda as list to pass
-		env false v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
+		env false v2-compile-rewrite-args-locals sub-max-frame-level! sub-objlist!
 		\ turn new sub-objlist back into lambda now that its rewritten and add to new-objlist
 		new-objlist
 			sub-objlist make-lambda append new-objlist!
-		\ did i rewrite ANY names in inner closure (or any inner closures of that, etc.)
-		sub-nr-rewritten 0 == if >>done-rewrite-sub 
-		\ i rewrote terms, therefore this lambda needs to be bound to my (runtime) frame,
-		\ so add that ...
+		\ does rewritten code require any vars from my (or higher) frames? 
+		sub-max-frame-level 0 <= if >>done-rewrite-sub \ max level == 0 means it only needs its locals (-1 means it needs NO vars)
+		\ this lambda requires values from my (or higher) frames, so needs to be bound to my
+		\ runtime frame ...
 		new-objlist 'bind-lambda append new-objlist!
 		
 	@done-rewrite-sub
-		\ add # rewritten to my count so i return total of mine + all recursive inner lambdas
-		nr-rewritten sub-nr-rewritten + nr-rewritten!
+		\ several subtleties here -- i might never use any values from a higher frame, but have a sub-lambda that does so,
+		\ so i need to take sub-max-frame into account. NOTE -- since i am 1 level up, i subtract 1 from sub-max-level 
+		\ (i.e. a sub-lambda requiring a value 2 frames up is only 1 frame up for me, so should be counted that way ... 
+		\ so if sub-max is 1 for example, *I* do not need to be bound to an outer frame since those are my locals.
+		\
+		\ HOWEVER, once the level is >= 0, NEVER decrease it below 0 since that would then be mistaken for meaning nothing was
+		\ rewritten -- in the case of lists, that would mean the original lists are deepcopied instead of the replacement
+		\ list being used, so lambdas inside a list would never be transformed correctly.
+		\
+		\ note that this does not harm the optimization at all, since level=0 means only locals are used, so this does not
+		\ cause any lambdas to be bound unnecessarily.
+		IF sub-max-frame-level 0 > THEN
+			max-frame-level sub-max-frame-level 1 - max max-frame-level!
+		ELSE
+			max-frame-level sub-max-frame-level max max-frame-level!
+		END
 		>>next
 		
 	@rewrite-inner-plain-list
@@ -1166,16 +1170,17 @@
 		\ with a single opcode, so the final RUNTIME length will be the same.
 		objlist i get length list-length!
 		\ rewrite list
-		objlist i get env true v2-compile-rewrite-args-locals sub-nr-rewritten! sub-objlist!
+		objlist i get env true v2-compile-rewrite-args-locals sub-max-frame-level! sub-objlist!
 		\ did I rewrite anything?
-		sub-nr-rewritten 0 == if >>plain-list-no-rewrites
+		sub-max-frame-level 0 < if >>plain-list-no-rewrites
 		\ else, the rewrites occurred in MY ENV so flatten list so runtime references are correct
 		new-objlist
 			sub-objlist extend \ flatten sub-objlist into new-objlist
 			\ add code to remake list at runtime -- see notes above on the length passed to make-list
 			list-length append 'make-list append new-objlist!
-		\ add # rewritten to my count so i return total of mine + all recursive inner lambdas
-		nr-rewritten sub-nr-rewritten + nr-rewritten!
+		\ like above, i need to account for sub-max-frame-level in my max-frame-level.
+		\ *UNLIKE* above, the rewrites occurred in MY frame, so I do NOT subtract 1 as i did above
+		max-frame-level sub-max-frame-level max max-frame-level!
 		>>next 
 		
 	@plain-list-no-rewrites
@@ -1188,7 +1193,7 @@
 		i 1 + i! <<rewrite-loop
 		
 	@done
-		new-objlist nr-rewritten return	
+		new-objlist max-frame-level return	
 		;
 		
 \ starting at objlist[index], look for @label, with index += increment at each step.
@@ -1271,11 +1276,12 @@
 : compile-finalize-word ( objlist -- newlist )
 	\ always a toplevel function - no outer environment
 	objlist void false v2-compile-rewrite-args-locals
-	drop \ don't need nr-rewritten here; top level is never bound anyways
+	drop \ don't need max-frame-level here; top level functions cannot have outer frames by definition
 	\ now that all the rewriting above is done, can replace << and >> with jump opcodes
 	compiler-optimize-jumps
 	return \ return new objlist
 	;
+	
 'COMPILED-NAMELISTS void make-var
 
 \ *TODO* this REALLY needs to be rewritten with named args for clarity ...

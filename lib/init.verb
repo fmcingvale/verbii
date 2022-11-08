@@ -229,12 +229,16 @@
 
 \ *TODO* this should take a char (1-length string) instead of any string
 
-\ ( string -- bool; is first char of string whitespace? )
-: whitespace?
-	0 get ord ( get as ascii )
-	32 <= ( treat everything <= space as whitespace )
+\ is first char of string whitespace?
+: whitespace? ( c -- result )
+	IF c string? c symbol? or THEN
+		c 0 get ord \ get as ascii 
+		32 <= \ treat everything <= space as whitespace )
+	ELSE
+		false \ non-string, void, etc.
+	END
 	;
-
+	
 \ return string with any leading whitespace removed
 \ ( string -- string )
 : string-ltrim 
