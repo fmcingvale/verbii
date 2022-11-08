@@ -215,27 +215,25 @@
 	;
 
 \ assumes [ was just read & dropped
-: syntax-list
-	0 make-list 
-	@loop ( list )
+: syntax-list ( -- list )
+	@locals [ obj ]
+	0 make-list list!
+	WHILE true DO
 		\ note - any inner lists/lambdas will be handled automatically by syntax-next,
 		\ so don't have to check for { or [ here
-		syntax-next
-			\ "SYNTAX-LIST GOT NEXT:" . dup . CR
-		dup void? if >>eof
-		dup '] == if >>closelist
-		dup is-inline-list? if >>inline-list 
-		\ anything else, append to list and continue
-		append <<loop
-	@eof ( list void )
-		"Unexpected end of input inside [ .. ]" error
-	@inline-list ( list inline-list )
-		\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
-		\ remove ,,inline 
-		1 -1 slice extend <<loop
-	@closelist ( list '] )
-		drop
-		;
+		syntax-next obj!
+		IF obj void? THEN "Unexpected end of input inside [ .. ]" error
+		ELIF obj '] == THEN list return 
+		ELIF obj is-inline-list? THEN
+			\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+			\ remove ,,inline 
+			list obj 1 -1 slice extend!
+		ELSE
+			\ anything else, append to list and continue
+			list obj append!
+		END
+	END
+	;
 
 \ parse next word from input into runnable object
 : syntax-next ( -- obj )
@@ -292,6 +290,59 @@
 	END
 	;
 
+\ TODO -- this could be used when parsing other things like lists, lambdas, etc.
+\
+\ parse reader stream into a list until any of the given symbols are found (upon return, symbol will have been read)
+\
+\ returns parsed list
+: syntax-collect-until-any-symbol ( symbols -- list stop-symbol )
+	@locals [ obj ]
+	[ ] list!
+	WHILE true DO
+		syntax-next obj!
+		IF obj void? THEN
+			"End of input looking for: " symbols str + error
+		ELIF symbols obj contains? THEN
+			\ return ( list stop-symbol )
+			list obj return
+		ELSE
+			\ else append to list and continue
+			IF obj is-inline-list? THEN
+				\ got [ ,,inline elem ... ] -- add elements inline instead of appending as a list 
+				\ remove ,,inline 
+				list obj 1 -1 slice extend!
+			ELSE
+				list obj append!
+			END
+		END
+	END	
+	;
+
+\ assumes @( was just read, parses until ) as an object list, prepended with ,,declargs
+: syntax-parse-decl-arglist ( -- outlist )
+	@locals [ obj ]
+	',,declargs 1 make-list outlist!
+	WHILE true DO
+		syntax-next obj!
+		IF obj void? THEN "End of input inside @(" error
+		ELIF obj ') == THEN outlist return
+		ELSE
+			\ else append object and continue
+			outlist obj append!
+		END
+	END
+	;
+	
+\ is obj a list like: [ ,,inline ... ]
+: is-inline-list? ( obj -- result )
+	IF obj list? THEN
+		IF obj length 0 > THEN
+			obj 0 get ',,inline == return
+		END
+	END
+	false
+	;
+	
 \ objlist can be from a lambda or list. pass plain-list=true if objlist is from a list; false if from a lambda.
 \ (the difference being that plain lists are never bound to a frame since they are never called as code)
 \
