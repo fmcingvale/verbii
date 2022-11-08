@@ -4,9 +4,9 @@ PRODUCTION=1
 # define which verbii port is considered the production compiler (all should produce identical output,
 # so it's really just a matter of which one is easiest to run on your system)
 #
-# i usually implement new things in the c++ compiler first, so that is a primary reason why
-# the c++ port is the default. also it is the fastest implementation.
-VERBII='../cpp/verbii'
+# i usually implement new things in the C compiler first, so that is a primary reason why
+# the C port is the default. also it is the fastest implementation.
+VERBII='../c/verbii'
 
 # set VERBII_BOOT since this should always run from this location.
 # this is convenient since it doesn't require it to be preset as well
