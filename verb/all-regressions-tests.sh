@@ -25,6 +25,8 @@ rm TEST-RESULTS/output-*.txt
 # cannot handle absolute paths from /mnt ...
 export VERBII_BOOT=../lib/
 
+echo "C ..."
+../c/verbii run-all-tests.verb > TEST-RESULTS/output-c.txt
 echo "C++ ..."
 ../cpp/verbii run-all-tests.verb > TEST-RESULTS/output-cpp.txt
 echo "C# ..."
