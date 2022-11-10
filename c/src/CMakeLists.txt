@@ -7,11 +7,16 @@ include(CheckSymbolExists)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS")
 
-# specify the C++ standard
+# specify the C standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-
+# find zlib
+find_library(ZLIB_LIBRARY
+			NAMES z zlib zlib.lib
+			PATHS ${PROJECT_SOURCE_DIR}/../zlib)
+			
+# find gc library
 find_library(GC_LIBRARY
 			NAMES gc gc.lib gc64_dll gc64_dll.lib
 			PATHS ${PROJECT_SOURCE_DIR}/../libgc)
@@ -35,6 +40,8 @@ find_library(MATH_LIBRARY
 check_symbol_exists(strndup "string.h" HAVE_STRNDUP)
 
 add_executable(main main.c langtypes.c interpreter.c deserialize.c errors.c native.c opcodes.c util.c gc_object.c xmalloc.c)
+
+target_link_libraries(main ${ZLIB_LIBRARY})
 
 if(MATH_LIBRARY)
 	target_link_libraries(main ${MATH_LIBRARY})

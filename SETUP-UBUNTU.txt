@@ -10,12 +10,12 @@ General:
   * Alternatively, you can set VERBII_BOOT to the location of the lib/ directory
     in the verbii source tree. Make sure to add a trailing / to the path.
 
-C++:
-----
+C/C++:
+------
 
 	* Tested with g++ 9.4.0, 11.2.0 and clang 7.5 (@ repl.it)
 	
-	$ sudo apt-get install g++ make libgc-dev cmake
+	$ sudo apt-get install g++ make libgc-dev cmake zlib1g zlib1g-dev
 	$ cd cpp
 	$ ./setup-linux.sh
 	$ ./make.sh

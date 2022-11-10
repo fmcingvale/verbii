@@ -991,6 +991,112 @@ static void builtin_puts() {
 		printf("%s", popString("puts"));
 }
 	
+#include <zlib.h>
+
+static voidpf my_zalloc(voidpf opaque, uInt items, uInt size) {
+	//printf("zalloc %d %d\n", items, size);
+	return x_malloc(items*size);
+}
+
+static void my_zfree(voidpf opaque, voidpf address) {
+	//printf("zfree\n");
+	x_free(address);
+}
+
+// zlib-compress(string, level)
+static void builtin_zlib_compress() {
+	VINT level = popInt("zlib-compress");
+	Object *str_in = pop();
+	if(!isString(str_in))
+		error("String required in zlib-compress, got: %s\n", fmtStackPrint(str_in));
+
+	z_stream zs;
+	zs.zalloc = my_zalloc;
+	zs.zfree = my_zfree;
+	zs.opaque = NULL;
+	if(deflateInit(&zs, level) != Z_OK)
+		error("Unexpected return from deflateInit\n");
+
+	// calc upper bound on output size
+	unsigned long destLen = compressBound(string_length(str_in));
+	char *buf_out = (char*)malloc(destLen);
+	// setup buffer pointers
+	zs.next_in = (z_const Bytef *)string_cstr(str_in);
+	zs.avail_in = string_length(str_in);
+	zs.next_out = buf_out;
+	zs.avail_out = destLen;
+
+	// this should compress in one shot
+	if(deflate(&zs, Z_FINISH) != Z_STREAM_END)
+		error("Unexpected return from deflate\n");
+		
+	Object *str_out = newString(buf_out, zs.total_out);
+	//printf("Input len: %lu\n", len);
+	//printf("Compressed: %lu\n", zs.total_in);
+	//unsigned long csize = zs.total_out;
+	//printf("Compressed size: %lu\n", zs.total_out);
+
+	if(deflateEnd(&zs) != Z_OK)
+		error("Unexpected return from deflateEnd\n");
+	
+	push(str_out);
+}
+
+// zlib-decompress(string)
+static void builtin_zlib_decompress() {
+	Object *str_in = pop();
+	if(!isString(str_in))
+		error("String required in zlib-decompress, got: %s\n", fmtStackPrint(str_in));
+
+	z_stream zs;
+	zs.zalloc = my_zalloc;
+	zs.zfree = my_zfree;
+	zs.opaque = NULL;
+	// per docs, these additional fields must be initted before calling inflateInit
+	zs.next_in = (z_const Bytef *)string_cstr(str_in);
+	zs.avail_in = string_length(str_in);
+	if(inflateInit(&zs) != Z_OK)
+		error("Unexpected return from inflateInit\n");
+
+	Object *str_out = newString("",0);
+
+	// I don't know the original size, so decompress in chunks
+	// (making this too small makes decompression VERY slow)
+	int TEMPSIZE = 131072;
+	char *TEMPBUF = (char*)x_malloc(TEMPSIZE);
+	zs.next_out = TEMPBUF;
+	zs.avail_out = TEMPSIZE;
+	int rv;
+	while(1) {
+		//printf("Inflate loop\n");
+		// decompress next chunk
+		rv = inflate(&zs, 0);
+		if(rv == Z_STREAM_END) {
+			// collect final output
+			string_append_cstr(str_out, TEMPBUF, TEMPSIZE-zs.avail_out);
+			break;
+		}
+
+		if(rv != Z_OK)
+			error("Unexpected error from inflate\n");			
+
+		// take chunk output and append to str_out
+		string_append_cstr(str_out, TEMPBUF, TEMPSIZE-zs.avail_out);
+		
+		// reset the output chunk
+		//printf("Got %d bytes\n", 16384 - zs2.avail_out);
+		zs.next_out = TEMPBUF;
+		zs.avail_out = TEMPSIZE;
+	}
+
+	if(inflateEnd(&zs) != Z_OK)
+		error("Unexpected return from inflateEnd\n");
+		
+	x_free(TEMPBUF);
+
+	push(str_out);
+}
+
 typedef struct _BUILTIN_FUNC {
 	const char *name;
 	void (*fn)();
@@ -1107,6 +1213,10 @@ BUILTIN_FUNC BLTINS[] = {
 	// more os/fileops
 	{ "file-pathsep", builtin_file_pathsep},
 	{ "os-getcwd", builtin_os_getcwd},
+
+	// zlib
+	{ "zlib-compress", builtin_zlib_compress},
+	{ "zlib-decompress", builtin_zlib_decompress},
 
 	{NULL, NULL}
 };
