@@ -103,6 +103,8 @@ Global TODO
 
 ---[ Optimization ]------------------------------------------------------
 
+* optimize single-char strings & symbols to use predefined obejcts like with small ints
+
 * stream-reader needs to be redone with named args -- should be significantly faster
 
 * I think the native make-word should be renamed to something like set-word and 
