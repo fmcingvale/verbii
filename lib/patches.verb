@@ -12,6 +12,161 @@
 ( ------ boot ----------- )
 	
 ( ------ init ----------- )
-	
+
 ( ------ compiler ------- )
 
+	
+\ =========================================================================
+\ Parsing & printing of hex values (these were originally in numeric.verb
+\ but are needed in the compiler now.
+\ =========================================================================
+
+\ convert char h from hex to int
+: hex-char-to-int ( h -- i )
+	h "0" >= 
+	h "9" <=
+	and if >>digit 
+
+	h "a" >=
+	h "h" <=
+	and if >>hexlower 
+
+	h "A" >= 
+	h "H" <=
+	and if >>hexupper
+
+	"Bad hex digit: " h + error
+
+	@digit h ord "0" ord - return
+	@hexlower h ord "a" ord - 10 + return
+	@hexupper h ord "A" ord - 10 + return
+	;
+
+\ parse hex string to integer -- hex must NOT have leading "0x"; ONLY hex digits
+: parse-hex ( hex -- i )
+	\ fold
+	hex
+	{ ( accum h ) 
+		h hex-char-to-int 
+		accum 16 * + 
+	} 0 fold
+	;
+
+\ 4-bit value to hex digit
+\ ( n -- h )
+: int4-to-hex 
+	dup 9 <= if >>digit 
+	dup 16 < if >>hex 
+	"Bad value in int4-to-hex:" swap str + error
+
+	@digit "0" ord + chr return
+	@hex 10 - "a" ord + chr
+	;
+
+\ 8-bit value to 2 hex digits )
+\ ( n -- h )
+: int8-to-hex 
+	16 /mod int4-to-hex swap int4-to-hex +
+	;
+
+\ 16-bit value to 4 hex digits
+\ ( n -- h )
+: int16-to-hex
+	256 /mod int8-to-hex swap int8-to-hex +
+	;
+
+\ 32-bit value to 8 hex digits )
+\ ( n -- h )
+: int32-to-hex
+	65536 /mod int16-to-hex swap int16-to-hex +
+	;
+
+\ shortcut - int to hex string
+\ - always unsigned
+\ - does NOT prepend "0x", only returns the hex digits
+\
+\ ( val -- hexstring )
+: str.hex int32-to-hex ;
+
+\ parse binary string to integer -- must NOT have any prefix, only "0" and "1" digits
+: parse-binary ( binstr -- i )
+	\ fold
+	binstr
+	{ ( accum b ) 
+		IF b "0" == THEN
+			accum 1 bit-shl
+		ELIF b "1" == THEN
+			accum 1 bit-shl 1 bit-or
+		\ allow dots to break digits into groups
+		ELIF b "." == THEN
+			accum \ skip
+		ELSE "Bad binary digit: " b + error 
+		END
+	} 0 fold
+	;
+	
+\ parse next word from input into runnable object
+: syntax-next ( -- obj )
+	@locals [ word ]
+	reader-next word!
+		\ "syntax-next word:" . word . CR
+	IF word void? THEN void return
+	ELIF word '( == THEN \ ) <- to fix syntax highlighting here
+		syntax-comment syntax-next return \ skip comment and return NEXT object
+	ELIF word '\ == THEN
+		syntax-line-comment syntax-next return \ skip comment and return NEXT object
+	ELIF word '{ == THEN
+		syntax-v2-closure return
+	ELIF word '[ == THEN
+		syntax-list return
+	ELIF word '#op( == THEN \ )
+		syntax-opcode return
+	ELIF word ': == THEN
+		v2-syntax-define-word return
+	ELIF word 'del == THEN
+		syntax-del return
+	ELIF word 'true == THEN 
+		true return
+	ELIF word 'false == THEN
+		false return
+	ELIF word 'null == THEN
+		null return
+	ELIF word 'WHILE == THEN
+		syntax-while return
+	ELIF word 'IF == THEN
+		syntax-if return
+	( look for triple-quoted string first )
+	ELIF word 0 3 slice TRIPLEQUOTE == THEN
+		\ "GOT TRIPLEQUOTE START:" . word . CR
+		\ call syntax-triple-string with first piece on stack
+		word syntax-triple-string return
+	( now single quoted string )
+	ELIF word 0 get '" == THEN \ "... <- fix syntax highlighting here
+		( call syntax-string with first piece on stack )
+		word syntax-string return
+	\ test for correct format before passing to parse-int or parse-float since those functions
+	\ may (depending on platform) happily parse something like "123abc" as 123 
+	ELIF word int-symbol? THEN
+		word parse-int return
+	ELIF word float-symbol? THEN
+		word parse-float return
+	\ literals:
+	\	#NN.NNN -> float
+	\	#xNNNNN -> hex
+	\	#bNNNNN -> binary (TODO)
+	ELIF word 0 get '# == THEN
+		IF word 1 -1 slice float-symbol? THEN
+			word 1 -1 slice parse-float return
+		ELIF word 1 get 'x == THEN
+			word 2 -1 slice str parse-hex return
+		ELIF word 1 get 'b == THEN
+			word 2 -1 slice str parse-binary return
+		ELSE
+			"Unknown literal: " word str + error
+		END
+	ELSE
+		\ "RET PLAIN WORD:" . word . CR
+		\ no match, return unprocessed word
+		word return
+	END
+	; 

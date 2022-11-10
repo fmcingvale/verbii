@@ -6,6 +6,7 @@
 "numeric" import
 
 : test-parse-hex
+	\ string parsing
 	2595453966 "9ab37c0e" parse-hex expect==
 	2068551320 "7b4b9698" parse-hex expect==
 	2503746217 "953c22a9" parse-hex expect==
@@ -16,6 +17,18 @@
 	         0 "00000000" parse-hex expect==
 	4294967295 "ffffffff" parse-hex expect==
 	  11259375   "ABCDEF" parse-hex expect==
+	  
+	\ compiler literals
+	2595453966 #x9ab37c0e expect==
+	2068551320 #x7b4b9698 expect==
+	2503746217 #x953c22a9 expect==
+	2235264886 #x853b6f76 expect==
+	3302115232 #xc4d247a0 expect==
+	4032181163 #xf05633ab expect==
+	1190136849 #x46f00c11 expect==
+	         0 #x00000000 expect==
+	4294967295 #xffffffff expect==
+	  11259375   #xABCDEF expect==
 	;
 	
 : test-str.hex
@@ -26,6 +39,36 @@
 	      2748 str.hex "00000abc" expect==
 		    15 str.hex "0000000f" expect==
 			 0 str.hex "00000000" expect==
+	;
+	
+: test-parse-binary
+	\ string parsing first
+	3830228581 "11100100010011001010011001100101" parse-binary expect==
+	4294967295 "11111111111111111111111111111111" parse-binary expect==
+	0          "00000000000000000000000000000000" parse-binary expect==
+	1687410066 "01100100100100111101010110010010" parse-binary expect==
+	629394                 "10011001101010010010" parse-binary expect==
+	
+	\ compiler literals
+	3830228581 #b11100100010011001010011001100101 expect==
+	4294967295 #b11111111111111111111111111111111 expect==
+	0          #b00000000000000000000000000000000 expect==
+	1687410066 #b01100100100100111101010110010010 expect==
+	629394                 #b10011001101010010010 expect==
+	
+	\ now with dots .. (can't get np++ syntax highlighing to work here .. ugh)
+	3830228581 #b1110.0100.0100.1100.1010.0110.0110.0101 expect==
+	4294967295 #b1111.1111.1111.1111.1111.1111.1111.1111 expect==
+	0          #b0000.0000.0000.0000.0000.0000.0000.0000 expect==
+	1687410066 #b0110.0100.1001.0011.1101.0101.1001.0010 expect==
+	629394                    #b1001.1001.1010.1001.0010 expect==
+	;
+	
+: test-str.bin 
+	"00000000.00010010.11010110.10000111" 1234567 str.bin expect==
+	"10100100.10001011.11010011.11001111" 2760627151 str.bin expect==
+	"11110100.11010000.01111011.11100011" 4107303907 str.bin expect==
+	"00000011.01000100.11010111.10011111" 54843295 str.bin expect==
 	;
 	
 : test-bit-not-and-or-xor
@@ -50,13 +93,6 @@
 	3850888180 3544819506 919487686 bit-xor expect==
 	;
 
-: test-str.bin 
-	"00000000.00010010.11010110.10000111" 1234567 str.bin expect==
-	"10100100.10001011.11010011.11001111" 2760627151 str.bin expect==
-	"11110100.11010000.01111011.11100011" 4107303907 str.bin expect==
-	"00000011.01000100.11010111.10011111" 54843295 str.bin expect==
-	;
-	
 : test-bit-shr
 	"0fedcba9" "fedcba98" parse-hex  4 bit-shr str.hex expect==
 	"00fedcba" "fedcba98" parse-hex  8 bit-shr str.hex expect==
