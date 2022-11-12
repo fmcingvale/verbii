@@ -137,6 +137,16 @@
 	[ "abc" "def" "ghi" ] "#&abc$/def::/ghi*#" "&*/#:$" string-split expect==
 	;
 	
+\ make sure that round trip of BYTE -> chr -> ord -> BYTE produces same value for 0..255
+: test-8-bit-strings
+	{ ( x )
+		@locals [ b c ]
+			x chr b!
+			b ord x expect==
+		}
+	0 1 256 for-count
+	;
+	
 (
 unittest-init
 
