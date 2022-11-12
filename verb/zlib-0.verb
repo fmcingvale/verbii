@@ -1,0 +1,136 @@
+\ zlib-0 - an alternate verbii implementation of zlib deflate level 0
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+\ this is intended for ports that don't have zlib available and need to be
+\ able to produce deflate-compatible streams. this only supports the uncompressed
+\ block type (like zlib-compress with level=0).
+\
+\ references:
+\	http://www.zlib.org/rfc-zlib.html (zlib container header)
+\	http://www.zlib.org/rfc-deflate.html (compressed block format)
+
+"numeric" import
+"hashing" import
+
+\ extract data from uncompressed zlib stream (i.e. from zlib-compress with level=0)
+
+\ raises exception if wrong format or corrupted
+: zlib-decompress-0 ( data -- uncompressed )
+	@locals [ n len nlen last-block offset ]
+	\ CMF flag is first
+	\ bits 3:0 = compression method (8=deflate)
+	IF data 0 get ord #x0f bit-and 8 != THEN
+		"Stopping: Can only handle DEFLATE format." error
+	END
+	\ bits 7:4 = for CM=8, the log of the LZ77 window size
+	\ "Window size (log):" . 
+	\ data 0 get ord #xf0 bit-and 4 bit-shr . nl
+	
+	\ flags (byte 1)
+	\ 4:0 check bits for CMF & FLG
+	\	I don't have to test them specifically since they are tested as part of header check below
+	\ 5 : yes/no for preset dictionary after FLG byte
+	IF data 1 get ord #x20 bit-and 5 bit-shr 0 != THEN
+		"Cannot handle preset dictionary." error
+	END
+	\ 7:6 = compression level
+	\ 	- not checked - i check each block individually
+	\ check: (CMF*256 + FLG) must be a multiple of 31
+	IF data 0 get ord 256 * data 1 get ord + 31 mod 0 != THEN
+		"Failed header check" error
+	END
+	
+	\ read all data blocks
+	0 last-block!
+	2 offset! \ offset to start of next block to read
+	"" uncompressed! \ collect all uncompressed data here
+	WHILE last-block 0 == DO
+		\ read next block
+		
+		\ 3 header bits:
+		\	0 : flag if this is the final block
+		\	2:1 : BTYPE, where 0=no compression
+		data offset get ord #x01 bit-and last-block! 
+		\ Compression type - must be 0 for uncompressed
+		IF data offset get ord #x06 bit-and 1 bit-shr 0 != THEN
+			"Stopping: Can only handle uncompressed data" error
+		END
+		\ next 2 bytes gives length, in little-endian format
+		data offset 1 + get ord data offset 2 + get ord 256 * + len! 
+		\ next 2 bytes is 1's complement of length
+		data offset 3 + get ord data offset 4 + get ord 256 * + nlen!
+		\ check that LEN+NLEN == 65535
+		IF len nlen + 65535 != THEN
+			"LEN != NLEN" error
+		END
+		\ next LEN bytes is the uncompressed data
+		\ add to uncompressed data
+		uncompressed
+			data offset 5 + len slice + uncompressed!
+		
+		\ position offset to start of next block
+		offset 5 + len + offset!
+	END
+	
+	\ last 4 bytes are the ADLER32 checksum in network order
+	data -4 -1 slice unpack-int32-BE n! 
+	IF uncompressed adler32-calc n != THEN
+		"Data corrupted (bad ADLER32)" error
+	END
+	uncompressed
+	;
+	
+\ create non-compressed string in DEFLATE format (like zlib-compress with level=0)
+: zlib-compress-0 ( data -- compressed )
+	@locals [ adler len nlen ]
+	\ CMF flag is first
+	\ bits 7:4 = for CM=8, the log of the LZ77 window size (should be 7)
+	\ bits 3:0 = compression method (8=deflate)
+	\ so will always be (binary): 0111 1000 = 0x78
+	
+	\ flags are next (byte 1)
+	\ 7:6 = compression level -- always 0 here
+	\ 5 = yes/no for preset dictionary after FLG byte (always 0 here)
+	\ 4:0 check bits for CMF & FLG
+	\ since both fields are fixed, this is easy to precalculate:
+	\	CMF*256 + FLG -> multiple of 31
+	\ CMF = 0x78 == 120
+	\ CMF*256 = 30720 --> / 31 = 990.9
+	\ 991 * 31 = 30721 --> so FLG = 1 will work
+	120 chr 1 chr + compressed!
+	
+	\ calc adler32 of data before splitting into blocks
+	data adler32-calc adler!
+	
+	\ data blocks are next
+	WHILE data length 0 > DO
+		\ block header byte:
+		\	0: last block?
+		\   2:1: format (always 0 for uncompressed here)
+		IF data length 65535 <= THEN
+			\ final block, header = 001
+			compressed 1 chr + compressed!
+			data length len!
+			65535 len - nlen!
+		ELSE
+			\ > 65535 bytes left, so this is not the final block, header=0
+			compressed 0 chr + compressed!
+			65535 len!
+			0 nlen!
+		END
+		\ write len then nlen, in little-endian format
+		compressed 
+			len pack-int16-LE +
+			nlen pack-int16-LE +
+			compressed!
+			
+		\ write next len blocks of data
+		compressed data 0 len slice + compressed!
+		data len -1 slice data!
+	END
+	
+	\ adler32 of entire uncompressed data goes on end
+	compressed adler pack-int32-BE +
+	;
+	
