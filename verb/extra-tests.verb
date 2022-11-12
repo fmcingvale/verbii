@@ -1,0 +1,91 @@
+
+\ extra-tests - test features not necessarily available on all platforms.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+"zlib-0" import
+"unittest" import
+
+unittest-init
+
+\ does name (symbol) exist in builtin functions?
+: have-builtin ( name )
+	.builtins name find-equal void? not
+	;
+
+: test-zlib
+	@locals [ text ctext text2 ]
+	IF 'zlib-compress have-builtin THEN
+		"Testing zlib -9 ..." . nl
+		"pi_200k.txt" file-read text!
+		text 9 zlib-compress ctext!
+		\ check expected length
+		ctext length 95066 expect==
+		\ check expected fnv-1a
+		ctext fnv-1a-32 str.hex "48ac41b8" expect==
+		ctext zlib-decompress text2!
+		text text2 expect== \ make sure decompression worked
+	ELSE
+		"Skipping zlib test" . nl
+	END
+	;
+	
+: test-zlib-0
+	@locals [ text ctext ctext0 text2 ]
+	IF 'zlib-compress have-builtin THEN
+		"Checking vs. native zlib ..." . nl
+		\ i have a native zlib, so can directly compare zlib-0 to it for correctness
+		"pi_200k.txt" file-read text!
+		\ compress with zlib, level=0
+		text 0 zlib-compress ctext!
+		\ compress with zlib-0
+		text zlib-compress-0 ctext0!
+		\ check expected length
+		ctext0 length 200026 expect==
+		\ make sure they are the same
+		ctext ctext0 expect==
+		\ test vs expected value
+		ctext fnv-1a-32 str.hex "7be8055c" expect==
+		\ uncompress both and check vs original
+		ctext zlib-decompress text2!
+		text text2 expect==
+		ctext0 zlib-decompress-0 text2!
+		text text2 expect==
+	ELSE
+		"Checking with verbii zlib-0 ..." . nl
+		\ no native zlib, so just pack & unpack and check vs expected value
+		"pi_200k.txt" file-read text!
+		\ compress
+		text zlib-compress-0 ctext0!
+		\ check expected length
+		ctext0 length 200026 expect==
+		\ check expected value
+		ctext0 fnv-1a-32 str.hex "7be8055c" expect==
+		\ decompress
+		ctext0 zlib-decompress-0 text2!
+		\ make sure is equal to original
+		text text2 expect==
+	END
+	;
+		
+	
+\ "Have +:" . '+ have-builtin . nl
+\ "Have CR:" . 'CR have-builtin . nl
+\ "Have zlib-compress:" . 'zlib-compress have-builtin . nl
+
+\ make expected value for FNV-1a of level-0 compressed pi_200k.txt
+\ "pi_200k.txt" file-read 0 zlib-compress fnv-1a-32 str.hex . nl
+\ .. and length
+\ "pi_200k.txt" file-read 0 zlib-compress length . nl
+
+\ make expected value for FNV-1a of level-9 compressed pi_200k.txt
+\ "pi_200k.txt" file-read 9 zlib-compress fnv-1a-32 str.hex . nl
+\ .. and length
+\ "pi_200k.txt" file-read 9 zlib-compress length . nl
+
+test-zlib
+test-zlib-0
+
+unittest-summary
+
+	
