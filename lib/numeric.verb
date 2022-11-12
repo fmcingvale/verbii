@@ -445,4 +445,67 @@
 	return
 	@error "Need at least 2 values in stddev.s, got: " numbers repr + error
 	;
+
+\ ======================================================================
+\ Byte packing of integers to/from strings
+\ ======================================================================
+
+\ pack a 16-bit integer into a string in little-endian order
+: pack-int16-LE ( x -- s )
+	""
+	x #xff bit-and chr +
+	x #xff00 bit-and 8 bit-shr chr +
+	;
 	
+\ pack a 16-bit integer into a string in big-endian ('network') order
+: pack-int16-BE ( x -- s )
+	""
+	x #xff00 bit-and 8 bit-shr chr +
+	x #xff bit-and chr +
+	;
+
+\ pack 32-bit integer into a string in little-endian order
+: pack-int32-LE ( x -- s )
+	""
+	x #x000000ff bit-and            chr +
+	x #x0000ff00 bit-and  8 bit-shr chr +
+	x #x00ff0000 bit-and 16 bit-shr chr +
+	x #xff000000 bit-and 24 bit-shr chr +
+	;
+		
+\ pack 32-bit integer into a string in big-endian ('network') order
+: pack-int32-BE ( x -- s )
+	""
+	x #xff000000 bit-and 24 bit-shr chr +
+	x #x00ff0000 bit-and 16 bit-shr chr +
+	x #x0000ff00 bit-and  8 bit-shr chr +
+	x #x000000ff bit-and            chr +
+	;
+
+\ unpack a 16-bit integer from first 2 bytes of string, in big-endian ('network') order
+: unpack-int16-BE ( data )
+	data 0 get ord 8 bit-shl
+	data 1 get ord +
+	;
+
+\ unpack a 16-bit integer from first 2 bytes of string, in little-endian order
+: unpack-int16-LE ( data )
+	data 1 get ord 8 bit-shl
+	data 0 get ord +
+	;
+	
+\ unpack a 32-bit integer from first 4 bytes of string, in big-endian ('network') order
+: unpack-int32-BE ( data )
+	data 0 get ord 24 bit-shl
+	data 1 get ord 16 bit-shl
+	data 2 get ord 8 bit-shl
+	data 3 get ord + + +
+	;
+
+\ unpack a 32-bit integer from first 4 bytes of string, in little-endian order
+: unpack-int32-LE ( data )
+	data 3 get ord 24 bit-shl
+	data 2 get ord 16 bit-shl
+	data 1 get ord 8 bit-shl
+	data 0 get ord + + +
+	;

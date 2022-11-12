@@ -385,3 +385,18 @@
 	"0.10" 0.001 2 fmt-percent expect==
 	"12.346" 0.123456 3 fmt-percent expect==
 	;
+	
+: test-int-packing
+	#xabcd pack-int16-LE #xcd chr #xab chr + expect==
+	#xabcd pack-int16-BE #xab chr #xcd chr + expect==
+	
+	#xabcd9876 pack-int32-LE #x76 chr #x98 chr + #xcd chr + #xab chr + expect==
+	#xabcd9876 pack-int32-BE #xab chr #xcd chr + #x98 chr + #x76 chr + expect==
+	
+	#x76 chr #x98 chr + #xcd chr + #xab chr + unpack-int32-LE #xabcd9876 expect==
+	#xab chr #xcd chr + #x98 chr + #x76 chr + unpack-int32-BE #xabcd9876 expect==
+	
+	#xcd chr #xab chr + unpack-int16-LE #xabcd expect==
+	#xab chr #xcd chr + unpack-int16-BE #xabcd expect==
+	;
+	
