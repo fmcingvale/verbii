@@ -25,6 +25,10 @@ unittest-init
 		ctext fnv-1a-32 str.hex "48ac41b8" expect==
 		ctext zlib-decompress text2!
 		text text2 expect== \ make sure decompression worked
+		
+		\ test adler32 & crc functions
+		text zlib-adler32 1251818882 expect==
+		text zlib-crc32 4171019437 expect==
 	ELSE
 		"Skipping zlib test" . nl
 	END

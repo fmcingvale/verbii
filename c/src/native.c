@@ -1097,7 +1097,21 @@ static void builtin_zlib_decompress() {
 	push(str_out);
 }
 
+// might as well provide these, since I have zlib, as alternative to the verbii implementations
+static void builtin_zlib_adler32() {
+	Object *data = popStringObj("zlib-adler32");
+	uLong adler = adler32(adler32(0, Z_NULL, 0), (const Bytef*)string_cstr(data), string_length(data));
+	push(newInt(adler));
+}
+
+static void builtin_zlib_crc32() {
+	Object *data = popStringObj("zlib-crc32");
+	uLong crc = crc32(crc32(0, Z_NULL, 0), (const Bytef*)string_cstr(data), string_length(data));
+	push(newInt(crc));
+}
+
 static void builtin_list_builtins();
+
 typedef struct _BUILTIN_FUNC {
 	const char *name;
 	void (*fn)();
@@ -1219,6 +1233,8 @@ BUILTIN_FUNC BLTINS[] = {
 	// zlib
 	{ "zlib-compress", builtin_zlib_compress},
 	{ "zlib-decompress", builtin_zlib_decompress},
+	{ "zlib-adler32", builtin_zlib_adler32},
+	{ "zlib-crc32", builtin_zlib_crc32},
 
 	{NULL, NULL}
 };
