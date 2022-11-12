@@ -1097,6 +1097,7 @@ static void builtin_zlib_decompress() {
 	push(str_out);
 }
 
+static void builtin_list_builtins();
 typedef struct _BUILTIN_FUNC {
 	const char *name;
 	void (*fn)();
@@ -1120,6 +1121,7 @@ BUILTIN_FUNC BLTINS[] = {
 	{ "set-allow-overwrite-words", builtin_set_allow_overwrite },
 	{ "set-stacktrace-on-exception", builtin_stacktrace_on_exception },
 	{ ".wordlist", builtin_wordlist },
+	{ ".builtins", builtin_list_builtins },
 
 	{ "f.setprec", builtin_f_setprec },
 
@@ -1220,6 +1222,19 @@ BUILTIN_FUNC BLTINS[] = {
 
 	{NULL, NULL}
 };
+
+static void builtin_list_builtins() {
+	Object *list = newList();
+	int i=0;
+	while(1) {
+		if(BLTINS[i].name == NULL)
+			break; // end of list
+
+		List_append(list, newSymbol(BLTINS[i].name, strlen(BLTINS[i].name)));
+		++i;
+	}
+	push(list);
+}
 
 static Object *BUILTINS; // dict
 

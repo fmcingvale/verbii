@@ -799,6 +799,15 @@ class Builtins {
 		intr.push(new LangInt(hash));
 	}
 
+	public static void list_builtins(Interpreter intr) {
+		var list = new LangList();
+		foreach(var pair in builtins) {
+			// no ordering requirement
+			list.objlist.Add(new LangSymbol(pair.Key));
+		}
+		intr.push(list);
+	}
+
 	public static Dictionary<string,Action<Interpreter>> builtins = 
 		new Dictionary<string,Action<Interpreter>> { 
 		{"+", add},
@@ -845,6 +854,7 @@ class Builtins {
 		{"make-symbol", make_symbol},
 		{".dumpword", dumpword},
 		{".wordlist", wordlist},
+		{".builtins", list_builtins},
 		{"error", intr => throw new LangError(popString(intr,"error")) },
 		{"put", obj_put},
 		{"get", obj_get},

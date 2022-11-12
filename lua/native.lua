@@ -655,6 +655,10 @@ function builtin_wordlist(intr)
 	intr:push(dictKeys(intr._WORDS))
 end
 
+function builtin_list_builtins(intr)
+	intr:push(dictKeys(BUILTINS))
+end
+
 function builtin_make_opcode(intr)
 	local C = popInt(intr)
 	local B = popInt(intr)
@@ -778,6 +782,7 @@ BUILTINS = {
 	["make-lambda"] = { {}, builtin_make_lambda},
 	[".dumpword"] = { {}, function(intr) intr:push(deepcopy(intr:lookupWordOrFail(popSymbol(intr)))) end},
 	[".wordlist"] = { {}, builtin_wordlist},
+	[".builtins"] = { {}, builtin_list_builtins},
 	["void"] = { {}, function(intr) intr:push(new_Void()) end},
 	["error"] = { {}, function(intr) error(">>>" .. popString(intr)) end},
 	

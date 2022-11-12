@@ -212,6 +212,9 @@ def builtin_puts(I, obj):
 def builtin_wordlist(I):
 	I.push(list(I._WORDS.keys()))
 
+def builtin_list_builtins(I):
+	I.push(list(BUILTINS.keys()))
+
 def builtin_file_read(I):
 	filename = popString(I, "file-read")
     # 'rb' so it doesn't translate EOL chars ...
@@ -619,6 +622,7 @@ BUILTINS = {
 	'SP': ([], lambda I: I.push(I.SP)),
 	'SP!': ([int], builtin_setsp),
 	'.wordlist': ([], builtin_wordlist),
+	'.builtins': ([], builtin_list_builtins),
 	'error': ([], builtin_error),
 
 	# compiler words

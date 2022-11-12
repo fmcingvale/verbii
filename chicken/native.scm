@@ -540,6 +540,12 @@
 			(value text))
 		(push intr hash)))
 
+(define (builtin-list-builtins intr)
+	(let ((newlist (new-lang-list)))
+		(for-each (lambda (lst)
+			(llist-push-back newlist (car lst))) N_BUILTINS)
+		(push intr newlist)))
+
 (import (chicken time))
 (import (chicken time posix))
 (import (chicken file))
@@ -620,6 +626,7 @@
 		(list "make-symbol" (list 'i) builtin-make-symbol)
 		(list ".dumpword" 	(list 'y) builtin-dumpword)
 		(list ".wordlist"   '() builtin-wordlist)
+		(list ".builtins"   '() builtin-list-builtins)
 		(list "f.setprec" 	(list 'i) (lambda (intr i) (flonum-print-precision i)))
 		(list "error"		(list 's) (lambda (intr s) (lang-error 'unknown s)))
 		; as above, must deepcopy list
