@@ -23,6 +23,24 @@
 	SP UNITTEST-SP0!
 	;
 
+\ max with of string before it is truncated with '...'
+\ NOTE: this isn't set to ensure values fit on the screen but just to ensure that
+\ really long (maybe erroneous) values don't flood the output
+'UNITTEST-STR-TRUNC-WIDTH 240 make-var
+
+\ if s > max-width then truncate it and add " ..." to end
+: string-truncate ( s max-width )
+	IF s length max-width > THEN
+		s 0 max-width 4 - slice " ..." + s!
+	END
+	s 
+	;
+	
+\ get obj as string, truncated if too wide
+: str.trunc ( obj -- s )
+	obj str UNITTEST-STR-TRUNC-WIDTH string-truncate
+	;
+	
 : unittest-report-pass ( msg )
 	"    " . msg . CR
 	UNITTEST-NR-PASS 1 + UNITTEST-NR-PASS!
@@ -36,11 +54,11 @@
 \ test is called with stack: ( expect actual )
 : expect-generic ( test testname expect actual )
 	expect actual test call if >>ok
-		"*** ERROR *** Expecting" . expect repr . "but got" . actual repr . CR 
+		"*** ERROR *** Expecting" . expect str.trunc . "but got" . actual str.trunc . CR 
 		UNITTEST-NR-FAIL 1 + UNITTEST-NR-FAIL!
 		return
 	@ok 
-		"    " . expect . testname . actual . ": ok" . CR 
+		"    " . expect str.trunc . testname . actual str.trunc . ": ok" . CR 
 		UNITTEST-NR-PASS 1 + UNITTEST-NR-PASS!
 	;
 
@@ -49,11 +67,11 @@
 	@locals [ actual ]
 	A B test call actual!
 	actual expect == if >>ok
-		"Expecting " expect str + " for " + A str + " " + testname + " " + B str + " but got " + actual str +
+		"Expecting " expect str.trunc + " for " + A str.trunc + " " + testname + " " + B str.trunc + " but got " + actual str.trunc +
 			unittest-report-fail
 		return
 	@ok
-		A str " " + testname + " " + B str + ": ok" + 
+		A str.trunc " " + testname + " " + B str.trunc + ": ok" + 
 			unittest-report-pass
 	;	
 
