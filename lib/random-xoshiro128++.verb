@@ -5,10 +5,12 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"numeric" import
-
-'XOSHIRO128PP-STATE void make-var
-
+: __modinit__
+	"numeric" import
+	\ create global
+	'XOSHIRO128PP-STATE void make-var
+	;
+	
 \ seed with 4 (32-bit) integer values
 : xoshiro128pp-seed ( a b c d -- )
 	[ a b c d ] XOSHIRO128PP-STATE!

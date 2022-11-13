@@ -1,61 +1,67 @@
 \ Board state and global definitions. make/unmake move is also here.
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: __modinit__
+
+	\ pieces
+	'P-PAWN 0 make-const
+	'P-KNIGHT 1 make-const
+	'P-BISHOP 2 make-const
+	'P-ROOK 3 make-const
+	'P-QUEEN 4 make-const
+	'P-KING 5 make-const
+	'P-NONE 6 make-const
+
+	'PIECE-CHARS [ "P" "N" "B" "R" "Q" "K" "." ] make-var
+
+	\ sides
+	'WHITE 0 make-const
+	'BLACK 1 make-const
+
+	\ ------ board state -------
+
+	\ coordinates: row=0,col=0 is a1; row=0,col=7 is h1; row=7,col=7 is h8
+
+	\ pieces list (P-*), 1 for each square
+	'PIECES null make-var
+		
+	\ colors list (WHITE|BLACK), 1 for each square
+	'COLORS null make-var
+
+	\ side to move next - WHITE or BLACK
+	'SIDE-TO-MOVE WHITE make-var
+
+	\ castling availability as bools
+	'CASTLING_W_OO false make-var
+	'CASTLING_W_OOO false make-var
+	'CASTLING_B_OO false make-var
+	'CASTLING_B_OOO false make-var
+
+	\ en-passant target square [0-63] or -1
+	\ this is the square directly BEHIND (relative to its kindside) 
+	\ the pawn that just jumped two squares
+	'EPSQUARE -1 make-var
+
+	\ halfmove number for 50-move rule
+	'HALFMOVE 0 make-var
+
+	\ fullmove number
+	'FULLMOVE 0 make-var
+
+	\ epsquare, halfmove and castling status are difficult or not possible
+	\ to reconstruct from just the previous move, so save them on an undo stack
+	'UNDO-STACK [ ] make-var
+
+	\ track king squares
+	'KING-SQUARE-W -1 make-var
+	'KING-SQUARE-B -1 make-var 
 	
-\ pieces
-: P-PAWN 0 ;
-: P-KNIGHT 1 ;
-: P-BISHOP 2 ;
-: P-ROOK 3 ;
-: P-QUEEN 4 ;
-: P-KING 5 ;
-: P-NONE 6 ;
-
-'PIECE-CHARS [ "P" "N" "B" "R" "Q" "K" "." ] make-var
-
-\ sides
-: WHITE 0 ;
-: BLACK 1 ;
+	clear-board
+	;
+	
 ( side -- other )
 : other 1 + 2 mod ;
-
-\ ------ board state -------
-
-\ coordinates: row=0,col=0 is a1; row=0,col=7 is h1; row=7,col=7 is h8
-
-\ pieces list (P-*), 1 for each square
-'PIECES null make-var
-	
-\ colors list (WHITE|BLACK), 1 for each square
-'COLORS null make-var
-
-\ side to move next - WHITE or BLACK
-'SIDE-TO-MOVE WHITE make-var
-
-\ castling availability as bools
-'CASTLING_W_OO false make-var
-'CASTLING_W_OOO false make-var
-'CASTLING_B_OO false make-var
-'CASTLING_B_OOO false make-var
-
-\ en-passant target square [0-63] or -1
-\ this is the square directly BEHIND (relative to its kindside) 
-\ the pawn that just jumped two squares
-'EPSQUARE -1 make-var
-
-\ halfmove number for 50-move rule
-'HALFMOVE 0 make-var
-
-\ fullmove number
-'FULLMOVE 0 make-var
-
-\ epsquare, halfmove and castling status are difficult or not possible
-\ to reconstruct from just the previous move, so save them on an undo stack
-'UNDO-STACK [ ] make-var
-
-\ track king squares
-'KING-SQUARE-W -1 make-var
-'KING-SQUARE-B -1 make-var 
 
 \ must call this at least once to init board state
 : clear-board ( -- ) 
@@ -281,8 +287,6 @@
 	\ parts[5] is fullmove
 	parts 5 get parse-int FULLMOVE!
 	;
-
-clear-board
 
 : valid-rowcol? ( row col )
 	row 0 >=

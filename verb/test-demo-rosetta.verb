@@ -3,12 +3,14 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
+: __modinit__
+	"unittest" import
+	"numeric" import
+	"hashing" import
+	"demo-common" import
+	;
+	
 ( https://rosettacode.org/wiki/Fibonacci_sequence )
-
-"unittest" import
-"numeric" import
-"hashing" import
-"demo-common" import
 
 ( get first nr fibonacci numbers as a list )
 : fibonacci ( nr -- list )
@@ -148,9 +150,11 @@
 	
 ( https://rosettacode.org/wiki/100_doors )
 	
-'DOORS [ ] make-var
-\ create 100 doors, all set to closed (0) [101 doors, so I can index them from 1..100 for clarity]
-{ DOORS 0 append drop } 101 repeat
+: 100-doors-init
+	'DOORS [ ] make-var
+	\ create 100 doors, all set to closed (0) [101 doors, so I can index them from 1..100 for clarity]
+	{ DOORS 0 append drop } 101 repeat
+	;
 
 \ toggle state of DOOR[i]
 : toggle-door ( i )
@@ -162,6 +166,7 @@
 	;
 	
 : test-rosetta-100-doors
+	100-doors-init \ create globals
 	\ outer loop, use an increment value from 1..100
 	{ ( increment )
 		\ inner loop, iterate over i=iterate..100, i += iterate
@@ -185,7 +190,9 @@
 
 	[ 1 4 9 16 25 36 49 64 81 100 ] OPENED expect==
 	
-	'OPENED ,,del
+	\ cleanup namespace
+	'OPENED delete-var
+	'DOORS delete-var
 	;
 	
 ( https://rosettacode.org/wiki/Runge-Kutta_method )

@@ -2,6 +2,11 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
+: __modinit__
+	'ROOK-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] ] make-var
+	'BISHOP-MOVEDIRS [ [ 1 1 ] [ -1 1 ] [ 1 -1 ] [ -1 -1 ] ] make-var
+	;
+
 \ attacks is from gen-fixed-attacks
 : gen-fixed-moves ( piece square attacks side -- moves )
 	[ ] moves!
@@ -68,22 +73,20 @@
 	P-KNIGHT square KNIGHT-ATTACKS-BY-SQUARE square get side gen-fixed-moves
 	;
 	
-'ROOK-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] ] make-var
-
 \ piece is a parameter since this is used for both queen and rook generation
 : gen-rook-moves ( square side piece -- moves )
 	@locals [ attacks blockers ]
+
 	\ gen attacks & blocked squares
 	square ROOK-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
 	piece square attacks blockers side gen-sliding-moves
 	\ return moves
 	;
 
-'BISHOP-MOVEDIRS [ [ 1 1 ] [ -1 1 ] [ 1 -1 ] [ -1 -1 ] ] make-var
-
 \ piece is a parameter since this is used for both queen and bishop generation
 : gen-bishop-moves ( square side piece -- moves )
 	@locals [ attacks blockers ]
+
 	\ gen attacks & blocked squares
 	square BISHOP-MOVEDIRS gen-all-sliding-attacks blockers! attacks!
 	piece square attacks blockers side gen-sliding-moves

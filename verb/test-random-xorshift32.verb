@@ -2,8 +2,10 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"unittest" import
-"random-xorshift32" import
+: __modinit__
+	"unittest" import
+	"random-xorshift32" import
+	;
 
 \ seed is an integer
 : *test-xorshift32-case ( seed skip vals -- )

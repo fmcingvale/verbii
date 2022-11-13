@@ -7,8 +7,10 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"board" import
-"move" import
-"attacks" import
-"movegen" import
+: __modinit__
+	"board" import
+	"move" import
+	"attacks" import
+	"movegen" import
+	;
 

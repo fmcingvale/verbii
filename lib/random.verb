@@ -2,23 +2,30 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"numeric" import
-"random-xorshift32" import
-"random-mersenne" import
-"random-xoshiro128++" import
-"random-xoshiro128starstar" import
-"random-worker" import
+: __modinit__
+	"numeric" import
+	"random-xorshift32" import
+	"random-mersenne" import
+	"random-xoshiro128++" import
+	"random-xoshiro128starstar" import
+	"random-worker" import
 
+	\ uncomment one to choose default random module, or set at runtime via code
+	\ (if switching modules, remember to re-seed before using)
+	\ 'RANDOM-MODULE "xorshift32" make-var
+	\ 'RANDOM-MODULE "mersenne" make-var
+	'RANDOM-MODULE "xoshiro128++" make-var
+	\ 'RANDOM-MODULE "xoshiro128**" make-var
+
+	\ globals used in random normal generation
+	'BOX-MULLER-MEAN void make-var
+	'BOX-MULLER-SIGMA void make-var
+	'BOX-MULLER-NEXT void make-var
+	;
+	
 \ ==================================================================================
 \ this is the public API
 \ ==================================================================================
-
-\ uncomment one to choose default random module, or set at runtime via code
-\ (if switching modules, remember to re-seed before using)
-\ 'RANDOM-MODULE "xorshift32" make-var
-\ 'RANDOM-MODULE "mersenne" make-var
-'RANDOM-MODULE "xoshiro128++" make-var
-\ 'RANDOM-MODULE "xoshiro128**" make-var
 
 \ seed random number generator in one of several ways:
 \
@@ -178,10 +185,6 @@
 	{ list a b randfloat append list! } nr repeat
 	list
 	;
-
-'BOX-MULLER-MEAN void make-var
-'BOX-MULLER-SIGMA void make-var
-'BOX-MULLER-NEXT void make-var
 
 : box-muller-next
 	\ algorithm: https://en.wikipedia.org/wiki/Box%E2%80%93Muller_transform

@@ -3,6 +3,8 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
+\ NOTE: This is NOT a module but is run as a standalone script by boot.verb
+
 \ at this point, the compiler/init must be loaded, so i can use any words now
 \ ( -- )
 : repl

@@ -2,8 +2,10 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"unittest" import
-"random-xoshiro128starstar" import
+: __modinit__
+	"unittest" import
+	"random-xoshiro128starstar" import
+	;
 
 : test-xoshiro128ss-seeding
 	11 22 33 44 xoshiro128ss-seed

@@ -3,10 +3,10 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"unittest" import
-"random-mersenne" import
-
-\ unittest-init
+: __modinit__
+	"unittest" import
+	"random-mersenne" import
+	;
 
 : test-mersenne-twister
 	\ this is a list of:

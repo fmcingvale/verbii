@@ -1,6 +1,18 @@
 \ Attack tables & generation
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: __modinit__
+	\ create all precalculated tables
+	"Making king attack table ..." . CR	
+	gen-all-king-attacks
+
+	"Making knight attack table ..." . CR	
+	gen-all-knight-attacks
+
+	"Making pawn attack table ..." . CR			
+	gen-all-pawn-attacks
+	;
 	
 \ for pieces that have fixed attack spaces relative to their position (kings, knights)
 \
@@ -88,13 +100,14 @@
 \ generate attacks for king of given side at square (king does not have
 \ to actually be there); these will be ALL squares the king can reach,
 \ regardless of whether something is on the destination square
-'KING-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] [ 1 1 ] [ 1 -1 ] [ -1 1 ] [ -1 -1 ] ] make-var
-
-\ pregenerated list of king attacks indexed by square
-'KING-ATTACKS-BY-SQUARE [ ] make-var
 
 \ pregenerate KING-ATTACKS-BY-SQUARE
 : gen-all-king-attacks ( -- ) 
+	'KING-MOVEDIRS [ [ 1 0 ] [ -1 0 ] [ 0 1 ] [ 0 -1 ] [ 1 1 ] [ 1 -1 ] [ -1 1 ] [ -1 -1 ] ] make-var
+
+	\ pregenerated list of king attacks indexed by square
+	'KING-ATTACKS-BY-SQUARE [ ] make-var
+
 	KING-MOVEDIRS gen-all-fixed-attacks
 		KING-ATTACKS-BY-SQUARE!
 	;
@@ -102,13 +115,14 @@
 \ generate attacks for knight of given side at square (knight does not have
 \ to actually be there); these will be ALL squares the knight can reach,
 \ regardless of whether something is on the destination square
-'KNIGHT-MOVEDIRS [ [ 2 1 ] [ 2 -1 ] [ -2 1 ] [ -2 -1 ] [ 1 2 ] [ 1 -2 ] [ -1 2 ] [ -1 -2 ] ] make-var
-
-\ pregenerated list of knight attacks indexed by square
-'KNIGHT-ATTACKS-BY-SQUARE [ ] make-var
 
 \ pregenerate KNIGHT-ATTACKS-BY-SQUARE
 : gen-all-knight-attacks ( -- ) 
+	'KNIGHT-MOVEDIRS [ [ 2 1 ] [ 2 -1 ] [ -2 1 ] [ -2 -1 ] [ 1 2 ] [ 1 -2 ] [ -1 2 ] [ -1 -2 ] ] make-var
+
+	\ pregenerated list of knight attacks indexed by square
+	'KNIGHT-ATTACKS-BY-SQUARE [ ] make-var
+	
 	KNIGHT-MOVEDIRS gen-all-fixed-attacks
 		KNIGHT-ATTACKS-BY-SQUARE!
 	;
@@ -154,13 +168,14 @@
 	@no-attacks [ ] return
 	;
 
-\ pawn moves nonsymmetrical so need a white & black table	
-'PAWN-ATTACKS-BY-SQUARE-W [ ] make-var
-'PAWN-ATTACKS-BY-SQUARE-B [ ] make-var
-
 \ pregenerate pawn attack tables
 : gen-all-pawn-attacks ( -- )
 	@locals [ i ]
+	
+	\ pawn moves nonsymmetrical so need a white & black table	
+	'PAWN-ATTACKS-BY-SQUARE-W [ ] make-var
+	'PAWN-ATTACKS-BY-SQUARE-B [ ] make-var
+
 	{ ( square )
 		PAWN-ATTACKS-BY-SQUARE-W
 			square WHITE _gen-pawn-attacks append!
@@ -224,11 +239,3 @@
 	attacks
 	;		
 	
-"Making king attack table ..." . CR	
-gen-all-king-attacks
-
-"Making knight attack table ..." . CR	
-gen-all-knight-attacks
-
-"Making pawn attack table ..." . CR			
-gen-all-pawn-attacks

@@ -16,15 +16,19 @@
 \
 \ Python unittest timing (original; cached source) 11.863 11.618 11.671 11.710 11.940
 \                        (hardcoded values)        11.132 11.108 11.374 11.019 11.660
-"numeric" import
 
 \ This implementation was derived from the pseudocode at:
 \ https://en.wikipedia.org/wiki/Mersenne_Twister
 
-\ state
-'MERSENNE-STATE void make-var
-'MERSENNE-INDEX void make-var
+: __modinit__
+	\ do imports & create globals
+	"numeric" import
 
+	\ state
+	'MERSENNE-STATE void make-var
+	'MERSENNE-INDEX void make-var
+	;
+	
 \ must be called at least once
 : mersenne-random-seed ( seed )
 	624 MERSENNE-INDEX!
@@ -95,7 +99,3 @@
 		
 	0 MERSENNE-INDEX!
 	;
-
-
-
-	

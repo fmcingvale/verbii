@@ -2,8 +2,10 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"unittest" import
-"numeric" import
+: __modinit__
+	"unittest" import
+	"numeric" import
+	;
 
 : test-parse-hex
 	\ string parsing

@@ -3,8 +3,10 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"hashing" import
-"unittest" import
+: __modinit__
+	"hashing" import
+	"unittest" import
+	;
 
 : test-hash-djb2
 	[ 	[ 24858410 "Hello World 12345 ^.^" ]

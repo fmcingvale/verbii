@@ -3,30 +3,35 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-'UNITTEST-NR-PASS 0 make-var
-'UNITTEST-NR-FAIL 0 make-var
-'UNITTEST-SP0 void make-var
-\ maximum % difference when checking floating point results, on [0..1]
-'UNITTEST-MAX-PCTDIFF 1e-6 make-var
-\ NOT the smallest float that can be represented, but the value that is
-\ defined as "really really small" where %diff test would give bad results
-\ for small amounts of rounding error. so if BOTH values are below this
-\ value, the %diff is defined as 0%.
-\
-\ values below this threshold cannot be meaningfully compared, so this
-\ might need additional tuning.
-'UNITTEST-TINY-FLOAT 1e-12 make-var
-
+: __modinit__
+	\ create globals
+	'UNITTEST-NR-PASS 0 make-var
+	'UNITTEST-NR-FAIL 0 make-var
+	'UNITTEST-SP0 void make-var
+	\ maximum % difference when checking floating point results, on [0..1]
+	'UNITTEST-MAX-PCTDIFF 1e-6 make-var
+	\ NOT the smallest float that can be represented, but the value that is
+	\ defined as "really really small" where %diff test would give bad results
+	\ for small amounts of rounding error. so if BOTH values are below this
+	\ value, the %diff is defined as 0%.
+	\
+	\ values below this threshold cannot be meaningfully compared, so this
+	\ might need additional tuning.
+	'UNITTEST-TINY-FLOAT 1e-12 make-var
+	
+	\ max with of string before it is truncated with '...'
+	\ NOTE: this isn't set to ensure values fit on the screen but just to ensure that
+	\ really long (maybe erroneous) values don't flood the output
+	'UNITTEST-STR-TRUNC-WIDTH 240 make-var
+	;
+	
 \ must call this once
 : unittest-init
 	\ remember starting value of SP to make sure it matches at end
+	\ (this does NOT go into __modinit__ since the stack might change between the
+	\ time this is imported and the time the unittests run)
 	SP UNITTEST-SP0!
 	;
-
-\ max with of string before it is truncated with '...'
-\ NOTE: this isn't set to ensure values fit on the screen but just to ensure that
-\ really long (maybe erroneous) values don't flood the output
-'UNITTEST-STR-TRUNC-WIDTH 240 make-var
 
 \ if s > max-width then truncate it and add " ..." to end
 : string-truncate ( s max-width )

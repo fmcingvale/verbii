@@ -26,7 +26,18 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"numeric" import
+: __modinit__
+	"numeric" import
+	'RANDOM-WORKER-K null make-var
+	'RANDWORKER-STATE 0 make-var
+
+	'RANDWORKER2-STATE null make-var
+
+	'RANDWORKER3-COUNTER 0 make-var
+
+	\ hex string that is used 8 chars at a time to make a 32 bit integer
+	'RANDWORKER3-STATE null make-var
+	;
 
 \ run an empty loop for at least (close to) T seconds, returning number of loops made
 \ as well as the actual runtime taken
@@ -46,8 +57,6 @@
 		cpu-time t0 - \ return: ( nr time )
 	;
 	
-'RANDOM-WORKER-K null make-var
-
 \ determine calibration constant to pass to digit randomizer
 : randworker-calibrate ( -- )
 	@locals [ nr seconds lps ]
@@ -66,8 +75,6 @@
 	\ K is calculated loops/sec
 	lps RANDOM-WORKER-K!
 	;
-
-'RANDWORKER-STATE 0 make-var
 
 : randworker-pick-hex-digit ( -- n )
 	@locals [ NRLOOPS ]
@@ -98,8 +105,6 @@
 \ ==============================================
 \ Worker #2
 \ ==============================================
-
-'RANDWORKER2-STATE null make-var
 
 : init-randworker2
 	@locals [ t nr ]
@@ -214,8 +219,6 @@
 	text { ( c ) c "0" != c "9" != c "." != and and } filter
 	;
 
-'RANDWORKER3-COUNTER 0 make-var
-
 \ the prefix is NOT part of the final random string, however, it gets hashed into
 \ the final string, so try and make it somewhat unique using the date + cpu-time + counter
 : randworker3-make-starting-prefix
@@ -223,9 +226,6 @@
 	time-string "*" + cpu-time str string-remove-0-9-dot + ":" + RANDWORKER3-COUNTER str + ":" +
 	;
 
-\ hex string that is used 8 chars at a time to make a 32 bit integer
-'RANDWORKER3-STATE null make-var
-	
 \ compute the next 16 values and cache them -- computing 16 at a time allows a lot
 \ more mixing of hash values than if i generated 1 at a time
 : randworker3-fill-state
@@ -246,5 +246,4 @@
 	RANDWORKER3-STATE 0 8 slice parse-hex 
 	RANDWORKER3-STATE 8 -1 slice RANDWORKER3-STATE!
 	;
-	
 	

@@ -2,9 +2,11 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"unittest" import
-"random-xoshiro128++" import
-
+: __modinit__
+	"unittest" import
+	"random-xoshiro128++" import
+	;
+	
 : test-xoshiro128pp-seeding
 	11 22 33 44 xoshiro128pp-seed
 	[ 11 22 33 44 ] XOSHIRO128PP-STATE expect==
@@ -40,4 +42,3 @@
 		P unmake drop *test-xoshiro128pp-case
 	} for-each
 	;
-

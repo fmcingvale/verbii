@@ -3,16 +3,23 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
+: __modinit__
+	\ do one-time initialization
+	"numeric" import
+
+	\ create globals for FNV-1a
+	\ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
+	'FNV32-PRIME 16777619 make-const
+	'FNV32-OFFSET 2166136261 make-const
+
+	initialize-crc32-table
+	;
+
 \ FNV-1a 32-bit hash function
 \
 \ This is much faster than fnv-128 since it uses native 32-bit integers.
 \
-\ Constants from https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-'FNV32-PRIME 16777619 make-var
-'FNV32-OFFSET 2166136261 make-var
-
-"numeric" import
-
+	
 \ ( text -- hash, as integer, 32-bits )
 : hash-fnv-32 
 	\ for each byte:
@@ -44,15 +51,14 @@
 \
 \ Based on: http://www.libpng.org/pub/png/spec/1.2/PNG-CRCAppendix.html
 
-"numeric" import
-
-'CRC32-TABLE null make-var
-'CRC32-CONST "edb88320" parse-hex make-var
-'CRC32-ALL1s "ffffffff" parse-hex make-var
-
 : initialize-crc32-table ( -- )
 	@locals [ c n k ]
-	[ ] CRC32-TABLE!
+
+	\ create globals used by crc32-calc
+	'CRC32-TABLE [ ] make-var
+	'CRC32-CONST #xedb88320 make-const
+	'CRC32-ALL1s #xffffffff make-const
+
 	\ for n = 0..255
 	{ ( n )
 		n c!
@@ -71,17 +77,14 @@
 	;
 	
 : crc32-update ( crc text -- crc )
-	CRC32-TABLE null? not if >>begin
-	initialize-crc32-table
-	@begin
-		\ n = 0..len-1
-		{ ( n )
-			CRC32-TABLE
-				\ crc_table[(c ^ buf[n]) & 0xff]
-				crc text n get ord bit-xor 255 bit-and get
-			crc 8 bit-shr bit-xor
-			crc!
-		} 0 1 text length for-count
+	\ n = 0..len-1
+	{ ( n )
+		CRC32-TABLE
+			\ crc_table[(c ^ buf[n]) & 0xff]
+			crc text n get ord bit-xor 255 bit-and get
+		crc 8 bit-shr bit-xor
+		crc!
+	} 0 1 text length for-count
 	crc
 	;
 		

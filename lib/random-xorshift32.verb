@@ -2,12 +2,15 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-"hashing" import
-
 \ 32-bit xor-shift pseudo random number generator
 \ ported from: https://en.wikipedia.org/wiki/Xorshift
-'XORSHIFT_32_STATE void make-var
 
+: __modinit__
+	"hashing" import
+	\ create global
+	'XORSHIFT_32_STATE void make-var
+	;
+	
 \ seed randomizer with (32-bit) seed n
 : xorshift32-seed ( n -- )
 	n XORSHIFT_32_STATE!

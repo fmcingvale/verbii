@@ -3,32 +3,41 @@
 \
 \ Copyright (c) 2022 Frank McIngvale, see LICENSE
 
-\ ======================================================================
-\ Constants
-\ ======================================================================
-'PI    3.141592653589793 make-const \ to limit of double precision
-'E-VAL 2.718281828459045 make-const
+: __modinit__
+	\ create various globals
+	
+	\ ======================================================================
+	\ Constants
+	\ ======================================================================
+	'PI    3.141592653589793 make-const \ to limit of double precision
+	'E-VAL 2.718281828459045 make-const
 
-\ max unsigned 32-bit value
-'MAX-INT32 4294967295 make-var
+	\ max unsigned 32-bit value
+	'MAX-INT32 4294967295 make-const
 
-\ FLOAT-MAX SHOULD BE: 1.7976931348623157E+308
-\ however, chicken seems to not be able to print this and rounds it to 1.79769313486232E+308,
-\ which is too large for a double. so if the chicken port creates a .b file containing 1.7976931348623157E+308,
-\ it will be serialized as an invalid value and crash the other ports when they try to load it.
-\ so the FLOAT-MAX below is the highest exact value that chicken will print correctly.
-\
-\ random trivia: the real value of FLOAT-MAX, in hex, is 0x7fefffffffffffff
-\ so i decremented that until i got a value that ended in 14x instead of 15x.
-\ the hex value of the number below is 0x7feffffffffffffb
-'FLOAT-MAX 1.7976931348623149E+308 make-const
-'FLOAT-MIN -1.7976931348623149E+308 make-const
+	\ FLOAT-MAX SHOULD BE: 1.7976931348623157E+308
+	\ however, chicken seems to not be able to print this and rounds it to 1.79769313486232E+308,
+	\ which is too large for a double. so if the chicken port creates a .b file containing 1.7976931348623157E+308,
+	\ it will be serialized as an invalid value and crash the other ports when they try to load it.
+	\ so the FLOAT-MAX below is the highest exact value that chicken will print correctly.
+	\
+	\ random trivia: the real value of FLOAT-MAX, in hex, is 0x7fefffffffffffff
+	\ so i decremented that until i got a value that ended in 14x instead of 15x.
+	\ the hex value of the number below is 0x7feffffffffffffb
+	'FLOAT-MAX 1.7976931348623149E+308 make-const
+	'FLOAT-MIN -1.7976931348623149E+308 make-const
 
-\ log(10), for changing base below
-'LOGN_10 2.30258509299404568 make-var
-\ log(2), for changing base below
-'LOGN_2  0.69314718055994531 make-var
-
+	\ log(10), for changing base below
+	'LOGN_10 2.30258509299404568 make-const
+	\ log(2), for changing base below
+	'LOGN_2  0.69314718055994531 make-const
+	
+	\ init pregenerated tables
+	generate-bit-count-ones-lookup-table
+	generate-bit-first-one-lookup-table 
+	generate-bit-leading-ones-lookup-table 
+	;
+	
 \ log, base 10
 : log10 ( v -- L ) 	v log LOGN_10 / ;
 \ log, base 2
@@ -254,11 +263,11 @@
 		count
 	;
 
-\ generated table for fast counting of 1's
-'BIT-COUNT-ONES-LOOKUP-TABLE null make-var 
-
-\ generate the above table for all 8 bit values
+\ generate the above table for all 8 bit values (call from __modinit__)
 : generate-bit-count-ones-lookup-table 
+	\ generated table for fast counting of 1's
+	'BIT-COUNT-ONES-LOOKUP-TABLE null make-var 
+	
 	@locals [ list ]
 	[ ] list!
 	{ ( x )
@@ -271,9 +280,6 @@
 	
 \ count number of 1 bits in low 32 bits of x (fast version)
 : bit-count-ones ( x -- count )
-	BIT-COUNT-ONES-LOOKUP-TABLE null? not if >>ok
-	generate-bit-count-ones-lookup-table 
-	@ok
 	0 count!
 	\ count each 8-bit segment of x and sum
 	count BIT-COUNT-ONES-LOOKUP-TABLE x 255 bit-and get + count!
@@ -304,12 +310,12 @@
 		void 
 	;
 		
-\ pregenerated lookup table for all 8 bit values
-'BIT-FIRST-ONE-LOOKUP-TABLE null make-var
-
-\ create lookup table
+\ create lookup table (called from __modinit__)
 : generate-bit-first-one-lookup-table 
 	@locals [ list ]
+	\ pregenerated lookup table for all 8 bit values
+	'BIT-FIRST-ONE-LOOKUP-TABLE null make-var
+	
 	[ ] list!
 	{ ( x ) list
 			x 24 bit-shl bit-first-one-slow append!
@@ -325,10 +331,6 @@
 \ return void if no 1 bits
 : bit-first-one ( x )
 	@locals [ i ]
-	\ generate table if needed
-	BIT-FIRST-ONE-LOOKUP-TABLE null? not if >>ok 
-	generate-bit-first-one-lookup-table
-	@ok
 	\ check from high byte to low byte 
 	BIT-FIRST-ONE-LOOKUP-TABLE x 24 bit-shr 255 bit-and get i!
 	i void != if >>found1
@@ -360,12 +362,13 @@
 		nr
 	;
 	
-\ pregenerated lookup table for all 8 bit values
-'BIT-LEADING-ONES-LOOKUP-TABLE null make-var
-
-\ create lookup table
+\ create lookup table (called by __modinit__)
 : generate-bit-leading-ones-lookup-table 
 	@locals [ list ]
+	
+	\ pregenerated lookup table for all 8 bit values
+	'BIT-LEADING-ONES-LOOKUP-TABLE null make-var
+	
 	[ ] list!
 	{ ( x ) list
 			x 24 bit-shl bit-leading-ones-slow append!
@@ -377,10 +380,6 @@
 \ count the number of leading ones in the low 32 bits of x (fast version)
 : bit-leading-ones ( x )
 	@locals [ i ]
-	\ generate table if needed
-	BIT-LEADING-ONES-LOOKUP-TABLE null? not if >>ok 
-	generate-bit-leading-ones-lookup-table
-	@ok
 	\ check from high byte to low byte 
 	x 24 bit-shr 255 bit-and dup 255 == if >>2nd \ got all 1's, so continue to 2nd byte
 	\ else, count will stop here
