@@ -387,16 +387,29 @@
 	;
 	
 : test-int-packing
+	\ packing
+	#xd4 pack-int8 #xd4 chr expect==
+	
 	#xabcd pack-int16-LE #xcd chr #xab chr + expect==
 	#xabcd pack-int16-BE #xab chr #xcd chr + expect==
+	
+	#xcd9876 pack-int24-LE #x76 chr #x98 chr + #xcd chr + expect==
+	#xcd9876 pack-int24-BE #xcd chr #x98 chr + #x76 chr + expect==
 	
 	#xabcd9876 pack-int32-LE #x76 chr #x98 chr + #xcd chr + #xab chr + expect==
 	#xabcd9876 pack-int32-BE #xab chr #xcd chr + #x98 chr + #x76 chr + expect==
 	
-	#x76 chr #x98 chr + #xcd chr + #xab chr + unpack-int32-LE #xabcd9876 expect==
-	#xab chr #xcd chr + #x98 chr + #x76 chr + unpack-int32-BE #xabcd9876 expect==
+	\ unpacking
+	#xe3 chr unpack-int8 #xe3 expect==
 	
 	#xcd chr #xab chr + unpack-int16-LE #xabcd expect==
-	#xab chr #xcd chr + unpack-int16-BE #xabcd expect==
+	#xcd chr #xab chr + unpack-int16-BE #xcdab expect==
+	
+	#xcd chr #x98 chr + #x76 chr + unpack-int24-LE #x7698cd expect==
+	#xcd chr #x98 chr + #x76 chr + unpack-int24-BE #xcd9876 expect==
+	
+	#x76 chr #x98 chr + #xcd chr + #xab chr + unpack-int32-LE #xabcd9876 expect==
+	#x76 chr #x98 chr + #xcd chr + #xab chr + unpack-int32-BE #x7698cdab expect==
+	
 	;
 	

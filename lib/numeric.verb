@@ -450,6 +450,11 @@
 \ Byte packing of integers to/from strings
 \ ======================================================================
 
+\ pack an 8-bit value into a string 
+: pack-int8 ( x -- s )
+	x #xff bit-and chr
+	;
+	
 \ pack a 16-bit integer into a string in little-endian order
 : pack-int16-LE ( x -- s )
 	""
@@ -462,6 +467,22 @@
 	""
 	x #xff00 bit-and 8 bit-shr chr +
 	x #xff bit-and chr +
+	;
+
+\ pack 24-bit integer into a string in little-endian order
+: pack-int24-LE ( x -- s )
+	""
+	x #x000000ff bit-and            chr +
+	x #x0000ff00 bit-and  8 bit-shr chr +
+	x #x00ff0000 bit-and 16 bit-shr chr +
+	;
+
+\ pack 24-bit integer into a string in big-endian ('network') order
+: pack-int24-BE ( x -- s )
+	""
+	x #x00ff0000 bit-and 16 bit-shr chr +
+	x #x0000ff00 bit-and  8 bit-shr chr +
+	x #x000000ff bit-and            chr +
 	;
 
 \ pack 32-bit integer into a string in little-endian order
@@ -482,6 +503,11 @@
 	x #x000000ff bit-and            chr +
 	;
 
+\ unpack an 8-bit integer from first byte of string
+: unpack-int8 ( data )
+	data 0 get ord
+	;
+	
 \ unpack a 16-bit integer from first 2 bytes of string, in big-endian ('network') order
 : unpack-int16-BE ( data )
 	data 0 get ord 8 bit-shl
@@ -492,6 +518,20 @@
 : unpack-int16-LE ( data )
 	data 1 get ord 8 bit-shl
 	data 0 get ord +
+	;
+
+\ unpack a 24-bit integer from first 3 bytes of string, in little-endian order
+: unpack-int24-LE ( data )
+	data 2 get ord 16 bit-shl
+	data 1 get ord 8 bit-shl
+	data 0 get ord + +
+	;
+
+\ unpack a 24-bit integer from first 3 bytes of string, in big-endian ('network') order
+: unpack-int24-BE ( data )
+	data 0 get ord 16 bit-shl
+	data 1 get ord 8 bit-shl
+	data 2 get ord + +
 	;
 	
 \ unpack a 32-bit integer from first 4 bytes of string, in big-endian ('network') order
