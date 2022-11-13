@@ -26,6 +26,13 @@
 	addr 'set! 2 make-list name '! + make-word
 	;
 
+\ delete var created with make-var
+: delete-var ( name )
+	\ delete NAME and NAME!
+	name ,,del
+	name '! + ,,del
+	;	
+
 \ make a variable with only a getter so acts as a constant
 \	'name' gets data stored in var
 : make-const ( name initval )
@@ -40,6 +47,11 @@
 	addr 'ref 2 make-list name make-word
 	;
 	
+\ delete constant created with make-const
+: delete-const ( name )
+	name ,,del
+	;
+	
 \ safely run currently loaded __main__ and delete it
 \ ( -- )
 : safe-run-and-delete-main
@@ -49,6 +61,18 @@
 	\ list into a lambda and run it
 	'__main__ .dumpword
 	'__main__ ,,del
+	make-lambda call
+	;
+	
+\ safely run currently loaded __modinit__ (if present) and delete it
+\ ( -- )
+: safe-run-and-delete-modinit
+	\ just like safe-run-and-delete-main, so i won't repeat the comments here.
+	\ the only difference is that __modinit__ is optional.
+	IF .wordlist '__modinit__ find-equal void? THEN return END
+	
+	'__modinit__ .dumpword
+	'__modinit__ ,,del
 	make-lambda call
 	;
 	
@@ -133,11 +157,6 @@
 '*_IMPORTED-MODULES ,,new-dict make-var
 
 \ load & import module from either name.verb or name.verb.b
-\ TODO:
-\	* define library paths & add search 
-\	* add way to let modules know they are being imported so they
-\	  shouldn't run their main code (unless it's required to init the module of course)
-\
 : import ( name -- )
 	@locals [ fullname ]
 	\ see if name has been imported already and don't import again
@@ -149,8 +168,11 @@
 	name ".verb" + find-filename-module-path fullname!
 	\ import module
 	fullname load-file-maybe-cached
-	\ module may need to init its own globals, etc., so run it
-	safe-run-and-delete-main
+	\ __main__ is NOT run for modules (so that modules can put demo/test code in their same file),
+	\ but i still need to delete it BEFORE running __modinit__ since it may import additional modules, etc.
+	'__main__ ,,del
+	\ run __modinit__ (if present) so module can initialize its globals, etc.
+	safe-run-and-delete-modinit
 	return
 	
 	@already-imported
@@ -229,6 +251,9 @@
 	init-interpreter
 
 	\ compiler should be running now, so i can load .verb files ...
+	\
+	\ NOTE this is a special case -- repl is NOT treated as a module but as a standalone
+	\ script (i.e. run __main__ and not __modinit__)
 	"repl.verb" find-filename-module-path load-file-maybe-cached 
 	safe-run-and-delete-main
 

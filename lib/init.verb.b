@@ -1,5 +1,5 @@
-M v1:1020084526
-L 96
+M v1:3296118410
+L 97
 W .
 L 4
 y str
@@ -14,6 +14,14 @@ W CR
 L 2
 i 10
 y .c
+W nl
+L 6
+i 13
+y chr
+i 10
+y chr
+y +
+y puts
 W str.w
 L 31
 o 65537

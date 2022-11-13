@@ -223,6 +223,95 @@
 	str float-string?
 	;
 	
+\ =========================================================================
+\ Parsing & printing of hex values (these were originally in numeric.verb
+\ but are needed in the compiler now.
+\ =========================================================================
+
+\ convert char h from hex to int
+: hex-char-to-int ( h -- i )
+	h "0" >= 
+	h "9" <=
+	and if >>digit 
+
+	h "a" >=
+	h "h" <=
+	and if >>hexlower 
+
+	h "A" >= 
+	h "H" <=
+	and if >>hexupper
+
+	"Bad hex digit: " h + error
+
+	@digit h ord "0" ord - return
+	@hexlower h ord "a" ord - 10 + return
+	@hexupper h ord "A" ord - 10 + return
+	;
+
+\ parse hex string to integer -- hex must NOT have leading "0x"; ONLY hex digits
+: parse-hex ( hex -- i )
+	\ fold
+	hex
+	{ ( accum h ) 
+		h hex-char-to-int 
+		accum 16 * + 
+	} 0 fold
+	;
+
+\ 4-bit value to hex digit
+\ ( n -- h )
+: int4-to-hex 
+	dup 9 <= if >>digit 
+	dup 16 < if >>hex 
+	"Bad value in int4-to-hex:" swap str + error
+
+	@digit "0" ord + chr return
+	@hex 10 - "a" ord + chr
+	;
+
+\ 8-bit value to 2 hex digits )
+\ ( n -- h )
+: int8-to-hex 
+	16 /mod int4-to-hex swap int4-to-hex +
+	;
+
+\ 16-bit value to 4 hex digits
+\ ( n -- h )
+: int16-to-hex
+	256 /mod int8-to-hex swap int8-to-hex +
+	;
+
+\ 32-bit value to 8 hex digits )
+\ ( n -- h )
+: int32-to-hex
+	65536 /mod int16-to-hex swap int16-to-hex +
+	;
+
+\ shortcut - int to hex string
+\ - always unsigned
+\ - does NOT prepend "0x", only returns the hex digits
+\
+\ ( val -- hexstring )
+: str.hex int32-to-hex ;
+
+\ parse binary string to integer -- must NOT have any prefix, only "0" and "1" digits
+: parse-binary ( binstr -- i )
+	\ fold
+	binstr
+	{ ( accum b ) 
+		IF b "0" == THEN
+			accum 1 bit-shl
+		ELIF b "1" == THEN
+			accum 1 bit-shl 1 bit-or
+		\ allow dots to break digits into groups
+		ELIF b "." == THEN
+			accum \ skip
+		ELSE "Bad binary digit: " b + error 
+		END
+	} 0 fold
+	;
+	
 ( make literal """ which cannot be written directly as source )
 
 'TRIPLEQUOTE 34 34 34 3 make-symbol make-var
@@ -272,15 +361,26 @@
 		word parse-int return
 	ELIF word float-symbol? THEN
 		word parse-float return
-	ELIF word 0 get '# ==
-			word 1 -1 slice float-symbol? and THEN
-		word 1 -1 slice parse-float return
+	\ literals:
+	\	#NN.NNN -> float
+	\	#xNNNNN -> hex
+	\	#bNNNNN -> binary (TODO)
+	ELIF word 0 get '# == THEN
+		IF word 1 -1 slice float-symbol? THEN
+			word 1 -1 slice parse-float return
+		ELIF word 1 get 'x == THEN
+			word 2 -1 slice str parse-hex return
+		ELIF word 1 get 'b == THEN
+			word 2 -1 slice str parse-binary return
+		ELSE
+			"Unknown literal: " word str + error
+		END
 	ELSE
 		\ "RET PLAIN WORD:" . word . CR
 		\ no match, return unprocessed word
 		word return
 	END
-	;
+	; 
 
 \ TODO -- this could be used when parsing other things like lists, lambdas, etc.
 \

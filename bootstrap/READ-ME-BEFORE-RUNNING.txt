@@ -72,11 +72,11 @@ wish to edit boot.verb, init.verb or compiler.verb, follow these steps CAREFULLY
 	Ensure no error output is shown.
 
 5. At the toplevel:
-	$ ./run-all-regressions.sh
-	$ cd unittests
-	$ ./makediffs.sh
-		-- ensure ALL diffs are ZERO before continuing.
-
+	# remove all .b files to ensure new compiler is working
+	$ ./clear-all-caches.sh
+	$ cd verb
+	$ ./all-regression-tests.sh 
+	
 Your new boot/compiler/init should be working now; safe to commit changes.
 
 NOTE: The above process is SAFER than directly editing boot/init/compiler.verb but not foolproof. 

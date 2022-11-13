@@ -17,6 +17,8 @@
 
 \ actually prints LF but originally named CR so I left it
 : CR 10 .c ;
+\ alternative to CR
+: nl 13 chr 10 chr + puts ;
 
 \ get str of obj with given field width, left padding with spaces and right-truncating as needed
 : str.w ( obj width -- string )
