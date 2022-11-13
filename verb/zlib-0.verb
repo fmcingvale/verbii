@@ -10,8 +10,10 @@
 \	http://www.zlib.org/rfc-zlib.html (zlib container header)
 \	http://www.zlib.org/rfc-deflate.html (compressed block format)
 
-"numeric" import
-"hashing" import
+: __modinit__
+	"numeric" import
+	"hashing" import
+	;
 
 \ extract data from uncompressed zlib stream (i.e. from zlib-compress with level=0)
 
