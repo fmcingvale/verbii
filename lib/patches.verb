@@ -11,6 +11,17 @@
 
 ( ------ boot ----------- )
 	
+\ delete var created with make-var
+: delete-var ( name )
+	\ delete NAME and NAME!
+	name ,,del
+	name '! + ,,del
+	;
+	
+\ delete constant created with make-const
+: delete-const ( name )
+	name ,,del
+	;
 ( ------ init ----------- )
 
 : nl 13 chr 10 chr + puts ;
