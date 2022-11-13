@@ -140,6 +140,13 @@ public class LangBool : LangObject {
 	public override string fmtStackPrint() { return value ? "<true>" : "<false>"; }
 }
 
+// implementation note: verbii strings are intended to hold binary data, NOT unicode.
+// c# strings are the opposite (they always hold unicode). however, putting raw bytes
+// into strings seems to work mostly ok - the only areas that get ugly are file reading
+// and writing (see file-read, file-write, file-append in native.cs).
+//
+// perhaps the underlying storage here should be byte[] instead of string, but, given
+// that it works for the purposes of verbii, maybe this is ok since it is probably simpler.
 public class LangString : LangObject {
 	public LangString(string s) {
 		value = s;

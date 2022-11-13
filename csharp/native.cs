@@ -326,8 +326,15 @@ class Builtins {
 
 	public static void file_read(Interpreter intr) {
 		string filename = popString(intr,"read-file");
-		var text = System.IO.File.ReadAllText(filename);
-		intr.push(new LangString(text));
+		// this is gross but i have to read the file as 8-bit bytes,
+		// otherwise c# tries to convert from unicode which messes up
+		// binary data
+		var arr = File.ReadAllBytes(filename);
+		var s = "";
+		for(int i=0; i<arr.Length; ++i) 
+			s = s + (char)arr[i];
+
+		intr.push(new LangString(s));
 	}
 
 	public static void make_list(Interpreter intr) {
@@ -702,17 +709,43 @@ class Builtins {
 	public static void file_write(Interpreter intr) {
 		var text = popString(intr,"file-write");
 		var filename = popString(intr,"file-write");
-		var fout = new System.IO.StreamWriter(filename, false);
-		fout.Write(text);
-		fout.Close();
+		//var fout = new System.IO.StreamWriter(filename, false);
+		//fout.Write(text);
+		//fout.Close();
+
+		// ugh ... this is ugly but Strings are unicode internally but I
+		// want to write as 8-bit data, so convert all chars to bytes first.
+		List<byte> bytes = new List<byte>();
+		for(var i=0; i<text.Length; ++i)
+			bytes.Add((byte)text[i]);
+
+		var arr = bytes.ToArray();
+		File.WriteAllBytes(filename, arr);
 	}
 
 	public static void file_append(Interpreter intr) {
 		var text = popString(intr,"file-append");
 		var filename = popString(intr,"file-append");
-		var fout = new System.IO.StreamWriter(filename, true);
-		fout.Write(text);
-		fout.Close();
+		//var fout = new System.IO.StreamWriter(filename, true);
+		//fout.Write(text);
+		//fout.Close();
+
+		// as above ... except i have to append to existing data
+		List<byte> bytes = new List<byte>();
+		
+		if(File.Exists(filename)) {
+			var arr = File.ReadAllBytes(filename);
+			bytes.AddRange(arr);
+		}
+		
+		// ugh ... this is ugly but Strings are unicode internally but I
+		// want to write as 8-bit data, so convert all chars to bytes first.
+		for(var i=0; i<text.Length; ++i)
+			bytes.Add((byte)text[i]);
+
+		var arr2 = bytes.ToArray();
+		
+		File.WriteAllBytes(filename, arr2);
 	}
 
 	public static void file_delete(Interpreter intr) {
