@@ -1,0 +1,347 @@
+\ PNG writer
+\
+\ Does not require libpng nor zlib, but will use zlib if is available. Using zlib is much faster and
+\ produces much smaller files (without zlib, images are stored uncompressed).
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+\
+\ Reference:
+\	http://www.libpng.org/pub/png/spec/1.2/PNG-DataRep.html#DR.Integers-and-byte-order
+
+"numeric" import
+"hashing" import
+"zlib-0" import 
+
+: png-signature
+	[ 137 80 78 71 13 10 26 10 ] { ( acc x ) acc x chr + } "" fold
+	dup "SIGNATURE:" . . nl
+	;
+
+\ use verbii functions by default for crc32 and zlib deflate
+'PNG-CRC32 { crc32-calc } make-var
+'PNG-DEFLATE { zlib-compress-0 } make-var
+
+\ if zlib is available, use it instead (faster & makes smaller files)
+IF .builtins 'zlib-crc32 find-equal void? not THEN
+	"Using zlib-crc32" . nl
+	{ zlib-crc32 } PNG-CRC32!
+END
+
+IF .builtins 'zlib-compress find-equal void? not THEN
+	"Using zlib-compress" . nl
+	{ 9 zlib-compress } PNG-DEFLATE!
+END
+
+\ type is 4 char chunk type string
+: png-encode-chunk ( type data -- chunk )
+	\ build chunk -- length + type + data + crc
+	data length pack-int32-BE
+	type +
+	data +
+	type data + PNG-CRC32 call pack-int32-BE + \ crc is just on the type+data
+	;
+	
+: png-make-IHDR ( width height colortype depth )
+	"PACK IHDR, width:" . width . "height:" . height . "color:" . colortype . "depth:" . depth . nl
+	"IHDR"
+	\ build data then encode chunk
+	width pack-int32-BE
+	height pack-int32-BE +
+	depth pack-int8 +
+	colortype pack-int8 + 
+	0 pack-int8 + \ compression type is always deflate
+	0 pack-int8 + \ filter type is always 0
+	0 pack-int8 + \ set no interlacing
+	png-encode-chunk
+	;
+
+\ data is from e.g. png-encode-data	
+: png-make-IDAT ( data )
+	"IDAT" data PNG-DEFLATE call png-encode-chunk
+	;
+	
+: png-make-IEND
+	"IEND" "" png-encode-chunk
+	;
+	
+\ define some common image types for simplicity, each as [colortype bitdepth]
+
+'PNG_IMAGE_GRAY_8 [ 0 8 ] make-var \ 8-bit grayscale
+'PNG_IMAGE_RGB_8 [ 2 8 ] make-var  \ RGB with 8-bits each for R/G/B (24 bits per pixel)
+'PNG_IMAGE_RGBA_8 [ 6 8 ] make-var \ RGB+alpha with 8 bits for each component (32 bits per pixel)
+
+\ imgtype is one of the PNG_IMAGE* values, or a custom value
+\
+\ returned object should only be modified via the png-* functions
+: png-new-image ( width height imgtype )
+	@locals [ row allrows ]
+	\ make a width x height list of cells
+	
+	\ make 1 row then deepcopy it height times
+	[ ] row!
+	\ 1 int per pixel, regardless of format (use png-color-* to pack pixel values)
+	\ there is also 1 filter-type byte at the start of each line
+	{ row 0 append! } width 1 + repeat
+	[ ] allrows!
+	{ allrows row deepcopy append! } height repeat
+	\ "ALLROWS:" . allrows . nl
+	\ return as object
+	[ png width height imgtype allrows ]
+	;
+	
+\ predicate
+: png? ( obj )
+	IF obj list? THEN
+ 		obj length 5 == obj 0 get 'png == and 
+	ELSE
+		false
+	END
+	;
+	
+\ always use png-color-* to pack colors in case the underlying format changes
+: png-color-gray ( g ) g ;
+: png-color-rgb ( r g b ) r 16 bit-shl g 8 bit-shl b bit-or bit-or ;
+: png-color-rgba ( r g b a ) r 24 bit-shl g 16 bit-shl b 8 bit-shl a bit-or bit-or bit-or ;
+
+\ color is from png-color-*
+: png-put ( img x y color )
+	IF img png? THEN
+		img 4 get \ allrows
+		y get \ row
+		x 1 + color put! \ +1 offset for filter byte at start of line
+	ELSE "Expecting PNG image, got:" img str + error
+	END
+	;
+
+\ create packed data from image, ready to be put into a chunk
+\ (if data > 2^31 bytes, caller will need to split it across multiple chunks)
+: png-encode-data ( img -- data )
+	@locals [ width height imgtype row x y packer allrows ]
+	"" data!
+	IF img png? not THEN "Expecting PNG image, got:" img str + error END
+	
+	\ unpack for readability
+	img 1 get width!
+	img 2 get height!
+	img 3 get imgtype!
+	img 4 get allrows!
+	
+	\ make function to pack pixel data into bytestring
+	IF imgtype PNG_IMAGE_GRAY_8 == THEN { pack-int8 } packer!
+	ELIF imgtype PNG_IMAGE_RGB_8 == THEN { pack-int24-BE } packer! 
+	ELIF imgtype PNG_IMAGE_RGBA_8 == THEN { pack-int32-BE } packer!
+	ELSE "Bad image format:" imgtype str + error
+	END
+	
+	0 y!
+	WHILE y height < DO
+		allrows y get row!
+		0 x!
+		\ encode each pixel into bytestring
+		\ start line with filter byte (always assumed to be zero)
+		data 0 pack-int8 + data!
+		\ now pixel data
+		WHILE x width < DO
+			data row x 1 + get packer call + data! \ +1 offset to account for filter byte
+			x 1 + x!
+		END
+		y 1 + y!
+	END
+	
+	data
+	;
+
+\ write PNG image to the given filename
+: png-write ( filename img )
+	IF img png? not THEN "Expecting PNG image, got: " img str + error END
+	
+	\ build file data ...
+	png-signature
+	\ width height colortype depth
+	img 1 get img 2 get img 3 get 0 get img 3 get 1 get png-make-IHDR +
+	img png-encode-data png-make-IDAT +
+	png-make-IEND +
+	
+	filename swap file-write
+	;
+	
+: test-border-images
+	@locals [ img ]
+	\ make gray image with white border to show entire image area is correctly written
+	320 200 PNG_IMAGE_GRAY_8 png-new-image img!
+	{ ( x )
+		img x 0 255 png-color-gray png-put
+		img x 199 255 png-color-gray png-put
+	} 0 1 320 for-count
+
+	{ ( y )
+		img 0 y 255 png-color-gray png-put
+		img 319 y 255 png-color-gray png-put
+	} 0 1 200 for-count
+
+	"image-border-gray.png" img png-write
+
+	\ make RGB image with red border to show entire image area is correctly written
+	320 200 PNG_IMAGE_RGB_8 png-new-image img!
+	{ ( x )
+		img x 0 255 0 0 png-color-rgb png-put
+		img x 199 255 0 0 png-color-rgb png-put
+	} 0 1 320 for-count
+
+	{ ( y )
+		img 0 y 255 0 0 png-color-rgb png-put
+		img 319 y 255 0 0 png-color-rgb png-put
+	} 0 1 200 for-count
+
+	"image-border-rgb.png" img png-write
+	
+	\ make RGBA image with red border to show entire image area is correctly written
+	320 200 PNG_IMAGE_RGBA_8 png-new-image img!
+	{ ( x )
+		img x 0 255 0 0 255 png-color-rgba png-put
+		img x 199 255 0 0 255 png-color-rgba png-put
+	} 0 1 320 for-count
+
+	{ ( y )
+		img 0 y 255 0 0 255 png-color-rgba png-put
+		img 319 y 255 0 0 255 png-color-rgba png-put
+	} 0 1 200 for-count
+
+	"image-border-rgba.png" img png-write
+	;
+	
+: test-horizontal-images
+	@locals [ img ]
+	\ make grayscale image with horizontal color bands
+	320 200 PNG_IMAGE_GRAY_8 png-new-image img!
+	{ ( y )
+		{ ( x )
+			IF y 50 < THEN
+				img x y 100 png-color-gray png-put
+			ELIF y 100 < THEN
+				img x y 160 png-color-gray png-put
+			ELIF y 150 < THEN
+				img x y 192 png-color-gray png-put
+			ELSE
+				img x y 255 png-color-gray png-put
+			END
+		} 0 1 320 for-count 
+	} 0 1 200 for-count 
+	"image-horizontal-gray.png" img png-write
+	
+	\ make RGB image with horizontal color bands
+	320 200 PNG_IMAGE_RGB_8 png-new-image img!
+	{ ( y )
+		{ ( x )
+			IF y 50 < THEN
+				img x y 255 0 0 png-color-rgb png-put
+			ELIF y 100 < THEN
+				img x y 0 255 0 png-color-rgb png-put
+			ELIF y 150 < THEN
+				img x y 0 0 255 png-color-rgb png-put
+			ELSE
+				img x y 255 255 255 png-color-rgb png-put
+			END
+		} 0 1 320 for-count 
+	} 0 1 200 for-count 
+	"image-horizontal-rgb.png" img png-write
+	;
+	
+: test-vertical-images
+	@locals [ img ]
+	\ make grayscale image with vertical color bands
+	320 200 PNG_IMAGE_GRAY_8 png-new-image img!
+	{ ( y )
+		{ ( x )
+			IF x 80 < THEN
+				img x y 100 png-color-gray png-put
+			ELIF x 160 < THEN
+				img x y 160 png-color-gray png-put
+			ELIF x 240 < THEN
+				img x y 192 png-color-gray png-put
+			ELSE
+				img x y 255 png-color-gray png-put
+			END
+		} 0 1 320 for-count 
+	} 0 1 200 for-count 
+	"image-vertical-gray.png" img png-write
+	
+	\ make RGB image with vertical color bands
+	320 200 PNG_IMAGE_RGB_8 png-new-image img!
+	{ ( y )
+		{ ( x )
+			IF x 80 < THEN
+				img x y 255 0 0 png-color-rgb png-put
+			ELIF x 160 < THEN
+				img x y 0 255 0 png-color-rgb png-put
+			ELIF x 240 < THEN
+				img x y 0 0 255 png-color-rgb png-put
+			ELSE
+				img x y 255 255 255 png-color-rgb png-put
+			END
+		} 0 1 320 for-count 
+	} 0 1 200 for-count 
+	"image-vertical-rgb.png" img png-write
+	;
+	
+: test-circle-images
+	@locals [ img x y ]
+	320 200 PNG_IMAGE_GRAY_8 png-new-image img!
+	{ ( y ) 
+		{ ( x )
+			@locals [ r ]
+			x 160 - dup * y 100 - dup * + sqrt r! \ calc radius
+			IF r 30 < THEN img x y 255 png-color-gray png-put 
+			ELIF r 60 < THEN img x y 192 png-color-gray png-put 
+			ELIF r 100 < THEN img x y 150 png-color-gray png-put 
+			ELSE img x y 50 png-color-gray png-put 
+			END
+		} 0 1 320 for-count 
+	} 0 1 200 for-count 
+	"image-circles-gray.png" img png-write
+	
+	320 200 PNG_IMAGE_RGB_8 png-new-image img!
+	{ ( y ) 
+		{ ( x )
+			@locals [ r ]
+			x 160 - dup * y 100 - dup * + sqrt r! \ calc radius
+			IF r 12.5 < THEN img x y 0 0 255 png-color-rgb png-put 
+			ELIF r 12.5 2 * < THEN img x y 0 255 0 png-color-rgb png-put 
+			ELIF r 12.5 3 * < THEN img x y 0 255 255 png-color-rgb png-put 
+			ELIF r 12.5 4 * < THEN img x y 255 0 0 png-color-rgb png-put 
+			ELIF r 12.5 5 * < THEN img x y 255 0 255 png-color-rgb png-put 
+			ELIF r 12.5 6 * < THEN img x y 255 255 0 png-color-rgb png-put 
+			ELIF r 12.5 7 * < THEN img x y 255 255 255 png-color-rgb png-put 
+			ELIF r 12.5 8 * < THEN img x y 128 128 128 png-color-rgb png-put 
+			ELSE img x y 0 0 0 png-color-rgb png-put 
+			END
+		} 0 1 320 for-count 
+	} 0 1 200 for-count 
+	"image-circles-rgb.png" img png-write
+	
+	320 200 PNG_IMAGE_RGBA_8 png-new-image img!
+	{ ( y ) 
+		{ ( x )
+			@locals [ r ]
+			x 160 - dup * y 100 - dup * + sqrt r! \ calc radius
+			IF r 12.5 < THEN img x y 0 0 255 255 png-color-rgba png-put 
+			ELIF r 12.5 2 * < THEN img x y 0 255 0 255 png-color-rgba png-put 
+			ELIF r 12.5 3 * < THEN img x y 0 255 255 255 png-color-rgba png-put 
+			ELIF r 12.5 4 * < THEN img x y 255 0 0 255 png-color-rgba png-put 
+			ELIF r 12.5 5 * < THEN img x y 255 0 255 255 png-color-rgba png-put 
+			ELIF r 12.5 6 * < THEN img x y 255 255 0 255 png-color-rgba png-put 
+			ELIF r 12.5 7 * < THEN img x y 255 255 255 255 png-color-rgba png-put 
+			ELIF r 12.5 8 * < THEN img x y 128 128 128 255 png-color-rgba png-put 
+			ELSE img x y 0 0 0 0 png-color-rgba png-put 
+			END
+		} 0 1 320 for-count 
+	} 0 1 200 for-count 
+	"image-circles-rgba.png" img png-write
+	;
+
+test-vertical-images
+test-horizontal-images
+test-circle-images
+test-border-images
+
+"END STACK:" . .S nl
