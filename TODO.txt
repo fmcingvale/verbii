@@ -35,8 +35,6 @@ Global TODO
   
 * add @globals to replace make-var. both faster AND could then be interpolated into lists like args/locals (and unlike make-var names)
 
-* benchmark random functions and set a default in random module
-
 * SCRIPT-ARGS (repl/boot?) should be a read only var instead of returning an address
 
 * add an 'append' for strings, like lists, to allow dynamically growing strings without breaking
@@ -85,8 +83,6 @@ Global TODO
   without an outer frame set
 
 	* then, words should be lambdas instead of objlists so they can be bound as well
-		
-* change all verbii code to use make-var instead of var then get rid of old ,,var/var -- can replace with make-var based function
 
 * chicken - minimize imports across all files
 
@@ -98,11 +94,22 @@ Global TODO
 * make sure ports all implement the same builtins (c++ has more that are not in other ports right now)
 
 * c++ reports (sometimes vastly) different # of tail calls with -stats than other ports
-
+	* see if C port is better?
+	
 * in native.* the pop* functions should take a 'where' argument like chicken
 
 ---[ Optimization ]------------------------------------------------------
 
+* explore if adding copy-on-write for string and list literals would be worth it.
+	* right now string and list literals are always deepcopied on instantiation, even if they are
+	never written to. 
+	* when i added mutable strings, and therefore had to add string deepcopy on instantiation,
+	i saw about a 3% slowdown in benchmark.verb and the chess perft tests. there was a much larger
+	slowdown (~12%) in the unittests but the unittests are very string heavy since thats how a lot
+	of test pass/fail conditions are defined.
+	* i think this would work by adding a 'literal' flag to strings & lists to denote if they are
+	references to literals in the bytecode and therefore must be copied when modified.
+	
 * optimize single-char strings & symbols to use predefined obejcts like with small ints
 
 * stream-reader needs to be redone with named args -- should be significantly faster
