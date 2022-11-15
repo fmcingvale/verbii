@@ -11,11 +11,16 @@
 \	z = a + bi
 \	z^2 = (a + bi) * (a + bi) = a^2 + (a*b)i + (a*b)i + (b^2)i^2 = a^2 - b^2 + (2*a*b)i 
 
+"png" import
+
 \ iterate Z[i+1] = Z[i]^2 + C 
 \
 \ where: CR = real part of C; CI = imaginary part of C
 \ 	
 \ maxiter = maximum number of iterations
+\
+\ if Z[i] escapes, returns # of iterations made before it escaped.
+\ if Z[i] does not escape within maxiter, returns -1
 : iterate ( CR CI maxiter )
 	@locals [ ZR+ ZI+ ZR ZI i ]
 	0 ZR! 0 ZI! \ Z[0] = 0 + 0i
@@ -25,23 +30,22 @@
 		ZR ZR * ZI ZI * - CR + ZR+!
 		\ ZI+ = 2 * ZR * ZI + CI
 		2 ZR * ZI * CI + ZI+!
-		\ if magnitude of Z[i+1] > 2 then can assume it blows up
+		\ if magnitude of Z[i+1] > 2 then assume it escapes
 		IF ZR+ ZR+ * ZI+ ZI+ * + sqrt 2 > THEN
-			i return \ return bail out count
+			i 1 + return \ return escape count (+1 since i is 0-based)
 		END
 		\ else continue iteration
 		i 1 + i!
 		ZR+ ZR!
 		ZI+ ZI!
 	END 
-	\ if i made it here, then Z never exceeded, so assume it does not escape
+	\ if i made it here, then Z never exceeded 2, so assume it does not escape
 	-1 return
 	;
 	
-'PALETTE "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" make-var
 
 \ iterate over C values from (xstart + ystart*i) .. (xend + yend*i)
-: draw ( xstart xend ystart yend nrcols nrrows maxiter )
+: run ( xstart xend ystart yend nrcols nrrows maxiter drawfunc )
 	@locals [ col row xstep ystep res ]
 	xend xstart - nrcols / xstep!
 	yend ystart - nrrows / ystep!
@@ -54,23 +58,151 @@
 			maxiter 
 			iterate res!
 			
-			IF res 0 < THEN
-				" " puts \ did not escape
-			ELSE
-				PALETTE 
-					res maxiter / PALETTE length * floor get puts
-			END 
+			col row res drawfunc call
+			
 			col 1 + col!
 		END
-		CR
+		\ -1 for x indicates end of row
+		-1 row -1 drawfunc call
 		row 1 + row!
 	END 
 	;
 	
-\ -1.5 0.5 1 -1 100 40 100 draw
--0.4 0.2 -1.087 -0.487 100 40 100 draw
+: draw-text ( x y count maxiter )
+	@locals [ palette ]
+	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" palette!
+	IF x 0 < THEN
+		nl \ x < 0 signals end of line
+	ELIF count 0 < THEN
+		" " puts \ did not escape
+	ELSE
+		palette
+			count maxiter / palette length * floor get puts
+	END 
+	;
+	
+: draw-png-gray ( x y count maxiter img )
+	IF x 0 < THEN
+		y . nl \ end of line indicator
+	ELIF count 0 < THEN
+		\ did not overflow == black
+		img x y 0 png-color-gray png-put
+	ELSE
+		img x y count log maxiter log / 256 * floor png-color-gray png-put
+	END
+	;
 
-			
+\ return value between (r0,g0,b0) and (r1,g1,b1) where p=[0..1]
+: rgb-interp ( r0 g0 b0 r1 g1 b1 p -- r g b )
+	r0 r1 r0 - p * + floor
+	g0 g1 g0 - p * + floor
+	b0 b1 b0 - p * + floor
+	;
+
+\ bands is a list of [ r g b ] and p = [0..1] = total % across all bands
+\ get interpolated (r,g,b) in band based on p
+: rgb-gradient ( bands p -- r g b )
+	\ # bands = len(bands)-1
+	\ width of each band = p/#bands
+	\ e.g. bands = [1,2,3,4,5]
+	\ # bands = 4 (i.e. 1-2, 2-3, 3-4, 4-5)
+	\ width of each band = 1.0/4 = 0.25
+	\ ex: p = 0.35 --> index = floor(0.35 / 0.25) = 1
+	\ % across band = (0.35/0.25) - index = 0.4
+	\
+	\ ex: p = 0.86 --> index = floor(0.86/0.25) = 3
+	\ % across band = (0.86/0.25) - index = 0.44
+	@locals [ width index pb ]
+	
+	1.0 bands length 1 - / width! \ width of each band
+	p width / floor index! \ index = floor(p / width)
+	p width / index - pb!  \ % across band
+	
+	\ get band index
+	bands index get unmake drop \ r0 g0 b0 
+	bands index 1 + get unmake drop \ r1 g1 b1
+	pb rgb-interp \ -> r g b on stack
+	;
+	
+: draw-png-rgb ( x y count maxiter img bands uselog )
+	IF x 0 < THEN
+		y . nl \ end of line indicator
+	ELIF count 0 < THEN
+		\ did not overflow == black
+		img x y 0 0 0 png-color-rgb png-put
+	ELIF uselog THEN
+		img x y 
+			bands count log maxiter 1 + log / rgb-gradient png-color-rgb png-put \ 1+ so quotient < 1
+	ELSE
+		img x y 
+			bands count maxiter 1 + / rgb-gradient png-color-rgb png-put \ 1+ so quotient < 1
+	END
+	;
+
+: run-text ( xstart xend ystart yend nrcols nrrows maxiter )
+	xstart xend ystart yend nrcols nrrows maxiter { maxiter draw-text } run
+	;
+	
+: run-png-gray ( xstart xend ystart yend nrcols nrrows maxiter )
+	@locals [ img ]
+	nrcols nrrows PNG_IMAGE_GRAY_8 png-new-image img!
+	xstart xend ystart yend nrcols nrrows maxiter { maxiter img draw-png-gray } run
+	"mandlebrot.png" img png-write
+	;
+	
+: run-png-rgb ( xcenter ycenter view-width pixel-width ratio maxiter bands uselog )
+	@locals [ img xstart xend ystart yend view-height pixel-height a b ]
+	view-width ratio / view-height!
+	pixel-width ratio / floor pixel-height!
+	
+	xcenter view-width 2 / - xstart!
+	xcenter view-width 2 / + xend!
+	
+	ycenter neg view-height 2 / - a!
+	ycenter neg view-height 2 / + b!
+	IF a b < THEN a ystart! b yend!
+	ELSE b ystart! a yend!
+	END
+	
+	pixel-width pixel-height PNG_IMAGE_RGB_8 png-new-image img!
+	xstart xend ystart yend pixel-width pixel-height maxiter { maxiter img bands uselog draw-png-rgb } run
+	"mandlebrot.png" img png-write
+	
+	"view width:" . view-width . nl
+	"view height:" . view-height . nl
+	"ystart:" . ystart . nl
+	"yend:" . yend . nl
+	;
+	
+'RGB_3_BANDS [ [ 255 0 0 ] [ 0 255 0 ] [ 0 255 255 ] ] make-var
+'RGB_8_BANDS [ [ 0 0 0 ] [ 0 0 255 ] [ 0 255 0 ] [ 0 255 255 ] [ 255 0 0 ] [ 255 0 255 ] [ 255 255 0 ] [ 255 255 255 ] ] make-var
+
+'RGB_ROYGBIV [ [ 0 0 0 ] [ 255 0 0 ] [ 255 165 0 ] [ 255 255 0 ] [ 0 255 0 ] [ 0 0 255 ] [ 75 0 130 ] [ 238 130 238 ] ] make-var
+'RGB_VIBGYOR [ [ 0 0 0 ] [ 238 130 238 ] [ 75 0 130 ] [ 0 0 255 ] [ 0 255 0 ] [ 255 255 0 ] [ 255 165 0 ] [ 255 0 0 ] ] make-var
+
+'RGB_BLUE_BROWN_1 [ [ 0 7 100 ] [ 32 107 203 ] [ 237 255 255 ] [ 255 170 0 ] [ 0 2 0 ] ] make-var
+'RGB_BLUE_BROWN_2 [ [ 0 0 0 ] [ 66 30 15 ] [ 25 7 26 ] [ 9 1 47 ] [ 4 4 73 ] [ 0 7 100 ] [ 12 44 138 ] [ 24 82 177 ] [ 57 125 209 ] [ 134 181 229 ]
+					[ 211 236 248 ] [ 241 233 191 ] [ 248 201 95 ] [ 255 170 0 ] [ 204 128 0 ] [ 153 87 0 ] [ 106 52 3 ] ] make-var
+					
+\ -1.5 0.5 1 -1 100 40 100 run-text
+\ -1.5 0.5 1 -1 320 240 100 run-png-gray
+\ -2 1 1.5 -1.5 320 240 100 RGB_8_BANDS run-png-rgb
+\ -2 1 1.5 -1.5 640 480 100 RGB_8_BANDS run-png-rgb
+\ -2 1 1.5 -1.5 1024 768 100 RGB_BLUE_BROWN_2 run-png-rgb
+
+
+\ -0.4 0.2 -1.087 -0.487 100 40 100 run-text
+\ -0.4 0.2 -1.087 -0.487 320 240 100 run-png-gray
+
+\ -0.4 0.2 -1.087 -0.487 1024 768 100 RGB_BLUE_BROWN_2 true run-png-rgb
+
+\ ======================
+
+\ -0.5 0 4 240 1.33 100 RGB_8_BANDS true run-png-rgb 
+\ -0.111285 0.87437 0.688 1024 1.33 200 RGB_BLUE_BROWN_2 dup dup + + true run-png-rgb
+\ -1.12696 0.30151 0.4 240 1.33 150 RGB_BLUE_BROWN_2 true run-png-rgb
+\ -.158733458 1.0351357 0.09356791   1024 1.33 250 RGB_BLUE_BROWN_2 dup dup + + true run-png-rgb
+-.158733458 1.0351357 0.09356791    1920 1.77 250 RGB_BLUE_BROWN_2 dup dup + + true run-png-rgb
 			
 		
 	
