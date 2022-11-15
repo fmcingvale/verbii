@@ -1,0 +1,149 @@
+\ Untyped 2D matrices
+\
+\ "Untyped" meaning you can put any kind of object into the matrix.
+\ However, it is up to the caller to ensure the matrix is homogenous
+\ before using operations that expect numeric values, for example.
+\
+\ There is minimal to no error checking -- this is intended to be reusable 
+\ in higher level data structures so don't want to cause slowdowns at this level.
+\
+\ It is recommended to treat the matrix as an opaque structure and only
+\ use the functions here to access it in case the underlying format changes.
+\
+\ Copyright (c) 2022 Frank McIngvale, see LICENSE
+
+: __modinit__
+	"numeric" import
+	;
+
+\ make a nrrows x nrcols array of cells, filled with initval
+: umat2d-new ( nrrows nrcols initval -- matrix )
+	@locals [ row ]
+	
+	\ make 1 row then deepcopy it nrrows times
+	[ ] row!
+	\ make row nrcols wide filled with initval
+	{ row initval append! } nrcols repeat
+	[ ] matrix!
+	\ append nrrows copies of row to make matrix
+	{ matrix row deepcopy append! } nrrows repeat
+	matrix
+	;
+
+\ create matrix from a nested list
+: umat2d-from-list ( list -- matrix )
+	list deepcopy
+	;
+	
+\ get # of rows in matrix
+: umat2d-nrrows ( matrix -- nrrows ) matrix length ;
+
+\ get # of columns in matrix
+: umat2d-nrcols ( matrix -- nrcols ) matrix 0 get length ;
+
+\ put object at (row,col) -- does NOT leave matrix on stack!
+: umat2d-put ( matrix row col obj -- )
+	matrix row get col obj put!
+	;
+	
+\ convenience function like put!, removes matrix from stack
+\ get object at (row,col)
+: umat2d-get ( matrix row col -- obj )
+	matrix row get col get
+	;
+
+\ calls func(row col obj) for all items in matrix	
+: umat2d-for-each ( matrix func -- minval )
+	@locals [ row x y nrrows nrcols ]
+	matrix umat2d-nrrows nrrows!
+	matrix umat2d-nrcols nrcols!
+	0 y!
+	WHILE y nrrows < DO
+		matrix y get row!
+		0 x!
+		WHILE x nrcols < DO
+			y x row x get func call 
+			x 1 + x!
+		END
+		y 1 + y!
+	END
+	;
+
+\ find minimum value in matrix -- matrix must be homogenous, containing
+\ objects that support comparison operations
+: umat2d-min ( matrix -- minval )
+	matrix 0 0 umat2d-get minval!
+	matrix { ( row col val ) val minval min minval! } umat2d-for-each
+	minval
+	;
+	
+\ find maximum value in matrix -- matrix must be homogenous, containing
+\ objects that support comparison operations
+: umat2d-max ( matrix -- maxval )
+	matrix 0 0 umat2d-get maxval!
+	matrix { ( row col val ) val maxval max maxval! } umat2d-for-each
+	maxval
+	;
+
+\ pack integer data from the given row into a bytestring, appending it to 
+\ the passed data string for efficiency.
+\
+\ packer is a function to pack an integer into a binary string.
+\ typically you'd pass a lambda with a pack-int* function like: { pack-int32-BE }
+: umat2d-pack-row ( data matrix row packer -- )
+	@locals [ ROW nrcols x ]
+	matrix row get ROW!
+	matrix umat2d-nrcols nrcols!
+	0 x!
+	WHILE x nrcols < DO
+		data ROW x get packer call append!
+		x 1 + x!
+	END
+	;
+	
+: test-umat2d
+	@locals [ matrix data ]
+	3 2 0 umat2d-new matrix!
+	"# rows:" . matrix umat2d-nrrows . nl
+	"# cols:" . matrix umat2d-nrcols . nl
+	"Matrix:" . matrix . nl
+		
+	matrix 0 0 "00" umat2d-put
+	matrix 0 1 "01" umat2d-put
+	matrix 1 0 "10" umat2d-put
+	matrix 1 1 "11" umat2d-put
+	matrix 2 0 "20" umat2d-put
+	matrix 2 1 "21" umat2d-put
+		
+	"Matrix:" . matrix . nl
+	
+	[ [ -4 3 0 ] [ -11 21 -5 ] [ 18 7 -1 ] [ 5 -1 -8 ] ] umat2d-from-list matrix!
+	"matrix:" . matrix . nl
+	"# rows:" . matrix umat2d-nrrows . nl
+	"# cols:" . matrix umat2d-nrcols . nl
+	"minval:" . matrix umat2d-min . nl
+	"maxval:" . matrix umat2d-max . nl
+	
+	[ [ 1 2 3 4 ] [ 5 6 7 8 ] ] umat2d-from-list matrix!
+	"" data!
+	data matrix 0 { pack-int8 } umat2d-pack-row 
+	data . nl
+	
+	[ [ #x8081 #x8283 #x8485 ] [ #x9091 #x9293 #x9495 ] ] umat2d-from-list matrix!
+	"" data!
+	data matrix 0 { pack-int16-BE } umat2d-pack-row 
+	data matrix 1 { pack-int16-BE } umat2d-pack-row 
+	data . nl
+	
+	[ [ #x80818283 #x84858687 #x88898a8b ] [ #x90919293 #x94959697 #x98999a9b ] ] umat2d-from-list matrix!
+	"" data!
+	data #xff pack-int8 append!
+	data matrix 0 { pack-int32-BE } umat2d-pack-row 
+	data #xff pack-int8 append!
+	data matrix 1 { pack-int32-BE } umat2d-pack-row 
+	data . nl
+	
+	;
+	
+test-umat2d
+
