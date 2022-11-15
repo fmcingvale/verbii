@@ -147,14 +147,38 @@
 	0 1 256 for-count
 	;
 	
-(
-unittest-init
-
-test-string-compares
-test-string-make-unmake
-test-string-get
-test-string-slicing
-test-string-ops
-
-unittest-summary
-)
+: make-a-test-string ( nr )
+	""
+	"a string:" append nr str append
+	;
+	
+: test-string-literals
+	\ make sure 'append' does not affect string literals (i.e. they are normallly
+	\ deepcopied on instantiation like list literals)
+	"a string:100" 100 make-a-test-string expect==
+	"a string:200" 200 make-a-test-string expect==
+	"a string:300" 300 make-a-test-string expect==
+	
+	\ make sure 'deepcopy' breaks the link from original string so append does not
+	\ affect it
+	"abc" dup
+	deepcopy "def" append "abcdef" expect==
+	"abc" expect==
+	;
+	
+: test-string-dict-keys
+	@locals [ k d ]
+	\ show that mutating a key string after adding to dict does not affect key in dict
+	"abc" k!
+	[ ] make-dict d!
+	d k 123 put!
+	k "def" append! \ mutate k
+	
+	k "abcdef" expect== \ key in dict should NOT have changed to "abcdef"
+	d k get void expect==
+	d "abc" get 123 expect==
+	;
+	
+	
+	
+	

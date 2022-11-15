@@ -681,11 +681,14 @@ Object *deepcopy(Object *obj) {
 		case TYPE_BOOL:
 		case TYPE_LAMBDA:
 		case TYPE_BOUND_LAMBDA:
-		case TYPE_STRING:
 		case TYPE_SYMBOL:
 		case TYPE_OPCODE:
 			return obj;
 
+		// strings are mutable so have to deepcopy
+		case TYPE_STRING:
+			return newString(string_cstr(obj), string_length(obj));
+		
 		case TYPE_LIST: {
 			Object *newlist = newListEx(List_length(obj),NULL);
 			newlist->data.array->length = List_length(obj);

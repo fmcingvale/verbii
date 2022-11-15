@@ -630,6 +630,15 @@ void run(Object *objlist) {
 			continue;
 		}
 
+		// now that strings are mutable, they have to be deepcopied as well.
+		// TODO - a way to optimize this would require usercode to mark a string as writeable
+		// with a word like 'mutable' and then literals could just be pushed. but this seems
+		// like it could have lots of side effects so this is simplest for now ...
+		else if(isString(obj)) {
+			push(deepcopy(obj));
+			continue;
+		}
+		
 		// everything else gets pushed -- initially i was only pushing objects that could be
 		// parsed from source. however, given the dynamic nature of verbii, every type of
 		// of object can end up in runnable code ... for example, dictionaries are not 
