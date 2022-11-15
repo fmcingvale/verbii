@@ -8,29 +8,36 @@
 \ Reference:
 \	http://www.libpng.org/pub/png/spec/1.2/PNG-DataRep.html#DR.Integers-and-byte-order
 
-"numeric" import
-"hashing" import
-"zlib-0" import 
+: __modinit__
+	"numeric" import
+	"hashing" import
+	"zlib-0" import 
 
+	\ use verbii functions by default for crc32 and zlib deflate
+	'PNG-CRC32 { crc32-calc } make-var
+	'PNG-DEFLATE { zlib-compress-0 } make-var
+
+	\ if zlib is available, use it instead (faster & makes smaller files)
+	IF .builtins 'zlib-crc32 find-equal void? not THEN
+		"Using zlib-crc32" . nl
+		{ zlib-crc32 } PNG-CRC32!
+	END
+
+	IF .builtins 'zlib-compress find-equal void? not THEN
+		"Using zlib-compress" . nl
+		{ 9 zlib-compress } PNG-DEFLATE!
+	END
+	
+	\ define some common image types for simplicity, each as [colortype bitdepth]
+	'PNG_IMAGE_GRAY_8 [ 0 8 ] make-var \ 8-bit grayscale
+	'PNG_IMAGE_RGB_8 [ 2 8 ] make-var  \ RGB with 8-bits each for R/G/B (24 bits per pixel)
+	'PNG_IMAGE_RGBA_8 [ 6 8 ] make-var \ RGB+alpha with 8 bits for each component (32 bits per pixel)
+	;
+	
 : png-signature
 	[ 137 80 78 71 13 10 26 10 ] { ( acc x ) acc x chr + } "" fold
 	dup "SIGNATURE:" . . nl
 	;
-
-\ use verbii functions by default for crc32 and zlib deflate
-'PNG-CRC32 { crc32-calc } make-var
-'PNG-DEFLATE { zlib-compress-0 } make-var
-
-\ if zlib is available, use it instead (faster & makes smaller files)
-IF .builtins 'zlib-crc32 find-equal void? not THEN
-	"Using zlib-crc32" . nl
-	{ zlib-crc32 } PNG-CRC32!
-END
-
-IF .builtins 'zlib-compress find-equal void? not THEN
-	"Using zlib-compress" . nl
-	{ 9 zlib-compress } PNG-DEFLATE!
-END
 
 \ type is 4 char chunk type string
 : png-encode-chunk ( type data -- chunk )
@@ -64,12 +71,6 @@ END
 	"IEND" "" png-encode-chunk
 	;
 	
-\ define some common image types for simplicity, each as [colortype bitdepth]
-
-'PNG_IMAGE_GRAY_8 [ 0 8 ] make-var \ 8-bit grayscale
-'PNG_IMAGE_RGB_8 [ 2 8 ] make-var  \ RGB with 8-bits each for R/G/B (24 bits per pixel)
-'PNG_IMAGE_RGBA_8 [ 6 8 ] make-var \ RGB+alpha with 8 bits for each component (32 bits per pixel)
-
 \ imgtype is one of the PNG_IMAGE* values, or a custom value
 \
 \ returned object should only be modified via the png-* functions
@@ -139,10 +140,10 @@ END
 		0 x!
 		\ encode each pixel into bytestring
 		\ start line with filter byte (always assumed to be zero)
-		data 0 pack-int8 + data!
+		data 0 pack-int8 append!
 		\ now pixel data
 		WHILE x width < DO
-			data row x 1 + get packer call + data! \ +1 offset to account for filter byte
+			data row x 1 + get packer call append! \ +1 offset to account for filter byte
 			x 1 + x!
 		END
 		y 1 + y!
@@ -165,6 +166,10 @@ END
 	filename swap file-write
 	;
 	
+\ ==================================================================================================
+\ The rest of this is demo code.
+\ ==================================================================================================
+
 : test-border-images
 	@locals [ img ]
 	\ make gray image with white border to show entire image area is correctly written
@@ -338,6 +343,9 @@ END
 	} 0 1 200 for-count 
 	"image-circles-rgba.png" img png-write
 	;
+
+\ the following only runs when this is run as a standalone script.
+\ note that __modinit__ runs automatically, so everything is already setup.
 
 test-vertical-images
 test-horizontal-images
