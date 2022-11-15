@@ -453,12 +453,21 @@ function builtin_make_word(intr)
 	end
 end
 
-function builtin_append(intr, list, obj)
-	if isList(list) then
-		table.insert(list, obj)
-		intr:push(list)
+function builtin_append(intr, seq, obj)
+	if isList(seq) then
+		table.insert(seq, obj)
+		intr:push(seq)
+	elseif isString(seq) then
+		if isString(obj) then
+			-- lua doesn't have a way to append to an existing string, but this
+			-- is still more efficient than creating a new String with '+'
+			seq.value = seq.value .. obj.value
+			intr:push(seq)
+		else
+			error(">>append expecting a string but got: " .. fmtStackPrint(seq))
+		end
 	else
-		error(">>>append expects list but got: " .. fmtStackPrint(list))
+		error(">>>append expects list or string but got: " .. fmtStackPrint(seq))
 	end
 end
 

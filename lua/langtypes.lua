@@ -490,11 +490,13 @@ end
 function deepcopy(obj)
 	if isNull(obj) or isInt(obj) or isFloat(obj) or
 		isBool(obj) or isLambda(obj) or
-		isString(obj) or isSymbol(obj) or isVoid(obj) or
+		isSymbol(obj) or isVoid(obj) or
 		isOpcode(obj) then
 		return obj
 	elseif isList(obj) then
 		return deepcopyObjlist(obj)
+	elseif isString(obj) then -- since strings are mutable
+		return new_String(obj.value)
 	elseif isDict(obj) then
 		local ndict = new_Dict()
 		for k,v in pairs(obj.dict) do

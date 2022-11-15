@@ -419,6 +419,13 @@ function Interpreter:run(objlist, stephook)
 			goto MAINLOOP
 		end
 
+		-- strings literals as well since they are mutable
+		-- see notes in C port about future optimizations
+		if isString(obj) then
+			self:push(deepcopy(obj))
+			goto MAINLOOP
+		end
+		
 		-- see c++ notes on why everything else is pushed
 		-- push everything here excepts lists/symbols/void -- see c++ notes for more
 		self:push(obj)
