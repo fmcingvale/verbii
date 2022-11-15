@@ -394,11 +394,23 @@ static void builtin_put() {
 
 // append modifies original object
 static void builtin_append() {
-	Object* add = pop();
-
-	Object* list = popList("append");
-	List_append(list, add);
-	push(list);
+	Object *elem = pop();
+	Object *seq = pop();
+	if(isList(seq)) {	
+		List_append(seq, elem);
+		push(seq);
+	}
+	else if(isString(seq)) {
+		if(isString(elem)) {
+			string_append(seq, elem);
+			push(seq);
+		}
+		else {
+			error("Can only append strings to strings, got: %s", fmtStackPrint(elem));
+		}
+	}
+	else
+		error("Unknown sequence in append: %s", fmtStackPrint(seq));
 }
 
 // append items from a list to an existing list, pushing original
