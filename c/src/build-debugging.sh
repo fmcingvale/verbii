@@ -7,6 +7,6 @@
 #gcc -p -g -DUSE_GC_OBJECT -o main main.c deserialize.c errors.c interpreter.c langtypes.c native.c opcodes.c util.c gc_object.c xmalloc.c -lm
 
 # Build with Boehm GC
-gcc -p -g -DUSE_BOEHM_GC -o main main.c deserialize.c errors.c interpreter.c langtypes.c native.c opcodes.c util.c gc_object.c xmalloc.c -lm -lgc
+gcc -O3 -p -g -DUSE_BOEHM_GC -o main main.c deserialize.c errors.c interpreter.c langtypes.c native.c opcodes.c util.c gc_object.c xmalloc.c -lm -lgc -lz
 
 cp main ..
