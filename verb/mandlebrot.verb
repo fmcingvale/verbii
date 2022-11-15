@@ -147,7 +147,7 @@
 	@locals [ img ]
 	nrcols nrrows PNG_IMAGE_GRAY_8 png-new-image img!
 	xstart xend ystart yend nrcols nrrows maxiter { maxiter img draw-png-gray } run
-	"mandlebrot.png" img png-write
+	"image-mandlebrot.png" img png-write
 	;
 	
 : run-png-rgb ( xcenter ycenter view-width pixel-width ratio maxiter bands uselog )
@@ -166,7 +166,7 @@
 	
 	pixel-width pixel-height PNG_IMAGE_RGB_8 png-new-image img!
 	xstart xend ystart yend pixel-width pixel-height maxiter { maxiter img bands uselog draw-png-rgb } run
-	"mandlebrot.png" img png-write
+	"image-mandlebrot.png" img png-write
 	
 	"view width:" . view-width . nl
 	"view height:" . view-height . nl
