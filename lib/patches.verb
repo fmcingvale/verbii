@@ -10,6 +10,41 @@
 \      else compiler would never run when finding .b files.
 
 ( ------ boot ----------- )
+\ safely run currently loaded __main__ and delete it
+\ ( -- )
+: safe-run-and-delete-main
+	@locals [ save-main save-modinit ]
+	\ the __main__ I'm about to run might want to redefine __main__ itself 
+	\ (maybe it loads another module, etc.), so do a little trick: 
+	\ first dump __main__ to a list, delete __main__, then make the dumped
+	\ list into a lambda and run it
+	'__main__ .dumpword save-main!
+	'__main__ ,,del
+	
+	\ if __modinit__ is defined, then i am running a module as a standalone
+	\ program -- in this case, i need to run __modinit__ first, THEN run __main__,
+	\ so that the expected globals, init code, etc. gets to set things up.
+	\ do the same trick as with __main__ since __modinit__ may import other modules, etc.
+	IF .wordlist '__modinit__ find-equal void? not THEN 
+		'__modinit__ .dumpword save-modinit!
+		'__modinit__ ,,del
+		save-modinit make-lambda call 
+	END
+		
+	save-main make-lambda call
+	;
+	
+\ safely run currently loaded __modinit__ (if present) and delete it
+\ ( -- )
+: safe-run-and-delete-modinit
+	\ similar to safe-run-and-delete-main, so i won't repeat the comments here.
+	\ the only difference is that __modinit__ is optional.
+	IF .wordlist '__modinit__ find-equal void? THEN return END
+	
+	'__modinit__ .dumpword
+	'__modinit__ ,,del
+	make-lambda call
+	;
 	
 ( ------ init ----------- )
 

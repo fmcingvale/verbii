@@ -43,10 +43,11 @@
 	true set-stacktrace-on-exception
 
 	load-file-maybe-cached
+	safe-run-and-delete-main
 	\ same trick as above to delete __main__ before running
-	'__main__ .dumpword \ <- for syntax highlight error
-	'__main__ ,,del
-	make-lambda call
+	\ '__main__ .dumpword \ <- for syntax highlight error
+	\ '__main__ ,,del
+	\ make-lambda call
 	;
 
 \ run in test mode (like non-interactive repl)
