@@ -9,6 +9,7 @@
 \	http://www.libpng.org/pub/png/spec/1.2/PNG-DataRep.html#DR.Integers-and-byte-order
 
 : __modinit__
+	"umat2d" import
 	"numeric" import
 	"hashing" import
 	"zlib-0" import 
@@ -75,19 +76,12 @@
 \
 \ returned object should only be modified via the png-* functions
 : png-new-image ( width height imgtype )
-	@locals [ row allrows ]
-	\ make a width x height list of cells
-	
-	\ make 1 row then deepcopy it height times
-	[ ] row!
-	\ 1 int per pixel, regardless of format (use png-color-* to pack pixel values)
-	\ there is also 1 filter-type byte at the start of each line
-	{ row 0 append! } width 1 + repeat
-	[ ] allrows!
-	{ allrows row deepcopy append! } height repeat
-	\ "ALLROWS:" . allrows . nl
+	@locals [ matrix ]
+	\ make a width x height matrix of cells, 1 integer per pixel, regardless
+	\ of format (use png-color-* to pack pixel values)
+	height width 0 umat2d-new matrix!
 	\ return as object
-	[ png width height imgtype allrows ]
+	[ png width height imgtype matrix ]
 	;
 	
 \ predicate
@@ -107,9 +101,9 @@
 \ color is from png-color-*
 : png-put ( img x y color )
 	IF img png? THEN
-		img 4 get \ allrows
-		y get \ row
-		x 1 + color put! \ +1 offset for filter byte at start of line
+		img 4 get \ matrix
+		\ row, col, obj
+		y x color umat2d-put
 	ELSE "Expecting PNG image, got:" img str + error
 	END
 	;
@@ -117,7 +111,7 @@
 \ create packed data from image, ready to be put into a chunk
 \ (if data > 2^31 bytes, caller will need to split it across multiple chunks)
 : png-encode-data ( img -- data )
-	@locals [ width height imgtype row x y packer allrows ]
+	@locals [ width height imgtype row x y packer matrix ]
 	"" data!
 	IF img png? not THEN "Expecting PNG image, got:" img str + error END
 	
@@ -125,7 +119,7 @@
 	img 1 get width!
 	img 2 get height!
 	img 3 get imgtype!
-	img 4 get allrows!
+	img 4 get matrix!
 	
 	\ make function to pack pixel data into bytestring
 	IF imgtype PNG_IMAGE_GRAY_8 == THEN { pack-int8 } packer!
@@ -136,16 +130,10 @@
 	
 	0 y!
 	WHILE y height < DO
-		allrows y get row!
-		0 x!
-		\ encode each pixel into bytestring
 		\ start line with filter byte (always assumed to be zero)
 		data 0 pack-int8 append!
-		\ now pixel data
-		WHILE x width < DO
-			data row x 1 + get packer call append! \ +1 offset to account for filter byte
-			x 1 + x!
-		END
+		\ pack pixel data from row
+		data matrix y packer umat2d-pack-row
 		y 1 + y!
 	END
 	
