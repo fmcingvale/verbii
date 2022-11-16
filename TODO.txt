@@ -73,6 +73,9 @@ Global TODO
 
 ---[   Clean-up   ]------------------------------------------------------
 
+* enforce rule that symbols can only contain safe ASCII chars 
+	* related: can strings in serialize/deserialize ever contain binary, or will they always be safe ASCII?
+
 * chicken: split opcodes into opcodes.scm, to mirror other ports
 
 * maybe? rename bitops for readability:
