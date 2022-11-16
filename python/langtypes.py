@@ -9,6 +9,7 @@ from opcodes import opcode_pack, opcode_unpack
 
 from errors import LangError
 import sys
+from io import BytesIO 
 
 FLOAT_PRECISION = 17
 # see c++ notes
@@ -43,20 +44,29 @@ def isVoid(obj): return isinstance(obj, LangVoid)
 
 # since symbols are far more common than strings,
 # Python strings are used for symbols and this class is used
-# for strings
+# for strings.
+#
+# verbii strings are defined as holding binary 8-bit data, NOT unicode.
+# so the underlying storage here needs to be bytes and not a python string.
 class LangString(object):
+	# can be initialized with a plain ASCII string (which is converted to bytes),
+	# or by passing bytes directly
 	def __init__(self, s):
-		self.s = s
-
+		# hmmm ... the initial write seems to be necessary to allow further appends as intended ..
+		# i.e. BytesIO(val) then .write(val2) overwrites val
+		if isinstance(s,str): self.sbuf = BytesIO(); self.sbuf.write(s.encode('ascii'))
+		elif isinstance(s, bytes): self.sbuf = BytesIO(); self.sbuf.write(s)
+		else: raise LangError("String requires ASCII string or bytes, got: " + str(s))
+		
 	# define these so LangString can be used directly for dict keys
 	def __lt__(self, b):
-		return self.s < b.s
+		return self.sbuf.getvalue() < b.sbuf.getvalue()
 
 	def __eq__(self, b):
-		return isString(b) and self.s == b.s
+		return isString(b) and self.sbuf.getvalue() == b.sbuf.getvalue()
 
 	def __hash__(self):
-		return hash(self.s)
+		return hash(self.sbuf.getvalue())
 
 def isString(obj): return isinstance(obj,LangString)
 def isSymbol(obj): return type(obj) == str
@@ -138,14 +148,14 @@ def fmtDisplayObjlist(objlist, open_delim, close_delim):
 	rlist.append(close_delim)
 	return ' '.join(rlist)
 
-# turn non-printable chars into "\xCODE"
-def stringEscapeForDisplay(s):
+# format bytes for display as a string. turn non-printable chars into "\xCODE" and
+# printable chars into their ASCII values.
+def bytesFormatForDisplay(b):
+	if not isinstance(b,bytes): raise LangError("Expecting bytes here, got: " + str(b))
 	o = ""
-	for c in s:
-		if ord(c) < 32 or ord(c) > 126:
-			o += "\\x{0:02x}".format(ord(c))
-		else:
-			o += c
+	for c in b:
+		if c < 32 or c > 126: o += "\\x{0:02x}".format(c)
+		else: o += chr(c)
 
 	return o
 
@@ -177,12 +187,10 @@ def fmtDisplay(obj):
 		s += "}"
 		return s
 	elif isString(obj):
-		# turn non-printable chars into "%code"
-		return stringEscapeForDisplay(obj.s)
+		# turns bytes into printable string
+		return bytesFormatForDisplay(obj.sbuf.getvalue())
 		
-	elif isSymbol(obj):
-		# turn non-printable chars into "%code"
-		return stringEscapeForDisplay(obj)
+	elif isSymbol(obj): return obj
 		
 	elif isOpcode(obj):
 		return fmtStackPrint(obj)
@@ -219,7 +227,7 @@ def fmtStackPrint(obj):
 		return '<bound ' + fmtStackPrintObjlist(obj.objlist,"{","}") + '>'
 	elif isString(obj):
 		# in a stack display, strings get " ... "
-		return '"' + fmtDisplay(obj.s) + '"'
+		return '"' + fmtDisplay(obj) + '"'
 	elif isSymbol(obj):
 		return "'" + fmtDisplay(obj)
 	elif isList(obj):
@@ -228,7 +236,7 @@ def fmtStackPrint(obj):
 		s = "{ "
 		# have to sort keys to give identical output across languages
 		for k in sorted(obj.keys()):
-			s += '"' + k.s + '" => ' + fmtStackPrint(obj[k]) + " "
+			s += fmtStackPrint(k) + ' => ' + fmtStackPrint(obj[k]) + " "
 		s += "}"
 		return s
 	elif isOpcode(obj):
@@ -253,8 +261,10 @@ def deepcopyObjlist(objlist):
 def deepcopy(obj):
 	if isNull(obj) or isVoid(obj) or isNumeric(obj) or isBool(obj) or \
 		isLambda(obj) or \
-		isString(obj) or isSymbol(obj) or isOpcode(obj):
+		isSymbol(obj) or isOpcode(obj):
 		return obj
+	elif isString(obj): # strings are mutable
+		return LangString(obj.sbuf.getvalue())
 	elif isList(obj):
 		return deepcopyObjlist(obj)
 	elif isDict(obj):

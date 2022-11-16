@@ -94,7 +94,7 @@ def popIntOrFloat(I):
 def popString(I,where):
 	obj = I.pop()
 	if isString(obj):
-		return obj.s
+		return obj.sbuf.getvalue()
 	else:
 		raise LangError("Expecting string (in {0}) but got: {1} ".format(where, fmtStackPrint(obj)))
 
@@ -105,10 +105,12 @@ def popSymbol(I):
 	else:
 		raise LangError("Expecting symbol but got: " + fmtStackPrint(obj))
 
+# NOTE! If String is popped, this assumes it is plain ASCII (this should be safe in a context where either
+# a string or symbol is taken, since symbols are ASCII safe (well not really .. but will be once implemented in compiler)
 def popStringOrSymbol(I,where):
 	obj = I.pop()
 	if isSymbol(obj): return obj
-	elif isString(obj): return obj.s
+	elif isString(obj): return obj.sbuf.getvalue().decode('ascii') # caller wants a string, not bytes
 	else: raise LangError("Expecting string or symbol (in {0}) but got: {1}".format(where,fmtStackPrint(obj)))
 
 def popLambda(I):
@@ -148,9 +150,7 @@ def builtin_add(I):
 		#print("ADD SYMBOLS")
 		I.push(a+b)
 	elif isString(a) and isString(b):
-		#print("IS LANG STRING")
-		#print(a.s+b.s)
-		I.push(LangString(a.s+b.s))
+		I.push(LangString(a.sbuf.getvalue()+b.sbuf.getvalue()))
 	elif isList(a) and isList(b):
 		I.push(a+b)
 	else:
@@ -207,7 +207,7 @@ def builtin_puts(I, obj):
 	if not isString(obj):
 		raise LangError("puts requires string but got: " + fmtStackPrint(obj))
 
-	FILE_STDOUT.write(obj.s)
+	FILE_STDOUT.write(fmtDisplay(obj))
 
 def builtin_wordlist(I):
 	I.push(list(I._WORDS.keys()))
@@ -221,13 +221,7 @@ def builtin_file_read(I):
 	f = open(filename,'rb')
 	# read as bytes
 	buf = f.read()
-	# TODO -- there must be a better way to do this ...
-	# convert bytes -> string a char at a time
-	s = ""
-	for bc in buf:
-		s += chr(bc)
-
-	I.push(LangString(s))
+	I.push(LangString(buf)) # takes bytes natively
 	f.close()
 
 def builtin_make_list(I):
@@ -243,7 +237,7 @@ def test_equal(a,b):
 	elif isNumeric(a): return isNumeric(b) and a==b
 	elif isBool(a): return isBool(b) and a==b
 	elif isSymbol(a): return isSymbol(b) and a==b
-	elif isString(a): return isString(b) and a.s == b.s
+	elif isString(a): return isString(b) and a.sbuf.getvalue() == b.sbuf.getvalue()
 	elif isLambda(a): return False # lambdas are never equal, even if its the same object
 	elif isBoundLambda(a): return False # same for bound lambdas
 	elif isOpcode(a): 
@@ -280,7 +274,7 @@ def builtin_greater(I):
 def test_greater(a,b):
 	if isNumeric(a) and isNumeric(b): return a>b
 	elif isSymbol(a) and isSymbol(b): return a>b
-	elif isString(a) and isString(b): return a.s > b.s
+	elif isString(a) and isString(b): return a.sbuf.getvalue() > b.sbuf.getvalue()
 	elif isList(a) and isList(b):
 		# see c++ comments - do it like a string test, still raise error on nonequal types	
 		# check up to max of common length
@@ -300,26 +294,26 @@ def test_greater(a,b):
 		raise LangError("Unable to compare objects (>) {0} and {1}".format(fmtStackPrint(a),fmtStackPrint(b)))
 
 def builtin_error(I):
-	msg = popString(I,'error')
+	msg = popString(I,'error').decode('ascii') # assumes error messages always safe ASCII
 	raise LangError(msg)
 
 def builtin_slice(I, obj, index, nr):
 	# ported from the C++ version
 	if isSymbol(obj) or isList(obj): objsize = len(obj)
-	elif isString(obj): objsize = len(obj.s)
+	elif isString(obj): objsize = len(obj.sbuf.getvalue())
 	else: raise LangError("Object doesn't support slicing: " + fmtStackPrint(obj))
 	
 	if index < 0: index = objsize + index
 	if index < 0 or index >= objsize:
 		if isSymbol(obj): return ""
-		elif isString(obj): return LangString("")
+		elif isString(obj): return LangString(b"")
 		elif isList(obj): return []
 
 	if nr < 0: nr = objsize - index
 	if (index+nr) > objsize: nr = objsize - index
 
 	if isSymbol(obj): return obj[index:index+nr]
-	elif isString(obj): return LangString(obj.s[index:index+nr])
+	elif isString(obj): return LangString(obj.sbuf.getvalue()[index:index+nr])
 	elif isList(obj): return obj[index:index+nr]
 		
 	raise LangError("Unreachable code!!")
@@ -331,8 +325,8 @@ def builtin_unmake(I, obj):
 		seq = obj
 		fn = lambda x: ord(x)
 	elif isString(obj): 
-		seq = obj.s
-		fn = lambda x: ord(x)
+		seq = obj.sbuf.getvalue()
+		fn = lambda x: x
 	elif isList(obj): seq = obj
 	elif isLambda(obj): 
 		# must deepcopy, see DESIGN-NOTES.md
@@ -347,16 +341,18 @@ def builtin_unmake(I, obj):
 	I.push(len(seq))
 
 def builtin_make_string(I, nr):
-	s = ''
+	chars = []
 	for i in range(nr):
-		s = chr(popInt(I)) + s
+		chars.insert(0, popInt(I))
 
-	I.push(LangString(s))
+	I.push(LangString(bytes(chars)))
 
 def builtin_make_symbol(I, nr):
 	s = ''
 	for i in range(nr):
-		s = chr(popInt(I)) + s
+		c = popInt(I)
+		if c < 32 or c > 126: raise Exception("Symbols must be ASCII 32..126, got: " + str(c))
+		s = chr(c) + s
 
 	I.push(s)
 
@@ -367,7 +363,7 @@ def builtin_make_lambda(I):
 
 def builtin_length(I, obj):
 	if isSymbol(obj) or isList(obj) or isDict(obj): I.pushInt(len(obj))
-	elif isString(obj): I.pushInt(len(obj.s))
+	elif isString(obj): I.pushInt(len(obj.sbuf.getvalue()))
 	else: raise LangError("Object doesn't support 'length': " + fmtStackPrint(obj))
 
 def builtin_make_word(I):
@@ -379,16 +375,22 @@ def builtin_make_word(I):
 	I.defineWord(name, objlist, ALLOW_OVERWRITE_WORDS)
 	
 def builtin_append(I):
-	#print("APPEND:")
-	#print(I.reprStack())
-
 	obj = I.pop()
-	_list = I.pop()
-	if not isList(_list):
-		raise LangError("append expecting list but got: " + fmtStackPrint(_list))
-
-	_list.append(obj)
-	I.push(_list)
+	seq = I.pop()
+	
+	if isList(seq):
+		seq.append(obj)
+		I.push(seq)
+	elif isString(seq):
+		if isString(obj):
+			# hmmmmmmmm .... this doesn't seem to give the huge advantage over 'string + string' that
+			# you could get with cStringIO in python 2.x. i don't see any speedup until the data gets
+			# over 1Mb ... in fact it is often SLOWER than 'string + string' for smaller data sizes.
+			seq.sbuf.write(obj.sbuf.getvalue())
+			I.push(seq)
+		else: raise LangError("append expecting string but got: " + fmtStackPrint(obj))
+	else:
+		raise LangError("append expecting list but got: " + fmtStackPrint(seq))
 
 def builtin_extend(I):
 	src = popList(I)
@@ -409,7 +411,7 @@ def builtin_put(I):
 		I.push(dest)
 	elif isDict(dest):
 		if not isString(index): raise LangError("put requires string key, got: " + fmtStackPrint(index))
-		dest[index] = obj
+		dest[deepcopy(index)] = obj # key is immutable (by definition in verbii) so deepcopy it since strings are mutable
 		I.push(dest)
 	else:
 		raise LangError("Object does not support put: " + fmtStackPrint(dest))
@@ -425,9 +427,9 @@ def builtin_get(I):
 		else: I.push(obj[index])
 	elif isString(obj):
 		if not isInt(index): raise LangError("get requires index, got: " + fmtStackPrint(index))
-		if index < 0: index += len(obj.s) # negative indexes
-		if index < 0 or index >= len(obj.s): I.push(LangVoid()) # out of bounds -> void
-		else: I.push(LangString(obj.s[index]))
+		if index < 0: index += len(obj.sbuf.getvalue()) # negative indexes
+		if index < 0 or index >= len(obj.sbuf.getvalue()): I.push(LangVoid()) # out of bounds -> void
+		else: I.push(LangString(bytes([obj.sbuf.getvalue()[index]])))
 	elif isDict(obj):
 		if not isString(index): raise LangError("get requires string key, got: " + fmtStackPrint(index))
 		if index not in obj:
@@ -468,7 +470,7 @@ def builtin_deserialize(I):
 def builtin_prompt(I):
 	prompt = popString(I,"prompt")
 	# NOTE - ignore any user-set stdout since user needs to see prompt on screen
-	sys.stdout.write(prompt)
+	sys.stdout.write(prompt.decode('ascii')) # assumes prompt is ASCII
 	sys.stdout.flush()
 	line = sys.stdin.readline()
 	if len(line) == 0:
@@ -478,7 +480,7 @@ def builtin_prompt(I):
 		while len(line) and line[-1] in "\r\n":
 			line = line[:-1]
 
-		I.push(LangString(line))
+		I.push(LangString(line)) # assumes line is plain ASCII
 
 # ( filename -- ; open filename and write stdout there )
 # ( void -- ; close any file attached to stdout and reset to normal stdout )
@@ -493,30 +495,28 @@ def builtin_open_as_stdout(I):
 			FILE_STDOUT.close()
 			FILE_STDOUT = sys.stdout
 	elif isString(obj):
-		FILE_STDOUT = open(obj.s, "w")
+		FILE_STDOUT = open(obj.sbuf.getvalue().decode('ascii'), "w") # assumes filenames are ASCII
 	else:
 		raise LangError("Unknown arg to open-as-stdout:" + fmtStackPrint(obj))
 
+def builtin_file_exists(I):
+	filename = popString(I,'file-exists?').decode('ascii') # assumes filenames are ASCII
+	I.push(os.path.isfile(filename))
+
 def builtin_file_write(I):
 	text = popString(I,'file-write')
-	# make a bytes array ... there has to be a better way ...
-	buf = bytes()
-	for c in text: buf += bytes([ord(c)])
 
 	filename = popString(I,'file-write')
 	f = open(filename, 'wb')
-	f.write(buf)
+	f.write(text) # write bytes
 	f.close()
 
 def builtin_file_append(I):
 	text = popString(I,'file-append')
-	# make a bytes array ... there has to be a better way ...
-	buf = bytes()
-	for c in text: buf += bytes([ord(c)])
-
+	
 	filename = popString(I,'file-append')
 	f = open(filename, 'ab')
-	f.write(buf)
+	f.write(text) # write bytes
 	f.close()
 
 def builtin_file_delete(I):
@@ -557,11 +557,11 @@ def builtin_bind_lambda(I):
 	I.framedata.bound = True
 	I.push(LangBoundLambda(_lambda, I.framedata))
 	
-def builtin_file_sep(I):
-	I.push(LangString(os.sep))
+def builtin_file_pathsep(I):
+	I.push(LangString(os.sep)) # assumes ASCII
 
 def builtin_os_getcwd(I):
-	I.push(LangString(os.getcwd()))
+	I.push(LangString(os.getcwd())) # assumes ASCII
 	
 def builtin_atan2(I):
 	x = popIntOrFloat(I)
@@ -579,7 +579,7 @@ def builtin_fnv_1a_32(I):
 	text = popString(I,"fnv-1a-32")
 	hash = 2166136261 # offset basis
 	for c in text:
-		hash = hash ^ ord(c)
+		hash = hash ^ c
 		hash = hash * 16777619 # FNV prime
 		# I added this
 		hash = hash & 0xffffffff
@@ -597,11 +597,13 @@ BUILTINS = {
 	'==': ([], builtin_equal),
 	'>': ([], builtin_greater),
 	'.c': ([int], lambda I,a: FILE_STDOUT.write(chr(a))),
+	# print to stderr so doesn't affect program output
+	'.log': ([], lambda I: sys.stderr.write(fmtDisplay(I.pop())+"\n")),
 	# object means any type
 	# format TOS for stack display and push string
-	'repr': ([object], lambda I,o: I.push(LangString(fmtStackPrint(o)))),
+	'repr': ([object], lambda I,o: I.push(LangString(fmtStackPrint(o)))), # assumes ASCII which should be true by design
 	# format TOS as display string and push
-	'str': ([object], lambda I,o: I.push(LangString(fmtDisplay(o)))),
+	'str': ([object], lambda I,o: I.push(LangString(fmtDisplay(o)))), # ditto for ASCII here
 	# print string from TOS
 	'puts': ([object], builtin_puts),
 	'int?': ([object], lambda I,o: I.push(isInt(o))),
@@ -658,7 +660,7 @@ BUILTINS = {
 	',,new-dict': ([], lambda I: I.push({})),
 
 	# new words needed for running boot.verb
-	'file-exists?': ([], lambda I: I.push(os.path.isfile(popString(I,'file-exists?')))),
+	'file-exists?': ([], builtin_file_exists),
 	'open-as-stdout': ([], builtin_open_as_stdout),
 	'deserialize': ([], builtin_deserialize),
 	'prompt': ([], builtin_prompt),
@@ -666,7 +668,7 @@ BUILTINS = {
 	'set-allow-overwrite-words': ([bool], builtin_set_allow_overwrite_words),
 	'set-stacktrace-on-exception': ([bool], builtin_set_stacktrace_on_exception),
 
-	'time-string': ([], lambda I: I.push(LangString(time.strftime("%Y-%m-%d %H:%M:%S")))),
+	'time-string': ([], lambda I: I.push(LangString(time.strftime("%Y-%m-%d %H:%M:%S")))), # safe ASCII
 	'floor': ([], lambda I: I.push(int(floor(popIntOrFloat(I))))),
 
 	'file-write': ([], builtin_file_write),
@@ -674,7 +676,7 @@ BUILTINS = {
 	'file-read': ([], builtin_file_read),
 	'file-delete': ([], builtin_file_delete),
 	
-	'sys-platform': ([], lambda I: I.push(LangString("Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro)))),
+	'sys-platform': ([], lambda I: I.push(LangString("Python {0}.{1}.{2}".format(sys.version_info.major, sys.version_info.minor, sys.version_info.micro)))), # safe ASCII
 
 	'keys': ([], lambda I: I.push(list(popDict(I)))),
 
@@ -695,7 +697,7 @@ BUILTINS = {
 	'bind-lambda': ([], builtin_bind_lambda),
 
 	# more os/fileops
-	'file-pathsep': ([], builtin_file_sep),
+	'file-pathsep': ([], builtin_file_pathsep),
 	'os-getcwd': ([], builtin_os_getcwd),
 
 	# fast hash

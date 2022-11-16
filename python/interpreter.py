@@ -2,7 +2,7 @@ from __future__ import annotations
 from langtypes import fmtStackPrint, MAX_VINT, MIN_VINT, \
 			isLambda, isSymbol, \
 			isList, isVoid, LangVoid, CallFrameData, isBoundLambda, isOpcode, \
-			fmtDisplay
+			fmtDisplay, isString
 """
 	Interpreter - runs code deserialized from bytecode.
 
@@ -403,6 +403,11 @@ class Interpreter(object):
 
 			# list literals are deepcopied (see DESIGN-NOTES.txt)
 			elif isList(word):
+				self.push(deepcopy(word))
+				continue
+
+			# strings are mutable so must be deepcopied on instantiation .. see C port
+			elif isString(word):
 				self.push(deepcopy(word))
 				continue
 

@@ -27,8 +27,8 @@ def deserialize_stream(intr, fileIn):
 	elif line[0] == 's':
 		s = line[2:]
 		s = s.replace("%32"," ").replace("%09","\t").replace("%10","\n").replace("%13","\r").replace("%37","%")
-		return LangString(s)
-	elif line[0] == 'y': return line[2:]
+		return LangString(s) # currently assumed to always be safe ASCII .. this is a TODO to check
+	elif line[0] == 'y': return line[2:] # must be safe ASCII ... TODO to check
 	elif line[0] == 'L':
 		nr = int(line[2:])
 		objs = []
