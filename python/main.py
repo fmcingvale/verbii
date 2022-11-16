@@ -97,6 +97,21 @@ if __name__ == '__main__':
 		print("Unable to find boot.verb.b - maybe you need to use '-libdir path' or set VERBII_BOOT?")
 		sys.exit(1)
 
+	# when things get broken really badly & the interpreter double-faults in the regular loop,
+	# (so you can't see the actual error), set ONESHOT=True and you should see it then.
+	ONESHOT = False
+	if ONESHOT:
+		try:
+			intr = Interpreter()
+			# boot expects cmdline args on top of stack
+			intr.push(cmdline_args)
+			deserialize_and_run(intr, BOOTFILE)
+		except LangError as exc:
+			print("*ERROR*")
+			print(exc.msg)
+
+		sys.exit(1)
+
 	intr = None
 	while True:
 		try:
